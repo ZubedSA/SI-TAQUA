@@ -20,6 +20,7 @@ import SemesterPage from './pages/semester/SemesterPage'
 import LaporanPage from './pages/laporan/LaporanPage'
 import AuditLogPage from './pages/auditlog/AuditLogPage'
 import PengaturanPage from './pages/pengaturan/PengaturanPage'
+import ProfilSettingsPage from './pages/profil/ProfilSettingsPage'
 import './index.css'
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
             {/* Semua Role (Admin + Guru + Wali) */}
             <Route path="/rekap-nilai" element={<RekapNilaiPage />} />
             <Route path="/laporan" element={<LaporanPage />} />
+            <Route path="/profil-settings" element={<ProfilSettingsPage />} />
           </Route>
         </Routes>
       </AuthProvider>
