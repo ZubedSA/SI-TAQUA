@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { Bell, User, Menu, ChevronDown, Settings, LogOut, UserCircle } from 'lucide-react'
+import { Bell, User, Menu, ChevronDown, Settings, LogOut, UserCircle, Clock } from 'lucide-react'
 import './Header.css'
 
 const Header = ({ onMenuClick }) => {
@@ -10,6 +10,15 @@ const Header = ({ onMenuClick }) => {
     const [showDropdown, setShowDropdown] = useState(false)
     const [showProfileModal, setShowProfileModal] = useState(false)
     const dropdownRef = useRef(null)
+    const [currentTime, setCurrentTime] = useState(new Date())
+
+    // Real-time clock update
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [])
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -21,6 +30,26 @@ const Header = ({ onMenuClick }) => {
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    // Format time to WIB
+    const formatTime = () => {
+        return currentTime.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        })
+    }
+
+    // Format date
+    const formatDate = () => {
+        return currentTime.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        })
+    }
 
     const getUserName = () => {
         if (userProfile?.nama) return userProfile.nama
@@ -81,6 +110,16 @@ const Header = ({ onMenuClick }) => {
                 </div>
 
                 <div className="header-actions">
+                    {/* Real-time Clock */}
+                    <div className="header-clock">
+                        <Clock size={16} className="clock-icon" />
+                        <div className="clock-content">
+                            <span className="clock-time">{formatTime()}</span>
+                            <span className="clock-date">{formatDate()}</span>
+                        </div>
+                        <span className="clock-wib">WIB</span>
+                    </div>
+
                     <button className="notification-btn">
                         <Bell size={20} />
                         <span className="notification-badge">3</span>

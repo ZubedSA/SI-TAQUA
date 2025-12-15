@@ -41,7 +41,7 @@ const HafalanForm = () => {
         try {
             const { data } = await supabase
                 .from('santri')
-                .select('id, nis, nama')
+                .select('id, nis, nama, nama_wali, no_telp_wali')
                 .eq('status', 'Aktif')
                 .order('nama')
             setSantriList(data || [])
@@ -116,13 +116,70 @@ const HafalanForm = () => {
                 const { error } = await supabase.from('hafalan').update(payload).eq('id', id)
                 if (error) throw error
                 setSuccess('Data hafalan berhasil diupdate!')
+                setTimeout(() => navigate('/hafalan'), 1500)
             } else {
                 const { error } = await supabase.from('hafalan').insert([payload])
                 if (error) throw error
-                setSuccess('Data hafalan berhasil disimpan!')
-            }
 
-            setTimeout(() => navigate('/hafalan'), 1500)
+                // Langsung konfirmasi kirim WhatsApp setelah simpan berhasil
+                const santri = santriList.find(s => s.id === formData.santri_id)
+                const penguji = guruList.find(g => g.id === formData.penguji_id)
+
+                const sendWA = confirm('✅ Data hafalan berhasil disimpan!\n\nKirim laporan ke WhatsApp wali santri?')
+
+                if (sendWA) {
+                    // Gunakan nomor dari database
+                    let phone = santri?.no_telp_wali || ''
+                    phone = phone.replace(/\D/g, '')
+                    if (phone.startsWith('0')) {
+                        phone = '62' + phone.substring(1)
+                    }
+
+                    // Jika tidak ada, minta input manual
+                    if (!phone) {
+                        phone = prompt(`Nomor telepon wali ${santri?.nama_wali || 'santri'} tidak tersedia.\n\nMasukkan nomor WhatsApp (contoh: 6281234567890):`)
+                        if (phone) {
+                            phone = phone.replace(/\D/g, '')
+                            if (phone.startsWith('0')) {
+                                phone = '62' + phone.substring(1)
+                            }
+                        }
+                    }
+
+                    if (phone) {
+                        const message = `Assalamu'alaikum Wr. Wb.
+
+*LAPORAN HAFALAN SANTRI*
+━━━━━━━━━━━━━━━━━━━━
+
+Kepada Yth. Bapak/Ibu *${santri?.nama_wali || 'Wali Santri'}*
+
+📌 *Nama Santri:* ${santri?.nama || '-'}
+📅 *Tanggal:* ${formData.tanggal}
+📖 *Jenis:* ${formData.jenis}
+
+*Detail Hafalan:*
+• Juz: ${formData.juz}
+• Surah: ${formData.surah}
+• Ayat: ${formData.ayat_mulai} - ${formData.ayat_selesai}
+
+*Status:* ${formData.status}
+*Penguji:* ${penguji?.nama || '-'}
+
+${formData.catatan ? `*Catatan:* ${formData.catatan}` : ''}
+
+Demikian laporan hafalan ananda. Jazakumullah khairan.
+
+_PTQA Batuan_`
+
+                        const encoded = encodeURIComponent(message)
+                        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank')
+                    }
+                }
+
+                navigate('/hafalan')
+                return
+            }
         } catch (err) {
             setError('Gagal menyimpan: ' + err.message)
         } finally {

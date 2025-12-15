@@ -88,3 +88,38 @@
     font-size: 0.85rem;
     font-weight: 500;
 }
+
+/* Santri Responsive */
+@media screen and (max-width: 768px) {
+    .santri-page .page-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .table-search {
+        width: 100%;
+    }
+
+    .table-footer {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .pagination {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .table-search .search-input {
+        padding: 8px 10px 8px 36px;
+        font-size: 0.85rem;
+    }
+
+    .btn-icon {
+        width: 28px;
+        height: 28px;
+    }
+}

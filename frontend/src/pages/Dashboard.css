@@ -32,3 +32,39 @@
 .title-icon {
     font-size: 1.2rem;
 }
+
+/* Dashboard Responsive */
+@media screen and (max-width: 768px) {
+    .dashboard .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .dashboard .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .dashboard .hafalan-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .dashboard .hafalan-item {
+        padding: 12px 0;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .dashboard .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard .stat-icon {
+        display: none;
+    }
+
+    .dashboard .chart-container {
+        height: 200px !important;
+    }
+}

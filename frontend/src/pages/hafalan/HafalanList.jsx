@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import './Hafalan.css'
 
@@ -10,9 +10,12 @@ const HafalanList = () => {
     const [loading, setLoading] = useState(true)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [selectedHafalan, setSelectedHafalan] = useState(null)
-    const [activeTab, setActiveTab] = useState('list') // 'list' or 'rekap'
+    const [activeTab, setActiveTab] = useState('list') // 'list', 'rekap', or 'pencapaian'
     const [activeFilter, setActiveFilter] = useState('Semua')
     const [stats, setStats] = useState({ total: 0, mutqin: 0, lancar: 0, perbaikan: 0 })
+
+    // Date filter for Input Hafalan tab
+    const [dateFilter, setDateFilter] = useState({ dari: '', sampai: '' })
 
     // Rekap filters
     const [halaqohList, setHalaqohList] = useState([])
@@ -25,10 +28,100 @@ const HafalanList = () => {
     const [rekapData, setRekapData] = useState([])
     const [rekapStats, setRekapStats] = useState({ totalSetoran: 0, lancar: 0, mutqin: 0, perbaikan: 0 })
 
+    // Pencapaian state
+    const [semesterList, setSemesterList] = useState([])
+    const [santriList, setSantriList] = useState([])
+    const [pencapaianSemester, setPencapaianSemester] = useState('')
+    const [pencapaianSearch, setPencapaianSearch] = useState('')
+    const [pencapaianData, setPencapaianData] = useState({})
+    const [savingPencapaian, setSavingPencapaian] = useState(false)
+
     useEffect(() => {
         fetchHafalan()
         fetchHalaqoh()
+        fetchSemester()
+        fetchSantriList()
     }, [])
+
+    useEffect(() => {
+        if (activeTab === 'pencapaian' && pencapaianSemester) {
+            fetchPencapaian()
+        }
+    }, [activeTab, pencapaianSemester])
+
+    const fetchSemester = async () => {
+        try {
+            const { data } = await supabase.from('semester').select('id, nama, tahun_ajaran, is_active').order('is_active', { ascending: false })
+            setSemesterList(data || [])
+            const activeSem = data?.find(s => s.is_active)
+            if (activeSem) setPencapaianSemester(activeSem.id)
+        } catch (err) {
+            console.error('Error:', err.message)
+        }
+    }
+
+    const fetchSantriList = async () => {
+        try {
+            const { data } = await supabase.from('santri').select('id, nis, nama, kelas:kelas_id(nama)').eq('status', 'Aktif').order('nama')
+            setSantriList(data?.map(s => ({ ...s, kelas: s.kelas?.nama || '-' })) || [])
+        } catch (err) {
+            console.error('Error:', err.message)
+        }
+    }
+
+    const fetchPencapaian = async () => {
+        try {
+            const { data } = await supabase.from('pencapaian_hafalan').select('santri_id, jumlah_hafalan, predikat, total_hafalan').eq('semester_id', pencapaianSemester)
+            const pencapaianMap = {}
+            santriList.forEach(s => {
+                pencapaianMap[s.id] = { jumlah_hafalan: '', predikat: 'Baik', total_hafalan: '' }
+            })
+            data?.forEach(p => {
+                pencapaianMap[p.santri_id] = {
+                    jumlah_hafalan: p.jumlah_hafalan || '',
+                    predikat: p.predikat || 'Baik',
+                    total_hafalan: p.total_hafalan || ''
+                }
+            })
+            setPencapaianData(pencapaianMap)
+        } catch (err) {
+            console.error('Error:', err.message)
+        }
+    }
+
+    const handlePencapaianChange = (santriId, field, value) => {
+        setPencapaianData(prev => ({
+            ...prev,
+            [santriId]: { ...prev[santriId], [field]: value }
+        }))
+    }
+
+    const savePencapaian = async () => {
+        if (!pencapaianSemester) return alert('Pilih semester terlebih dahulu')
+        setSavingPencapaian(true)
+        try {
+            await supabase.from('pencapaian_hafalan').delete().eq('semester_id', pencapaianSemester)
+            const insertData = Object.entries(pencapaianData)
+                .filter(([_, v]) => v.jumlah_hafalan || v.total_hafalan)
+                .map(([santriId, v]) => ({
+                    santri_id: santriId,
+                    semester_id: pencapaianSemester,
+                    jumlah_hafalan: v.jumlah_hafalan,
+                    predikat: v.predikat,
+                    total_hafalan: v.total_hafalan
+                }))
+            if (insertData.length > 0) {
+                const { error } = await supabase.from('pencapaian_hafalan').insert(insertData)
+                if (error) throw error
+            }
+            alert('Pencapaian hafalan berhasil disimpan!')
+        } catch (err) {
+            console.error('Error:', err.message)
+            alert('Gagal menyimpan: ' + err.message)
+        } finally {
+            setSavingPencapaian(false)
+        }
+    }
 
     const fetchHalaqoh = async () => {
         try {
@@ -46,7 +139,7 @@ const HafalanList = () => {
                 .from('hafalan')
                 .select(`
                     *,
-                    santri:santri_id(nama, kelas:kelas_id(nama), halaqoh:halaqoh_id(id, nama)),
+                    santri:santri_id(nama, nama_wali, no_telp_wali, kelas:kelas_id(nama), halaqoh:halaqoh_id(id, nama)),
                     penguji:penguji_id(nama)
                 `)
                 .order('tanggal', { ascending: false })
@@ -56,6 +149,8 @@ const HafalanList = () => {
             const mapped = data.map(h => ({
                 ...h,
                 santri_nama: h.santri?.nama || '-',
+                nama_wali: h.santri?.nama_wali || '-',
+                no_telp_wali: h.santri?.no_telp_wali || '',
                 kelas_nama: h.santri?.kelas?.nama || '-',
                 halaqoh_id: h.santri?.halaqoh?.id || null,
                 halaqoh_nama: h.santri?.halaqoh?.nama || '-',
@@ -98,8 +193,68 @@ const HafalanList = () => {
         const matchSearch = h.santri_nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             h.surah?.toLowerCase().includes(searchTerm.toLowerCase())
         const matchFilter = activeFilter === 'Semua' || h.jenis === activeFilter
-        return matchSearch && matchFilter
+
+        // Date filter
+        let matchDate = true
+        if (dateFilter.dari) {
+            matchDate = matchDate && h.tanggal >= dateFilter.dari
+        }
+        if (dateFilter.sampai) {
+            matchDate = matchDate && h.tanggal <= dateFilter.sampai
+        }
+
+        return matchSearch && matchFilter && matchDate
     })
+
+    // Fungsi kirim WhatsApp
+    const sendWhatsApp = (item) => {
+        // Gunakan nomor dari database, atau minta input jika tidak ada
+        let phone = item.no_telp_wali || ''
+
+        // Format nomor (hapus karakter non-digit, tambah 62 jika perlu)
+        phone = phone.replace(/\D/g, '')
+        if (phone.startsWith('0')) {
+            phone = '62' + phone.substring(1)
+        }
+
+        // Jika tidak ada nomor, minta input manual
+        if (!phone) {
+            phone = prompt(`Nomor telepon wali ${item.nama_wali || 'santri'} tidak tersedia.\n\nMasukkan nomor WhatsApp (contoh: 6281234567890):`)
+            if (!phone) return
+            phone = phone.replace(/\D/g, '')
+            if (phone.startsWith('0')) {
+                phone = '62' + phone.substring(1)
+            }
+        }
+
+        const message = `Assalamu'alaikum Wr. Wb.
+
+*LAPORAN HAFALAN SANTRI*
+━━━━━━━━━━━━━━━━━━━━
+
+Kepada Yth. Bapak/Ibu *${item.nama_wali || 'Wali Santri'}*
+
+📌 *Nama Santri:* ${item.santri_nama}
+📅 *Tanggal:* ${item.tanggal}
+📖 *Jenis:* ${item.jenis || 'Setoran'}
+
+*Detail Hafalan:*
+• Juz: ${item.juz}
+• Surah: ${item.surah}
+• Ayat: ${item.ayat_mulai} - ${item.ayat_selesai}
+
+*Status:* ${item.status}
+*Penguji:* ${item.penguji_nama || '-'}
+
+${item.catatan ? `*Catatan:* ${item.catatan}` : ''}
+
+Demikian laporan hafalan ananda. Jazakumullah khairan.
+
+_PTQA Batuan_`
+
+        const encoded = encodeURIComponent(message)
+        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank')
+    }
 
     // Filter for Rekap Hafalan tab
     const applyRekapFilter = () => {
@@ -179,6 +334,12 @@ const HafalanList = () => {
                 >
                     <BarChart3 size={16} /> Rekap Hafalan
                 </button>
+                <button
+                    className={`hafalan-tab ${activeTab === 'pencapaian' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('pencapaian')}
+                >
+                    <Trophy size={16} /> Pencapaian
+                </button>
             </div>
 
             {/* ==================== INPUT HAFALAN TAB ==================== */}
@@ -225,6 +386,33 @@ const HafalanList = () => {
                         <button className={`filter-tab ${activeFilter === 'Semua' ? 'active' : ''}`} onClick={() => setActiveFilter('Semua')}>Semua</button>
                         <button className={`filter-tab ${activeFilter === 'Setoran' ? 'active' : ''}`} onClick={() => setActiveFilter('Setoran')}>Setoran</button>
                         <button className={`filter-tab ${activeFilter === "Muroja'ah" ? 'active' : ''}`} onClick={() => setActiveFilter("Muroja'ah")}>Muroja'ah</button>
+                    </div>
+
+                    {/* Date Filter */}
+                    <div className="date-filter-row">
+                        <div className="date-filter-group">
+                            <label><Calendar size={14} /> Dari Tanggal</label>
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={dateFilter.dari}
+                                onChange={(e) => setDateFilter({ ...dateFilter, dari: e.target.value })}
+                            />
+                        </div>
+                        <div className="date-filter-group">
+                            <label><Calendar size={14} /> Sampai Tanggal</label>
+                            <input
+                                type="date"
+                                className="form-control"
+                                value={dateFilter.sampai}
+                                onChange={(e) => setDateFilter({ ...dateFilter, sampai: e.target.value })}
+                            />
+                        </div>
+                        {(dateFilter.dari || dateFilter.sampai) && (
+                            <button className="btn btn-secondary btn-sm" onClick={() => setDateFilter({ dari: '', sampai: '' })}>
+                                <RefreshCw size={14} /> Reset
+                            </button>
+                        )}
                     </div>
 
                     {/* Search and Add Button */}
@@ -276,6 +464,7 @@ const HafalanList = () => {
                                                 <td>{item.penguji_nama}</td>
                                                 <td>
                                                     <div className="action-buttons">
+                                                        <button className="btn-icon btn-icon-success" title="Kirim WhatsApp" onClick={() => sendWhatsApp(item)}><MessageCircle size={16} /></button>
                                                         <Link to={`/hafalan/${item.id}/edit`} className="btn-icon" title="Edit"><Edit size={16} /></Link>
                                                         <button className="btn-icon btn-icon-danger" title="Hapus" onClick={() => { setSelectedHafalan(item); setShowDeleteModal(true) }}><Trash2 size={16} /></button>
                                                     </div>
@@ -419,6 +608,116 @@ const HafalanList = () => {
                                                 <td>{item.penguji_nama}</td>
                                             </tr>
                                         ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* ==================== PENCAPAIAN TAB ==================== */}
+            {activeTab === 'pencapaian' && (
+                <>
+                    {/* Filter Bar */}
+                    <div className="filter-bar mb-4">
+                        <div className="filter-group">
+                            <label>Semester</label>
+                            <select
+                                value={pencapaianSemester}
+                                onChange={(e) => setPencapaianSemester(e.target.value)}
+                                className="form-select"
+                            >
+                                <option value="">-- Pilih Semester --</option>
+                                {semesterList.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.nama} - {s.tahun_ajaran} {s.is_active ? '(Aktif)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Cari Santri</label>
+                            <input
+                                type="text"
+                                placeholder="Ketik nama santri..."
+                                value={pencapaianSearch}
+                                onChange={(e) => setPencapaianSearch(e.target.value)}
+                                className="form-input"
+                            />
+                        </div>
+                        <div className="filter-group filter-action">
+                            <button className="btn btn-primary btn-save" onClick={savePencapaian} disabled={savingPencapaian || !pencapaianSemester}>
+                                {savingPencapaian ? <RefreshCw size={16} className="spin" /> : <Save size={16} />}
+                                <span>{savingPencapaian ? 'Menyimpan...' : 'Simpan'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Pencapaian Table */}
+                    <div className="table-container">
+                        <div className="table-header">
+                            <h3 className="table-title"><Trophy size={20} /> Pencapaian Hafalan Semester ({santriList.filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase())).length} santri)</h3>
+                        </div>
+
+                        <div className="table-wrapper">
+                            <table className="table pencapaian-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Santri</th>
+                                        <th>Kelas</th>
+                                        <th>Jumlah Hafalan (Semester)</th>
+                                        <th>Predikat</th>
+                                        <th>Total Hafalan (Keseluruhan)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {!pencapaianSemester ? (
+                                        <tr><td colSpan="6" className="text-center">Pilih semester terlebih dahulu</td></tr>
+                                    ) : santriList.filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase())).length === 0 ? (
+                                        <tr><td colSpan="6" className="text-center">Tidak ada data santri</td></tr>
+                                    ) : (
+                                        santriList
+                                            .filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()))
+                                            .map((santri, index) => (
+                                                <tr key={santri.id}>
+                                                    <td>{index + 1}</td>
+                                                    <td className="name-cell">{santri.nama}</td>
+                                                    <td>{santri.kelas}</td>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Contoh: 3 Juz"
+                                                            value={pencapaianData[santri.id]?.jumlah_hafalan || ''}
+                                                            onChange={(e) => handlePencapaianChange(santri.id, 'jumlah_hafalan', e.target.value)}
+                                                            className="form-input-sm"
+                                                        />
+                                                    </td>
+                                                    <td>
+                                                        <select
+                                                            value={pencapaianData[santri.id]?.predikat || 'Baik'}
+                                                            onChange={(e) => handlePencapaianChange(santri.id, 'predikat', e.target.value)}
+                                                            className="form-select-sm"
+                                                        >
+                                                            <option value="Sangat Baik">Sangat Baik</option>
+                                                            <option value="Baik">Baik</option>
+                                                            <option value="Cukup">Cukup</option>
+                                                            <option value="Kurang">Kurang</option>
+                                                            <option value="Buruk">Buruk</option>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Contoh: 10 Juz"
+                                                            value={pencapaianData[santri.id]?.total_hafalan || ''}
+                                                            onChange={(e) => handlePencapaianChange(santri.id, 'total_hafalan', e.target.value)}
+                                                            className="form-input-sm"
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            ))
                                     )}
                                 </tbody>
                             </table>

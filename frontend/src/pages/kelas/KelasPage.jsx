@@ -9,7 +9,7 @@ const KelasPage = () => {
     const [showModal, setShowModal] = useState(false)
     const [showSantriModal, setShowSantriModal] = useState(false)
     const [editData, setEditData] = useState(null)
-    const [formData, setFormData] = useState({ nama: '', tingkat: 7, wali_kelas_id: '', tahun_ajaran: '2024/2025' })
+    const [formData, setFormData] = useState({ nama: '', wali_kelas_id: '' })
     const [guruList, setGuruList] = useState([])
     const [saving, setSaving] = useState(false)
     const [selectedKelas, setSelectedKelas] = useState(null)
@@ -28,7 +28,6 @@ const KelasPage = () => {
             const { data, error } = await supabase
                 .from('kelas')
                 .select('*, wali_kelas:wali_kelas_id(nama)')
-                .order('tingkat')
                 .order('nama')
 
             if (error) throw error
@@ -82,8 +81,6 @@ const KelasPage = () => {
         try {
             const payload = {
                 nama: formData.nama,
-                tingkat: formData.tingkat,
-                tahun_ajaran: formData.tahun_ajaran,
                 wali_kelas_id: formData.wali_kelas_id || null
             }
 
@@ -98,7 +95,7 @@ const KelasPage = () => {
             fetchKelas()
             setShowModal(false)
             setEditData(null)
-            setFormData({ nama: '', tingkat: 7, wali_kelas_id: '', tahun_ajaran: '2024/2025' })
+            setFormData({ nama: '', wali_kelas_id: '' })
         } catch (err) {
             alert('Error: ' + err.message)
         } finally {
@@ -110,9 +107,7 @@ const KelasPage = () => {
         setEditData(kelas)
         setFormData({
             nama: kelas.nama,
-            tingkat: kelas.tingkat,
-            wali_kelas_id: kelas.wali_kelas_id || '',
-            tahun_ajaran: kelas.tahun_ajaran
+            wali_kelas_id: kelas.wali_kelas_id || ''
         })
         setShowModal(true)
     }
@@ -135,7 +130,7 @@ const KelasPage = () => {
                     <h1 className="page-title">Manajemen Kelas</h1>
                     <p className="page-subtitle">Kelola data kelas dan wali kelas</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ nama: '', tingkat: 7, wali_kelas_id: '', tahun_ajaran: '2024/2025' }); setShowModal(true) }}>
+                <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) }}>
                     <Plus size={18} /> Tambah Kelas
                 </button>
             </div>
@@ -150,7 +145,6 @@ const KelasPage = () => {
                         <div key={kelas.id} className="kelas-card" onClick={() => fetchSantriByKelas(kelas)} style={{ cursor: 'pointer' }}>
                             <div className="kelas-header">
                                 <h3 className="kelas-name">{kelas.nama}</h3>
-                                <span className="kelas-tingkat">Tingkat {kelas.tingkat}</span>
                             </div>
                             <div className="kelas-body">
                                 <div className="kelas-info">
@@ -158,7 +152,6 @@ const KelasPage = () => {
                                     <span>{santriCounts[kelas.id] || 0} Santri</span>
                                 </div>
                                 <p className="wali-kelas">Wali: {kelas.wali_kelas?.nama || '-'}</p>
-                                <p className="tahun-ajaran">{kelas.tahun_ajaran}</p>
                             </div>
                             <div className="kelas-actions" onClick={e => e.stopPropagation()}>
                                 <button className="btn-icon" onClick={() => handleEdit(kelas)}><Edit size={16} /></button>
@@ -218,14 +211,16 @@ const KelasPage = () => {
                         <form onSubmit={handleSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
-                                    <label className="form-label">Nama Kelas *</label>
-                                    <input type="text" className="form-control" value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Tingkat</label>
-                                    <select className="form-control" value={formData.tingkat} onChange={e => setFormData({ ...formData, tingkat: parseInt(e.target.value) })}>
-                                        {[7, 8, 9, 10, 11, 12].map(t => <option key={t} value={t}>Tingkat {t}</option>)}
-                                    </select>
+                                    <label className="form-label">Kelas *</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Contoh: 7A, 8B, 9C, 10 IPA 1"
+                                        value={formData.nama}
+                                        onChange={e => setFormData({ ...formData, nama: e.target.value })}
+                                        required
+                                    />
+                                    <small className="form-hint">Masukkan nama kelas beserta tingkatnya</small>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Wali Kelas</label>
@@ -233,10 +228,6 @@ const KelasPage = () => {
                                         <option value="">Pilih Wali Kelas</option>
                                         {guruList.map(g => <option key={g.id} value={g.id}>{g.nama}</option>)}
                                     </select>
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Tahun Ajaran</label>
-                                    <input type="text" className="form-control" placeholder="2024/2025" value={formData.tahun_ajaran} onChange={e => setFormData({ ...formData, tahun_ajaran: e.target.value })} />
                                 </div>
                             </div>
                             <div className="modal-footer">
@@ -252,3 +243,4 @@ const KelasPage = () => {
 }
 
 export default KelasPage
+

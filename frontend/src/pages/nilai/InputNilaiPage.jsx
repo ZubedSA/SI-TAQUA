@@ -32,7 +32,7 @@ const InputNilaiPage = () => {
         try {
             const [mapelRes, kelasRes, semesterRes] = await Promise.all([
                 supabase.from('mapel').select('id, kode, nama, kategori').order('nama'),
-                supabase.from('kelas').select('id, nama').order('tingkat').order('nama'),
+                supabase.from('kelas').select('id, nama').order('nama'),
                 supabase.from('semester').select('id, nama, tahun_ajaran, is_active').order('is_active', { ascending: false })
             ])
             setMapelList(mapelRes.data || [])
@@ -76,9 +76,7 @@ const InputNilaiPage = () => {
             nilaiData?.forEach(n => {
                 nilaiMap[n.santri_id] = {
                     id: n.id,
-                    tugas: n.nilai_tugas || '',
-                    uts: n.nilai_uts || '',
-                    uas: n.nilai_uas || ''
+                    nilai: n.nilai_akhir || ''
                 }
             })
             setNilai(nilaiMap)
@@ -89,25 +87,14 @@ const InputNilaiPage = () => {
         }
     }
 
-    const handleNilaiChange = (santriId, type, value) => {
+    const handleNilaiChange = (santriId, value) => {
         setNilai(prev => ({
             ...prev,
             [santriId]: {
                 ...prev[santriId],
-                [type]: value === '' ? '' : parseFloat(value) || 0
+                nilai: value === '' ? '' : parseFloat(value) || 0
             }
         }))
-    }
-
-    const calculateAverage = (santriId) => {
-        const n = nilai[santriId]
-        if (!n) return '-'
-        const tugas = parseFloat(n.tugas) || 0
-        const uts = parseFloat(n.uts) || 0
-        const uas = parseFloat(n.uas) || 0
-        if (!tugas && !uts && !uas) return '-'
-        const avg = (tugas + uts + uas) / 3
-        return avg.toFixed(1)
     }
 
     const handleSave = async () => {
@@ -116,18 +103,13 @@ const InputNilaiPage = () => {
         setSuccess('')
         try {
             for (const [santriId, data] of Object.entries(nilai)) {
-                if (!data.tugas && !data.uts && !data.uas) continue
-
-                const avg = ((parseFloat(data.tugas) || 0) + (parseFloat(data.uts) || 0) + (parseFloat(data.uas) || 0)) / 3
+                if (!data.nilai && data.nilai !== 0) continue
 
                 const payload = {
                     santri_id: santriId,
                     mapel_id: selectedMapel,
                     semester_id: semester,
-                    nilai_tugas: parseFloat(data.tugas) || null,
-                    nilai_uts: parseFloat(data.uts) || null,
-                    nilai_uas: parseFloat(data.uas) || null,
-                    nilai_akhir: avg
+                    nilai_akhir: parseFloat(data.nilai) || 0
                 }
 
                 if (data.id) {
@@ -229,39 +211,31 @@ const InputNilaiPage = () => {
                                 <th>No</th>
                                 <th>NIS</th>
                                 <th>Nama Santri</th>
-                                <th>Tugas</th>
-                                <th>UTS</th>
-                                <th>UAS</th>
-                                <th>Rata-rata</th>
+                                <th style={{ textAlign: 'center' }}>Nilai</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="7" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                <tr><td colSpan="4" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
                             ) : santriList.length === 0 ? (
-                                <tr><td colSpan="7" className="text-center">Tidak ada santri di kelas ini</td></tr>
+                                <tr><td colSpan="4" className="text-center">Tidak ada santri di kelas ini</td></tr>
                             ) : (
                                 santriList.map((santri, idx) => (
                                     <tr key={santri.id}>
                                         <td>{idx + 1}</td>
                                         <td>{santri.nis}</td>
                                         <td className="name-cell">{santri.nama}</td>
-                                        <td>
-                                            <input type="number" className="nilai-input" min="0" max="100"
-                                                value={nilai[santri.id]?.tugas ?? ''}
-                                                onChange={e => handleNilaiChange(santri.id, 'tugas', e.target.value)} />
+                                        <td style={{ textAlign: 'center' }}>
+                                            <input
+                                                type="number"
+                                                className="nilai-input"
+                                                min="0"
+                                                max="100"
+                                                placeholder="0-100"
+                                                value={nilai[santri.id]?.nilai ?? ''}
+                                                onChange={e => handleNilaiChange(santri.id, e.target.value)}
+                                            />
                                         </td>
-                                        <td>
-                                            <input type="number" className="nilai-input" min="0" max="100"
-                                                value={nilai[santri.id]?.uts ?? ''}
-                                                onChange={e => handleNilaiChange(santri.id, 'uts', e.target.value)} />
-                                        </td>
-                                        <td>
-                                            <input type="number" className="nilai-input" min="0" max="100"
-                                                value={nilai[santri.id]?.uas ?? ''}
-                                                onChange={e => handleNilaiChange(santri.id, 'uas', e.target.value)} />
-                                        </td>
-                                        <td><span className="badge badge-success">{calculateAverage(santri.id)}</span></td>
                                     </tr>
                                 ))
                             )}
@@ -274,3 +248,4 @@ const InputNilaiPage = () => {
 }
 
 export default InputNilaiPage
+

@@ -1,26 +1,39 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Check, X, Clock, ChevronLeft, ChevronRight, RefreshCw, Save } from 'lucide-react'
+import { Calendar, Check, X, Clock, ChevronLeft, ChevronRight, RefreshCw, Save, Users, Heart } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import './Presensi.css'
 
+const PERILAKU_KATEGORI = ['Ketekunan', 'Kedisiplinan', 'Kebersihan', 'Kerapian']
+const PERILAKU_NILAI = ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Buruk']
+
 const PresensiPage = () => {
+    const [activeTab, setActiveTab] = useState('presensi')
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [santriList, setSantriList] = useState([])
     const [presensi, setPresensi] = useState({})
+    const [perilaku, setPerilaku] = useState({})
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
+    const [semesterList, setSemesterList] = useState([])
+    const [selectedSemester, setSelectedSemester] = useState('')
+    const [searchSantri, setSearchSantri] = useState('')
 
     useEffect(() => {
         fetchSantri()
+        fetchSemester()
     }, [])
 
     useEffect(() => {
         if (santriList.length > 0) {
-            fetchPresensi()
+            if (activeTab === 'presensi') {
+                fetchPresensi()
+            } else if (activeTab === 'perilaku' && selectedSemester) {
+                fetchPerilaku()
+            }
         }
-    }, [selectedDate, santriList])
+    }, [selectedDate, santriList, activeTab, selectedSemester])
 
     const fetchSantri = async () => {
         try {
@@ -42,6 +55,21 @@ const PresensiPage = () => {
         }
     }
 
+    const fetchSemester = async () => {
+        try {
+            const { data } = await supabase
+                .from('semester')
+                .select('id, nama, tahun_ajaran, is_active')
+                .order('is_active', { ascending: false })
+            setSemesterList(data || [])
+            // Set default to active semester
+            const activeSem = data?.find(s => s.is_active)
+            if (activeSem) setSelectedSemester(activeSem.id)
+        } catch (err) {
+            console.error('Error:', err.message)
+        }
+    }
+
     const fetchPresensi = async () => {
         setLoading(true)
         try {
@@ -53,15 +81,48 @@ const PresensiPage = () => {
             if (error) throw error
 
             const presensiMap = {}
-            // Initialize with hadir for all santri
             santriList.forEach(s => {
                 presensiMap[s.id] = 'hadir'
             })
-            // Override with actual data
             data?.forEach(p => {
                 presensiMap[p.santri_id] = p.status
             })
             setPresensi(presensiMap)
+        } catch (err) {
+            console.error('Error:', err.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchPerilaku = async () => {
+        setLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('perilaku')
+                .select('santri_id, ketekunan, kedisiplinan, kebersihan, kerapian')
+                .eq('semester_id', selectedSemester)
+
+            if (error) throw error
+
+            const perilakuMap = {}
+            santriList.forEach(s => {
+                perilakuMap[s.id] = {
+                    ketekunan: 'Baik',
+                    kedisiplinan: 'Baik',
+                    kebersihan: 'Baik',
+                    kerapian: 'Baik'
+                }
+            })
+            data?.forEach(p => {
+                perilakuMap[p.santri_id] = {
+                    ketekunan: p.ketekunan || 'Baik',
+                    kedisiplinan: p.kedisiplinan || 'Baik',
+                    kebersihan: p.kebersihan || 'Baik',
+                    kerapian: p.kerapian || 'Baik'
+                }
+            })
+            setPerilaku(perilakuMap)
         } catch (err) {
             console.error('Error:', err.message)
         } finally {
@@ -76,25 +137,46 @@ const PresensiPage = () => {
         }))
     }
 
+    const handlePerilakuChange = (santriId, kategori, nilai) => {
+        setPerilaku(prev => ({
+            ...prev,
+            [santriId]: {
+                ...prev[santriId],
+                [kategori.toLowerCase()]: nilai
+            }
+        }))
+    }
+
     const handleSave = async () => {
         setSaving(true)
         setError('')
         setSuccess('')
         try {
-            // Delete existing presensi for the date
-            await supabase.from('presensi').delete().eq('tanggal', selectedDate)
-
-            // Insert new presensi
-            const presensiData = Object.entries(presensi).map(([santriId, status]) => ({
-                santri_id: santriId,
-                tanggal: selectedDate,
-                status
-            }))
-
-            const { error } = await supabase.from('presensi').insert(presensiData)
-            if (error) throw error
-
-            setSuccess('Presensi berhasil disimpan!')
+            if (activeTab === 'presensi') {
+                await supabase.from('presensi').delete().eq('tanggal', selectedDate)
+                const presensiData = Object.entries(presensi).map(([santriId, status]) => ({
+                    santri_id: santriId,
+                    tanggal: selectedDate,
+                    status
+                }))
+                const { error } = await supabase.from('presensi').insert(presensiData)
+                if (error) throw error
+                setSuccess('Presensi berhasil disimpan!')
+            } else {
+                // Save perilaku
+                await supabase.from('perilaku').delete().eq('semester_id', selectedSemester)
+                const perilakuData = Object.entries(perilaku).map(([santriId, values]) => ({
+                    santri_id: santriId,
+                    semester_id: selectedSemester,
+                    ketekunan: values.ketekunan,
+                    kedisiplinan: values.kedisiplinan,
+                    kebersihan: values.kebersihan,
+                    kerapian: values.kerapian
+                }))
+                const { error } = await supabase.from('perilaku').insert(perilakuData)
+                if (error) throw error
+                setSuccess('Perilaku santri berhasil disimpan!')
+            }
             setTimeout(() => setSuccess(''), 3000)
         } catch (err) {
             console.error('Error:', err.message)
@@ -114,6 +196,17 @@ const PresensiPage = () => {
         }
     }
 
+    const getNilaiColor = (nilai) => {
+        switch (nilai) {
+            case 'Sangat Baik': return 'success'
+            case 'Baik': return 'info'
+            case 'Cukup': return 'warning'
+            case 'Kurang': return 'orange'
+            case 'Buruk': return 'danger'
+            default: return ''
+        }
+    }
+
     const summary = {
         hadir: Object.values(presensi).filter(s => s === 'hadir').length,
         izin: Object.values(presensi).filter(s => s === 'izin').length,
@@ -125,99 +218,217 @@ const PresensiPage = () => {
         <div className="presensi-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Presensi Harian</h1>
-                    <p className="page-subtitle">Catat kehadiran santri setiap hari</p>
+                    <h1 className="page-title">Presensi & Perilaku</h1>
+                    <p className="page-subtitle">Catat kehadiran dan perilaku santri</p>
                 </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="tab-navigation mb-4">
+                <button
+                    className={`tab-btn ${activeTab === 'presensi' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('presensi')}
+                >
+                    <Calendar size={18} />
+                    Presensi Harian
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'perilaku' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('perilaku')}
+                >
+                    <Heart size={18} />
+                    Perilaku Santri
+                </button>
             </div>
 
             {error && <div className="alert alert-error mb-3">{error}</div>}
             {success && <div className="alert alert-success mb-3">{success}</div>}
 
-            {/* Date Selector */}
-            <div className="date-selector">
-                <button className="btn btn-secondary btn-sm" onClick={() => {
-                    const d = new Date(selectedDate)
-                    d.setDate(d.getDate() - 1)
-                    setSelectedDate(d.toISOString().split('T')[0])
-                }}>
-                    <ChevronLeft size={18} />
-                </button>
-                <div className="date-input-wrapper">
-                    <Calendar size={18} />
-                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="date-input" />
-                </div>
-                <button className="btn btn-secondary btn-sm" onClick={() => {
-                    const d = new Date(selectedDate)
-                    d.setDate(d.getDate() + 1)
-                    setSelectedDate(d.toISOString().split('T')[0])
-                }}>
-                    <ChevronRight size={18} />
-                </button>
-            </div>
+            {/* PRESENSI TAB */}
+            {activeTab === 'presensi' && (
+                <>
+                    {/* Date Selector */}
+                    <div className="date-selector">
+                        <button className="btn btn-secondary btn-sm" onClick={() => {
+                            const d = new Date(selectedDate)
+                            d.setDate(d.getDate() - 1)
+                            setSelectedDate(d.toISOString().split('T')[0])
+                        }}>
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="date-input-wrapper">
+                            <Calendar size={18} />
+                            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="date-input" />
+                        </div>
+                        <button className="btn btn-secondary btn-sm" onClick={() => {
+                            const d = new Date(selectedDate)
+                            d.setDate(d.getDate() + 1)
+                            setSelectedDate(d.toISOString().split('T')[0])
+                        }}>
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
 
-            {/* Summary */}
-            <div className="presensi-summary">
-                <div className="summary-item hadir"><span className="summary-count">{summary.hadir}</span><span className="summary-label">Hadir</span></div>
-                <div className="summary-item izin"><span className="summary-count">{summary.izin}</span><span className="summary-label">Izin</span></div>
-                <div className="summary-item sakit"><span className="summary-count">{summary.sakit}</span><span className="summary-label">Sakit</span></div>
-                <div className="summary-item alpha"><span className="summary-count">{summary.alpha}</span><span className="summary-label">Alpha</span></div>
-            </div>
+                    {/* Summary */}
+                    <div className="presensi-summary">
+                        <div className="summary-item hadir"><span className="summary-count">{summary.hadir}</span><span className="summary-label">Hadir</span></div>
+                        <div className="summary-item izin"><span className="summary-count">{summary.izin}</span><span className="summary-label">Izin</span></div>
+                        <div className="summary-item sakit"><span className="summary-count">{summary.sakit}</span><span className="summary-label">Sakit</span></div>
+                        <div className="summary-item alpha"><span className="summary-count">{summary.alpha}</span><span className="summary-label">Alpha</span></div>
+                    </div>
 
-            {/* Presensi Table */}
-            <div className="table-container">
-                <div className="table-header">
-                    <h3 className="table-title">Daftar Santri ({santriList.length})</h3>
-                    <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                        {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Presensi</>}
-                    </button>
-                </div>
+                    {/* Presensi Table */}
+                    <div className="table-container">
+                        <div className="table-header">
+                            <h3 className="table-title">Daftar Santri ({santriList.length})</h3>
+                            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                                {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Presensi</>}
+                            </button>
+                        </div>
 
-                <div className="table-wrapper">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>NIS</th>
-                                <th>Nama</th>
-                                <th>Kelas</th>
-                                <th>Status Kehadiran</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan="5" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                            ) : santriList.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center">Tidak ada data santri</td></tr>
-                            ) : (
-                                santriList.map((santri, index) => (
-                                    <tr key={santri.id}>
-                                        <td>{index + 1}</td>
-                                        <td>{santri.nis}</td>
-                                        <td className="name-cell">{santri.nama}</td>
-                                        <td>{santri.kelas}</td>
-                                        <td>
-                                            <div className="status-buttons">
-                                                {['hadir', 'izin', 'sakit', 'alpha'].map((status) => (
-                                                    <button
-                                                        key={status}
-                                                        className={`status-btn ${status} ${presensi[santri.id] === status ? 'active' : ''}`}
-                                                        onClick={() => handleStatusChange(santri.id, status)}
-                                                    >
-                                                        {getStatusIcon(status)}
-                                                        <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </td>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>NIS</th>
+                                        <th>Nama</th>
+                                        <th>Kelas</th>
+                                        <th>Status Kehadiran</th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr><td colSpan="5" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                    ) : santriList.length === 0 ? (
+                                        <tr><td colSpan="5" className="text-center">Tidak ada data santri</td></tr>
+                                    ) : (
+                                        santriList.map((santri, index) => (
+                                            <tr key={santri.id}>
+                                                <td>{index + 1}</td>
+                                                <td>{santri.nis}</td>
+                                                <td className="name-cell">{santri.nama}</td>
+                                                <td>{santri.kelas}</td>
+                                                <td>
+                                                    <div className="status-buttons">
+                                                        {['hadir', 'izin', 'sakit', 'alpha'].map((status) => (
+                                                            <button
+                                                                key={status}
+                                                                className={`status-btn ${status} ${presensi[santri.id] === status ? 'active' : ''}`}
+                                                                onClick={() => handleStatusChange(santri.id, status)}
+                                                            >
+                                                                {getStatusIcon(status)}
+                                                                <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* PERILAKU TAB */}
+            {activeTab === 'perilaku' && (
+                <>
+                    {/* Filter Bar */}
+                    <div className="filter-bar mb-4">
+                        <div className="filter-group">
+                            <label>Semester</label>
+                            <select
+                                value={selectedSemester}
+                                onChange={(e) => setSelectedSemester(e.target.value)}
+                                className="form-select"
+                            >
+                                <option value="">-- Pilih Semester --</option>
+                                {semesterList.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.nama} - {s.tahun_ajaran} {s.is_active ? '(Aktif)' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label>Cari Santri</label>
+                            <input
+                                type="text"
+                                placeholder="Ketik nama santri..."
+                                value={searchSantri}
+                                onChange={(e) => setSearchSantri(e.target.value)}
+                                className="form-input"
+                            />
+                        </div>
+                        <div className="filter-group filter-action">
+                            <button className="btn btn-primary btn-save" onClick={handleSave} disabled={saving || !selectedSemester}>
+                                {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />}
+                                <span>{saving ? 'Menyimpan...' : 'Simpan'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Perilaku Table */}
+                    <div className="table-container">
+                        <div className="table-header">
+                            <h3 className="table-title">Penilaian Perilaku ({santriList.filter(s => s.nama.toLowerCase().includes(searchSantri.toLowerCase())).length} santri)</h3>
+                        </div>
+
+                        <div className="table-wrapper">
+                            <table className="table perilaku-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Santri</th>
+                                        <th>Kelas</th>
+                                        {PERILAKU_KATEGORI.map(k => (
+                                            <th key={k}>{k}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr><td colSpan={3 + PERILAKU_KATEGORI.length} className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                    ) : !selectedSemester ? (
+                                        <tr><td colSpan={3 + PERILAKU_KATEGORI.length} className="text-center">Pilih semester terlebih dahulu</td></tr>
+                                    ) : santriList.filter(s => s.nama.toLowerCase().includes(searchSantri.toLowerCase())).length === 0 ? (
+                                        <tr><td colSpan={3 + PERILAKU_KATEGORI.length} className="text-center">Tidak ada data santri</td></tr>
+                                    ) : (
+                                        santriList
+                                            .filter(s => s.nama.toLowerCase().includes(searchSantri.toLowerCase()))
+                                            .map((santri, index) => (
+                                                <tr key={santri.id}>
+                                                    <td>{index + 1}</td>
+                                                    <td className="name-cell">{santri.nama}</td>
+                                                    <td>{santri.kelas}</td>
+                                                    {PERILAKU_KATEGORI.map(kategori => (
+                                                        <td key={kategori}>
+                                                            <select
+                                                                value={perilaku[santri.id]?.[kategori.toLowerCase()] || 'Baik'}
+                                                                onChange={(e) => handlePerilakuChange(santri.id, kategori, e.target.value)}
+                                                                className={`perilaku-select ${getNilaiColor(perilaku[santri.id]?.[kategori.toLowerCase()])}`}
+                                                            >
+                                                                {PERILAKU_NILAI.map(nilai => (
+                                                                    <option key={nilai} value={nilai}>{nilai}</option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     )
 }
 
 export default PresensiPage
+

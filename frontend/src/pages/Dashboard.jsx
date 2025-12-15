@@ -36,8 +36,22 @@ const Dashboard = () => {
         totalHafalan: 0
     })
     const [loading, setLoading] = useState(true)
-
     const [hafalanProgress, setHafalanProgress] = useState([])
+    const [greeting, setGreeting] = useState('')
+
+    // Update greeting based on current time
+    const updateGreeting = () => {
+        const hour = new Date().getHours()
+        if (hour >= 4 && hour < 11) {
+            setGreeting('Selamat Pagi')
+        } else if (hour >= 11 && hour < 15) {
+            setGreeting('Selamat Siang')
+        } else if (hour >= 15 && hour < 18) {
+            setGreeting('Selamat Sore')
+        } else {
+            setGreeting('Selamat Malam')
+        }
+    }
 
     // Chart data
     const chartData = {
@@ -80,6 +94,11 @@ const Dashboard = () => {
     useEffect(() => {
         fetchStats()
         fetchHafalanProgress()
+        updateGreeting()
+
+        // Update greeting every minute
+        const interval = setInterval(updateGreeting, 60000)
+        return () => clearInterval(interval)
     }, [])
 
     const fetchStats = async () => {
@@ -149,19 +168,11 @@ const Dashboard = () => {
         }
     }
 
-    const getGreeting = () => {
-        const hour = new Date().getHours()
-        if (hour < 12) return 'Selamat Pagi'
-        if (hour < 15) return 'Selamat Siang'
-        if (hour < 18) return 'Selamat Sore'
-        return 'Selamat Malam'
-    }
-
     return (
         <div className="dashboard">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">👋 {getGreeting()}!</h1>
+                    <h1 className="page-title">👋 {greeting}!</h1>
                     <p className="page-subtitle">Selamat datang di Sistem Akademik PTQA Batuan</p>
                 </div>
                 <ConnectionStatus />

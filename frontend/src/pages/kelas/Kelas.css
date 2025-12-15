@@ -69,3 +69,33 @@
     border-top: 1px solid var(--border-color);
     background: var(--bg-light);
 }
+
+/* Kelas Responsive */
+@media screen and (max-width: 768px) {
+    .kelas-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .kelas-header {
+        padding: 16px;
+    }
+
+    .kelas-name {
+        font-size: 1rem;
+    }
+
+    .kelas-body {
+        padding: 16px;
+    }
+
+    .kelas-actions {
+        padding: 10px 16px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .kelas-grid {
+        grid-template-columns: 1fr;
+    }
+}

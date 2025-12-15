@@ -67,6 +67,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  cursor: default;
 }
 
 html {
@@ -80,6 +81,7 @@ body {
   color: var(--text-dark);
   line-height: 1.6;
   overflow-x: hidden;
+  cursor: default;
 }
 
 a {
@@ -89,6 +91,7 @@ a {
 
 ul {
   list-style: none;
+  cursor: default;
 }
 
 button {
@@ -98,12 +101,21 @@ button {
   font-family: inherit;
 }
 
+a {
+  cursor: pointer;
+}
+
 input,
 select,
 textarea {
   border: none;
   outline: none;
   font-family: inherit;
+  cursor: text;
+}
+
+select {
+  cursor: pointer;
 }
 
 /* ================================
@@ -153,14 +165,22 @@ textarea {
 }
 
 .logo-icon {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   background: var(--accent-yellow);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.logo-image {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .logo-icon svg {
@@ -1662,5 +1682,256 @@ textarea {
   /* Hide user info text on mobile */
   .user-info {
     display: none;
+  }
+
+  /* ================================
+     Mobile Responsive Tables
+     ================================ */
+  .table-container {
+    margin: 0 -16px;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    min-width: 600px;
+    font-size: 13px;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+
+  /* ================================
+     Mobile Stats Grid
+     ================================ */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .stat-card {
+    padding: 16px !important;
+  }
+
+  .stat-value {
+    font-size: 1.5rem !important;
+  }
+
+  /* ================================
+     Mobile Form Styles
+     ================================ */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .form-card {
+    padding: 16px !important;
+    margin: 0 -8px;
+  }
+
+  .form-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .form-actions .btn {
+    width: 100% !important;
+  }
+
+  /* ================================
+     Mobile Charts
+     ================================ */
+  .charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .chart-card {
+    padding: 16px !important;
+  }
+
+  /* ================================
+     Mobile Modal
+     ================================ */
+  .modal {
+    margin: 16px !important;
+    max-height: 90vh !important;
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+  }
+
+  .modal-body {
+    max-height: 60vh !important;
+    overflow-y: auto;
+  }
+
+  /* ================================
+     Mobile Buttons
+     ================================ */
+  .btn {
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+  }
+
+  .btn-icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .action-buttons {
+    gap: 4px !important;
+  }
+
+  /* ================================
+     Mobile Page Header
+     ================================ */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .page-title {
+    font-size: 1.25rem !important;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem !important;
+  }
+}
+
+/* ================================
+   Tablet Responsive (768px - 1024px)
+   ================================ */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .sidebar {
+    width: var(--sidebar-collapsed-width);
+  }
+
+  .main-content {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+}
+
+/* ================================
+   Extra Small Devices (< 480px)
+   ================================ */
+@media screen and (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
+  .content-wrapper {
+    padding: 12px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .stat-card {
+    padding: 12px !important;
+  }
+
+  .stat-value {
+    font-size: 1.25rem !important;
+  }
+
+  .stat-label {
+    font-size: 0.75rem !important;
+  }
+
+  .table {
+    font-size: 12px;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 6px;
+  }
+
+  .btn {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .modal {
+    margin: 8px !important;
+  }
+
+  .badge {
+    padding: 2px 6px !important;
+    font-size: 10px !important;
+  }
+
+  .page-title {
+    font-size: 1.1rem !important;
+  }
+
+  /* Card grids on very small screens */
+  .kelas-grid,
+  .halaqoh-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ================================
+   Large Screens (> 1440px)
+   ================================ */
+@media screen and (min-width: 1440px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .content-wrapper {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+}
+
+/* ================================
+   Print Styles
+   ================================ */
+@media print {
+
+  .sidebar,
+  .header,
+  .btn,
+  .action-buttons {
+    display: none !important;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  .table {
+    font-size: 10pt;
   }
 }
