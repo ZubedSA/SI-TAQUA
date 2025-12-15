@@ -1,0 +1,67 @@
+.halaqoh-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.halaqoh-card {
+    background: var(--bg-white);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: all var(--transition-fast);
+}
+
+.halaqoh-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.halaqoh-icon {
+    font-size: 2.5rem;
+    background: var(--accent-green-light);
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.halaqoh-content {
+    flex: 1;
+}
+
+.halaqoh-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.halaqoh-musyrif {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.halaqoh-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.halaqoh-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.halaqoh-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
