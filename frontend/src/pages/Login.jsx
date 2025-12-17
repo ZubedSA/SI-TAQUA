@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, LogIn, UserPlus, RefreshCw } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -7,6 +7,19 @@ import './Login.css'
 const Login = () => {
     const navigate = useNavigate()
     const { signIn, signUp } = useAuth()
+
+    // Force light mode on login page
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('ptqa-theme')
+        document.documentElement.setAttribute('data-theme', 'light')
+
+        // Restore theme when leaving login page
+        return () => {
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme)
+            }
+        }
+    }, [])
 
     const [isRegister, setIsRegister] = useState(false)
     const [emailOrPhone, setEmailOrPhone] = useState('')

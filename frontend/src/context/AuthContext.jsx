@@ -1,7 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
+
+// Idle timeout duration in milliseconds (20 minutes)
+const IDLE_TIMEOUT = 20 * 60 * 1000
 
 export const useAuth = () => {
     const context = useContext(AuthContext)
@@ -15,6 +18,81 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [userProfile, setUserProfile] = useState({ role: 'admin' }) // Default role
     const [loading, setLoading] = useState(true)
+    const idleTimerRef = useRef(null)
+    const lastActivityRef = useRef(Date.now())
+
+    // Reset idle timer on user activity
+    const resetIdleTimer = useCallback(() => {
+        lastActivityRef.current = Date.now()
+
+        if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current)
+        }
+
+        // Only set timer if user is logged in
+        if (user) {
+            idleTimerRef.current = setTimeout(() => {
+                // Auto logout after idle timeout
+                console.log('Session expired due to inactivity')
+                handleAutoLogout()
+            }, IDLE_TIMEOUT)
+        }
+    }, [user])
+
+    // Handle auto logout
+    const handleAutoLogout = async () => {
+        try {
+            await supabase.auth.signOut()
+            setUser(null)
+            setUserProfile({ role: 'admin' })
+            alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 20 menit. Silakan login kembali.')
+            window.location.href = '/login'
+        } catch (error) {
+            console.error('Auto logout error:', error)
+        }
+    }
+
+    // Setup activity listeners
+    useEffect(() => {
+        if (!user) {
+            // Clear timer if user is not logged in
+            if (idleTimerRef.current) {
+                clearTimeout(idleTimerRef.current)
+            }
+            return
+        }
+
+        // Activity events to track
+        const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
+
+        // Throttle function to prevent too many resets
+        let lastReset = 0
+        const throttledReset = () => {
+            const now = Date.now()
+            if (now - lastReset > 1000) { // Only reset once per second
+                lastReset = now
+                resetIdleTimer()
+            }
+        }
+
+        // Add event listeners
+        activityEvents.forEach(event => {
+            document.addEventListener(event, throttledReset, { passive: true })
+        })
+
+        // Start the idle timer
+        resetIdleTimer()
+
+        // Cleanup
+        return () => {
+            activityEvents.forEach(event => {
+                document.removeEventListener(event, throttledReset)
+            })
+            if (idleTimerRef.current) {
+                clearTimeout(idleTimerRef.current)
+            }
+        }
+    }, [user, resetIdleTimer])
 
     useEffect(() => {
         const getSession = async () => {

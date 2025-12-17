@@ -34,6 +34,7 @@ const HafalanForm = () => {
         ayat_selesai: 1,
         jenis: jenisFromUrl,
         status: 'Lancar',
+        kadar_setoran: '1 Halaman',
         tanggal: new Date().toISOString().split('T')[0],
         penguji_id: '',
         catatan: ''
@@ -220,7 +221,7 @@ Kepada Yth. Bapak/Ibu *${santri?.nama_wali || 'Wali Santri'}*
 
 📌 *Nama Santri:* ${santri?.nama || '-'}
 📅 *Tanggal:* ${formData.tanggal}
-📖 *Jenis:* ${formData.jenis}
+📖 *Jenis Hafalan:* ${formData.jenis}
 
 *Detail Hafalan:*
 • Mulai: Juz ${formData.juz_mulai}, ${formData.surah_mulai} ayat ${formData.ayat_mulai}
@@ -294,7 +295,7 @@ _PTQA Batuan_`
                             {selectedHalaqoh && <small className="form-hint">{filteredSantriList.length} santri tersedia</small>}
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Jenis *</label>
+                            <label className="form-label">Jenis Setoran *</label>
                             <select name="jenis" className="form-control" value={formData.jenis} onChange={handleChange}>
                                 <option value="Setoran">Setoran (Hafalan Baru)</option>
                                 <option value="Muroja'ah">Muroja'ah (Mengulang)</option>
@@ -354,6 +355,16 @@ _PTQA Batuan_`
                                 <option value="Sedang">Sedang</option>
                                 <option value="Lemah">Lemah</option>
                                 <option value="Baca Nazhor">Baca Nazhor</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Kadar Setoran *</label>
+                            <select name="kadar_setoran" className="form-control" value={formData.kadar_setoran} onChange={handleChange}>
+                                <option value="Setengah Halaman">½ Halaman</option>
+                                <option value="1 Halaman">1 Halaman</option>
+                                <option value="2 Halaman">2 Halaman</option>
+                                <option value="3 Halaman">3 Halaman</option>
+                                <option value="4 Halaman">4 Halaman</option>
                             </select>
                         </div>
                         <div className="form-group">

@@ -707,3 +707,65 @@
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* Single Setoran Button - Full Width on Mobile */
+.toolbar-single-btn {
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.btn-setoran-full {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 28px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    min-width: 160px;
+    text-decoration: none !important;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-setoran-full:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
+}
+
+@media (max-width: 992px) {
+    .hafalan-toolbar {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .toolbar-single-btn {
+        width: 100%;
+    }
+
+    .btn-setoran-full {
+        width: 100% !important;
+        padding: 14px 24px !important;
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .btn-setoran-full {
+        padding: 12px 20px !important;
+        font-size: 0.95rem !important;
+        min-width: unset;
+    }
+}
+
+/* Dark Mode - Musyrif Halaqoh Input */
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] input[disabled] {
+    background-color: #334155 !important;
+    color: #0f172a !important;
+    border-color: #475569 !important;
+    -webkit-text-fill-color: #0f172a !important;
+    opacity: 1 !important;
+}

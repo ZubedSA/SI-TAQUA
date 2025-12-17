@@ -181,6 +181,7 @@ const GuruForm = () => {
                                 <option value="Pengajar">Pengajar</option>
                                 <option value="Wali Kelas">Wali Kelas</option>
                                 <option value="Musyrif">Musyrif</option>
+                                <option value="Pengasuh">Pengasuh</option>
                                 <option value="Kepala Sekolah">Kepala Sekolah</option>
                                 <option value="Staff">Staff</option>
                             </select>
