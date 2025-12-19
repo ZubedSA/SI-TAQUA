@@ -16,7 +16,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
-    const [userProfile, setUserProfile] = useState({ role: 'admin' }) // Default role
+    const [userProfile, setUserProfile] = useState({ role: 'guest' }) // Default role
     const [loading, setLoading] = useState(true)
     const idleTimerRef = useRef(null)
     const lastActivityRef = useRef(Date.now())
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
         try {
             await supabase.auth.signOut()
             setUser(null)
-            setUserProfile({ role: 'admin' })
+            setUserProfile({ role: 'guest' })
             alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 20 menit. Silakan login kembali.')
             window.location.href = '/login'
         } catch (error) {
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
                 if (session?.user) {
                     fetchUserProfile(session.user.id)
                 } else {
-                    setUserProfile({ role: 'admin' })
+                    setUserProfile({ role: 'guest' })
                 }
                 setLoading(false)
             }
@@ -144,68 +144,42 @@ export const AuthProvider = ({ children }) => {
 
             if (error) {
                 // Tabel tidak ada atau error lainnya - gunakan default
-                console.log('Profile not found, using default admin role')
-                setUserProfile({ role: 'admin' })
+                console.log('Profile not found, using default guest role')
+                setUserProfile({ role: 'guest' })
                 return
             }
 
             setUserProfile(data || { role: 'admin' })
         } catch (err) {
             // Timeout atau error - gunakan default
-            console.log('Using default admin role')
-            setUserProfile({ role: 'admin' })
+            console.log('Using default guest role')
+            setUserProfile({ role: 'guest' })
         }
     }
 
-    // Fungsi untuk menormalisasi nomor telepon
-    const normalizePhone = (phone) => {
-        let cleaned = phone.replace(/[^\d]/g, '')
-        // Konversi 08xxx ke 628xxx
-        if (cleaned.startsWith('0')) {
-            cleaned = '62' + cleaned.substring(1)
-        }
-        // Hapus prefix +
-        if (cleaned.startsWith('+')) {
-            cleaned = cleaned.substring(1)
-        }
-        return cleaned
-    }
+    const signIn = async (input, password) => {
+        let authEmail = input.trim()
 
-    // Cek apakah input adalah nomor telepon
-    const isPhoneNumber = (input) => {
-        const cleaned = input.replace(/[^\d+]/g, '')
-        return /^(\+62|62|08)\d{8,12}$/.test(cleaned)
-    }
+        // Cek apakah input adalah email valid (mengandung @)
+        // Jika TIDAK mengandung @, kita asumsikan sebagai USERNAME
+        if (!authEmail.includes('@')) {
+            console.log('Looking up username:', authEmail)
+            const { data: foundEmail, error: rpcError } = await supabase
+                .rpc('get_email_by_username', { p_username: authEmail })
 
-    const signIn = async (emailOrPhone, password) => {
-        let authEmail = emailOrPhone
-
-        // Jika input adalah nomor telepon, cari auth email
-        if (isPhoneNumber(emailOrPhone)) {
-            const normalizedPhone = normalizePhone(emailOrPhone)
-
-            // Cari user berdasarkan nomor telepon di user_profiles
-            const { data: profiles, error: profileError } = await supabase
-                .from('user_profiles')
-                .select('email, no_telp, user_id')
-                .or(`no_telp.eq.${normalizedPhone},no_telp.eq.0${normalizedPhone.substring(2)},no_telp.eq.+${normalizedPhone}`)
-
-            if (profileError) {
-                console.error('Error finding profile:', profileError)
-                throw new Error('Terjadi kesalahan saat mencari akun')
+            if (rpcError) {
+                console.error('Error finding username:', rpcError)
+                if (rpcError.message.includes('function get_email_by_username')) {
+                    throw new Error('Database belum update (MIGRATE_TO_USERNAME.sql)')
+                }
+                throw new Error('Gagal mencari username')
             }
 
-            if (!profiles || profiles.length === 0) {
-                throw new Error('Akun tidak ditemukan dengan nomor telepon ini')
+            if (!foundEmail) {
+                throw new Error('Username tidak ditemukan!')
             }
 
-            // Jika email di profile ada, gunakan itu. Jika tidak, gunakan email placeholder
-            if (profiles[0].email) {
-                authEmail = profiles[0].email
-            } else {
-                // User hanya punya no_telp, pakai email placeholder
-                authEmail = `${normalizedPhone}@phone.local`
-            }
+            authEmail = foundEmail
         }
 
         const { data, error } = await supabase.auth.signInWithPassword({

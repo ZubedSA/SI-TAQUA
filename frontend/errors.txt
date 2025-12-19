@@ -1,0 +1,31 @@
+
+> frontend@0.0.0 build
+> vite build
+
+[36mvite v7.2.7 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 29 modules transformed.
+[31m✗[39m Build failed in 320ms
+[31merror during build:
+[31m[vite:esbuild] Transform failed with 1 error:
+D:/web/akademik/frontend/src/pages/pengaturan/PengaturanPage.jsx:1198:0: ERROR: Unexpected "}"[31m
+file: [36mD:/web/akademik/frontend/src/pages/pengaturan/PengaturanPage.jsx:1198:0[31m
+[33m
+[33mUnexpected "}"[33m
+1196 |      </div >
+1197 |  )
+1198 |  }
+     |  ^
+1199 |  
+1200 |  export default PengaturanPage
+[31m
+    at failureErrorWithLog (D:\web\akademik\frontend\node_modules\esbuild\lib\main.js:1467:15)
+    at D:\web\akademik\frontend\node_modules\esbuild\lib\main.js:736:50
+    at responseCallbacks.<computed> (D:\web\akademik\frontend\node_modules\esbuild\lib\main.js:603:9)
+    at handleIncomingPacket (D:\web\akademik\frontend\node_modules\esbuild\lib\main.js:658:12)
+    at Socket.readFromStdout (D:\web\akademik\frontend\node_modules\esbuild\lib\main.js:581:7)
+    at Socket.emit (node:events:508:28)
+    at addChunk (node:internal/streams/readable:559:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+    at Readable.push (node:internal/streams/readable:390:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)[39m

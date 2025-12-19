@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import { Users, Database, UserPlus, Edit, Trash2, RefreshCw, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Save, Shield, GraduationCap, User, Key, Lock, Eye, UserCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import * as XLSX from 'xlsx'
-import AkunWaliPage from '../akunwali/AkunWaliPage'
+
 import './Pengaturan.css'
 
 const PengaturanPage = () => {
@@ -13,7 +14,8 @@ const PengaturanPage = () => {
     const [loadingUsers, setLoadingUsers] = useState(false)
     const [showUserModal, setShowUserModal] = useState(false)
     const [editingUser, setEditingUser] = useState(null)
-    const [userForm, setUserForm] = useState({ email: '', password: '', nama: '', role: 'guru', no_telp: '' })
+    const [userForm, setUserForm] = useState({ email: '', password: '', nama: '', role: 'guru', no_telp: '', santri_ids: [], username: '' })
+    const [santriList, setSantriList] = useState([])
     const [savingUser, setSavingUser] = useState(false)
     const [userError, setUserError] = useState('')
     const [userSuccess, setUserSuccess] = useState('')
@@ -40,6 +42,7 @@ const PengaturanPage = () => {
     useEffect(() => {
         if (activeTab === 'users') {
             fetchUsers()
+            fetchSantriList()
         }
     }, [activeTab])
 
@@ -56,6 +59,20 @@ const PengaturanPage = () => {
         }
     }
 
+    const fetchSantriList = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('santri')
+                .select('id, nama, kelas:kelas_id(nama)')
+                .eq('status', 'Aktif')
+                .order('nama')
+            if (error) throw error
+            setSantriList(data || [])
+        } catch (err) {
+            console.error('Fetch santri error:', err)
+        }
+    }
+
     const handleAddUser = async (e) => {
         e.preventDefault()
         setSavingUser(true)
@@ -63,6 +80,8 @@ const PengaturanPage = () => {
         setUserSuccess('')
 
         try {
+            let newUserId = null
+
             if (editingUser) {
                 // Update existing user profile
                 const { error } = await supabase
@@ -72,6 +91,7 @@ const PengaturanPage = () => {
                         role: userForm.role,
                         no_telp: userForm.no_telp,
                         email: userForm.email,
+                        username: userForm.username,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', editingUser.id)
@@ -79,24 +99,27 @@ const PengaturanPage = () => {
                 if (error) throw error
                 setUserSuccess('User berhasil diupdate!')
             } else {
-                // Validasi: minimal email ATAU no_telp harus diisi
-                if (!userForm.email && !userForm.no_telp) {
-                    throw new Error('Email atau No. Telepon harus diisi (minimal salah satu)')
+                // Validasi: Username wajib
+                if (!userForm.username) {
+                    throw new Error('Username harus diisi')
                 }
 
-                // Jika tidak ada email, generate email placeholder dari no_telp
+                // Generate email placeholder jika kosong
                 let authEmail = userForm.email
-                if (!authEmail && userForm.no_telp) {
-                    // Normalize phone number
-                    let phone = userForm.no_telp.replace(/[^\d]/g, '')
-                    if (phone.startsWith('0')) {
-                        phone = '62' + phone.substring(1)
-                    }
-                    authEmail = `${phone}@phone.local`
+                if (!authEmail) {
+                    // Gunakan username sebagai basis email
+                    authEmail = `${userForm.username}@username.local`
                 }
 
                 // Create new user with Supabase Auth
-                const { data: authData, error: authError } = await supabase.auth.signUp({
+                // Gunakan client sementara agar session Admin tidak tertimpa/logout
+                const tempSupabase = createClient(
+                    import.meta.env.VITE_SUPABASE_URL,
+                    import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+                )
+
+                const { data: authData, error: authError } = await tempSupabase.auth.signUp({
                     email: authEmail,
                     password: userForm.password,
                     options: {
@@ -113,7 +136,8 @@ const PengaturanPage = () => {
                 if (authData.user) {
                     const { error: profileError } = await supabase.from('user_profiles').insert([{
                         user_id: authData.user.id,
-                        email: userForm.email || null, // Simpan email asli (bisa null)
+                        email: userForm.email || null,
+                        username: userForm.username,
                         no_telp: userForm.no_telp || null,
                         nama: userForm.nama,
                         role: userForm.role,
@@ -121,15 +145,37 @@ const PengaturanPage = () => {
                     }])
 
                     if (profileError) throw profileError
+                    newUserId = authData.user.id
                 }
 
                 setUserSuccess('User berhasil ditambahkan!')
             }
 
+            // JOIN SANTRI LOGIC
+            const targetUserId = editingUser ? editingUser.user_id : newUserId
+
+            if (targetUserId && userForm.role === 'wali') {
+                // 1. Reset: Unlink semua santri dari user ini dulu
+                await supabase.from('santri').update({ wali_id: null }).eq('wali_id', targetUserId)
+
+                // 2. Link: Hubungkan santri yang dipilih
+                if (userForm.santri_ids && userForm.santri_ids.length > 0) {
+                    const { error: linkError } = await supabase
+                        .from('santri')
+                        .update({ wali_id: targetUserId })
+                        .in('id', userForm.santri_ids)
+
+                    if (linkError) {
+                        console.error('Link santri error:', linkError)
+                        alert('User disimpan, TAPI Gagal menghubungkan santri: ' + linkError.message)
+                    }
+                }
+            }
+
             fetchUsers()
             setTimeout(() => {
                 setShowUserModal(false)
-                setUserForm({ email: '', password: '', nama: '', role: 'guru', no_telp: '' })
+                setUserForm({ email: '', password: '', nama: '', role: 'guru', no_telp: '', santri_ids: [], username: '' })
                 setEditingUser(null)
                 setUserSuccess('')
             }, 2000)
@@ -142,12 +188,27 @@ const PengaturanPage = () => {
 
     const handleEditUser = (user) => {
         setEditingUser(user)
+        // Fetch linked santri if role is wali
+        let linkedSantriIds = []
+        if (user.role === 'wali') {
+            supabase
+                .from('santri')
+                .select('id')
+                .eq('wali_id', user.user_id)
+                .then(({ data }) => {
+                    if (data) {
+                        setUserForm(prev => ({ ...prev, santri_ids: data.map(s => s.id) }))
+                    }
+                })
+        }
+
         setUserForm({
-            email: user.email,
+            username: user.username || user.email.split('@')[0],
             password: '',
             nama: user.nama || '',
             role: user.role || 'guru',
-            no_telp: user.no_telp || ''
+            no_telp: user.no_telp || '',
+            santri_ids: [] // Akan diisi async di atas
         })
         setShowUserModal(true)
     }
@@ -680,12 +741,7 @@ const PengaturanPage = () => {
                 >
                     <Users size={18} /> Kelola Akun Pengguna
                 </button>
-                <button
-                    className={`pengaturan-tab ${activeTab === 'wali' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('wali')}
-                >
-                    <UserCheck size={18} /> Kelola Akun Wali
-                </button>
+
                 <button
                     className={`pengaturan-tab ${activeTab === 'data-input' ? 'active' : ''}`}
                     onClick={() => setActiveTab('data-input')}
@@ -694,17 +750,14 @@ const PengaturanPage = () => {
                 </button>
             </div>
 
-            {/* Wali Management Tab */}
-            {activeTab === 'wali' && (
-                <AkunWaliPage />
-            )}
+
 
             {/* User Management Tab */}
             {activeTab === 'users' && (
                 <div className="settings-section">
                     <div className="section-header">
                         <h3>Daftar Pengguna</h3>
-                        <button className="btn btn-primary" onClick={() => { setEditingUser(null); setUserForm({ email: '', password: '', nama: '', role: 'guru', no_telp: '' }); setShowUserModal(true) }}>
+                        <button className="btn btn-primary" onClick={() => { setEditingUser(null); setUserForm({ email: '', password: '', nama: '', role: 'guru', no_telp: '', santri_ids: [], username: '' }); setShowUserModal(true) }}>
                             <UserPlus size={16} /> Tambah Pengguna
                         </button>
                     </div>
@@ -739,7 +792,7 @@ const PengaturanPage = () => {
                             <thead>
                                 <tr>
                                     <th>No</th>
-                                    <th>Email</th>
+                                    <th>Username</th>
                                     <th>No. Telepon</th>
                                     <th>Nama</th>
                                     <th>Role</th>
@@ -757,7 +810,9 @@ const PengaturanPage = () => {
                                         return (
                                             <tr key={user.id}>
                                                 <td>{idx + 1}</td>
-                                                <td>{user.email}</td>
+                                                <td>
+                                                    {user.username ? user.username : <span className="badge badge-danger">No Username</span>}
+                                                </td>
                                                 <td>{user.no_telp || '-'}</td>
                                                 <td>{user.nama || '-'}</td>
                                                 <td>
@@ -920,18 +975,19 @@ const PengaturanPage = () => {
                                 {userSuccess && <div className="alert alert-success mb-3">{userSuccess}</div>}
 
                                 <div className="info-box mb-3" style={{ background: '#f0f9ff', padding: '10px 12px', borderRadius: '6px', fontSize: '0.85rem', color: '#1e40af' }}>
-                                    💡 Isi <strong>Email</strong> atau <strong>No. Telepon</strong> (salah satu wajib). User akan login sesuai data yang diisi.
+                                    💡 User akan login menggunakan <strong>Username</strong> dan <strong>Password</strong>.
                                 </div>
 
                                 <div className="form-group">
-                                    <label className="form-label">Email</label>
+                                    <label className="form-label">Username *</label>
                                     <input
                                         type="text"
                                         className="form-control"
-                                        value={userForm.email}
-                                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                        value={userForm.username}
+                                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
                                         disabled={editingUser}
-                                        placeholder="contoh@email.com (opsional jika ada no. telp)"
+                                        placeholder="username"
+                                        required
                                     />
                                 </div>
 
@@ -984,6 +1040,44 @@ const PengaturanPage = () => {
                                         <option value="wali">Wali Santri - Lihat dan download nilai</option>
                                     </select>
                                 </div>
+
+                                {userForm.role === 'wali' && (
+                                    <div className="form-group">
+                                        <label className="form-label">Hubungkan Santri (Anak Asuh)</label>
+                                        <div className="santri-selector" style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', padding: '10px', borderRadius: '6px' }}>
+                                            {santriList.length === 0 ? (
+                                                <p className="text-muted small">Tidak ada data santri aktif.</p>
+                                            ) : (
+                                                santriList.map(santri => (
+                                                    <div key={santri.id} className="checkbox-item" style={{ marginBottom: '8px' }}>
+                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={(userForm.santri_ids || []).includes(santri.id)}
+                                                                onChange={(e) => {
+                                                                    const checked = e.target.checked
+                                                                    setUserForm(prev => ({
+                                                                        ...prev,
+                                                                        santri_ids: checked
+                                                                            ? [...prev.santri_ids, santri.id]
+                                                                            : prev.santri_ids.filter(id => id !== santri.id)
+                                                                    }))
+                                                                }}
+                                                                style={{ width: '16px', height: '16px' }}
+                                                            />
+                                                            <span style={{ color: (userForm.santri_ids || []).includes(santri.id) ? '#2563eb' : 'inherit', fontWeight: (userForm.santri_ids || []).includes(santri.id) ? '600' : 'normal' }}>
+                                                                {santri.nama} <small className="text-muted">({santri.kelas?.nama || '-'})</small>
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                        <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
+                                            {userForm.santri_ids.length} santri dipilih.
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowUserModal(false)}>Batal</button>
@@ -997,117 +1091,121 @@ const PengaturanPage = () => {
             )}
 
             {/* Reset Password Modal */}
-            {showPasswordModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title"><Lock size={20} /> Ubah Password</h3>
-                            <button className="modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+            {
+                showPasswordModal && (
+                    <div className="modal-overlay active">
+                        <div className="modal">
+                            <div className="modal-header">
+                                <h3 className="modal-title"><Lock size={20} /> Ubah Password</h3>
+                                <button className="modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+                            </div>
+                            <form onSubmit={handleSavePassword}>
+                                <div className="modal-body">
+                                    {passwordError && <div className="alert alert-error mb-3">{passwordError}</div>}
+                                    {passwordSuccess && <div className="alert alert-success mb-3">{passwordSuccess}</div>}
+
+                                    <div className="info-box mb-3">
+                                        <p><strong>User:</strong> {passwordUser?.email}</p>
+                                        <p><strong>Nama:</strong> {passwordUser?.nama || '-'}</p>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Password Baru *</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder="Minimal 6 karakter"
+                                            minLength={6}
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label className="form-label">Konfirmasi Password *</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="Ulangi password baru"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>Batal</button>
+                                    <button type="submit" className="btn btn-primary" disabled={savingPassword}>
+                                        {savingPassword ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : <><Save size={16} /> Simpan Password</>}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleSavePassword}>
-                            <div className="modal-body">
-                                {passwordError && <div className="alert alert-error mb-3">{passwordError}</div>}
-                                {passwordSuccess && <div className="alert alert-success mb-3">{passwordSuccess}</div>}
-
-                                <div className="info-box mb-3">
-                                    <p><strong>User:</strong> {passwordUser?.email}</p>
-                                    <p><strong>Nama:</strong> {passwordUser?.nama || '-'}</p>
-                                </div>
-
-                                <div className="form-group">
-                                    <label className="form-label">Password Baru *</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        placeholder="Minimal 6 karakter"
-                                        minLength={6}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label className="form-label">Konfirmasi Password *</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="Ulangi password baru"
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={savingPassword}>
-                                    {savingPassword ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : <><Save size={16} /> Simpan Password</>}
-                                </button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Detail User Modal */}
-            {showDetailModal && detailUser && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title"><Eye size={20} /> Detail Pengguna</h3>
-                            <button className="modal-close" onClick={() => setShowDetailModal(false)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="user-detail-card">
-                                <div className="detail-avatar">
-                                    <User size={48} />
-                                </div>
-                                <div className="detail-info">
-                                    <h3>{detailUser.nama || 'Nama tidak tersedia'}</h3>
-                                    <span className={`badge ${getRoleBadge(detailUser.role).class}`}>
-                                        {getRoleBadge(detailUser.role).label}
-                                    </span>
-                                </div>
+            {
+                showDetailModal && detailUser && (
+                    <div className="modal-overlay active">
+                        <div className="modal">
+                            <div className="modal-header">
+                                <h3 className="modal-title"><Eye size={20} /> Detail Pengguna</h3>
+                                <button className="modal-close" onClick={() => setShowDetailModal(false)}>×</button>
                             </div>
-
-                            <div className="detail-table">
-                                <div className="detail-row">
-                                    <span className="detail-label">Email</span>
-                                    <span className="detail-value">{detailUser.email}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Nama Lengkap</span>
-                                    <span className="detail-value">{detailUser.nama || '-'}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Role</span>
-                                    <span className="detail-value">
+                            <div className="modal-body">
+                                <div className="user-detail-card">
+                                    <div className="detail-avatar">
+                                        <User size={48} />
+                                    </div>
+                                    <div className="detail-info">
+                                        <h3>{detailUser.nama || 'Nama tidak tersedia'}</h3>
                                         <span className={`badge ${getRoleBadge(detailUser.role).class}`}>
                                             {getRoleBadge(detailUser.role).label}
                                         </span>
-                                    </span>
+                                    </div>
                                 </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Password</span>
-                                    <span className="detail-value">
-                                        <code className="password-display">{detailUser.password_ref || '(belum diset)'}</code>
-                                    </span>
+
+                                <div className="detail-table">
+                                    <div className="detail-row">
+                                        <span className="detail-label">Email</span>
+                                        <span className="detail-value">{detailUser.email}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Nama Lengkap</span>
+                                        <span className="detail-value">{detailUser.nama || '-'}</span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Role</span>
+                                        <span className="detail-value">
+                                            <span className={`badge ${getRoleBadge(detailUser.role).class}`}>
+                                                {getRoleBadge(detailUser.role).label}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="detail-row">
+                                        <span className="detail-label">Password</span>
+                                        <span className="detail-value">
+                                            <code className="password-display">{detailUser.password_ref || '(belum diset)'}</code>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowDetailModal(false)}>Tutup</button>
-                            <button className="btn btn-warning" onClick={() => { setShowDetailModal(false); handleResetPassword(detailUser) }}>
-                                <Key size={16} /> Ubah Password
-                            </button>
-                            <button className="btn btn-primary" onClick={() => { setShowDetailModal(false); handleEditUser(detailUser) }}>
-                                <Edit size={16} /> Edit
-                            </button>
+                            <div className="modal-footer">
+                                <button className="btn btn-secondary" onClick={() => setShowDetailModal(false)}>Tutup</button>
+                                <button className="btn btn-warning" onClick={() => { setShowDetailModal(false); handleResetPassword(detailUser) }}>
+                                    <Key size={16} /> Ubah Password
+                                </button>
+                                <button className="btn btn-primary" onClick={() => { setShowDetailModal(false); handleEditUser(detailUser) }}>
+                                    <Edit size={16} /> Edit
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div>
     )
 }

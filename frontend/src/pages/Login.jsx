@@ -90,7 +90,7 @@ const Login = () => {
                 setIsRegister(false)
                 setPassword('')
             } else {
-                if (!emailOrPhone) throw new Error('Email atau No. Telepon harus diisi')
+                if (!emailOrPhone) throw new Error('Username harus diisi')
                 if (!password) throw new Error('Password harus diisi')
 
                 const { role } = await signIn(emailOrPhone, password)
@@ -125,22 +125,14 @@ const Login = () => {
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <div className="input-group">
-                        <label>{isRegister ? 'Email' : 'Email atau No. Telepon'}</label>
+                        <label>{isRegister ? 'Email' : 'Username'}</label>
                         <input
                             type="text"
-                            placeholder={isRegister ? 'Masukkan email' : 'Email atau nomor telepon'}
+                            placeholder={isRegister ? 'Masukkan email' : 'Masukkan username'}
                             value={emailOrPhone}
                             onChange={(e) => setEmailOrPhone(e.target.value)}
                             required
                         />
-                        {!isRegister && emailOrPhone && (
-                            <span className="input-hint">
-                                {isPhoneNumber(emailOrPhone) ? '📱 Login dengan No. Telepon' : '✉️ Login dengan Email'}
-                            </span>
-                        )}
-                        {isRegister && (
-                            <span className="input-hint">No. Telepon untuk login bisa ditambahkan oleh Admin</span>
-                        )}
                     </div>
 
                     <div className="input-group">
