@@ -216,8 +216,8 @@ const SantriList = () => {
                                         <td>
                                             <MobileActionMenu
                                                 actions={[
-                                                    { icon: <Eye size={16} />, label: 'Detail', onClick: () => window.location.href = `/santri/${item.id}` },
-                                                    { icon: <Edit size={16} />, label: 'Edit', onClick: () => window.location.href = `/santri/${item.id}/edit` },
+                                                    { icon: <Eye size={16} />, label: 'Detail', path: `/santri/${item.id}` },
+                                                    { icon: <Edit size={16} />, label: 'Edit', path: `/santri/${item.id}/edit` },
                                                     { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedSantri(item); setShowDeleteModal(true) }, danger: true }
                                                 ]}
                                             >

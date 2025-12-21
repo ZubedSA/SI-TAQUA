@@ -795,7 +795,7 @@ _PTQA Batuan_`
                                                     <MobileActionMenu
                                                         actions={[
                                                             { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(item) },
-                                                            { icon: <Edit size={16} />, label: 'Edit', onClick: () => window.location.href = `/hafalan/${item.id}/edit` },
+                                                            { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${item.id}/edit` },
                                                             { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(item); setShowDeleteModal(true) }, danger: true }
                                                         ]}
                                                     >

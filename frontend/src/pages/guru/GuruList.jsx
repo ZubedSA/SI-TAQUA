@@ -142,8 +142,8 @@ const GuruList = () => {
                                         <td>
                                             <MobileActionMenu
                                                 actions={[
-                                                    { icon: <Eye size={16} />, label: 'Detail', onClick: () => window.location.href = `/guru/${item.id}` },
-                                                    { icon: <Edit size={16} />, label: 'Edit', onClick: () => window.location.href = `/guru/${item.id}/edit` },
+                                                    { icon: <Eye size={16} />, label: 'Detail', path: `/guru/${item.id}` },
+                                                    { icon: <Edit size={16} />, label: 'Edit', path: `/guru/${item.id}/edit` },
                                                     { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedGuru(item); setShowDeleteModal(true) }, danger: true }
                                                 ]}
                                             >

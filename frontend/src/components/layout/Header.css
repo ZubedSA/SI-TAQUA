@@ -459,12 +459,7 @@
         gap: 6px;
     }
 
-    /* Hide clock on mobile */
-    .header-clock {
-        display: none !important;
-    }
-
-    /* Smaller buttons on mobile */
+    /* Clock stays visible on mobile with compact style */
     .theme-toggle-btn,
     .notification-btn {
         width: 38px;
