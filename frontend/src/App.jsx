@@ -23,6 +23,7 @@ import AuditLogPage from './pages/auditlog/AuditLogPage'
 import PengaturanPage from './pages/pengaturan/PengaturanPage'
 import ProfilSettingsPage from './pages/profil/ProfilSettingsPage'
 import WaliSantriPage from './pages/walisantri/WaliSantriPage'
+import BackupPage from './pages/backup/BackupPage'
 import './index.css'
 
 // Component untuk redirect berdasarkan role setelah login
@@ -133,6 +134,11 @@ function App() {
               <Route path="/pengaturan" element={
                 <ProtectedRoute roles={['admin']} fallbackRedirect="/wali-santri">
                   <PengaturanPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/backup" element={
+                <ProtectedRoute roles={['admin']} fallbackRedirect="/wali-santri">
+                  <BackupPage />
                 </ProtectedRoute>
               } />
 
