@@ -501,6 +501,8 @@ select {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .notification-btn {

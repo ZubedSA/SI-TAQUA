@@ -330,6 +330,13 @@
     border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* Notification Wrapper */
+.notification-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
 /* Dark mode specific for toggle button */
 [data-theme="dark"] .theme-toggle-btn {
     background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
@@ -414,7 +421,9 @@
     .header-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
     }
 
     /* Compact clock for mobile - time only */
@@ -517,26 +526,67 @@
         right: 0;
         min-width: 180px;
     }
+
+    /* Search button - icon only on mobile */
+    .search-btn {
+        padding: 8px;
+        margin-right: 0;
+        min-width: 36px;
+        width: 36px;
+        height: 36px;
+        justify-content: center;
+        border-radius: 8px;
+    }
+
+    .search-btn-text,
+    .search-shortcut {
+        display: none;
+    }
+
+    .search-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Notification wrapper for mobile */
+    .notification-wrapper {
+        position: relative;
+    }
 }
 
 /* Extra small screens */
 @media screen and (max-width: 480px) {
     .header-actions {
-        gap: 6px;
+        gap: 4px;
+        flex-wrap: nowrap;
     }
 
-    /* Smaller clock on very small screens */
+    /* Compact clock on extra small screens - time only */
     .header-clock {
         padding: 4px 8px;
+        gap: 4px;
+        border-radius: 6px;
+    }
+
+    .header-clock .clock-icon,
+    .header-clock .clock-date {
+        display: none;
+    }
+
+    .header-clock .clock-content {
+        flex-direction: row;
+        align-items: center;
+        gap: 4px;
     }
 
     .header-clock .clock-time {
         font-size: 11px;
+        letter-spacing: 0.3px;
     }
 
     .header-clock .clock-wib {
-        font-size: 7px;
-        padding: 1px 3px;
+        font-size: 8px;
+        padding: 2px 4px;
     }
 
     .theme-toggle-btn,
@@ -554,5 +604,71 @@
     .user-avatar {
         width: 28px;
         height: 28px;
+    }
+
+    /* Search button icon only */
+    .search-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .search-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* Ultra small screens (Samsung A series, older iPhones) */
+@media screen and (max-width: 360px) {
+    .header-actions {
+        gap: 3px;
+        flex-wrap: nowrap;
+    }
+
+    /* Ultra compact clock - minimal */
+    .header-clock {
+        padding: 3px 6px;
+        gap: 2px;
+        border-radius: 4px;
+    }
+
+    .header-clock .clock-time {
+        font-size: 10px;
+    }
+
+    .header-clock .clock-wib {
+        font-size: 7px;
+        padding: 1px 3px;
+    }
+
+    /* Ultra compact buttons */
+    .theme-toggle-btn,
+    .notification-btn,
+    .search-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .theme-toggle-btn svg,
+    .notification-btn svg,
+    .search-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .user-avatar {
+        width: 26px;
+        height: 26px;
+    }
+
+    .user-avatar svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .user-profile {
+        padding: 3px;
     }
 }
