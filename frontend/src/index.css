@@ -2273,7 +2273,7 @@ select {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(20px);
   }
 
   to {
@@ -2285,7 +2285,7 @@ select {
 @keyframes fadeInDown {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(-15px);
   }
 
   to {
@@ -2297,19 +2297,7 @@ select {
 @keyframes fadeInLeft {
   from {
     opacity: 0;
-    transform: translateX(-30px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes fadeInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
+    transform: translateX(-20px);
   }
 
   to {
@@ -2321,7 +2309,7 @@ select {
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.96);
   }
 
   to {
@@ -2330,318 +2318,101 @@ select {
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-/* Page Entrance Animation - Applied to main content area */
+/* Page Entrance Animation - Only visual, no blocking */
 .main-content {
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn 0.35s ease-out forwards;
 }
 
 /* Page Header Animation */
 .page-header {
-  animation: fadeInDown 0.5s ease-out;
+  animation: fadeInDown 0.4s ease-out forwards;
 }
 
 /* Page Title Animation */
 .page-title {
-  animation: fadeInLeft 0.5s ease-out;
+  animation: fadeInLeft 0.4s ease-out forwards;
 }
 
-.page-subtitle {
-  animation: fadeIn 0.6s ease-out 0.1s both;
-}
-
-/* Table Container Animation */
+/* Table Container Animation - NO delay to prevent click blocking */
 .table-container {
-  animation: fadeInUp 0.5s ease-out 0.1s both;
+  animation: fadeInUp 0.4s ease-out forwards;
 }
 
-/* Card Animations */
+/* Card Animations - fast, no delays */
 .form-card,
 .settings-section,
-.rekap-filters,
-.filter-bar,
 .audit-card {
-  animation: fadeInUp 0.5s ease-out 0.1s both;
+  animation: fadeInUp 0.35s ease-out forwards;
 }
 
-/* Stats Grid Animation - Staggered */
+/* Stats Animation */
 .dashboard-stats-grid,
 .hafalan-stats {
-  animation: fadeIn 0.4s ease-out;
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
 .dashboard-stat-card,
 .hafalan-stat-card {
-  animation: scaleIn 0.4s ease-out both;
+  animation: scaleIn 0.3s ease-out forwards;
 }
 
-.dashboard-stat-card:nth-child(1),
-.hafalan-stat-card:nth-child(1) {
-  animation-delay: 0.05s;
-}
-
-.dashboard-stat-card:nth-child(2),
-.hafalan-stat-card:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.dashboard-stat-card:nth-child(3),
-.hafalan-stat-card:nth-child(3) {
-  animation-delay: 0.15s;
-}
-
-.dashboard-stat-card:nth-child(4),
-.hafalan-stat-card:nth-child(4) {
-  animation-delay: 0.2s;
-}
-
-.dashboard-stat-card:nth-child(5),
-.hafalan-stat-card:nth-child(5) {
-  animation-delay: 0.25s;
-}
-
-/* Chart Box Animation - Staggered */
+/* Chart Box Animation */
 .dashboard-chart-box {
-  animation: fadeInUp 0.5s ease-out both;
-}
-
-.dashboard-chart-box:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.dashboard-chart-box:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.dashboard-chart-box:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-.dashboard-chart-box:nth-child(4) {
-  animation-delay: 0.4s;
-}
-
-.dashboard-chart-box:nth-child(5) {
-  animation-delay: 0.5s;
+  animation: fadeInUp 0.4s ease-out forwards;
 }
 
 /* Backup Card Animation */
 .backup-card {
-  animation: fadeInUp 0.5s ease-out both;
-}
-
-.backup-card:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.backup-card:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.backup-card:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-/* Tab Animation */
-.hafalan-tabs,
-.dashboard-tabs,
-.pencapaian-subtabs {
-  animation: fadeInDown 0.4s ease-out;
-}
-
-/* Table Row Animation on Scroll */
-.table tbody tr {
-  animation: fadeIn 0.3s ease-out both;
-}
-
-.table tbody tr:nth-child(1) {
-  animation-delay: 0.02s;
-}
-
-.table tbody tr:nth-child(2) {
-  animation-delay: 0.04s;
-}
-
-.table tbody tr:nth-child(3) {
-  animation-delay: 0.06s;
-}
-
-.table tbody tr:nth-child(4) {
-  animation-delay: 0.08s;
-}
-
-.table tbody tr:nth-child(5) {
-  animation-delay: 0.1s;
-}
-
-.table tbody tr:nth-child(6) {
-  animation-delay: 0.12s;
-}
-
-.table tbody tr:nth-child(7) {
-  animation-delay: 0.14s;
-}
-
-.table tbody tr:nth-child(8) {
-  animation-delay: 0.16s;
-}
-
-.table tbody tr:nth-child(9) {
-  animation-delay: 0.18s;
-}
-
-.table tbody tr:nth-child(10) {
-  animation-delay: 0.2s;
+  animation: fadeInUp 0.4s ease-out forwards;
 }
 
 /* Modal Animation */
 .modal-overlay.active {
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.2s ease-out forwards;
 }
 
 .modal-overlay.active .modal {
-  animation: scaleIn 0.3s ease-out;
+  animation: scaleIn 0.25s ease-out forwards;
 }
 
 /* Alert Animation */
 .alert {
-  animation: fadeInDown 0.4s ease-out;
+  animation: fadeInDown 0.3s ease-out forwards;
 }
 
-/* Button Hover Animation */
+/* CRITICAL: Ensure all interactive elements are always clickable */
+.table tbody tr,
+.table tbody td,
+.action-buttons,
+.btn,
+.btn-icon,
+.btn-icon-danger,
+.btn-icon-success,
+.mobile-action-wrapper,
+.mobile-action-toggle,
+.mobile-action-menu,
+.mobile-action-item,
+.menu-item,
+button,
+a,
+input,
+select,
+textarea {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+/* Button Hover Animation - only transform, keep clickable */
 .btn {
-  transition: all 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .btn:active {
   transform: translateY(0);
-}
-
-/* Card Hover Animation */
-.dashboard-stat-card:hover,
-.hafalan-stat-card:hover,
-.backup-card:hover,
-.dashboard-chart-box:hover {
-  transition: all 0.3s ease;
-}
-
-/* Form Section Animation */
-.form-section {
-  animation: fadeIn 0.5s ease-out both;
-}
-
-.form-section:nth-child(1) {
-  animation-delay: 0.1s;
-}
-
-.form-section:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.form-section:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-/* Welcome Section Animation */
-.dashboard-welcome {
-  animation: fadeInLeft 0.5s ease-out;
-}
-
-/* Tips Section Animation */
-.backup-tips {
-  animation: fadeInUp 0.5s ease-out 0.4s both;
-}
-
-/* Sidebar Menu Animation */
-.sidebar-menu .menu-item {
-  animation: fadeInLeft 0.3s ease-out both;
-}
-
-.sidebar-menu .menu-item:nth-child(1) {
-  animation-delay: 0.02s;
-}
-
-.sidebar-menu .menu-item:nth-child(2) {
-  animation-delay: 0.04s;
-}
-
-.sidebar-menu .menu-item:nth-child(3) {
-  animation-delay: 0.06s;
-}
-
-.sidebar-menu .menu-item:nth-child(4) {
-  animation-delay: 0.08s;
-}
-
-.sidebar-menu .menu-item:nth-child(5) {
-  animation-delay: 0.1s;
-}
-
-.sidebar-menu .menu-item:nth-child(6) {
-  animation-delay: 0.12s;
-}
-
-.sidebar-menu .menu-item:nth-child(7) {
-  animation-delay: 0.14s;
-}
-
-.sidebar-menu .menu-item:nth-child(8) {
-  animation-delay: 0.16s;
-}
-
-.sidebar-menu .menu-item:nth-child(9) {
-  animation-delay: 0.18s;
-}
-
-.sidebar-menu .menu-item:nth-child(10) {
-  animation-delay: 0.2s;
-}
-
-.sidebar-menu .menu-item:nth-child(11) {
-  animation-delay: 0.22s;
-}
-
-.sidebar-menu .menu-item:nth-child(12) {
-  animation-delay: 0.24s;
-}
-
-.sidebar-menu .menu-item:nth-child(13) {
-  animation-delay: 0.26s;
-}
-
-.sidebar-menu .menu-item:nth-child(14) {
-  animation-delay: 0.28s;
-}
-
-.sidebar-menu .menu-item:nth-child(15) {
-  animation-delay: 0.3s;
 }
 
 /* Loading Spinner Animation */

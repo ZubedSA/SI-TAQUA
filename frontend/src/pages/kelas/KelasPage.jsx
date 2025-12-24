@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, Users, RefreshCw, Eye, X, UserPlus, Check } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import './Kelas.css'
 
 const KelasPage = () => {
@@ -167,9 +168,11 @@ const KelasPage = () => {
             if (editData) {
                 const { error } = await supabase.from('kelas').update(payload).eq('id', editData.id)
                 if (error) throw error
+                await logUpdate('kelas', formData.nama, `Edit kelas: ${formData.nama}`)
             } else {
                 const { error } = await supabase.from('kelas').insert([payload])
                 if (error) throw error
+                await logCreate('kelas', formData.nama, `Tambah kelas baru: ${formData.nama}`)
             }
 
             fetchKelas()
@@ -193,10 +196,12 @@ const KelasPage = () => {
     }
 
     const handleDelete = async (id) => {
+        const kelas = kelasList.find(k => k.id === id)
         if (!confirm('Yakin ingin menghapus kelas ini?')) return
         try {
             const { error } = await supabase.from('kelas').delete().eq('id', id)
             if (error) throw error
+            await logDelete('kelas', kelas?.nama || 'Kelas', `Hapus kelas: ${kelas?.nama}`)
             setKelasList(kelasList.filter(k => k.id !== id))
         } catch (err) {
             alert('Error: ' + err.message)

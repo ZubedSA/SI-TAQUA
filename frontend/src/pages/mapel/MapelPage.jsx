@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, BookOpen, Search, RefreshCw, BookMarked, GraduationCap } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import './Mapel.css'
 
 const MapelPage = () => {
@@ -44,9 +45,11 @@ const MapelPage = () => {
             if (editData) {
                 const { error } = await supabase.from('mapel').update(formData).eq('id', editData.id)
                 if (error) throw error
+                await logUpdate('mapel', formData.nama, `Edit mapel: ${formData.nama} (${formData.kode})`)
             } else {
                 const { error } = await supabase.from('mapel').insert([formData])
                 if (error) throw error
+                await logCreate('mapel', formData.nama, `Tambah mapel baru: ${formData.nama} (${formData.kode})`)
             }
             fetchMapel()
             setShowModal(false)
@@ -66,10 +69,12 @@ const MapelPage = () => {
     }
 
     const handleDelete = async (id) => {
+        const mapel = mapelList.find(m => m.id === id)
         if (!confirm('Yakin ingin menghapus mata pelajaran ini?')) return
         try {
             const { error } = await supabase.from('mapel').delete().eq('id', id)
             if (error) throw error
+            await logDelete('mapel', mapel?.nama || 'Mapel', `Hapus mapel: ${mapel?.nama} (${mapel?.kode})`)
             setMapelList(mapelList.filter(m => m.id !== id))
         } catch (err) {
             alert('Error: ' + err.message)

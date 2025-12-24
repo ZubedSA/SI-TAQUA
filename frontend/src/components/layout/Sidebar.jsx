@@ -18,7 +18,8 @@ import {
     X,
     Settings,
     UserCircle,
-    HardDrive
+    HardDrive,
+    Activity
 } from 'lucide-react'
 import './Sidebar.css'
 
@@ -39,7 +40,7 @@ const menuItems = [
     { path: '/laporan', icon: Download, label: 'Laporan', roles: ['admin', 'guru'] },
     { path: '/wali-santri', icon: UserCircle, label: 'Portal Wali', roles: ['admin', 'guru', 'wali'] },
     { path: '/audit-log', icon: ClipboardList, label: 'Audit Log', roles: ['admin'] },
-    { path: '/backup', icon: HardDrive, label: 'Backup Data', roles: ['admin'] },
+    { path: '/system-status', icon: Activity, label: 'Status Sistem', roles: ['admin'] },
     { path: '/pengaturan', icon: Settings, label: 'Pengaturan', roles: ['admin'] },
 ]
 

@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, Edit, Trash2, Eye, RefreshCw, MoreVertical } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import './Guru.css'
 
 const GuruList = () => {
     const [guru, setGuru] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
+    const [sortBy, setSortBy] = useState('nama-asc')
     const [loading, setLoading] = useState(true)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [selectedGuru, setSelectedGuru] = useState(null)
@@ -46,6 +48,7 @@ const GuruList = () => {
                 .eq('id', selectedGuru.id)
 
             if (error) throw error
+            await logDelete('guru', selectedGuru.nama, `Hapus data guru: ${selectedGuru.nama} (${selectedGuru.nip})`)
 
             setGuru(guru.filter(g => g.id !== selectedGuru.id))
             setShowDeleteModal(false)
@@ -56,10 +59,22 @@ const GuruList = () => {
         }
     }
 
-    const filteredGuru = guru.filter(g =>
-        g.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        g.nip?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredGuru = guru
+        .filter(g =>
+            g.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            g.nip?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            switch (sortBy) {
+                case 'nama-asc': return (a.nama || '').localeCompare(b.nama || '')
+                case 'nama-desc': return (b.nama || '').localeCompare(a.nama || '')
+                case 'nip-asc': return (a.nip || '').localeCompare(b.nip || '')
+                case 'nip-desc': return (b.nip || '').localeCompare(a.nip || '')
+                case 'jabatan-asc': return (a.jabatan || '').localeCompare(b.jabatan || '')
+                case 'status-asc': return (a.status || '').localeCompare(b.status || '')
+                default: return 0
+            }
+        })
 
     return (
         <div className="guru-page">
@@ -86,15 +101,28 @@ const GuruList = () => {
             <div className="table-container">
                 <div className="table-header">
                     <h3 className="table-title">Daftar Guru ({filteredGuru.length})</h3>
-                    <div className="table-search">
-                        <Search size={18} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Cari guru..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="search-input"
-                        />
+                    <div className="table-controls">
+                        <div className="table-search">
+                            <Search size={18} className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Cari guru..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="search-input"
+                            />
+                        </div>
+                        <div className="sort-select">
+                            <label>Urutkan:</label>
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                                <option value="nama-asc">Nama A-Z</option>
+                                <option value="nama-desc">Nama Z-A</option>
+                                <option value="nip-asc">NIP Terkecil</option>
+                                <option value="nip-desc">NIP Terbesar</option>
+                                <option value="jabatan-asc">Jabatan A-Z</option>
+                                <option value="status-asc">Status A-Z</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

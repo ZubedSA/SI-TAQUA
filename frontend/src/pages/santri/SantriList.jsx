@@ -10,6 +10,7 @@ import './Santri.css'
 const SantriList = () => {
     const [santri, setSantri] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
+    const [sortBy, setSortBy] = useState('nama-asc')
     const [loading, setLoading] = useState(true)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showImportModal, setShowImportModal] = useState(false)
@@ -135,10 +136,24 @@ const SantriList = () => {
         }
     }
 
-    const filteredSantri = santri.filter(s =>
-        s.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.nis?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredSantri = santri
+        .filter(s =>
+            s.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.nis?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            switch (sortBy) {
+                case 'nama-asc': return (a.nama || '').localeCompare(b.nama || '')
+                case 'nama-desc': return (b.nama || '').localeCompare(a.nama || '')
+                case 'nis-asc': return (a.nis || '').localeCompare(b.nis || '')
+                case 'nis-desc': return (b.nis || '').localeCompare(a.nis || '')
+                case 'kelas-asc': return (a.kelas || '').localeCompare(b.kelas || '')
+                case 'kelas-desc': return (b.kelas || '').localeCompare(a.kelas || '')
+                case 'status-asc': return (a.status || '').localeCompare(b.status || '')
+                case 'status-desc': return (b.status || '').localeCompare(a.status || '')
+                default: return 0
+            }
+        })
 
     return (
         <div className="santri-page">
@@ -176,15 +191,29 @@ const SantriList = () => {
             <div className="table-container">
                 <div className="table-header">
                     <h3 className="table-title">Daftar Santri ({filteredSantri.length})</h3>
-                    <div className="table-search">
-                        <Search size={18} className="search-icon" />
-                        <input
-                            type="text"
-                            placeholder="Cari santri..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="search-input"
-                        />
+                    <div className="table-controls">
+                        <div className="table-search">
+                            <Search size={18} className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Cari santri..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="search-input"
+                            />
+                        </div>
+                        <div className="sort-select">
+                            <label>Urutkan:</label>
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                                <option value="nama-asc">Nama A-Z</option>
+                                <option value="nama-desc">Nama Z-A</option>
+                                <option value="nis-asc">NIS Terkecil</option>
+                                <option value="nis-desc">NIS Terbesar</option>
+                                <option value="kelas-asc">Kelas A-Z</option>
+                                <option value="kelas-desc">Kelas Z-A</option>
+                                <option value="status-asc">Status A-Z</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 

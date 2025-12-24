@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { logCreate, logUpdate } from '../../lib/auditLog'
 import './Guru.css'
 
 const GuruForm = () => {
@@ -88,12 +89,14 @@ const GuruForm = () => {
                     .update(payload)
                     .eq('id', id)
                 if (error) throw error
+                await logUpdate('guru', formData.nama, `Edit data guru: ${formData.nama} (${formData.nip})`)
                 setSuccess('Data guru berhasil diupdate!')
             } else {
                 const { error } = await supabase
                     .from('guru')
                     .insert([payload])
                 if (error) throw error
+                await logCreate('guru', formData.nama, `Tambah guru baru: ${formData.nama} (${formData.nip})`)
                 setSuccess('Data guru berhasil disimpan!')
             }
 
