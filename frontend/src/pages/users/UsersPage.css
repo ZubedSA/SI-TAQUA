@@ -655,5 +655,437 @@
     .modal-content {
         max-height: 85vh;
     }
-}/ *   R o l e s   C h e c k b o x   G r o u p   * /   . r o l e s - c h e c k b o x - g r o u p   {   d i s p l a y :   g r i d ;   g r i d - t e m p l a t e - c o l u m n s :   r e p e a t ( 2 ,   1 f r ) ;   g a p :   1 0 p x ;   m a r g i n - t o p :   8 p x ;   }   . r o l e - c h e c k b o x   {   d i s p l a y :   f l e x ;   a l i g n - i t e m s :   c e n t e r ;   g a p :   8 p x ;   p a d d i n g :   1 0 p x   1 2 p x ;   b a c k g r o u n d :   v a r ( - - b g - t e r t i a r y ,   # f 9 f a f b ) ;   b o r d e r :   1 p x   s o l i d   v a r ( - - b o r d e r - c o l o r ,   # e 5 e 7 e b ) ;   b o r d e r - r a d i u s :   8 p x ;   c u r s o r :   p o i n t e r ;   t r a n s i t i o n :   a l l   0 . 1 5 s   e a s e ;   p o s i t i o n :   r e l a t i v e ;   }   . r o l e - c h e c k b o x : h o v e r   {   b o r d e r - c o l o r :   # 3 b 8 2 f 6 ;   b a c k g r o u n d :   # e f f 6 f f ;   }   . r o l e - c h e c k b o x . c h e c k e d   {   b a c k g r o u n d :   # e f f 6 f f ;   b o r d e r - c o l o r :   # 3 b 8 2 f 6 ;   c o l o r :   # 2 5 6 3 e b ;   f o n t - w e i g h t :   5 0 0 ;   }   . r o l e - c h e c k b o x   i n p u t   {   d i s p l a y :   n o n e ;   }   . r o l e - l a b e l - t e x t   {   f l e x :   1 ;   }   . c h e c k - i c o n   {   c o l o r :   # 2 5 6 3 e b ;   }   . r o l e s - c e l l   {   d i s p l a y :   f l e x ;   f l e x - w r a p :   w r a p ;   g a p :   4 p x ;   }   . b a d g e - t e a l   {   b a c k g r o u n d :   r g b a ( 2 0 ,   1 8 4 ,   1 6 6 ,   0 . 1 ) ;   c o l o r :   # 0 d 9 4 8 8 ;   }  
- 
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group input.error {
+    border-color: #ef4444;
+}
+
+.form-group input.error:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-group input:disabled {
+    background: var(--bg-tertiary, #f3f4f6);
+    color: var(--text-secondary, #6b7280);
+    cursor: not-allowed;
+}
+
+.error-text {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: #ef4444;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.password-input {
+    position: relative;
+}
+
+.password-input input {
+    padding-right: 44px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary, #6b7280);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+.password-toggle:hover {
+    color: var(--text-primary, #1f2937);
+}
+
+/* Santri Selection for Wali */
+.santri-selection {
+    margin-top: 8px;
+}
+
+.santri-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    padding: 8px;
+    background: var(--bg-tertiary, #f9fafb);
+}
+
+.santri-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.santri-checkbox-item:last-child {
+    margin-bottom: 0;
+}
+
+.santri-checkbox-item:hover {
+    background: var(--bg-secondary, white);
+}
+
+.santri-checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #10b981;
+    cursor: pointer;
+}
+
+.santri-checkbox-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.santri-nama {
+    font-weight: 500;
+    color: var(--text-primary, #1f2937);
+    font-size: 0.9rem;
+}
+
+.santri-detail {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+.selection-info {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #10b981;
+    font-weight: 500;
+}
+
+.loading-text,
+.empty-text {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.875rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    background: var(--bg-tertiary, #f9fafb);
+    border-radius: 0 0 16px 16px;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    background: var(--bg-secondary, white);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    color: var(--text-primary, #1f2937);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-secondary:hover {
+    background: var(--bg-tertiary, #f3f4f6);
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .filters-bar {
+        flex-direction: column;
+    }
+
+    .search-box {
+        width: 100%;
+    }
+
+    .stats-row {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 8px;
+    }
+
+    .users-table-container {
+        overflow-x: auto;
+    }
+
+    .users-table {
+        min-width: 700px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        max-height: 85vh;
+    }
+}
+
+/* ================================
+   Dark Mode Overrides
+   ================================ */
+[data-theme="dark"] .header-info h1 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .header-info p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .search-box {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .search-box input {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .filter-group {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .filter-group select {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .stat-chip {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .stat-number {
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .stat-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .users-table-container {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+/* Table headers - BRIGHTER for dark mode */
+[data-theme="dark"] .users-table th {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .users-table td {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .users-table tbody tr:hover {
+    background: #0f172a;
+}
+
+/* User cell - BRIGHTER text */
+[data-theme="dark"] .user-name {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .user-email {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .username {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .date-text {
+    color: #94a3b8;
+}
+
+/* Brighter badges for dark mode */
+[data-theme="dark"] .badge-red {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+}
+
+[data-theme="dark"] .badge-blue {
+    background: rgba(96, 165, 250, 0.15);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .badge-green {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .badge-purple {
+    background: rgba(167, 139, 250, 0.15);
+    color: #a78bfa;
+}
+
+[data-theme="dark"] .badge-gray {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .status-badge.active {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .status-badge.inactive {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+}
+
+/* Modal dark mode */
+[data-theme="dark"] .modal-content {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .modal-header {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .modal-header h2 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .form-group label {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .form-group input,
+[data-theme="dark"] .form-group select {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .form-group input:disabled {
+    background: #1e293b;
+    color: #64748b;
+}
+
+[data-theme="dark"] .santri-list {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .santri-nama {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .santri-detail {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .modal-footer {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .btn-secondary {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-icon {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .empty-state h3 {
+    color: #e2e8f0;
+}
+
+/* Roles Checkbox Group */
+.roles-checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.role-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-tertiary, #f9fafb);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.role-checkbox:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.role-checkbox.checked {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.role-checkbox input {
+    display: none;
+}
+
+.role-label-text {
+    flex: 1;
+}
+
+.check-icon {
+    color: #2563eb;
+}
+
+.roles-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.badge-teal {
+    background: rgba(20, 184, 166, 0.1);
+    color: #0d9488;
+}

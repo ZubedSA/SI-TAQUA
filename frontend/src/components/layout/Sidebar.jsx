@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
@@ -157,7 +157,7 @@ const operatorMenuItems = [
     {
         id: 'alur-kas',
         icon: PiggyBank,
-        label: 'Alur KAS',
+        label: 'Arus KAS',
         roles: ['admin', 'bendahara', 'pengasuh'],
         children: [
             { path: '/keuangan/kas/pemasukan', icon: ArrowUpCircle, label: 'Pemasukan' },
@@ -187,7 +187,7 @@ const operatorMenuItems = [
         label: 'Penyaluran Dana',
         roles: ['admin', 'bendahara', 'pengasuh'],
         children: [
-            { path: '/keuangan/dana/anggaran', icon: PiggyBank, label: 'Anggaran' },
+            { path: '/keuangan/dana/anggaran', icon: PiggyBank, label: 'Anggaran', roles: ['admin', 'bendahara'] },
             { path: '/keuangan/dana/persetujuan', icon: CheckCircle, label: 'Persetujuan' },
             { path: '/keuangan/dana/realisasi', icon: TrendingUp, label: 'Realisasi Dana' },
             { path: '/keuangan/dana/laporan', icon: FileBarChart, label: 'Laporan Penyaluran' },
@@ -312,10 +312,32 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         })
     }
 
+    useEffect(() => {
+        const newOpenMenus = {}
+        const scanItems = (items) => {
+            items.forEach(item => {
+                if (item.children) {
+                    if (isChildActive(item.children)) {
+                        newOpenMenus[item.id] = true
+                    }
+                    scanItems(item.children)
+                }
+            })
+        }
+        scanItems(baseMenuItems)
+        setOpenMenus(newOpenMenus)
+    }, [location.pathname, activeRole])
+
     // Render submenu item
     const renderMenuItem = (item, level = 0) => {
-        const hasChildren = item.children && item.children.length > 0
-        const isOpen = openMenus[item.id] || isChildActive(item.children)
+        // Filter children by role if they exist
+        const filteredChildren = item.children?.filter(child => {
+            if (!child.roles || child.roles.length === 0) return true
+            return child.roles.includes(activeRole)
+        })
+
+        const hasChildren = filteredChildren && filteredChildren.length > 0
+        const isOpen = openMenus[item.id]
         const paddingLeft = 14 + (level * 12)
 
         if (hasChildren) {
@@ -335,7 +357,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                         </span>
                     </button>
                     <ul className={`submenu ${isOpen ? 'open' : ''}`}>
-                        {item.children.map(child => renderMenuItem(child, level + 1))}
+                        {filteredChildren.map(child => renderMenuItem(child, level + 1))}
                     </ul>
                 </li>
             )
@@ -368,8 +390,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                 <div className="logo">
                     <img src="/logo-white.png" alt="Logo" className="logo-image" />
                     <div className="logo-text">
-                        <span className="logo-title">PTQA BATUAN</span>
-                        <span className="logo-subtitle">Sistem Akademik</span>
+                        <span className="logo-title">Si-Taqua</span>
                     </div>
                 </div>
                 <button className="sidebar-close-btn" onClick={onClose}>

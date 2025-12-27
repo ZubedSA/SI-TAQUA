@@ -259,7 +259,7 @@ const Header = ({ onMenuClick }) => {
                                     </div>
                                     <div className="profile-row">
                                         <label>Role</label>
-                                        <span className={`badge badge-${role}`}>{getRoleLabel()}</span>
+                                        <span className={`badge badge-${activeRole}`}>{getRoleLabel()}</span>
                                     </div>
                                     {userProfile?.created_at && (
                                         <div className="profile-row">
@@ -285,5 +285,3 @@ const Header = ({ onMenuClick }) => {
 }
 
 export default Header
-
-

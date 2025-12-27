@@ -428,14 +428,13 @@
         display: flex !important;
         align-items: center;
         gap: 8px;
-        /* Increase gap slightly for cleaner look */
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         flex: 1;
         justify-content: flex-end;
         min-width: 0;
-        padding-right: 12px;
-        /* Add breathing room for profile icon */
+        padding-right: 36px;
+        /* More breathing room for profile icon - align with content below */
     }
 
     /* Hide Clock as requested */
@@ -483,18 +482,20 @@
         top: 4px;
     }
 
-    /* User Profile */
+    /* User Profile - better mobile positioning */
     .user-profile-wrapper {
         margin-left: 4px;
+        margin-right: 18px;
+        /* Add right margin for edge spacing - align with content */
         flex-shrink: 1;
         min-width: 0;
     }
 
     .user-profile {
-        padding: 4px 8px 4px 4px;
+        padding: 4px 10px 4px 4px;
+        /* More right padding */
         gap: 8px;
         max-width: 100%;
-        /* Allow it to take available space */
     }
 
     .user-avatar {

@@ -21,9 +21,14 @@ import {
     ArrowUpCircle,
     ArrowDownCircle,
     CheckCircle,
-    Tag
+    Tag,
+    ArrowUpRight,
+    ArrowDownRight,
+    Search,
+    RefreshCw
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useTheme } from '../../context/ThemeContext'
 import './KeuanganDashboard.css'
 
 // Register ChartJS
@@ -41,11 +46,18 @@ ChartJS.register(
  * Fokus pada kas, pembayaran, dan penyaluran dana
  */
 const KeuanganDashboard = () => {
+    const { isDark } = useTheme()
     const [keuanganStats, setKeuanganStats] = useState({
         pemasukan: 0,
         pengeluaran: 0,
         pembayaran: 0,
         saldo: 0
+    })
+    const [filters, setFilters] = useState({
+        bulan: '',
+        tahun: new Date().getFullYear(),
+        dateFrom: '',
+        dateTo: ''
     })
     const [monthlyData, setMonthlyData] = useState({
         pemasukan: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -68,6 +80,9 @@ const KeuanganDashboard = () => {
     useEffect(() => {
         fetchKeuanganStats()
         fetchMonthlyData()
+    }, [filters.bulan, filters.tahun, filters.dateFrom, filters.dateTo])
+
+    useEffect(() => {
         updateGreeting()
         const interval = setInterval(updateGreeting, 60000)
         return () => clearInterval(interval)
@@ -76,13 +91,26 @@ const KeuanganDashboard = () => {
     const fetchKeuanganStats = async () => {
         setLoading(true)
         try {
-            const startOfYear = `${currentYear}-01-01`
-            const endOfYear = `${currentYear}-12-31`
+            let start = `${currentYear}-01-01`
+            let end = `${currentYear}-12-31`
+
+            if (filters.dateFrom && filters.dateTo) {
+                start = filters.dateFrom
+                end = filters.dateTo
+            } else if (filters.tahun) {
+                start = `${filters.tahun}-01-01`
+                end = `${filters.tahun}-12-31`
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    start = `${filters.tahun}-${month}-01`
+                    end = `${filters.tahun}-${month}-31`
+                }
+            }
 
             const [pemasukanRes, pengeluaranRes, pembayaranRes] = await Promise.all([
-                supabase.from('kas_pemasukan').select('jumlah').gte('tanggal', startOfYear).lte('tanggal', endOfYear),
-                supabase.from('kas_pengeluaran').select('jumlah').gte('tanggal', startOfYear).lte('tanggal', endOfYear),
-                supabase.from('pembayaran_santri').select('jumlah').gte('tanggal', startOfYear).lte('tanggal', endOfYear)
+                supabase.from('kas_pemasukan').select('jumlah').gte('tanggal', start).lte('tanggal', end),
+                supabase.from('kas_pengeluaran').select('jumlah').gte('tanggal', start).lte('tanggal', end),
+                supabase.from('pembayaran_santri').select('jumlah').gte('tanggal', start).lte('tanggal', end)
             ])
 
             const totalPemasukan = pemasukanRes.data?.reduce((sum, d) => sum + Number(d.jumlah || 0), 0) || 0
@@ -104,12 +132,25 @@ const KeuanganDashboard = () => {
 
     const fetchMonthlyData = async () => {
         try {
-            const startOfYear = `${currentYear}-01-01`
-            const endOfYear = `${currentYear}-12-31`
+            let start = `${currentYear}-01-01`
+            let end = `${currentYear}-12-31`
+
+            if (filters.dateFrom && filters.dateTo) {
+                start = filters.dateFrom
+                end = filters.dateTo
+            } else if (filters.tahun) {
+                start = `${filters.tahun}-01-01`
+                end = `${filters.tahun}-12-31`
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    start = `${filters.tahun}-${month}-01`
+                    end = `${filters.tahun}-${month}-31`
+                }
+            }
 
             const [pemasukanRes, pengeluaranRes] = await Promise.all([
-                supabase.from('kas_pemasukan').select('jumlah, tanggal').gte('tanggal', startOfYear).lte('tanggal', endOfYear),
-                supabase.from('kas_pengeluaran').select('jumlah, tanggal').gte('tanggal', startOfYear).lte('tanggal', endOfYear)
+                supabase.from('kas_pemasukan').select('jumlah, tanggal').gte('tanggal', start).lte('tanggal', end),
+                supabase.from('kas_pengeluaran').select('jumlah, tanggal').gte('tanggal', start).lte('tanggal', end)
             ])
 
             const pemasukan = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -165,13 +206,55 @@ const KeuanganDashboard = () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { display: true, position: 'top' }
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    color: isDark ? '#e2e8f0' : '#4b5563',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 12
+                    }
+                }
+            },
+            tooltip: {
+                backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                titleColor: isDark ? '#f1f5f9' : '#1f2937',
+                bodyColor: isDark ? '#cbd5e1' : '#4b5563',
+                borderColor: isDark ? '#334155' : '#e5e7eb',
+                borderWidth: 1,
+                padding: 12,
+                titleFont: { family: "'Inter', sans-serif", size: 14, weight: 'bold' },
+                bodyFont: { family: "'Inter', sans-serif", size: 13 }
+            }
         },
         scales: {
             y: {
                 beginAtZero: true,
+                border: { display: false },
+                grid: {
+                    color: isDark ? '#334155' : '#f3f4f6',
+                },
                 ticks: {
-                    callback: (value) => formatCurrency(value, true)
+                    callback: (value) => formatCurrency(value, true),
+                    color: isDark ? '#94a3b8' : '#6b7280',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11
+                    }
+                }
+            },
+            x: {
+                border: { display: false },
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: isDark ? '#94a3b8' : '#6b7280',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11
+                    }
                 }
             }
         }
@@ -229,6 +312,45 @@ const KeuanganDashboard = () => {
                         <Wallet size={24} />
                     </div>
                 </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="filters-bar" style={{ marginTop: '20px', marginBottom: '20px' }}>
+                <div className="date-range-filter">
+                    <input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Dari Tanggal"
+                    />
+                    <span>-</span>
+                    <input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Sampai Tanggal"
+                    />
+                </div>
+                <select
+                    value={filters.bulan}
+                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
+                    <option value="">Semua Bulan</option>
+                    {[...Array(12)].map((_, i) => (
+                        <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
+                    ))}
+                </select>
+                <select
+                    value={filters.tahun}
+                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
+                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <button className="btn btn-icon" onClick={() => { fetchKeuanganStats(); fetchMonthlyData(); }}>
+                    <RefreshCw size={18} />
+                </button>
             </div>
 
             {/* Chart */}

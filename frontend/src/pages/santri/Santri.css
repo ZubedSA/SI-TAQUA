@@ -123,3 +123,21 @@
         height: 28px;
     }
 }
+
+/* ================================
+   Dark Mode Overrides
+   ================================ */
+[data-theme="dark"] .table-search .search-input {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .btn-icon {
+    background: #0f172a;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .table-info {
+    color: #94a3b8;
+}

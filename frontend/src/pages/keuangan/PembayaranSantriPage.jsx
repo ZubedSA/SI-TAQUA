@@ -58,14 +58,20 @@ const PembayaranSantriPage = () => {
         try {
             const { data, error } = await supabase
                 .from('santri')
-                .select('*, kelas:kelas_id(nama)')
-                .or(`nama.ilike.%${query}%,nis.ilike.%${query}%`)
+                .select('id, nama, nis, nama_wali, no_telp_wali, status, kelas:kelas_id(nama)')
+                .or(`nama.ilike.*${query}*,nis.ilike.*${query}*`)
                 .limit(10)
                 .order('nama')
-            if (error) throw error
+
+            if (error) {
+                console.error('Supabase error:', error)
+                throw error
+            }
+            console.log('Santri search result:', data)
             setSantriList(data || [])
         } catch (err) {
-            console.error('Error:', err.message)
+            console.error('Error fetching santri:', err)
+            setSantriList([])
         } finally {
             setLoading(false)
         }
@@ -247,12 +253,17 @@ Jazakumullah khairan atas pembayarannya.
 
     // Print receipt
     const handlePrintKwitansi = () => {
+        // Get periode from payment date
+        const paymentDate = new Date(lastPayment.tanggal)
+        const periodeStr = paymentDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+
         generateKwitansiPDF({
             nomorKwitansi: `KW-${Date.now().toString().slice(-8)}`,
             tanggal: lastPayment.tanggal,
             namaSantri: selectedSantri?.nama,
-            kelas: selectedSantri?.kelas?.nama,
+            namaWali: selectedSantri?.nama_wali || '-',
             kategori: lastPayment.items.map(t => t.kategori?.nama).join(', '),
+            periode: periodeStr,
             jumlah: lastPayment.jumlah,
             metode: lastPayment.metode,
             kasir: 'Bendahara PTQA'
@@ -332,12 +343,17 @@ Jazakumullah khairan.
 
     // Print kwitansi for single lunas
     const handlePrintLunasSingle = (tagihan) => {
+        // Get periode from jatuh_tempo
+        const periodeDate = new Date(tagihan.jatuh_tempo)
+        const periodeStr = periodeDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+
         generateKwitansiPDF({
             nomorKwitansi: `KW-${tagihan.id.slice(-8)}`,
             tanggal: new Date().toISOString().split('T')[0],
             namaSantri: selectedSantri?.nama,
-            kelas: selectedSantri?.kelas?.nama,
+            namaWali: selectedSantri?.nama_wali || '-',
             kategori: tagihan.kategori?.nama,
+            periode: periodeStr,
             jumlah: tagihan.jumlah,
             metode: 'Tunai',
             kasir: 'Bendahara PTQA'
@@ -417,12 +433,17 @@ Jazakumullah khairan.
 
     // Print kwitansi for single history
     const handlePrintHistorySingle = (pembayaran) => {
+        // Get periode from payment date
+        const periodeDate = new Date(pembayaran.tanggal)
+        const periodeStr = periodeDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+
         generateKwitansiPDF({
             nomorKwitansi: `KW-${pembayaran.id.slice(-8)}`,
             tanggal: pembayaran.tanggal,
             namaSantri: selectedSantri?.nama,
-            kelas: selectedSantri?.kelas?.nama,
+            namaWali: selectedSantri?.nama_wali || '-',
             kategori: pembayaran.tagihan?.kategori?.nama,
+            periode: periodeStr,
             jumlah: pembayaran.jumlah,
             metode: pembayaran.metode,
             kasir: 'Bendahara PTQA'

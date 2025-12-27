@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Search, Edit2, Trash2, Receipt, Download, RefreshCw, MessageCircle, AlertCircle, Calendar } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { usePermissions } from '../../hooks/usePermissions'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { sendWhatsApp, templateTagihanSantri, templatePengingatTagihan } from '../../utils/whatsapp'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
@@ -9,6 +10,7 @@ import './Keuangan.css'
 
 const TagihanSantriPage = () => {
     const { user } = useAuth()
+    const { canCreate, canUpdate, canDelete } = usePermissions()
     const [data, setData] = useState([])
     const [santriList, setSantriList] = useState([])
     const [kategoriList, setKategoriList] = useState([])
@@ -244,9 +246,11 @@ const TagihanSantriPage = () => {
                     <button className="btn btn-secondary" onClick={handleDownloadPDF}>
                         <Download size={18} /> Download PDF
                     </button>
-                    <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
-                        <Plus size={18} /> Buat Tagihan
-                    </button>
+                    {canCreate('tagihan') && (
+                        <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
+                            <Plus size={18} /> Buat Tagihan
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -331,15 +335,19 @@ const TagihanSantriPage = () => {
                                         <MobileActionMenu
                                             actions={[
                                                 { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => handleSendWhatsApp(item) },
-                                                { icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(item) },
-                                                { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => handleDelete(item.id), danger: true }
+                                                ...(canUpdate('tagihan') ? [{ icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(item) }] : []),
+                                                ...(canDelete('tagihan') ? [{ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => handleDelete(item.id), danger: true }] : [])
                                             ]}
                                         >
                                             <button className="btn-icon-sm success" onClick={() => handleSendWhatsApp(item)} title="Kirim WhatsApp">
                                                 <MessageCircle size={16} />
                                             </button>
-                                            <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
-                                            <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
+                                            {canUpdate('tagihan') && (
+                                                <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
+                                            )}
+                                            {canDelete('tagihan') && (
+                                                <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
+                                            )}
                                         </MobileActionMenu>
                                     </td>
                                 </tr>

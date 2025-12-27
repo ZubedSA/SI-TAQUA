@@ -8,11 +8,12 @@ const KasLaporanPage = () => {
     const [pemasukan, setPemasukan] = useState([])
     const [pengeluaran, setPengeluaran] = useState([])
     const [loading, setLoading] = useState(true)
-    const [filters, setFilters] = useState({ bulan: '', tahun: new Date().getFullYear() })
-
-    useEffect(() => {
-        fetchData()
-    }, [filters.bulan, filters.tahun])
+    const [filters, setFilters] = useState({
+        bulan: '',
+        tahun: new Date().getFullYear(),
+        dateFrom: '',
+        dateTo: ''
+    })
 
     const fetchData = async () => {
         setLoading(true)
@@ -20,14 +21,27 @@ const KasLaporanPage = () => {
             let queryPemasukan = supabase.from('kas_pemasukan').select('*').order('tanggal', { ascending: false })
             let queryPengeluaran = supabase.from('kas_pengeluaran').select('*').order('tanggal', { ascending: false })
 
-            if (filters.tahun) {
-                queryPemasukan = queryPemasukan.gte('tanggal', `${filters.tahun}-01-01`).lte('tanggal', `${filters.tahun}-12-31`)
-                queryPengeluaran = queryPengeluaran.gte('tanggal', `${filters.tahun}-01-01`).lte('tanggal', `${filters.tahun}-12-31`)
-            }
-            if (filters.bulan) {
-                const month = String(filters.bulan).padStart(2, '0')
-                queryPemasukan = queryPemasukan.gte('tanggal', `${filters.tahun}-${month}-01`).lte('tanggal', `${filters.tahun}-${month}-31`)
-                queryPengeluaran = queryPengeluaran.gte('tanggal', `${filters.tahun}-${month}-01`).lte('tanggal', `${filters.tahun}-${month}-31`)
+            // Date range filter takes priority
+            if (filters.dateFrom && filters.dateTo) {
+                queryPemasukan = queryPemasukan.gte('tanggal', filters.dateFrom).lte('tanggal', filters.dateTo)
+                queryPengeluaran = queryPengeluaran.gte('tanggal', filters.dateFrom).lte('tanggal', filters.dateTo)
+            } else if (filters.dateFrom) {
+                queryPemasukan = queryPemasukan.gte('tanggal', filters.dateFrom)
+                queryPengeluaran = queryPengeluaran.gte('tanggal', filters.dateFrom)
+            } else if (filters.dateTo) {
+                queryPemasukan = queryPemasukan.lte('tanggal', filters.dateTo)
+                queryPengeluaran = queryPengeluaran.lte('tanggal', filters.dateTo)
+            } else {
+                // Fallback to bulan/tahun filter
+                if (filters.tahun) {
+                    queryPemasukan = queryPemasukan.gte('tanggal', `${filters.tahun}-01-01`).lte('tanggal', `${filters.tahun}-12-31`)
+                    queryPengeluaran = queryPengeluaran.gte('tanggal', `${filters.tahun}-01-01`).lte('tanggal', `${filters.tahun}-12-31`)
+                }
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    queryPemasukan = queryPemasukan.gte('tanggal', `${filters.tahun}-${month}-01`).lte('tanggal', `${filters.tahun}-${month}-31`)
+                    queryPengeluaran = queryPengeluaran.gte('tanggal', `${filters.tahun}-${month}-01`).lte('tanggal', `${filters.tahun}-${month}-31`)
+                }
             }
 
             const [pemasukanRes, pengeluaranRes] = await Promise.all([queryPemasukan, queryPengeluaran])
@@ -39,6 +53,10 @@ const KasLaporanPage = () => {
             setLoading(false)
         }
     }
+
+    useEffect(() => {
+        fetchData()
+    }, [filters.bulan, filters.tahun, filters.dateFrom, filters.dateTo])
 
     const totalPemasukan = pemasukan.reduce((sum, d) => sum + Number(d.jumlah), 0)
     const totalPengeluaran = pengeluaran.reduce((sum, d) => sum + Number(d.jumlah), 0)
@@ -52,7 +70,9 @@ const KasLaporanPage = () => {
 
         generateLaporanPDF({
             title: 'Laporan Alur Kas',
-            subtitle: filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,
+            subtitle: filters.dateFrom && filters.dateTo
+                ? `Periode ${new Date(filters.dateFrom).toLocaleDateString('id-ID')} - ${new Date(filters.dateTo).toLocaleDateString('id-ID')}`
+                : filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,
             columns: ['Tanggal', 'Jenis', 'Keterangan', 'Masuk', 'Keluar'],
             data: allData.map(d => [
                 new Date(d.tanggal).toLocaleDateString('id-ID'),
@@ -111,13 +131,36 @@ const KasLaporanPage = () => {
             </div>
 
             <div className="filters-bar">
-                <select value={filters.bulan} onChange={e => setFilters({ ...filters, bulan: e.target.value })}>
+                <div className="date-range-filter">
+                    <input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Dari Tanggal"
+                    />
+                    <span>-</span>
+                    <input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Sampai Tanggal"
+                    />
+                </div>
+                <select
+                    value={filters.bulan}
+                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
                     <option value="">Semua Bulan</option>
                     {[...Array(12)].map((_, i) => (
                         <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
                     ))}
                 </select>
-                <select value={filters.tahun} onChange={e => setFilters({ ...filters, tahun: e.target.value })}>
+                <select
+                    value={filters.tahun}
+                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
                     {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>

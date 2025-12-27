@@ -8,11 +8,12 @@ const LaporanPembayaranPage = () => {
     const [pembayaran, setPembayaran] = useState([])
     const [tagihan, setTagihan] = useState([])
     const [loading, setLoading] = useState(true)
-    const [filters, setFilters] = useState({ bulan: '', tahun: new Date().getFullYear() })
-
-    useEffect(() => {
-        fetchData()
-    }, [filters.bulan, filters.tahun])
+    const [filters, setFilters] = useState({
+        bulan: '',
+        tahun: new Date().getFullYear(),
+        dateFrom: '',
+        dateTo: ''
+    })
 
     const fetchData = async () => {
         setLoading(true)
@@ -22,12 +23,22 @@ const LaporanPembayaranPage = () => {
                 .select('*, tagihan:tagihan_id(kategori:kategori_id(nama)), santri:santri_id(nama, nis)')
                 .order('tanggal', { ascending: false })
 
-            if (filters.tahun) {
-                queryPembayaran = queryPembayaran.gte('tanggal', `${filters.tahun}-01-01`).lte('tanggal', `${filters.tahun}-12-31`)
-            }
-            if (filters.bulan) {
-                const month = String(filters.bulan).padStart(2, '0')
-                queryPembayaran = queryPembayaran.gte('tanggal', `${filters.tahun}-${month}-01`).lte('tanggal', `${filters.tahun}-${month}-31`)
+            // Date range filter takes priority
+            if (filters.dateFrom && filters.dateTo) {
+                queryPembayaran = queryPembayaran.gte('tanggal', filters.dateFrom).lte('tanggal', filters.dateTo)
+            } else if (filters.dateFrom) {
+                queryPembayaran = queryPembayaran.gte('tanggal', filters.dateFrom)
+            } else if (filters.dateTo) {
+                queryPembayaran = queryPembayaran.lte('tanggal', filters.dateTo)
+            } else {
+                // Fallback to bulan/tahun filter
+                if (filters.tahun) {
+                    queryPembayaran = queryPembayaran.gte('tanggal', `${filters.tahun}-01-01`).lte('tanggal', `${filters.tahun}-12-31`)
+                }
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    queryPembayaran = queryPembayaran.gte('tanggal', `${filters.tahun}-${month}-01`).lte('tanggal', `${filters.tahun}-${month}-31`)
+                }
             }
 
             const [pembayaranRes, tagihanRes] = await Promise.all([
@@ -44,6 +55,10 @@ const LaporanPembayaranPage = () => {
         }
     }
 
+    useEffect(() => {
+        fetchData()
+    }, [filters.bulan, filters.tahun, filters.dateFrom, filters.dateTo])
+
     const totalPembayaran = pembayaran.reduce((sum, d) => sum + Number(d.jumlah), 0)
     const totalTagihan = tagihan.reduce((sum, d) => sum + Number(d.jumlah), 0)
     const lunasCount = tagihan.filter(t => t.status === 'Lunas').length
@@ -52,7 +67,10 @@ const LaporanPembayaranPage = () => {
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Pembayaran Santri',
-            subtitle: filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,
+            title: 'Laporan Pembayaran Santri',
+            subtitle: filters.dateFrom && filters.dateTo
+                ? `Periode ${new Date(filters.dateFrom).toLocaleDateString('id-ID')} - ${new Date(filters.dateTo).toLocaleDateString('id-ID')}`
+                : filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,
             columns: ['Tanggal', 'Santri', 'NIS', 'Kategori', 'Jumlah', 'Metode'],
             data: pembayaran.map(d => [
                 new Date(d.tanggal).toLocaleDateString('id-ID'),
@@ -110,13 +128,36 @@ const LaporanPembayaranPage = () => {
             </div>
 
             <div className="filters-bar">
-                <select value={filters.bulan} onChange={e => setFilters({ ...filters, bulan: e.target.value })}>
+                <div className="date-range-filter">
+                    <input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Dari Tanggal"
+                    />
+                    <span>-</span>
+                    <input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Sampai Tanggal"
+                    />
+                </div>
+                <select
+                    value={filters.bulan}
+                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
                     <option value="">Semua Bulan</option>
                     {[...Array(12)].map((_, i) => (
                         <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
                     ))}
                 </select>
-                <select value={filters.tahun} onChange={e => setFilters({ ...filters, tahun: e.target.value })}>
+                <select
+                    value={filters.tahun}
+                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
                     {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>

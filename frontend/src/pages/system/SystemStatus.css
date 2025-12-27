@@ -275,3 +275,75 @@
         justify-content: center;
     }
 }
+
+/* ================================
+   Dark Mode Overrides
+   ================================ */
+[data-theme="dark"] .status-section {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .status-section h2 {
+    color: #f1f5f9;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .health-overview {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+[data-theme="dark"] .health-text {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .health-card {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .health-card-content h4 {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .health-card-content p {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .stat-item {
+    background: #0f172a;
+}
+
+[data-theme="dark"] .stat-value {
+    color: #4ade80;
+}
+
+[data-theme="dark"] .stat-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .backup-status,
+[data-theme="dark"] .backup-time {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .backup-tips {
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+[data-theme="dark"] .backup-tips h4 {
+    color: #fbbf24;
+}
+
+/* Brighter utility colors for dark mode */
+[data-theme="dark"] .text-success {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .text-warning {
+    color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .text-danger {
+    color: #f87171 !important;
+}

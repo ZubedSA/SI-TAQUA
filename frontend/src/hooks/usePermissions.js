@@ -27,7 +27,12 @@ export const usePermissions = () => {
         canAccessKeuangan: ['admin', 'bendahara', 'pengasuh'].includes(role),
         canAccessKas: ['admin', 'bendahara', 'pengasuh'].includes(role),
         canAccessPembayaran: ['admin', 'bendahara', 'pengasuh'].includes(role),
-        canAccessAnggaran: ['admin', 'bendahara', 'pengasuh'].includes(role),
+        canAccessAnggaran: ['admin', 'bendahara'].includes(role), // Pengasuh cannot access Anggaran
+        canAccessPersetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
+
+        // Keuangan CRUD - Pengasuh can only CRUD in Persetujuan
+        canCrudKeuangan: ['admin', 'bendahara'].includes(role), // General keuangan CRUD
+        canCrudPersetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role), // Persetujuan CRUD
 
         // CRUD operations
         canCreate: {
@@ -39,6 +44,13 @@ export const usePermissions = () => {
             presensi: ['admin', 'guru'].includes(role),
             nilai: ['admin', 'guru'].includes(role),
             mapel: ['admin'].includes(role),
+            // Keuangan
+            kas: ['admin', 'bendahara'].includes(role),
+            pembayaran: ['admin', 'bendahara'].includes(role),
+            tagihan: ['admin', 'bendahara'].includes(role),
+            anggaran: ['admin', 'bendahara'].includes(role),
+            persetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            realisasi: ['admin', 'bendahara'].includes(role),
         },
         canUpdate: {
             santri: ['admin', 'guru'].includes(role),
@@ -49,6 +61,13 @@ export const usePermissions = () => {
             presensi: ['admin', 'guru'].includes(role),
             nilai: ['admin', 'guru'].includes(role),
             mapel: ['admin'].includes(role),
+            // Keuangan
+            kas: ['admin', 'bendahara'].includes(role),
+            pembayaran: ['admin', 'bendahara'].includes(role),
+            tagihan: ['admin', 'bendahara'].includes(role),
+            anggaran: ['admin', 'bendahara'].includes(role),
+            persetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            realisasi: ['admin', 'bendahara'].includes(role),
         },
         canDelete: {
             santri: ['admin'].includes(role),
@@ -59,6 +78,13 @@ export const usePermissions = () => {
             presensi: ['admin'].includes(role),
             nilai: ['admin'].includes(role),
             mapel: ['admin'].includes(role),
+            // Keuangan
+            kas: ['admin', 'bendahara'].includes(role),
+            pembayaran: ['admin', 'bendahara'].includes(role),
+            tagihan: ['admin', 'bendahara'].includes(role),
+            anggaran: ['admin', 'bendahara'].includes(role),
+            persetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            realisasi: ['admin', 'bendahara'].includes(role),
         },
         canRead: {
             // Wali hanya bisa read data santri yang terhubung (enforced by RLS)
@@ -70,6 +96,13 @@ export const usePermissions = () => {
             presensi: ['admin', 'guru', 'wali'].includes(role),
             nilai: ['admin', 'guru', 'wali'].includes(role),
             mapel: ['admin', 'guru', 'wali'].includes(role),
+            // Keuangan - Pengasuh can read all
+            kas: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            pembayaran: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            tagihan: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            anggaran: ['admin', 'bendahara'].includes(role),
+            persetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
+            realisasi: ['admin', 'bendahara', 'pengasuh'].includes(role),
         },
     }
 

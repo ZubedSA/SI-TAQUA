@@ -2,17 +2,25 @@ import { useState, useEffect } from 'react'
 import { Plus, Search, Edit2, Trash2, ArrowDownCircle, Download, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { usePermissions } from '../../hooks/usePermissions'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import './Keuangan.css'
 
 const KasPengeluaranPage = () => {
     const { user } = useAuth()
+    const { canCreate, canUpdate, canDelete } = usePermissions()
     const [data, setData] = useState([])
     const [kategoriList, setKategoriList] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
     const [editItem, setEditItem] = useState(null)
-    const [filters, setFilters] = useState({ search: '', bulan: '', tahun: new Date().getFullYear() })
+    const [filters, setFilters] = useState({
+        search: '',
+        bulan: '',
+        tahun: new Date().getFullYear(),
+        dateFrom: '',
+        dateTo: ''
+    })
     const [form, setForm] = useState({
         tanggal: new Date().toISOString().split('T')[0],
         keperluan: '',
@@ -24,7 +32,7 @@ const KasPengeluaranPage = () => {
     useEffect(() => {
         fetchData()
         fetchKategori()
-    }, [filters.bulan, filters.tahun])
+    }, [filters.bulan, filters.tahun, filters.dateFrom, filters.dateTo])
 
     const fetchKategori = async () => {
         const { data } = await supabase
@@ -44,14 +52,25 @@ const KasPengeluaranPage = () => {
                 .select('*')
                 .order('tanggal', { ascending: false })
 
-            if (filters.tahun) {
-                query = query.gte('tanggal', `${filters.tahun}-01-01`)
-                    .lte('tanggal', `${filters.tahun}-12-31`)
-            }
-            if (filters.bulan) {
-                const month = filters.bulan.padStart(2, '0')
-                query = query.gte('tanggal', `${filters.tahun}-${month}-01`)
-                    .lte('tanggal', `${filters.tahun}-${month}-31`)
+            // Date range filter takes priority
+            if (filters.dateFrom && filters.dateTo) {
+                query = query.gte('tanggal', filters.dateFrom)
+                    .lte('tanggal', filters.dateTo)
+            } else if (filters.dateFrom) {
+                query = query.gte('tanggal', filters.dateFrom)
+            } else if (filters.dateTo) {
+                query = query.lte('tanggal', filters.dateTo)
+            } else {
+                // Fallback to bulan/tahun filter
+                if (filters.tahun) {
+                    query = query.gte('tanggal', `${filters.tahun}-01-01`)
+                        .lte('tanggal', `${filters.tahun}-12-31`)
+                }
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    query = query.gte('tanggal', `${filters.tahun}-${month}-01`)
+                        .lte('tanggal', `${filters.tahun}-${month}-31`)
+                }
             }
 
             const { data: result, error } = await query
@@ -161,9 +180,11 @@ const KasPengeluaranPage = () => {
                     <button className="btn btn-secondary" onClick={handleDownloadPDF}>
                         <Download size={18} /> Download PDF
                     </button>
-                    <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
-                        <Plus size={18} /> Tambah Pengeluaran
-                    </button>
+                    {canCreate('kas') && (
+                        <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
+                            <Plus size={18} /> Tambah Pengeluaran
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -185,13 +206,36 @@ const KasPengeluaranPage = () => {
                         onChange={e => setFilters({ ...filters, search: e.target.value })}
                     />
                 </div>
-                <select value={filters.bulan} onChange={e => setFilters({ ...filters, bulan: e.target.value })}>
+                <div className="date-range-filter">
+                    <input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Dari Tanggal"
+                    />
+                    <span>-</span>
+                    <input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                        title="Sampai Tanggal"
+                    />
+                </div>
+                <select
+                    value={filters.bulan}
+                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
                     <option value="">Semua Bulan</option>
                     {[...Array(12)].map((_, i) => (
                         <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
                     ))}
                 </select>
-                <select value={filters.tahun} onChange={e => setFilters({ ...filters, tahun: e.target.value })}>
+                <select
+                    value={filters.tahun}
+                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
+                    disabled={filters.dateFrom || filters.dateTo}
+                >
                     {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
@@ -225,10 +269,16 @@ const KasPengeluaranPage = () => {
                                     <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
                                     <td>{item.keterangan || '-'}</td>
                                     <td>
-                                        <div className="action-buttons">
-                                            <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
-                                            <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
-                                        </div>
+                                        {(canUpdate('kas') || canDelete('kas')) && (
+                                            <div className="action-buttons">
+                                                {canUpdate('kas') && (
+                                                    <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
+                                                )}
+                                                {canDelete('kas') && (
+                                                    <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
+                                                )}
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

@@ -267,3 +267,107 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ================================
+   Dark Mode Overrides
+   ================================ */
+[data-theme="dark"] .info-banner {
+    background: rgba(96, 165, 250, 0.15);
+    border-color: rgba(96, 165, 250, 0.3);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .role-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .role-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Role card text - BRIGHTER */
+[data-theme="dark"] .role-info h3 {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .role-info p {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .role-stat {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .role-card-footer {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .system-badge {
+    background: #0f172a;
+    color: #94a3b8;
+}
+
+/* Permission section */
+[data-theme="dark"] .permission-section,
+[data-theme="dark"] .comparison-section {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .section-header h2 {
+    color: #f1f5f9;
+}
+
+/* Permission matrix table */
+[data-theme="dark"] .permission-matrix th {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .permission-matrix td {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .module-name {
+    color: #f1f5f9;
+}
+
+/* Comparison table */
+[data-theme="dark"] .comparison-table th {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .comparison-table td {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .comparison-table td:first-child {
+    color: #f1f5f9;
+}
+
+/* Brighter permission icons */
+[data-theme="dark"] .perm-yes {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .perm-no {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+}
+
+[data-theme="dark"] .perm-na {
+    color: #64748b;
+}
+
+[data-theme="dark"] .comparison-table .check {
+    color: #4ade80;
+}
+
+[data-theme="dark"] .comparison-table .cross {
+    color: #f87171;
+}
