@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save, Printer, Download, MoreVertical } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save, Printer, Download, MoreVertical, Send } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+
 import './Hafalan.css'
 
 const HafalanList = () => {
+    // Read initial tab from URL param
+    const [searchParams] = useSearchParams()
+    const initialTab = searchParams.get('tab') || 'list'
+
     const [hafalan, setHafalan] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [selectedHafalan, setSelectedHafalan] = useState(null)
-    const [activeTab, setActiveTab] = useState('list') // 'list', 'rekap', or 'pencapaian'
+    const [activeTab, setActiveTab] = useState(initialTab) // 'list' or 'rekap'
     const [activeFilter, setActiveFilter] = useState('Semua')
     const [stats, setStats] = useState({ total: 0, lancar: 0, sedang: 0, lemah: 0, bacaNazhor: 0 })
 
@@ -83,6 +88,14 @@ const HafalanList = () => {
         fetchSemester()
         fetchSantriList()
     }, [])
+
+    // Sync activeTab with URL when navigating via sidebar
+    useEffect(() => {
+        const urlTab = searchParams.get('tab') || 'list'
+        if (activeTab !== urlTab) {
+            setActiveTab(urlTab)
+        }
+    }, [searchParams])
 
     // Auto-fetch pencapaian data when period filter changes
     useEffect(() => {
@@ -394,6 +407,46 @@ _PTQA Batuan_`
         window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank')
     }
 
+    // Fungsi kirim massal (looping)
+    // Fungsi kirim massal (looping)
+    const sendAllWhatsApp = () => {
+        // Debugging logs
+        console.log('Button clicked. Data length:', rekapData.length)
+
+        if (!rekapData || rekapData.length === 0) {
+            alert('Tidak ada data rekap untuk dikirim. Silakan filter data terlebih dahulu.')
+            return
+        }
+
+        const message = `Akan mengirim laporan ke ${rekapData.length} wali santri.\n\nSistem akan membuka tab WhatsApp Web satu per satu setiap 2 detik.\n\nKlik OK untuk melanjutkan.`
+
+        if (!window.confirm(message)) return
+
+        // Feedback visual
+        const statusDiv = document.createElement('div')
+        statusDiv.style.cssText = 'position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:15px;border-radius:8px;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.1);'
+        statusDiv.innerHTML = `Mengirim pesan massal... (0/${rekapData.length})`
+        document.body.appendChild(statusDiv)
+
+        rekapData.forEach((item, index) => {
+            setTimeout(() => {
+                try {
+                    sendWhatsApp(item)
+                    statusDiv.innerHTML = `Mengirim pesan massal... (${index + 1}/${rekapData.length})`
+
+                    if (index === rekapData.length - 1) {
+                        setTimeout(() => {
+                            statusDiv.innerHTML = '✅ Pengiriman Selesai'
+                            setTimeout(() => statusDiv.remove(), 3000)
+                        }, 1000)
+                    }
+                } catch (e) {
+                    console.error('Error sending:', e)
+                }
+            }, index * 2000 + 500) // Delay awal 500ms
+        })
+    }
+
     // Filter for Rekap Hafalan tab
     const applyRekapFilter = () => {
         let filtered = [...hafalan]
@@ -612,33 +665,40 @@ _PTQA Batuan_`
     return (
         <div className="hafalan-page">
             {/* Header */}
+            {/* Header */}
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Hafalan Tahfizh</h1>
-                    <p className="page-subtitle">Kelola setoran dan muroja'ah hafalan santri</p>
+                    <h1 className="page-title">
+                        {activeTab === 'list' && 'Input Hafalan'}
+                        {activeTab === 'rekap' && 'Rekap Hafalan'}
+                        {activeTab === 'pencapaian' && 'Pencapaian Hafalan'}
+                    </h1>
+                    <p className="page-subtitle">
+                        {activeTab === 'list' && "Kelola setoran dan muroja'ah hafalan santri"}
+                        {activeTab === 'rekap' && "Lihat rekap hafalan santri dengan filter"}
+                        {activeTab === 'pencapaian' && "Monitoring pencapaian hafalan santri"}
+                    </p>
                 </div>
             </div>
 
-            {/* Top Tabs */}
+            {/* Top Tabs - Show only relevant tab based on route */}
             <div className="hafalan-tabs">
-                <button
-                    className={`hafalan-tab ${activeTab === 'list' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('list')}
-                >
-                    <FileText size={16} /> Input Hafalan
-                </button>
-                <button
-                    className={`hafalan-tab ${activeTab === 'rekap' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('rekap')}
-                >
-                    <BarChart3 size={16} /> Rekap Hafalan
-                </button>
-                <button
-                    className={`hafalan-tab ${activeTab === 'pencapaian' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('pencapaian')}
-                >
-                    <Trophy size={16} /> Pencapaian
-                </button>
+                {initialTab !== 'rekap' && (
+                    <button
+                        className={`hafalan-tab ${activeTab === 'list' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('list')}
+                    >
+                        <FileText size={16} /> Input Hafalan
+                    </button>
+                )}
+                {initialTab === 'rekap' && (
+                    <button
+                        className={`hafalan-tab ${activeTab === 'rekap' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('rekap')}
+                    >
+                        <BarChart3 size={16} /> Rekap Hafalan
+                    </button>
+                )}
             </div>
 
             {/* ==================== INPUT HAFALAN TAB ==================== */}
@@ -706,6 +766,7 @@ _PTQA Batuan_`
                                 value={dateFilter.dari}
                                 onChange={(e) => setDateFilter({ ...dateFilter, dari: e.target.value })}
                             />
+
                         </div>
                         <div className="date-filter-group">
                             <label><Calendar size={14} /> Sampai Tanggal</label>
@@ -715,6 +776,7 @@ _PTQA Batuan_`
                                 value={dateFilter.sampai}
                                 onChange={(e) => setDateFilter({ ...dateFilter, sampai: e.target.value })}
                             />
+
                         </div>
                         {(dateFilter.dari || dateFilter.sampai) && (
                             <button className="btn btn-secondary btn-sm" onClick={() => setDateFilter({ dari: '', sampai: '' })}>
@@ -816,6 +878,8 @@ _PTQA Batuan_`
                 </>
             )}
 
+
+
             {/* ==================== REKAP HAFALAN TAB ==================== */}
             {activeTab === 'rekap' && (
                 <>
@@ -869,6 +933,14 @@ _PTQA Batuan_`
                             </button>
                             <button className="btn btn-success" onClick={handleDownloadPDF}>
                                 <Download size={14} /> PDF
+                            </button>
+                            <button
+                                className="btn btn-success"
+                                onClick={sendAllWhatsApp}
+                                disabled={rekapData.length === 0}
+                                title="Kirim massal ke semua data rekap"
+                            >
+                                <Send size={14} /> Kirim Semua WA
                             </button>
                         </div>
                     </div>

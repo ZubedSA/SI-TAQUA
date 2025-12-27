@@ -101,7 +101,20 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const getSession = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession()
+                const { data: { session }, error } = await supabase.auth.getSession()
+
+                // Handle session errors (like invalid refresh token)
+                if (error) {
+                    console.error('Session error:', error.message)
+                    // Clear any stale session data
+                    localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token')
+                    await supabase.auth.signOut()
+                    setUser(null)
+                    setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
+                    setLoading(false)
+                    return
+                }
+
                 setUser(session?.user ?? null)
                 if (session?.user) {
                     // Fetch profile dengan timeout
@@ -109,6 +122,14 @@ export const AuthProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error('Auth error:', error.message)
+                // Clear session on any auth error
+                try {
+                    await supabase.auth.signOut()
+                } catch (e) {
+                    console.error('Signout error:', e)
+                }
+                setUser(null)
+                setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
             } finally {
                 setLoading(false)
             }
@@ -118,6 +139,14 @@ export const AuthProvider = ({ children }) => {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                // Handle token refresh errors
+                if (event === 'TOKEN_REFRESHED' && !session) {
+                    console.log('Token refresh failed, signing out')
+                    setUser(null)
+                    setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
+                    return
+                }
+
                 setUser(session?.user ?? null)
                 if (session?.user) {
                     fetchUserProfile(session.user.id)

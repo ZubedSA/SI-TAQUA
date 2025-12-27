@@ -135,7 +135,7 @@ const InputNilaiPage = () => {
         <div className="nilai-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Input Nilai</h1>
+                    <h1 className="page-title">Input Nilai Santri</h1>
                     <p className="page-subtitle">Masukkan nilai santri per mata pelajaran</p>
                 </div>
             </div>

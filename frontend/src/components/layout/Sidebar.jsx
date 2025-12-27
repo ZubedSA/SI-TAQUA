@@ -20,6 +20,7 @@ import {
     Settings,
     UserCircle,
     Activity,
+    Trophy,
     Wallet,
     ChevronDown,
     ChevronRight,
@@ -81,10 +82,11 @@ const adminMenuItems = [
         label: 'Monitoring Akademik',
         children: [
             { path: '/dashboard/akademik', icon: School, label: 'Dashboard Akademik' },
-            { path: '/rekap-nilai', icon: FileText, label: 'Rekap Nilai' },
+            { path: '/rekap-nilai/syahri', icon: FileText, label: 'Rekap Nilai Syahri' },
+            { path: '/rekap-nilai/semester', icon: FileText, label: 'Rekap Nilai Semester' },
             { path: '/hafalan', icon: BookMarked, label: 'Progress Hafalan' },
             { path: '/presensi', icon: CalendarCheck, label: 'Kehadiran' },
-            { path: '/laporan', icon: FileSearch, label: 'Laporan' },
+            { path: '/laporan/akademik-santri', icon: FileSearch, label: 'Laporan Akademik' },
         ]
     },
 
@@ -136,19 +138,95 @@ const operatorMenuItems = [
         ]
     },
 
-    // Akademik Menu dengan Nested Submenu
+    // Akademik Menu dengan Deep Nested Submenu
     {
         id: 'akademik',
         icon: School,
         label: 'Akademik',
         roles: ['admin', 'guru'],
         children: [
-            { path: '/input-nilai', icon: PenLine, label: 'Input Nilai', roles: ['admin', 'guru'] },
-            { path: '/rekap-nilai', icon: FileText, label: 'Rekap Nilai', roles: ['admin', 'guru'] },
-            { path: '/hafalan', icon: BookMarked, label: 'Hafalan', roles: ['admin', 'guru'] },
+            // Input Nilai with nested Tahfizhiyah/Madrosiyah
+            {
+                id: 'input-nilai',
+                icon: PenLine,
+                label: 'Input Nilai',
+                roles: ['admin', 'guru'],
+                children: [
+                    {
+                        id: 'nilai-tahfizh',
+                        icon: BookMarked,
+                        label: 'Tahfizhiyah',
+                        roles: ['admin', 'guru'],
+                        children: [
+                            { path: '/akademik/nilai/tahfizh/syahri', icon: Calendar, label: 'Ujian Syahri', roles: ['admin', 'guru'] },
+                            { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
+                        ]
+                    },
+                    {
+                        id: 'nilai-madros',
+                        icon: BookOpen,
+                        label: 'Madrosiyah',
+                        roles: ['admin', 'guru'],
+                        children: [
+                            { path: '/akademik/nilai/madros/harian', icon: PenLine, label: 'Ujian Harian', roles: ['admin', 'guru'] },
+                            { path: '/akademik/nilai/madros/uts', icon: FileText, label: 'Ujian Tengah Semester', roles: ['admin', 'guru'] },
+                            { path: '/akademik/nilai/madros/uas', icon: ClipboardList, label: 'Ujian Akhir Semester', roles: ['admin', 'guru'] },
+                        ]
+                    },
+                ]
+            },
+            // Hafalan with Pencapaian submenu
+            {
+                id: 'hafalan-menu',
+                icon: BookMarked,
+                label: 'Hafalan',
+                roles: ['admin', 'guru'],
+                children: [
+                    { path: '/hafalan', icon: PenLine, label: 'Input Hafalan', roles: ['admin', 'guru'] },
+                    { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan', roles: ['admin', 'guru'] },
+                    {
+                        id: 'pencapaian',
+                        icon: Trophy,
+                        label: 'Pencapaian',
+                        roles: ['admin', 'guru'],
+                        children: [
+                            { path: '/hafalan/pencapaian/mingguan', icon: Calendar, label: 'Mingguan', roles: ['admin', 'guru'] },
+                            { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan', roles: ['admin', 'guru'] },
+                            { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester', roles: ['admin', 'guru'] },
+                        ]
+                    },
+                ]
+            },
+            // Rekap Nilai
+            {
+                id: 'rekap-nilai-menu',
+                icon: FileText,
+                label: 'Rekap Nilai',
+                roles: ['admin', 'guru'],
+                children: [
+                    { path: '/rekap-nilai/syahri', icon: Calendar, label: 'Rekap Syahri', roles: ['admin', 'guru'] },
+                    { path: '/rekap-nilai/semester', icon: CalendarCheck, label: 'Rekap Semester', roles: ['admin', 'guru'] },
+                    { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan', roles: ['admin', 'guru'] },
+                ]
+            },
+            // Laporan
+            {
+                id: 'laporan-akademik',
+                icon: Download,
+                label: 'Laporan',
+                roles: ['admin', 'guru'],
+                children: [
+                    { path: '/laporan/hafalan-harian', icon: BookMarked, label: 'Laporan Hafalan Harian', roles: ['admin', 'guru'] },
+                    { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Laporan Rekap Mingguan', roles: ['admin', 'guru'] },
+                    { path: '/laporan/ujian-syahri', icon: FileText, label: 'Laporan Ujian Syahri', roles: ['admin', 'guru'] },
+                    { path: '/laporan/ujian-semester', icon: FileText, label: 'Laporan Ujian Semester', roles: ['admin', 'guru'] },
+                    { path: '/laporan/akademik-santri', icon: Users, label: 'Laporan Akademik Santri', roles: ['admin', 'guru'] },
+                ]
+            },
+            // Pembinaan Santri (existing)
             { path: '/presensi', icon: CalendarCheck, label: 'Pembinaan Santri', roles: ['admin', 'guru'] },
+            // Semester (existing)
             { path: '/semester', icon: Calendar, label: 'Semester', roles: ['admin', 'guru'] },
-            { path: '/laporan', icon: Download, label: 'Laporan', roles: ['admin', 'guru'] },
         ]
     },
 
@@ -240,25 +318,52 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         'data-pondok', 'akademik', 'alur-kas', 'pembayaran', 'penyaluran'
     ]
 
-    // No more nested submenus since keuangan items are now top-level
-    const nestedSubmenuIds = []
+    // Nested submenu IDs for Akademik deep structure with parent mapping
+    const nestedSubmenuIds = [
+        'input-nilai', 'nilai-tahfizh', 'nilai-madros',
+        'hafalan-menu', 'pencapaian',
+        'rekap-nilai-menu', 'laporan-akademik'
+    ]
+
+    // Define parent-child relationships for nested menus
+    const submenuParents = {
+        'nilai-tahfizh': 'input-nilai',
+        'nilai-madros': 'input-nilai',
+        'pencapaian': 'hafalan-menu'
+    }
+
+    // Get all ancestors of a menu ID
+    const getAncestors = (menuId) => {
+        const ancestors = []
+        let current = submenuParents[menuId]
+        while (current) {
+            ancestors.push(current)
+            current = submenuParents[current]
+        }
+        return ancestors
+    }
 
     const toggleMenu = (menuId) => {
         setOpenMenus(prev => {
             const isCurrentlyOpen = prev[menuId]
 
-            // If closing, just close it
+            // If closing, just close it and its children
             if (isCurrentlyOpen) {
-                return {
-                    ...prev,
-                    [menuId]: false
-                }
+                const newState = { ...prev }
+                newState[menuId] = false
+                // Also close any children of this menu
+                Object.keys(submenuParents).forEach(childId => {
+                    if (submenuParents[childId] === menuId) {
+                        newState[childId] = false
+                    }
+                })
+                return newState
             }
 
             // Check if this is a top-level menu
             const isTopLevel = topLevelMenuIds.includes(menuId)
 
-            // Check if this is a nested submenu (inside keuangan)
+            // Check if this is a nested submenu
             const isNestedSubmenu = nestedSubmenuIds.includes(menuId)
 
             if (isTopLevel) {
@@ -279,13 +384,24 @@ const Sidebar = ({ mobileOpen, onClose }) => {
             }
 
             if (isNestedSubmenu) {
-                // Close only other nested submenus, keep parent open
                 const newState = { ...prev }
+                const ancestors = getAncestors(menuId)
+
+                // Keep ancestors open, close siblings only
                 nestedSubmenuIds.forEach(key => {
-                    if (key !== menuId) {
+                    if (key === menuId) {
+                        // Open this menu
+                        newState[key] = true
+                    } else if (ancestors.includes(key)) {
+                        // Keep ancestors open
+                        newState[key] = true
+                    } else if (!ancestors.includes(key) && submenuParents[menuId] === submenuParents[key]) {
+                        // Close siblings (same parent)
                         newState[key] = false
                     }
+                    // Leave other menus as-is
                 })
+
                 newState[menuId] = true
                 return newState
             }
@@ -313,19 +429,25 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     }
 
     useEffect(() => {
-        const newOpenMenus = {}
-        const scanItems = (items) => {
-            items.forEach(item => {
-                if (item.children) {
-                    if (isChildActive(item.children)) {
-                        newOpenMenus[item.id] = true
+        // Only run on initial mount or role change, not on every path change
+        // This prevents menus from closing when clicking child links
+        setOpenMenus(prev => {
+            const newOpenMenus = { ...prev }
+
+            const scanItems = (items) => {
+                items.forEach(item => {
+                    if (item.children) {
+                        if (isChildActive(item.children)) {
+                            // Keep this menu open if a child is active
+                            newOpenMenus[item.id] = true
+                        }
+                        scanItems(item.children)
                     }
-                    scanItems(item.children)
-                }
-            })
-        }
-        scanItems(baseMenuItems)
-        setOpenMenus(newOpenMenus)
+                })
+            }
+            scanItems(baseMenuItems)
+            return newOpenMenus
+        })
     }, [location.pathname, activeRole])
 
     // Render submenu item
@@ -363,11 +485,26 @@ const Sidebar = ({ mobileOpen, onClose }) => {
             )
         }
 
+        // Custom active check for paths with query params
+        const isItemActive = () => {
+            const currentPath = location.pathname
+            const currentSearch = location.search
+            const itemPath = item.path.split('?')[0]
+            const itemSearch = item.path.includes('?') ? '?' + item.path.split('?')[1] : ''
+
+            // If item has query param, must match both path and query
+            if (itemSearch) {
+                return currentPath === itemPath && currentSearch === itemSearch
+            }
+            // If item has no query param, must match path exactly and have no tab query
+            return currentPath === itemPath && !currentSearch.includes('tab=')
+        }
+
         return (
             <li key={item.path} className="nav-item">
                 <NavLink
                     to={item.path}
-                    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                    className={() => `nav-link ${isItemActive() ? 'active' : ''}`}
                     onClick={handleNavClick}
                     style={{ paddingLeft: `${paddingLeft}px` }}
                 >

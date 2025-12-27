@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Check, MessageCircle, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate } from '../../lib/auditLog'
 import './Hafalan.css'
@@ -22,6 +22,8 @@ const HafalanForm = () => {
     const [selectedHalaqoh, setSelectedHalaqoh] = useState('')
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+    // State untuk menyimpan data hafalan yang baru diinput hari ini
+    const [recentHafalan, setRecentHafalan] = useState([])
 
     const [formData, setFormData] = useState({
         santri_id: '',
@@ -45,10 +47,32 @@ const HafalanForm = () => {
         fetchHalaqoh()
         fetchSantri()
         fetchGuru()
+        fetchRecentHafalan()
         if (isEdit) {
             fetchHafalan()
         }
     }, [id])
+
+    // Fetch hafalan yang baru diinput hari ini
+    const fetchRecentHafalan = async () => {
+        try {
+            const today = new Date().toISOString().split('T')[0]
+            const { data } = await supabase
+                .from('hafalan')
+                .select(`
+                    id, tanggal, juz_mulai, surah_mulai, ayat_mulai, 
+                    juz_selesai, surah_selesai, ayat_selesai, jenis, status, catatan,
+                    santri:santri_id (id, nama, nis, no_telp_wali, nama_wali),
+                    penguji:penguji_id (id, nama)
+                `)
+                .eq('tanggal', today)
+                .order('created_at', { ascending: false })
+                .limit(20)
+            setRecentHafalan(data || [])
+        } catch (err) {
+            console.error('Error fetching recent hafalan:', err.message)
+        }
+    }
 
     // Fetch daftar halaqoh dengan musyrif
     const fetchHalaqoh = async () => {
@@ -186,8 +210,11 @@ const HafalanForm = () => {
                 const santriForLog = santriList.find(s => s.id === formData.santri_id)
                 await logCreate('hafalan', santriForLog?.nama || 'Santri', `Tambah hafalan: ${santriForLog?.nama || 'Santri'} - ${formData.surah_mulai}`)
 
-                // Data berhasil disimpan - tampilkan sukses dulu
-                setSuccess('Data hafalan berhasil disimpan!')
+                // Data berhasil disimpan - tampilkan sukses
+                setSuccess('✅ Data hafalan berhasil disimpan!')
+
+                // Refresh daftar hafalan yang baru diinput
+                await fetchRecentHafalan()
 
                 // Konfirmasi kirim WhatsApp dengan try-catch
                 try {
@@ -250,7 +277,25 @@ _PTQA Batuan_`
                     // Tidak throw error, data sudah tersimpan
                 }
 
-                setTimeout(() => navigate('/hafalan'), 1000)
+                // Reset form untuk input baru, tapi pertahankan halaqoh yang dipilih
+                setFormData({
+                    santri_id: '',
+                    juz_mulai: formData.juz_mulai,
+                    surah_mulai: '',
+                    ayat_mulai: 1,
+                    juz_selesai: formData.juz_selesai,
+                    surah_selesai: '',
+                    ayat_selesai: 1,
+                    jenis: formData.jenis,
+                    status: 'Lancar',
+                    kadar_setoran: '1 Halaman',
+                    tanggal: new Date().toISOString().split('T')[0],
+                    penguji_id: formData.penguji_id,
+                    catatan: ''
+                })
+
+                // Clear success setelah 3 detik
+                setTimeout(() => setSuccess(''), 3000)
                 return
             }
         } catch (err) {
@@ -400,6 +445,82 @@ _PTQA Batuan_`
                     </button>
                 </div>
             </form>
+
+            {/* Tabel hafalan yang baru diinput hari ini */}
+            {!isEdit && recentHafalan.length > 0 && (
+                <div className="recent-hafalan-section" style={{ marginTop: '32px' }}>
+                    <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Check size={20} className="text-success" /> Hafalan Hari Ini ({recentHafalan.length})
+                    </h3>
+                    <div className="card">
+                        <div className="table-container">
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Santri</th>
+                                        <th>Juz/Surah</th>
+                                        <th>Jenis</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentHafalan.map((item, index) => (
+                                        <tr key={item.id}>
+                                            <td>{index + 1}</td>
+                                            <td>{item.santri?.nama || '-'}</td>
+                                            <td>
+                                                Juz {item.juz_mulai} - {item.surah_mulai} : {item.ayat_mulai}
+                                                {item.surah_selesai && ` → ${item.surah_selesai} : ${item.ayat_selesai}`}
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${item.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>
+                                                    {item.jenis}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${item.status === 'Lancar' ? 'badge-success' : item.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        className="btn btn-sm btn-success"
+                                                        onClick={() => {
+                                                            const santri = item.santri
+                                                            if (!santri?.no_telp_wali) {
+                                                                alert('Nomor WA wali tidak tersedia')
+                                                                return
+                                                            }
+                                                            let phone = santri.no_telp_wali.replace(/\D/g, '')
+                                                            if (phone.startsWith('0')) phone = '62' + phone.substring(1)
+                                                            const halaqoh = halaqohList.find(h => h.id === selectedHalaqoh)
+                                                            const message = `Assalamu'alaikum Wr. Wb.\n\n*LAPORAN HAFALAN SANTRI*\n━━━━━━━━━━━━━━━━━━━━\n\nKepada Yth. ${santri?.nama_wali || 'Wali Santri'}\n\n📌 *Nama:* ${santri.nama}\n📅 *Tanggal:* ${item.tanggal}\n📖 *Jenis:* ${item.jenis}\n📝 *Detail:* Juz ${item.juz_mulai}, ${item.surah_mulai} (${item.ayat_mulai}-${item.ayat_selesai})\n✅ *Status:* ${item.status}\n\nJazakumullah khairan.\n_PTQA Batuan_`
+                                                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                                                        }}
+                                                        title="Kirim via WhatsApp"
+                                                    >
+                                                        <MessageCircle size={14} />
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm btn-outline"
+                                                        onClick={() => navigate(`/hafalan/edit/${item.id}`)}
+                                                        title="Edit"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

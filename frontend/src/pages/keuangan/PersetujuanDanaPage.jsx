@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { CheckCircle, XCircle, Search, RefreshCw, Clock, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import './Keuangan.css'
 
 const PersetujuanDanaPage = () => {
@@ -152,7 +153,12 @@ const PersetujuanDanaPage = () => {
                                     <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
                                     <td>
                                         {item.status === 'Pending' ? (
-                                            <div className="action-buttons">
+                                            <MobileActionMenu
+                                                actions={[
+                                                    { label: 'Setujui', icon: <CheckCircle size={14} />, onClick: () => openApproval(item, 'approve') },
+                                                    { label: 'Tolak', icon: <XCircle size={14} />, onClick: () => openApproval(item, 'reject'), danger: true }
+                                                ]}
+                                            >
                                                 <button
                                                     className="btn-icon-sm success"
                                                     onClick={() => openApproval(item, 'approve')}
@@ -167,7 +173,7 @@ const PersetujuanDanaPage = () => {
                                                 >
                                                     <XCircle size={16} />
                                                 </button>
-                                            </div>
+                                            </MobileActionMenu>
                                         ) : (
                                             <span className="text-muted">-</span>
                                         )}

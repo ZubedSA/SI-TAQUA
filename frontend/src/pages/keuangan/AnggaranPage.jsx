@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, PiggyBank, Download, RefreshCw, Eye } from
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import './Keuangan.css'
 
 const AnggaranPage = () => {
@@ -221,12 +222,21 @@ const AnggaranPage = () => {
                                     <td>
                                         <div className="action-buttons">
                                             {item.status === 'Pending' && (
-                                                <>
+                                                <MobileActionMenu
+                                                    actions={[
+                                                        { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
+                                                        { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => handleDelete(item.id), danger: true },
+                                                        { label: 'Detail', icon: <Eye size={14} />, onClick: () => { } }
+                                                    ]}
+                                                >
                                                     <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
                                                     <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
-                                                </>
+                                                    <button className="btn-icon-sm" title="Detail"><Eye size={16} /></button>
+                                                </MobileActionMenu>
                                             )}
-                                            <button className="btn-icon-sm" title="Detail"><Eye size={16} /></button>
+                                            {item.status !== 'Pending' && (
+                                                <button className="btn-icon-sm" title="Detail"><Eye size={16} /></button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

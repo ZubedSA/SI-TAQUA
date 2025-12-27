@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, TrendingUp, Download, RefreshCw } from 'lu
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import './Keuangan.css'
 
 const RealisasiDanaPage = () => {
@@ -209,10 +210,15 @@ const RealisasiDanaPage = () => {
                                     <td>{item.keperluan || '-'}</td>
                                     <td className="amount red">Rp {Number(item.jumlah_terpakai).toLocaleString('id-ID')}</td>
                                     <td>
-                                        <div className="action-buttons">
+                                        <MobileActionMenu
+                                            actions={[
+                                                { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
+                                                { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => handleDelete(item.id), danger: true }
+                                            ]}
+                                        >
                                             <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
                                             <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
-                                        </div>
+                                        </MobileActionMenu>
                                     </td>
                                 </tr>
                             ))}

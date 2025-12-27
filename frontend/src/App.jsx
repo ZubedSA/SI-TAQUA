@@ -18,6 +18,9 @@ import InputNilaiPage from './pages/nilai/InputNilaiPage'
 import RekapNilaiPage from './pages/nilai/RekapNilaiPage'
 import HafalanList from './pages/hafalan/HafalanList'
 import HafalanForm from './pages/hafalan/HafalanForm'
+import PencapaianMingguanPage from './pages/hafalan/PencapaianMingguanPage'
+import PencapaianBulananPage from './pages/hafalan/PencapaianBulananPage'
+import PencapaianSemesterPage from './pages/hafalan/PencapaianSemesterPage'
 import PresensiPage from './pages/presensi/PresensiPage'
 import SemesterPage from './pages/semester/SemesterPage'
 import LaporanPage from './pages/laporan/LaporanPage'
@@ -42,6 +45,23 @@ import AnggaranPage from './pages/keuangan/AnggaranPage'
 import PersetujuanDanaPage from './pages/keuangan/PersetujuanDanaPage'
 import RealisasiDanaPage from './pages/keuangan/RealisasiDanaPage'
 import LaporanPenyaluranPage from './pages/keuangan/LaporanPenyaluranPage'
+// Akademik - Input Nilai Pages
+import TahfizhSyahriPage from './pages/nilai/TahfizhSyahriPage'
+import TahfizhSemesterPage from './pages/nilai/TahfizhSemesterPage'
+import MadrosHarianPage from './pages/nilai/MadrosHarianPage'
+import MadrosUTSPage from './pages/nilai/MadrosUTSPage'
+import MadrosUASPage from './pages/nilai/MadrosUASPage'
+// Akademik - Rekap Nilai Pages
+import RekapSyahriPage from './pages/nilai/RekapSyahriPage'
+import RekapSemesterPage from './pages/nilai/RekapSemesterPage'
+import GrafikPerkembanganPage from './pages/nilai/GrafikPerkembanganPage'
+// Note: Pencapaian pages removed from menu structure
+// Akademik - Laporan Pages
+import LaporanHafalanHarianPage from './pages/laporan/LaporanHafalanHarianPage'
+import LaporanRekapMingguanPage from './pages/laporan/LaporanRekapMingguanPage'
+import LaporanUjianSyahriPage from './pages/laporan/LaporanUjianSyahriPage'
+import LaporanUjianSemesterPage from './pages/laporan/LaporanUjianSemesterPage'
+import LaporanAkademikSantriPage from './pages/laporan/LaporanAkademikSantriPage'
 import './index.css'
 import './components/common/ErrorBoundary.css'
 
@@ -239,6 +259,23 @@ function App() {
                   </ProtectedRoute>
                 } />
 
+                {/* Pencapaian Hafalan */}
+                <Route path="/hafalan/pencapaian/mingguan" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <PencapaianMingguanPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/hafalan/pencapaian/bulanan" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <PencapaianBulananPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/hafalan/pencapaian/semester" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <PencapaianSemesterPage />
+                  </ProtectedRoute>
+                } />
+
                 {/* Presensi */}
                 <Route path="/presensi" element={
                   <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
@@ -262,6 +299,94 @@ function App() {
                 <Route path="/laporan" element={
                   <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
                     <LaporanPage />
+                  </ProtectedRoute>
+                } />
+
+                {/* ============ AKADEMIK - INPUT NILAI ROUTES ============ */}
+
+                {/* Tahfizhiyah - Ujian Syahri */}
+                <Route path="/akademik/nilai/tahfizh/syahri" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <TahfizhSyahriPage />
+                  </ProtectedRoute>
+                } />
+                {/* Tahfizhiyah - Ujian Semester */}
+                <Route path="/akademik/nilai/tahfizh/semester" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <TahfizhSemesterPage />
+                  </ProtectedRoute>
+                } />
+                {/* Madrosiyah - Ujian Harian */}
+                <Route path="/akademik/nilai/madros/harian" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <MadrosHarianPage />
+                  </ProtectedRoute>
+                } />
+                {/* Madrosiyah - UTS */}
+                <Route path="/akademik/nilai/madros/uts" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <MadrosUTSPage />
+                  </ProtectedRoute>
+                } />
+                {/* Madrosiyah - UAS */}
+                <Route path="/akademik/nilai/madros/uas" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <MadrosUASPage />
+                  </ProtectedRoute>
+                } />
+
+                {/* ============ AKADEMIK - REKAP NILAI ROUTES ============ */}
+
+                {/* Rekap Syahri */}
+                <Route path="/rekap-nilai/syahri" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <RekapSyahriPage />
+                  </ProtectedRoute>
+                } />
+                {/* Rekap Semester */}
+                <Route path="/rekap-nilai/semester" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <RekapSemesterPage />
+                  </ProtectedRoute>
+                } />
+                {/* Grafik Perkembangan */}
+                <Route path="/rekap-nilai/grafik" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <GrafikPerkembanganPage />
+                  </ProtectedRoute>
+                } />
+
+
+                {/* ============ AKADEMIK - LAPORAN ROUTES ============ */}
+
+                {/* Laporan Hafalan Harian */}
+                <Route path="/laporan/hafalan-harian" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <LaporanHafalanHarianPage />
+                  </ProtectedRoute>
+                } />
+                {/* Laporan Rekap Mingguan */}
+                <Route path="/laporan/rekap-mingguan" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <LaporanRekapMingguanPage />
+                  </ProtectedRoute>
+                } />
+                {/* Laporan Ujian Syahri */}
+                <Route path="/laporan/ujian-syahri" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <LaporanUjianSyahriPage />
+                  </ProtectedRoute>
+                } />
+                {/* Laporan Ujian Semester */}
+                <Route path="/laporan/ujian-semester" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <LaporanUjianSemesterPage />
+                  </ProtectedRoute>
+                } />
+                {/* Laporan Akademik Santri */}
+                <Route path="/laporan/akademik-santri" element={
+                  <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                    <LaporanAkademikSantriPage />
                   </ProtectedRoute>
                 } />
 

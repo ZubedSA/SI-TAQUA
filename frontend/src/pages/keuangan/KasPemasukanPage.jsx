@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import './Keuangan.css'
 
 const KasPemasukanPage = () => {
@@ -287,18 +288,32 @@ const KasPemasukanPage = () => {
                                     <td>{item.keterangan || '-'}</td>
                                     <td>
                                         {(canUpdate('kas') || canDelete('kas')) && (
-                                            <div className="action-buttons">
+                                            <MobileActionMenu
+                                                actions={[
+                                                    canUpdate('kas') && {
+                                                        label: 'Edit',
+                                                        icon: <Edit2 size={14} />,
+                                                        onClick: () => openEdit(item)
+                                                    },
+                                                    canDelete('kas') && {
+                                                        label: 'Hapus',
+                                                        icon: <Trash2 size={14} />,
+                                                        onClick: () => handleDelete(item.id),
+                                                        danger: true
+                                                    }
+                                                ].filter(Boolean)}
+                                            >
                                                 {canUpdate('kas') && (
-                                                    <button className="btn-icon-sm" onClick={() => openEdit(item)}>
+                                                    <button className="btn-icon" onClick={() => openEdit(item)} title="Edit">
                                                         <Edit2 size={16} />
                                                     </button>
                                                 )}
                                                 {canDelete('kas') && (
-                                                    <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}>
+                                                    <button className="btn-icon btn-icon-danger" onClick={() => handleDelete(item.id)} title="Hapus">
                                                         <Trash2 size={16} />
                                                     </button>
                                                 )}
-                                            </div>
+                                            </MobileActionMenu>
                                         )}
                                     </td>
                                 </tr>
