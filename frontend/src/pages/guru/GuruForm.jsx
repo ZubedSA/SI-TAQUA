@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate } from '../../lib/auditLog'
@@ -8,6 +8,10 @@ import './Guru.css'
 const GuruForm = () => {
     const navigate = useNavigate()
     const { id } = useParams()
+    const location = useLocation()
+
+    // Determine mode: view (read-only) vs edit
+    const isViewMode = id && !location.pathname.includes('/edit')
     const isEdit = Boolean(id)
 
     const [loading, setLoading] = useState(false)
@@ -123,8 +127,8 @@ const GuruForm = () => {
                     <button className="btn btn-secondary btn-sm mb-2" onClick={() => navigate('/guru')}>
                         <ArrowLeft size={16} /> Kembali
                     </button>
-                    <h1 className="page-title">{isEdit ? 'Edit Guru' : 'Tambah Guru Baru'}</h1>
-                    <p className="page-subtitle">{isEdit ? 'Update data guru' : 'Isi form untuk menambah guru baru'}</p>
+                    <h1 className="page-title">{isViewMode ? 'Detail Guru' : isEdit ? 'Edit Guru' : 'Tambah Guru Baru'}</h1>
+                    <p className="page-subtitle">{isViewMode ? 'Informasi lengkap data guru' : isEdit ? 'Update data guru' : 'Isi form untuk menambah guru baru'}</p>
                 </div>
             </div>
 
@@ -138,35 +142,35 @@ const GuruForm = () => {
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">NIP</label>
-                            <input type="text" name="nip" className="form-control" value={formData.nip} onChange={handleChange} placeholder="Opsional" />
+                            <input type="text" name="nip" className="form-control" value={formData.nip} onChange={handleChange} placeholder="Opsional" readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Nama Lengkap *</label>
-                            <input type="text" name="nama" className="form-control" value={formData.nama} onChange={handleChange} required />
+                            <input type="text" name="nama" className="form-control" value={formData.nama} onChange={handleChange} required readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Jenis Kelamin</label>
-                            <select name="jenis_kelamin" className="form-control" value={formData.jenis_kelamin} onChange={handleChange}>
+                            <select name="jenis_kelamin" className="form-control" value={formData.jenis_kelamin} onChange={handleChange} disabled={isViewMode}>
                                 <option value="Laki-laki">Laki-laki</option>
                                 <option value="Perempuan">Perempuan</option>
                             </select>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Tempat Lahir</label>
-                            <input type="text" name="tempat_lahir" className="form-control" value={formData.tempat_lahir} onChange={handleChange} />
+                            <input type="text" name="tempat_lahir" className="form-control" value={formData.tempat_lahir} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Tanggal Lahir</label>
-                            <input type="date" name="tanggal_lahir" className="form-control" value={formData.tanggal_lahir} onChange={handleChange} />
+                            <input type="date" name="tanggal_lahir" className="form-control" value={formData.tanggal_lahir} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Email</label>
-                            <input type="email" name="email" className="form-control" value={formData.email} onChange={handleChange} />
+                            <input type="email" name="email" className="form-control" value={formData.email} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                     </div>
                     <div className="form-group">
                         <label className="form-label">Alamat</label>
-                        <textarea name="alamat" className="form-control" rows={2} value={formData.alamat} onChange={handleChange} />
+                        <textarea name="alamat" className="form-control" rows={2} value={formData.alamat} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                     </div>
                 </div>
 
@@ -176,11 +180,11 @@ const GuruForm = () => {
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">No. Telepon</label>
-                            <input type="text" name="no_telp" className="form-control" value={formData.no_telp} onChange={handleChange} />
+                            <input type="text" name="no_telp" className="form-control" value={formData.no_telp} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Jabatan</label>
-                            <select name="jabatan" className="form-control" value={formData.jabatan} onChange={handleChange}>
+                            <select name="jabatan" className="form-control" value={formData.jabatan} onChange={handleChange} disabled={isViewMode}>
                                 <option value="Pengajar">Pengajar</option>
                                 <option value="Wali Kelas">Wali Kelas</option>
                                 <option value="Musyrif">Musyrif</option>
@@ -191,7 +195,7 @@ const GuruForm = () => {
                         </div>
                         <div className="form-group">
                             <label className="form-label">Pendidikan Terakhir</label>
-                            <select name="pendidikan_terakhir" className="form-control" value={formData.pendidikan_terakhir} onChange={handleChange}>
+                            <select name="pendidikan_terakhir" className="form-control" value={formData.pendidikan_terakhir} onChange={handleChange} disabled={isViewMode}>
                                 <option value="">Pilih</option>
                                 <option value="SMA/MA">SMA/MA</option>
                                 <option value="D3">D3</option>
@@ -202,7 +206,7 @@ const GuruForm = () => {
                         </div>
                         <div className="form-group">
                             <label className="form-label">Status</label>
-                            <select name="status" className="form-control" value={formData.status} onChange={handleChange}>
+                            <select name="status" className="form-control" value={formData.status} onChange={handleChange} disabled={isViewMode}>
                                 <option value="Aktif">Aktif</option>
                                 <option value="Tidak Aktif">Tidak Aktif</option>
                                 <option value="Pensiun">Pensiun</option>
@@ -213,10 +217,18 @@ const GuruForm = () => {
 
                 {/* Actions */}
                 <div className="form-actions">
-                    <button type="button" className="btn btn-secondary" onClick={() => navigate('/guru')}>Batal</button>
-                    <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}
+                    <button type="button" className="btn btn-secondary" onClick={() => navigate('/guru')}>
+                        {isViewMode ? 'Kembali' : 'Batal'}
                     </button>
+                    {isViewMode ? (
+                        <button type="button" className="btn btn-primary" onClick={() => navigate(`/guru/${id}/edit`)}>
+                            Edit Data
+                        </button>
+                    ) : (
+                        <button type="submit" className="btn btn-primary" disabled={loading}>
+                            {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}
+                        </button>
+                    )}
                 </div>
             </form>
         </div>

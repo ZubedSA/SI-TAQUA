@@ -10,7 +10,7 @@ const HalaqohPage = () => {
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
-    const canEdit = adminCheck || bendaharaCheck
+    const canEdit = adminCheck
     const [halaqohList, setHalaqohList] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -281,7 +281,7 @@ const HalaqohPage = () => {
                             ) : (
                                 <table className="table">
                                     <thead>
-                                        <tr><th>NIS</th><th>Nama</th><th>L/P</th><th>Status</th><th>Aksi</th></tr>
+                                        <tr><th>NIS</th><th>Nama</th><th>L/P</th><th>Status</th>{canEdit && <th>Aksi</th>}</tr>
                                     </thead>
                                     <tbody>
                                         {santriList.map(s => (
@@ -290,11 +290,13 @@ const HalaqohPage = () => {
                                                 <td>{s.nama}</td>
                                                 <td>{s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</td>
                                                 <td><span className={`badge ${s.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{s.status}</span></td>
-                                                <td>
-                                                    <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari halaqoh" onClick={() => handleRemoveSantriFromHalaqoh(s.id)}>
-                                                        <X size={14} />
-                                                    </button>
-                                                </td>
+                                                {canEdit && (
+                                                    <td>
+                                                        <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari halaqoh" onClick={() => handleRemoveSantriFromHalaqoh(s.id)}>
+                                                            <X size={14} />
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>

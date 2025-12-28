@@ -184,8 +184,8 @@ export const AuthProvider = ({ children }) => {
 
             // Handle both old (single role) and new (multi-role) format
             // Admin gets access to ALL dashboards by default
-            let roles = data.roles || (data.role ? [data.role] : ['admin'])
-            const activeRole = data.active_role || data.role || 'admin'
+            let roles = data.roles || (data.role ? [data.role] : ['guest'])
+            const activeRole = data.active_role || data.role || (roles.length > 0 ? roles[0] : 'guest')
 
             // If user is admin (either in roles array or single role), grant access to all dashboards
             if (roles.includes('admin') || data.role === 'admin') {
@@ -271,8 +271,8 @@ export const AuthProvider = ({ children }) => {
             .eq('user_id', data.user.id)
             .single()
 
-        let roles = profile?.roles || (profile?.role ? [profile.role] : ['admin'])
-        const activeRole = profile?.active_role || profile?.role || 'admin'
+        let roles = profile?.roles || (profile?.role ? [profile.role] : ['guest'])
+        const activeRole = profile?.active_role || profile?.role || (roles.length > 0 ? roles[0] : 'guest')
 
         // If user is admin, grant access to all dashboards
         if (roles.includes('admin') || profile?.role === 'admin') {

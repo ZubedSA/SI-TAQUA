@@ -290,7 +290,7 @@ const KasPengeluaranPage = () => {
                                 <th>Kategori</th>
                                 <th>Jumlah</th>
                                 <th>Keterangan</th>
-                                <th>Aksi</th>
+                                {canEditKas && <th>Aksi</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -302,8 +302,8 @@ const KasPengeluaranPage = () => {
                                     <td><span className="badge red">{item.kategori || '-'}</span></td>
                                     <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
                                     <td>{item.keterangan || '-'}</td>
-                                    <td>
-                                        {canEditKas && (
+                                    {canEditKas && (
+                                        <td>
                                             <MobileActionMenu
                                                 actions={[
                                                     { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
@@ -348,8 +348,8 @@ const KasPengeluaranPage = () => {
                                                     <Trash2 size={16} />
                                                 </button>
                                             </MobileActionMenu>
-                                        )}
-                                    </td>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate } from '../../lib/auditLog'
@@ -8,6 +8,13 @@ import './Santri.css'
 const SantriForm = () => {
     const navigate = useNavigate()
     const { id } = useParams()
+    const location = useLocation()
+
+    // Determine mode: view (read-only) vs edit
+    // If URL is /santri/:id (without /edit), it's view mode
+    // If URL is /santri/:id/edit, it's edit mode
+    // If URL is /santri/create, it's create mode
+    const isViewMode = id && !location.pathname.includes('/edit')
     const isEdit = Boolean(id)
 
     const [loading, setLoading] = useState(false)
@@ -192,8 +199,8 @@ const SantriForm = () => {
                     <button className="btn btn-secondary btn-sm mb-2" onClick={() => navigate('/santri')}>
                         <ArrowLeft size={16} /> Kembali
                     </button>
-                    <h1 className="page-title">{isEdit ? 'Edit Santri' : 'Tambah Santri Baru'}</h1>
-                    <p className="page-subtitle">{isEdit ? 'Update data santri' : 'Isi form untuk menambah santri baru'}</p>
+                    <h1 className="page-title">{isViewMode ? 'Detail Santri' : isEdit ? 'Edit Santri' : 'Tambah Santri Baru'}</h1>
+                    <p className="page-subtitle">{isViewMode ? 'Informasi lengkap data santri' : isEdit ? 'Update data santri' : 'Isi form untuk menambah santri baru'}</p>
                 </div>
             </div>
 
@@ -207,35 +214,35 @@ const SantriForm = () => {
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">NIS *</label>
-                            <input type="text" name="nis" className="form-control" value={formData.nis} onChange={handleChange} required />
+                            <input type="text" name="nis" className="form-control" value={formData.nis} onChange={handleChange} required readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Nama Lengkap *</label>
-                            <input type="text" name="nama" className="form-control" value={formData.nama} onChange={handleChange} required />
+                            <input type="text" name="nama" className="form-control" value={formData.nama} onChange={handleChange} required readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Jenis Kelamin</label>
-                            <select name="jenis_kelamin" className="form-control" value={formData.jenis_kelamin} onChange={handleChange}>
+                            <select name="jenis_kelamin" className="form-control" value={formData.jenis_kelamin} onChange={handleChange} disabled={isViewMode}>
                                 <option value="Laki-laki">Laki-laki</option>
                                 <option value="Perempuan">Perempuan</option>
                             </select>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Tempat Lahir</label>
-                            <input type="text" name="tempat_lahir" className="form-control" value={formData.tempat_lahir} onChange={handleChange} />
+                            <input type="text" name="tempat_lahir" className="form-control" value={formData.tempat_lahir} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Tanggal Lahir</label>
-                            <input type="date" name="tanggal_lahir" className="form-control" value={formData.tanggal_lahir} onChange={handleChange} />
+                            <input type="date" name="tanggal_lahir" className="form-control" value={formData.tanggal_lahir} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">No. Telepon</label>
-                            <input type="text" name="no_telp" className="form-control" value={formData.no_telp} onChange={handleChange} />
+                            <input type="text" name="no_telp" className="form-control" value={formData.no_telp} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                     </div>
                     <div className="form-group">
                         <label className="form-label">Alamat</label>
-                        <textarea name="alamat" className="form-control" rows={2} value={formData.alamat} onChange={handleChange} />
+                        <textarea name="alamat" className="form-control" rows={2} value={formData.alamat} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                     </div>
                 </div>
 
@@ -245,11 +252,11 @@ const SantriForm = () => {
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">Nama Wali</label>
-                            <input type="text" name="nama_wali" className="form-control" value={formData.nama_wali} onChange={handleChange} />
+                            <input type="text" name="nama_wali" className="form-control" value={formData.nama_wali} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                         <div className="form-group">
                             <label className="form-label">No. Telepon Wali</label>
-                            <input type="text" name="no_telp_wali" className="form-control" value={formData.no_telp_wali} onChange={handleChange} />
+                            <input type="text" name="no_telp_wali" className="form-control" value={formData.no_telp_wali} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
                         </div>
                     </div>
                 </div>
@@ -260,14 +267,14 @@ const SantriForm = () => {
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">Kelas</label>
-                            <select name="kelas_id" className="form-control" value={formData.kelas_id} onChange={handleChange}>
+                            <select name="kelas_id" className="form-control" value={formData.kelas_id} onChange={handleChange} disabled={isViewMode}>
                                 <option value="">Pilih Kelas</option>
                                 {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
                             </select>
                         </div>
                         <div className="form-group">
                             <label className="form-label">Halaqoh</label>
-                            <select name="halaqoh_id" className="form-control" value={formData.halaqoh_id} onChange={handleChange}>
+                            <select name="halaqoh_id" className="form-control" value={formData.halaqoh_id} onChange={handleChange} disabled={isViewMode}>
                                 <option value="">Pilih Halaqoh</option>
                                 {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama}</option>)}
                             </select>
@@ -282,11 +289,13 @@ const SantriForm = () => {
                                 value={formData.angkatan}
                                 onChange={handleChange}
                                 min="1"
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             />
                         </div>
                         <div className="form-group">
                             <label className="form-label">Status</label>
-                            <select name="status" className="form-control" value={formData.status} onChange={handleChange}>
+                            <select name="status" className="form-control" value={formData.status} onChange={handleChange} disabled={isViewMode}>
                                 <option value="Aktif">Aktif</option>
                                 <option value="Tidak Aktif">Tidak Aktif</option>
                                 <option value="Lulus">Lulus</option>
@@ -298,10 +307,18 @@ const SantriForm = () => {
 
                 {/* Actions */}
                 <div className="form-actions">
-                    <button type="button" className="btn btn-secondary" onClick={() => navigate('/santri')}>Batal</button>
-                    <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}
+                    <button type="button" className="btn btn-secondary" onClick={() => navigate('/santri')}>
+                        {isViewMode ? 'Kembali' : 'Batal'}
                     </button>
+                    {isViewMode ? (
+                        <button type="button" className="btn btn-primary" onClick={() => navigate(`/santri/${id}/edit`)}>
+                            Edit Data
+                        </button>
+                    ) : (
+                        <button type="submit" className="btn btn-primary" disabled={loading}>
+                            {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}
+                        </button>
+                    )}
                 </div>
             </form>
         </div>

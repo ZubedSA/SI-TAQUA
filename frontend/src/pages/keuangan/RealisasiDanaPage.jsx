@@ -233,7 +233,7 @@ const RealisasiDanaPage = () => {
                                 <th>Program</th>
                                 <th>Keperluan</th>
                                 <th>Jumlah</th>
-                                <th>Aksi</th>
+                                {canEditKas && <th>Aksi</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -244,8 +244,8 @@ const RealisasiDanaPage = () => {
                                     <td><span className="badge blue">{item.anggaran?.nama_program || '-'}</span></td>
                                     <td>{item.keperluan || '-'}</td>
                                     <td className="amount red">Rp {Number(item.jumlah_terpakai).toLocaleString('id-ID')}</td>
-                                    <td>
-                                        {canEditKas && (
+                                    {canEditKas && (
+                                        <td>
                                             <MobileActionMenu
                                                 actions={[
                                                     { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
@@ -290,8 +290,8 @@ const RealisasiDanaPage = () => {
                                                     <Trash2 size={16} />
                                                 </button>
                                             </MobileActionMenu>
-                                        )}
-                                    </td>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>

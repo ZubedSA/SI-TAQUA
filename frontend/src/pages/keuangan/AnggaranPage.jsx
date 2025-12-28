@@ -235,7 +235,7 @@ const AnggaranPage = () => {
                                 <th>Disetujui</th>
                                 <th>Tanggal</th>
                                 <th>Status</th>
-                                <th>Aksi</th>
+                                {canEditKas && <th>Aksi</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -254,9 +254,9 @@ const AnggaranPage = () => {
                                     </td>
                                     <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
                                     <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
-                                    <td>
-                                        <div className="action-buttons" style={{ display: 'flex', gap: '4px' }}>
-                                            {canEditKas && (
+                                    {canEditKas && (
+                                        <td>
+                                            <div className="action-buttons" style={{ display: 'flex', gap: '4px' }}>
                                                 <MobileActionMenu
                                                     actions={[
                                                         { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
@@ -318,9 +318,9 @@ const AnggaranPage = () => {
                                                         <Eye size={16} />
                                                     </button>
                                                 </MobileActionMenu>
-                                            )}
-                                        </div>
-                                    </td>
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>

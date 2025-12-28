@@ -11,7 +11,7 @@ const MapelPage = () => {
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
-    const canEdit = adminCheck || bendaharaCheck
+    const canEdit = adminCheck
     const [mapelList, setMapelList] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
     const [loading, setLoading] = useState(true)
@@ -134,88 +134,89 @@ const MapelPage = () => {
                         <input type="text" placeholder="Cari mapel..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input" />
                     </div>
                 </div>
-                <table className="table">
-                    <thead>
-                        <tr>
-                            <th>Kode</th>
-                            <th>Nama Mapel</th>
-                            <th>Kategori</th>
-                            <th>Deskripsi</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr><td colSpan="5" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                        ) : filteredMapel.length === 0 ? (
-                            <tr><td colSpan="5" className="text-center">Tidak ada data</td></tr>
-                        ) : (
-                            filteredMapel.map(mapel => (
-                                <tr key={mapel.id}>
-                                    <td><span className="badge badge-info">{mapel.kode}</span></td>
-                                    <td className="name-cell"><BookOpen size={16} className="text-muted" /> {mapel.nama}</td>
-                                    <td>
-                                        <span className={`badge ${mapel.kategori === 'Tahfizhiyah' ? 'badge-success' : 'badge-warning'}`}>
-                                            {mapel.kategori || 'Madrosiyah'}
-                                        </span>
-                                    </td>
-                                    <td className="text-muted">{mapel.deskripsi || '-'}</td>
-                                    <td>
-                                        {/* Action buttons only for canEdit roles */}
-                                        {canEdit ? (
-                                            <MobileActionMenu
-                                                actions={[
-                                                    { icon: <Edit size={16} />, label: 'Edit', onClick: () => handleEdit(mapel) },
-                                                    { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => handleDelete(mapel.id), danger: true }
-                                                ]}
-                                            >
-                                                <button
-                                                    className="btn-icon"
-                                                    onClick={() => handleEdit(mapel)}
-                                                    title="Edit"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        border: 'none',
-                                                        background: '#fef3c7',
-                                                        color: '#d97706',
-                                                        cursor: 'pointer',
-                                                        marginRight: '4px'
-                                                    }}
+                <div className="table-wrapper">
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Nama Mapel</th>
+                                <th>Kategori</th>
+                                <th>Deskripsi</th>
+                                {canEdit && <th>Aksi</th>}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr><td colSpan={canEdit ? 5 : 4} className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                            ) : filteredMapel.length === 0 ? (
+                                <tr><td colSpan={canEdit ? 5 : 4} className="text-center">Tidak ada data</td></tr>
+                            ) : (
+                                filteredMapel.map(mapel => (
+                                    <tr key={mapel.id}>
+                                        <td><span className="badge badge-info">{mapel.kode}</span></td>
+                                        <td className="name-cell"><BookOpen size={16} className="text-muted" /> {mapel.nama}</td>
+                                        <td>
+                                            <span className={`badge ${mapel.kategori === 'Tahfizhiyah' ? 'badge-success' : 'badge-warning'}`}>
+                                                {mapel.kategori || 'Madrosiyah'}
+                                            </span>
+                                        </td>
+                                        <td className="text-muted">{mapel.deskripsi || '-'}</td>
+                                        {canEdit && (
+                                            <td>
+                                                <MobileActionMenu
+                                                    actions={[
+                                                        { icon: <Edit size={16} />, label: 'Edit', onClick: () => handleEdit(mapel) },
+                                                        { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => handleDelete(mapel.id), danger: true }
+                                                    ]}
                                                 >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button
-                                                    className="btn-icon btn-icon-danger"
-                                                    onClick={() => handleDelete(mapel.id)}
-                                                    title="Hapus"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        border: 'none',
-                                                        background: '#fee2e2',
-                                                        color: '#ef4444',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </MobileActionMenu>
-                                        ) : null}
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                                                    <button
+                                                        className="btn-icon"
+                                                        onClick={() => handleEdit(mapel)}
+                                                        title="Edit"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            border: 'none',
+                                                            background: '#fef3c7',
+                                                            color: '#d97706',
+                                                            cursor: 'pointer',
+                                                            marginRight: '4px'
+                                                        }}
+                                                    >
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button
+                                                        className="btn-icon btn-icon-danger"
+                                                        onClick={() => handleDelete(mapel.id)}
+                                                        title="Hapus"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            border: 'none',
+                                                            background: '#fee2e2',
+                                                            color: '#ef4444',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </MobileActionMenu>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {showModal && (

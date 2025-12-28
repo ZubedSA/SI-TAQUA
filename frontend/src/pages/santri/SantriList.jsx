@@ -18,7 +18,7 @@ const SantriList = () => {
     const guruCheck = isGuru() || userProfile?.role === 'guru' || userProfile?.activeRole === 'guru' || hasRole('guru')
 
     // Admin dan Bendahara bisa CRUD santri, Guru hanya read-only
-    const canEditSantri = adminCheck || bendaharaCheck
+    const canEditSantri = adminCheck
 
     // DEBUG: Log role info
     console.log('🔐 SantriList Debug:', {
@@ -396,14 +396,14 @@ const SantriList = () => {
                                 <th>Kelas</th>
                                 <th>Halaqoh</th>
                                 <th>Status</th>
-                                <th>Aksi</th>
+                                {canEditSantri && <th>Aksi</th>}
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="8" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                <tr><td colSpan={canEditSantri ? 8 : 7} className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
                             ) : filteredSantri.length === 0 ? (
-                                <tr><td colSpan="8" className="text-center">{error ? 'Gagal memuat data' : 'Tidak ada data santri'}</td></tr>
+                                <tr><td colSpan={canEditSantri ? 8 : 7} className="text-center">{error ? 'Gagal memuat data' : 'Tidak ada data santri'}</td></tr>
                             ) : (
                                 filteredSantri.map((item) => (
                                     <tr key={item.id}>
@@ -421,79 +421,75 @@ const SantriList = () => {
                                         <td>{item.kelas}</td>
                                         <td>{item.halaqoh}</td>
                                         <td><span className={`badge ${item.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{item.status}</span></td>
-                                        <td>
-                                            <MobileActionMenu
-                                                actions={[
-                                                    { icon: <Eye size={16} />, label: 'Detail', path: `/santri/${item.id}` },
-                                                    ...(canEditSantri ? [
+                                        {canEditSantri && (
+                                            <td>
+                                                <MobileActionMenu
+                                                    actions={[
+                                                        { icon: <Eye size={16} />, label: 'Detail', path: `/santri/${item.id}` },
                                                         { icon: <Edit size={16} />, label: 'Edit', path: `/santri/${item.id}/edit` },
                                                         { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedSantri(item); setShowDeleteModal(true) }, danger: true }
-                                                    ] : [])
-                                                ]}
-                                            >
-                                                <Link
-                                                    to={`/santri/${item.id}`}
-                                                    className="btn-icon"
-                                                    title="Lihat Detail"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        background: '#dbeafe',
-                                                        color: '#2563eb',
-                                                        marginRight: '4px',
-                                                        textDecoration: 'none'
-                                                    }}
+                                                    ]}
                                                 >
-                                                    <Eye size={16} />
-                                                </Link>
-                                                {canEditSantri && (
-                                                    <>
-                                                        <Link
-                                                            to={`/santri/${item.id}/edit`}
-                                                            className="btn-icon"
-                                                            title="Edit"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '32px',
-                                                                height: '32px',
-                                                                borderRadius: '6px',
-                                                                background: '#fef3c7',
-                                                                color: '#d97706',
-                                                                marginRight: '4px',
-                                                                textDecoration: 'none'
-                                                            }}
-                                                        >
-                                                            <Edit size={16} />
-                                                        </Link>
-                                                        <button
-                                                            className="btn-icon btn-icon-danger"
-                                                            title="Hapus"
-                                                            onClick={() => { setSelectedSantri(item); setShowDeleteModal(true) }}
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '32px',
-                                                                height: '32px',
-                                                                borderRadius: '6px',
-                                                                background: '#fee2e2',
-                                                                color: '#dc2626',
-                                                                border: 'none',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </MobileActionMenu>
-                                        </td>
+                                                    <Link
+                                                        to={`/santri/${item.id}`}
+                                                        className="btn-icon"
+                                                        title="Lihat Detail"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#dbeafe',
+                                                            color: '#2563eb',
+                                                            marginRight: '4px',
+                                                            textDecoration: 'none'
+                                                        }}
+                                                    >
+                                                        <Eye size={16} />
+                                                    </Link>
+                                                    <Link
+                                                        to={`/santri/${item.id}/edit`}
+                                                        className="btn-icon"
+                                                        title="Edit"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#fef3c7',
+                                                            color: '#d97706',
+                                                            marginRight: '4px',
+                                                            textDecoration: 'none'
+                                                        }}
+                                                    >
+                                                        <Edit size={16} />
+                                                    </Link>
+                                                    <button
+                                                        className="btn-icon btn-icon-danger"
+                                                        title="Hapus"
+                                                        onClick={() => { setSelectedSantri(item); setShowDeleteModal(true) }}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#fee2e2',
+                                                            color: '#dc2626',
+                                                            border: 'none',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </MobileActionMenu>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))
                             )}
