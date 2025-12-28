@@ -138,44 +138,54 @@ const operatorMenuItems = [
         ]
     },
 
-    // Akademik Menu dengan Deep Nested Submenu
+    // Akademik Menu dengan Deep Nested Submenu - Sesuai struktur folder target
     {
         id: 'akademik',
         icon: School,
         label: 'Akademik',
         roles: ['admin', 'guru'],
         children: [
-            // Input Nilai with nested Tahfizhiyah/Madrosiyah
+            // Input Nilai - root menu
             {
                 id: 'input-nilai',
                 icon: PenLine,
                 label: 'Input Nilai',
                 roles: ['admin', 'guru'],
                 children: [
+                    // Ujian Syahri (langsung tanpa submenu tahfizhiyah)
+                    { path: '/akademik/nilai/tahfizh/syahri', icon: Calendar, label: 'Ujian Syahri', roles: ['admin', 'guru'] },
+                    // Ujian Semester dengan submenu Tahfiziyah dan Madrasiyah
                     {
-                        id: 'nilai-tahfizh',
-                        icon: BookMarked,
-                        label: 'Tahfizhiyah',
+                        id: 'ujian-semester',
+                        icon: CalendarCheck,
+                        label: 'Ujian Semester',
                         roles: ['admin', 'guru'],
                         children: [
-                            { path: '/akademik/nilai/tahfizh/syahri', icon: Calendar, label: 'Ujian Syahri', roles: ['admin', 'guru'] },
-                            { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
-                        ]
-                    },
-                    {
-                        id: 'nilai-madros',
-                        icon: BookOpen,
-                        label: 'Madrosiyah',
-                        roles: ['admin', 'guru'],
-                        children: [
-                            { path: '/akademik/nilai/madros/harian', icon: PenLine, label: 'Ujian Harian', roles: ['admin', 'guru'] },
-                            { path: '/akademik/nilai/madros/uts', icon: FileText, label: 'Ujian Tengah Semester', roles: ['admin', 'guru'] },
-                            { path: '/akademik/nilai/madros/uas', icon: ClipboardList, label: 'Ujian Akhir Semester', roles: ['admin', 'guru'] },
+                            {
+                                id: 'nilai-tahfizh',
+                                icon: BookMarked,
+                                label: 'Tahfiziyah',
+                                roles: ['admin', 'guru'],
+                                children: [
+                                    { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
+                                ]
+                            },
+                            {
+                                id: 'nilai-madros',
+                                icon: BookOpen,
+                                label: 'Madrasiyah',
+                                roles: ['admin', 'guru'],
+                                children: [
+                                    { path: '/akademik/nilai/madros/harian', icon: PenLine, label: 'Ujian Harian', roles: ['admin', 'guru'] },
+                                    { path: '/akademik/nilai/madros/uts', icon: FileText, label: 'UTS', roles: ['admin', 'guru'] },
+                                    { path: '/akademik/nilai/madros/uas', icon: ClipboardList, label: 'UAS', roles: ['admin', 'guru'] },
+                                ]
+                            },
                         ]
                     },
                 ]
             },
-            // Hafalan with Pencapaian submenu
+            // Hafalan Menu
             {
                 id: 'hafalan-menu',
                 icon: BookMarked,
@@ -183,13 +193,13 @@ const operatorMenuItems = [
                 roles: ['admin', 'guru'],
                 children: [
                     { path: '/hafalan', icon: PenLine, label: 'Input Hafalan', roles: ['admin', 'guru'] },
-                    { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan', roles: ['admin', 'guru'] },
                     {
-                        id: 'pencapaian',
-                        icon: Trophy,
-                        label: 'Pencapaian',
+                        id: 'rekap-hafalan',
+                        icon: FileText,
+                        label: 'Rekap Hafalan',
                         roles: ['admin', 'guru'],
                         children: [
+                            { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Data', roles: ['admin', 'guru'] },
                             { path: '/hafalan/pencapaian/mingguan', icon: Calendar, label: 'Mingguan', roles: ['admin', 'guru'] },
                             { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan', roles: ['admin', 'guru'] },
                             { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester', roles: ['admin', 'guru'] },
@@ -197,30 +207,48 @@ const operatorMenuItems = [
                     },
                 ]
             },
-            // Rekap Nilai
-            {
-                id: 'rekap-nilai-menu',
-                icon: FileText,
-                label: 'Rekap Nilai',
-                roles: ['admin', 'guru'],
-                children: [
-                    { path: '/rekap-nilai/syahri', icon: Calendar, label: 'Rekap Syahri', roles: ['admin', 'guru'] },
-                    { path: '/rekap-nilai/semester', icon: CalendarCheck, label: 'Rekap Semester', roles: ['admin', 'guru'] },
-                    { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan', roles: ['admin', 'guru'] },
-                ]
-            },
-            // Laporan
+            // Laporan Menu - sesuai struktur target
             {
                 id: 'laporan-akademik',
                 icon: Download,
                 label: 'Laporan',
                 roles: ['admin', 'guru'],
                 children: [
-                    { path: '/laporan/hafalan-harian', icon: BookMarked, label: 'Laporan Hafalan Harian', roles: ['admin', 'guru'] },
-                    { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Laporan Rekap Mingguan', roles: ['admin', 'guru'] },
-                    { path: '/laporan/ujian-syahri', icon: FileText, label: 'Laporan Ujian Syahri', roles: ['admin', 'guru'] },
-                    { path: '/laporan/ujian-semester', icon: FileText, label: 'Laporan Ujian Semester', roles: ['admin', 'guru'] },
-                    { path: '/laporan/akademik-santri', icon: Users, label: 'Laporan Akademik Santri', roles: ['admin', 'guru'] },
+                    // Laporan Nilai
+                    {
+                        id: 'laporan-nilai',
+                        icon: FileText,
+                        label: 'Laporan Nilai',
+                        roles: ['admin', 'guru'],
+                        children: [
+                            { path: '/laporan/ujian-syahri', icon: Calendar, label: 'Ujian Syahri', roles: ['admin', 'guru'] },
+                            { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
+                        ]
+                    },
+                    // Laporan Hafalan
+                    {
+                        id: 'laporan-hafalan',
+                        icon: BookMarked,
+                        label: 'Laporan Hafalan',
+                        roles: ['admin', 'guru'],
+                        children: [
+                            { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian', roles: ['admin', 'guru'] },
+                            { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan', roles: ['admin', 'guru'] },
+                            // { path: '/laporan/hafalan-bulanan', icon: Calendar, label: 'Bulanan', roles: ['admin', 'guru'] },
+                            // { path: '/laporan/hafalan-semester', icon: CalendarCheck, label: 'Semester', roles: ['admin', 'guru'] },
+                        ]
+                    },
+                    // Laporan Akademik
+                    {
+                        id: 'laporan-akademik-santri',
+                        icon: Users,
+                        label: 'Laporan Akademik',
+                        roles: ['admin', 'guru'],
+                        children: [
+                            { path: '/laporan/akademik-santri', icon: Users, label: 'Raport', roles: ['admin', 'guru'] },
+                            { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan', roles: ['admin', 'guru'] },
+                        ]
+                    },
                 ]
             },
             // Pembinaan Santri (existing)
@@ -320,16 +348,20 @@ const Sidebar = ({ mobileOpen, onClose }) => {
 
     // Nested submenu IDs for Akademik deep structure with parent mapping
     const nestedSubmenuIds = [
-        'input-nilai', 'nilai-tahfizh', 'nilai-madros',
-        'hafalan-menu', 'pencapaian',
-        'rekap-nilai-menu', 'laporan-akademik'
+        'input-nilai', 'ujian-semester', 'nilai-tahfizh', 'nilai-madros',
+        'hafalan-menu', 'rekap-hafalan',
+        'laporan-akademik', 'laporan-nilai', 'laporan-hafalan', 'laporan-akademik-santri'
     ]
 
     // Define parent-child relationships for nested menus
     const submenuParents = {
-        'nilai-tahfizh': 'input-nilai',
-        'nilai-madros': 'input-nilai',
-        'pencapaian': 'hafalan-menu'
+        'ujian-semester': 'input-nilai',
+        'nilai-tahfizh': 'ujian-semester',
+        'nilai-madros': 'ujian-semester',
+        'rekap-hafalan': 'hafalan-menu',
+        'laporan-nilai': 'laporan-akademik',
+        'laporan-hafalan': 'laporan-akademik',
+        'laporan-akademik-santri': 'laporan-akademik'
     }
 
     // Get all ancestors of a menu ID
