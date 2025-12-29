@@ -5,10 +5,12 @@ import { useAuth } from '../../context/AuthContext'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import { useToast } from '../../context/ToastContext'
 import './Keuangan.css'
 
 const RealisasiDanaPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
     // Multiple checks - admin dan bendahara bisa CRUD
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -107,8 +109,9 @@ const RealisasiDanaPage = () => {
             setShowModal(false)
             resetForm()
             fetchData()
+            showToast.success('Realisasi dana berhasil disimpan')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         }
     }
 
@@ -130,8 +133,9 @@ const RealisasiDanaPage = () => {
             }
 
             fetchData()
+            showToast.success('Realisasi dana berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         }
     }
 

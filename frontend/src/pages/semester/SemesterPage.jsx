@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Plus, Calendar, CheckCircle, RefreshCw, Edit, Trash2, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../context/ToastContext'
 import './Semester.css'
 
 const SemesterPage = () => {
+    const { showToast } = useToast()
     const [semesterList, setSemesterList] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -78,8 +80,9 @@ const SemesterPage = () => {
             fetchSemester()
             setShowModal(false)
             resetForm()
+            showToast.success('Data semester berhasil disimpan')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         } finally {
             setSaving(false)
         }
@@ -130,8 +133,9 @@ const SemesterPage = () => {
             fetchSemester()
             setShowDeleteModal(false)
             setSelectedDeleteId(null)
+            showToast.success('Data semester berhasil dihapus')
         } catch (err) {
-            alert('Gagal menghapus: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -145,9 +149,11 @@ const SemesterPage = () => {
                 { nama: 'Genap', tahun_ajaran: `${currentYear}/${currentYear + 1}`, tanggal_mulai: `${currentYear + 1}-01-05`, tanggal_selesai: `${currentYear + 1}-06-20`, is_active: false }
             ])
             if (error) throw error
+            if (error) throw error
             fetchSemester()
+            showToast.success('Data default berhasil digenerate')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         } finally {
             setLoading(false)
         }

@@ -3,10 +3,12 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import {
     Activity, Database, Wifi, HardDrive, RefreshCw, Download,
     Upload, Trash2, AlertTriangle, CheckCircle, Clock, Server,
-    Shield, Zap, AlertCircle, FileJson, Calendar
+    Shield, Zap, AlertCircle, FileJson, Calendar, FileSpreadsheet,
+    FileText, Briefcase, GraduationCap, DollarSign, Users
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate } from '../../lib/auditLog'
@@ -16,6 +18,7 @@ import disasterRecovery from '../../lib/disasterRecovery'
 import './SystemStatus.css'
 
 const SystemStatusPage = () => {
+    // -- STATES --
     const [health, setHealth] = useState(null)
     const [cacheStats, setCacheStats] = useState(null)
     const [backupInfo, setBackupInfo] = useState(null)
@@ -23,19 +26,43 @@ const SystemStatusPage = () => {
     const [refreshing, setRefreshing] = useState(false)
     const [message, setMessage] = useState(null)
 
-    // Database Backup State
+    // Backup & Restore States
     const [dbLoading, setDbLoading] = useState(false)
     const [dbBackupData, setDbBackupData] = useState(null)
     const [dbBackupInfo, setDbBackupInfo] = useState(null)
     const [restoreLoading, setRestoreLoading] = useState(false)
     const fileInputRef = useRef(null)
 
-    // Tables to backup
-    const tables = [
-        'santri', 'guru', 'kelas', 'halaqoh', 'mapel', 'semester',
-        'hafalan', 'nilai', 'presensi', 'pencapaian_hafalan', 'user_profiles'
-    ]
+    // -- DEFINISI MODUL BACKUP --
+    const MODULES = {
+        PONDOK: {
+            name: 'PONDOK',
+            label: 'Data Pondok',
+            tables: ['santri', 'guru', 'kelas', 'halaqoh']
+        },
+        AKADEMIK: {
+            name: 'AKADEMIK',
+            label: 'Data Akademik',
+            tables: ['semester', 'mapel', 'hafalan', 'nilai', 'presensi', 'pencapaian_hafalan']
+        },
+        KEUANGAN: {
+            name: 'KEUANGAN',
+            label: 'Data Keuangan',
+            tables: ['tagihan_santri', 'pembayaran_santri', 'kas_pemasukan', 'kas_pengeluaran', 'anggaran', 'realisasi_dana']
+        },
+        FULL: {
+            name: 'FULL',
+            label: 'Semua Data',
+            tables: [
+                'santri', 'guru', 'kelas', 'halaqoh',
+                'semester', 'mapel', 'hafalan', 'nilai', 'presensi', 'pencapaian_hafalan',
+                'tagihan_santri', 'pembayaran_santri', 'kas_pemasukan', 'kas_pengeluaran', 'anggaran', 'realisasi_dana',
+                'user_profiles'
+            ]
+        }
+    }
 
+    // -- INIT --
     useEffect(() => {
         loadData()
         healthMonitor.start()
@@ -61,6 +88,12 @@ const SystemStatusPage = () => {
         showMessage('Data berhasil dimuat ulang', 'success')
     }
 
+    const showMessage = (text, type) => {
+        setMessage({ text, type })
+        setTimeout(() => setMessage(null), 4000)
+    }
+
+    // -- CACHE HANDLERS --
     const handleClearCache = () => {
         if (confirm('Hapus semua cache? Ini akan memperlambat loading sementara.')) {
             const cleared = cacheManager.clearAll()
@@ -75,91 +108,168 @@ const SystemStatusPage = () => {
         showMessage(`${cleared} cache expired dihapus`, 'success')
     }
 
-    const handleCreateBackup = () => {
+    // -- LOCAL STORAGE BACKUP --
+    const handleCreateLocalBackup = () => {
         disasterRecovery.createBackup()
         setBackupInfo(disasterRecovery.getInfo())
         showMessage('Backup lokal berhasil dibuat', 'success')
     }
 
-    const handleExportBackup = () => {
-        disasterRecovery.exportFile()
-        showMessage('File backup diunduh', 'success')
+    // -- CORE BACKUP LOGIC --
+
+    /**
+     * Mengambil data referensi untuk mode Readable (Laporan)
+     * Mengubah ID menjadi Nama yang mudah dibaca.
+     */
+    const fetchReferences = async () => {
+        const refs = {}
+        const refTables = ['santri', 'guru', 'kelas', 'halaqoh', 'mapel', 'semester', 'anggaran']
+
+        for (const table of refTables) {
+            const { data } = await supabase.from(table).select('*')
+            if (data) {
+                refs[table] = data.reduce((acc, item) => {
+                    // Tentukan field mana yang jadi label
+                    let label = item.nama || item.name || item.judul || item.nama_anggaran
+                    if (table === 'santri') label = `${item.nama} (${item.nis})`
+                    acc[item.id] = label
+                    return acc
+                }, {})
+            }
+        }
+        return refs
     }
 
-    const handleImportBackup = (e) => {
-        const file = e.target.files[0]
-        if (!file) return
+    /**
+     * Transformasi ID ke Nama untuk mode Laporan
+     */
+    const transformDataToReadable = (data, tableName, refs) => {
+        if (!data || data.length === 0) return []
 
-        disasterRecovery.importFile(file)
-            .then(() => {
-                setBackupInfo(disasterRecovery.getInfo())
-                showMessage('Backup berhasil diimpor', 'success')
+        return data.map(row => {
+            const newRow = { ...row }
+
+            // Hapus field internal sistem
+            delete newRow.id
+            delete newRow.created_at
+            delete newRow.updated_at
+            delete newRow.deleted_at
+            delete newRow.audit_logs
+            delete newRow.user_id
+
+            // Transformasi ID -> Nama
+            if (newRow.santri_id) {
+                newRow['Nama Santri'] = refs.santri?.[newRow.santri_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.santri_id
+            }
+            if (newRow.guru_id) {
+                newRow['Nama Guru'] = refs.guru?.[newRow.guru_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.guru_id
+            }
+            if (newRow.kelas_id) {
+                newRow['Kelas'] = refs.kelas?.[newRow.kelas_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.kelas_id
+            }
+            if (newRow.halaqoh_id) {
+                newRow['Halaqoh'] = refs.halaqoh?.[newRow.halaqoh_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.halaqoh_id
+            }
+            if (newRow.mapel_id) {
+                newRow['Mata Pelajaran'] = refs.mapel?.[newRow.mapel_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.mapel_id
+            }
+            if (newRow.semester_id) {
+                newRow['Semester'] = refs.semester?.[newRow.semester_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.semester_id
+            }
+            if (newRow.anggaran_id) {
+                newRow['Anggaran'] = refs.anggaran?.[newRow.anggaran_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.anggaran_id
+            }
+
+            // Format Tanggal & Uang
+            Object.keys(newRow).forEach(key => {
+                if (key.includes('tanggal') || key.includes('date') || key.includes('waktu')) {
+                    if (newRow[key]) newRow[key] = new Date(newRow[key]).toLocaleDateString('id-ID')
+                }
+                if (key.includes('total') || key.includes('jumlah') || key.includes('bayar') || key.includes('nominal')) {
+                    if (typeof newRow[key] === 'number') {
+                        newRow[key] = newRow[key].toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })
+                    }
+                }
             })
-            .catch(err => {
-                showMessage('Gagal impor: ' + err.message, 'error')
-            })
+
+            return newRow
+        })
     }
 
-    // DATABASE BACKUP FUNCTIONS
-    const handleDatabaseBackup = async () => {
+    /**
+     * Handler Utama Modular Backup
+     * @param {string} moduleKey - Key dari object MODULES (e.g., 'PONDOK', 'KEUANGAN')
+     * @param {string} mode - 'RESTORE' (Raw) atau 'LAPORAN' (Readable)
+     */
+    const handleModularBackup = async (moduleKey, mode = 'RESTORE') => {
+        const module = MODULES[moduleKey]
+        if (!module) return
+
         setDbLoading(true)
-        setDbBackupData(null)
+        const typeLabel = mode === 'RESTORE' ? 'RESTORE (RAW)' : 'LAPORAN (READABLE)'
+        showMessage(`Memproses Backup ${module.label} - Mode ${typeLabel}...`, 'info')
+
+        const timestamp = new Date().toISOString().split('T')[0]
+        const modeSuffix = mode === 'RESTORE' ? 'RESTORE' : 'LAPORAN'
+        const filename = `BACKUP_${module.name}_${modeSuffix}_${timestamp}.xlsx`
 
         try {
-            const backup = {
-                version: '1.0',
-                createdAt: new Date().toISOString(),
-                app: 'PTQA Akademik',
-                tables: {}
+            const workbook = XLSX.utils.book_new()
+            let refs = {}
+
+            // Jika mode laporan, ambil referensi dulu
+            if (mode === 'LAPORAN') {
+                refs = await fetchReferences()
             }
 
-            let totalRecords = 0
+            let totalData = 0
 
-            for (const table of tables) {
-                try {
-                    const { data, error } = await supabase.from(table).select('*')
-                    if (error) {
-                        backup.tables[table] = { error: error.message, data: [] }
-                    } else {
-                        backup.tables[table] = { count: data?.length || 0, data: data || [] }
-                        totalRecords += data?.length || 0
-                    }
-                } catch (err) {
-                    backup.tables[table] = { error: err.message, data: [] }
+            for (const table of module.tables) {
+                const { data, error } = await supabase.from(table).select('*')
+
+                if (error) {
+                    console.error(`Gagal fetch ${table}:`, error)
+                    continue
                 }
+
+                let finalData = data || []
+
+                if (mode === 'LAPORAN') {
+                    finalData = transformDataToReadable(finalData, table, refs)
+                }
+
+                const sheet = XLSX.utils.json_to_sheet(finalData)
+                let sheetName = table.substring(0, 31).toUpperCase()
+                if (mode === 'LAPORAN') sheetName = sheetName.replace(/_/g, ' ')
+
+                XLSX.utils.book_append_sheet(workbook, sheet, sheetName)
+                totalData += finalData.length
             }
 
-            setDbBackupData(backup)
-            setDbBackupInfo({ createdAt: backup.createdAt, totalRecords, tableCount: tables.length })
-            await logCreate('backup', 'Backup Database', `Backup: ${totalRecords} records dari ${tables.length} tabel`)
-            showMessage(`Backup berhasil! ${totalRecords} data dari ${tables.length} tabel siap didownload.`, 'success')
-        } catch (error) {
-            showMessage(`Gagal backup: ${error.message}`, 'error')
+            // Download File
+            XLSX.writeFile(workbook, filename)
+
+            await logCreate('backup', `Backup ${module.name}`, `Mode: ${mode}, Records: ${totalData}`)
+            showMessage(`✅ Berhasil! File ${filename} terunduh.`, 'success')
+
+        } catch (err) {
+            console.error(err)
+            showMessage(`❌ Gagal: ${err.message}`, 'error')
         } finally {
             setDbLoading(false)
         }
     }
 
-    const handleDatabaseDownload = () => {
-        if (!dbBackupData) {
-            showMessage('Belum ada backup. Klik "Backup Database" terlebih dahulu.', 'error')
-            return
-        }
-
-        const dataStr = JSON.stringify(dbBackupData, null, 2)
-        const blob = new Blob([dataStr], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `backup_ptqa_${new Date().toISOString().split('T')[0]}.json`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        showMessage('File backup berhasil didownload!', 'success')
-    }
-
-    const handleDatabaseRestore = (e) => {
+    // -- RESTORE HANDLER (JSON ONLY FOR SYSTEM) --
+    // Restore tetap menggunakan JSON Full System untuk keamanan integritas referensi
+    const handleSystemRestoreCheck = (e) => {
         const file = e.target.files[0]
         if (!file) return
 
@@ -167,19 +277,18 @@ const SystemStatusPage = () => {
         reader.onload = async (event) => {
             try {
                 const data = JSON.parse(event.target.result)
-                if (!data.version || !data.tables || !data.createdAt) {
-                    showMessage('File backup tidak valid', 'error')
+                if (!data.version || !data.tables) {
+                    showMessage('File backup JSON tidak valid', 'error')
                     return
                 }
 
                 const tableNames = Object.keys(data.tables)
-                const totalRecords = tableNames.reduce((sum, t) => sum + (data.tables[t]?.count || 0), 0)
-
-                if (!confirm(`⚠️ PERINGATAN: Restore akan MENGGANTI data!\n\nFile: ${new Date(data.createdAt).toLocaleString('id-ID')}\nTabel: ${tableNames.length}\nData: ${totalRecords}\n\nLanjutkan?`)) return
+                if (!confirm(`⚠️ PERINGATAN: Restore akan MENGGANTI data sistem!\n\nTabel: ${tableNames.length}\nLanjutkan?`)) return
 
                 await performRestore(data)
+
             } catch (err) {
-                showMessage(`Gagal membaca file: ${err.message}`, 'error')
+                showMessage(`Error: ${err.message}`, 'error')
             }
         }
         reader.readAsText(file)
@@ -187,39 +296,62 @@ const SystemStatusPage = () => {
 
     const performRestore = async (data) => {
         setRestoreLoading(true)
-        showMessage('Proses restore sedang berjalan...', 'success')
-
+        showMessage('Proses restore berjalan...', 'info')
         try {
-            const restoreOrder = ['semester', 'kelas', 'halaqoh', 'mapel', 'guru', 'santri', 'hafalan', 'nilai', 'presensi', 'pencapaian_hafalan']
-            let restoredTables = 0, restoredRecords = 0
+            // Urutan restore penting untuk Foreign Key
+            const restoreOrder = [
+                'semester', 'kelas', 'mapel', 'guru', 'santri', 'halaqoh', // Master
+                'hafalan', 'nilai', 'presensi', // Transaksi Akademik
+                'anggaran', 'kas_pemasukan', 'kas_pengeluaran', 'tagihan_santri', 'pembayaran_santri' // Transaksi Keuangan
+            ]
 
+            let count = 0
             for (const table of restoreOrder) {
-                if (data.tables[table]?.data?.length > 0) {
-                    const records = data.tables[table].data
+                const records = data.tables[table]?.data
+                if (records && records.length > 0) {
+                    // Hapus data lama (kecuali default ID 0000...)
                     await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000')
+                    // Insert data baru
                     const { error } = await supabase.from(table).upsert(records, { onConflict: 'id' })
-                    if (!error) {
-                        restoredTables++
-                        restoredRecords += records.length
-                    }
+                    if (!error) count += records.length
                 }
             }
 
-            await logCreate('restore', 'Restore Database', `Restore: ${restoredRecords} records ke ${restoredTables} tabel`)
-            showMessage(`Restore berhasil! ${restoredRecords} data ke ${restoredTables} tabel.`, 'success')
-        } catch (error) {
-            showMessage(`Gagal restore: ${error.message}`, 'error')
+            showMessage(`✅ Restore Sukses! ${count} data dipulihkan.`, 'success')
+            await logCreate('restore', 'System Restore', `Restored ${count} items`)
+        } catch (err) {
+            showMessage(`Gagal Restore: ${err.message}`, 'error')
         } finally {
             setRestoreLoading(false)
             if (fileInputRef.current) fileInputRef.current.value = ''
         }
     }
 
-    const showMessage = (text, type) => {
-        setMessage({ text, type })
-        setTimeout(() => setMessage(null), 4000)
+    // JSON Backup Handlers (Legacy / System Only)
+    const handleJsonBackup = async () => {
+        setDbLoading(true)
+        try {
+            const backup = { version: '1.0', createdAt: new Date(), tables: {} }
+            for (const table of MODULES.FULL.tables) {
+                const { data } = await supabase.from(table).select('*')
+                backup.tables[table] = { data: data || [] }
+            }
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `SYSTEM_BACKUP_${new Date().toISOString().split('T')[0]}.json`
+            a.click()
+            showMessage('Backup JSON System Berhasil', 'success')
+        } catch (err) {
+            showMessage(err.message, 'error')
+        } finally {
+            setDbLoading(false)
+        }
     }
 
+
+    // -- RENDER HELPERS --
     const getStatusColor = (status) => {
         switch (status) {
             case HealthStatus.HEALTHY: return '#10b981'
@@ -231,31 +363,37 @@ const SystemStatusPage = () => {
 
     const getStatusIcon = (status) => {
         switch (status) {
-            case HealthStatus.HEALTHY: return <CheckCircle size={20} style={{ color: '#10b981' }} />
-            case HealthStatus.DEGRADED: return <AlertTriangle size={20} style={{ color: '#f59e0b' }} />
-            case HealthStatus.UNHEALTHY: return <AlertTriangle size={20} style={{ color: '#ef4444' }} />
-            default: return <Activity size={20} style={{ color: '#6b7280' }} />
+            case HealthStatus.HEALTHY: return <CheckCircle className="text-success" size={24} />
+            case HealthStatus.DEGRADED: return <AlertTriangle className="text-warning" size={24} />
+            case HealthStatus.UNHEALTHY: return <AlertCircle className="text-danger" size={24} />
+            default: return <Activity size={24} />
         }
     }
 
-    const summary = health ? healthMonitor.getSummary() : null
+    const summary = health ? {
+        status: health.status,
+        statusText: health.status === 'healthy' ? 'Sistem Sehat' : 'Sistem Bermasalah',
+        lastCheck: new Date().toLocaleTimeString(), // Fallback time
+        issues: [] // Simplified check
+    } : null
 
-    if (loading) {
-        return (
-            <div className="system-status-page">
-                <div className="text-center py-4">
-                    <RefreshCw size={24} className="spin" /> Memuat status sistem...
-                </div>
-            </div>
-        )
+    if (health && summary) {
+        summary.lastCheck = health.timestamp ? new Date(health.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()
+        if (health.status !== 'healthy') {
+            if (health.details?.database?.status !== 'healthy') summary.issues.push('Koneksi Database Bermasalah')
+            if (!health.details?.network?.online) summary.issues.push('Koneksi Internet Terputus')
+            if ((health.details?.storage?.percentage || 0) > 90) summary.issues.push('Penyimpanan Penuh')
+        }
     }
+
+    if (loading) return <div className="p-5 text-center"><RefreshCw className="spin mx-auto" /> Memuat...</div>
 
     return (
         <div className="system-status-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title"><Server size={28} /> Status Sistem</h1>
-                    <p className="page-subtitle">Monitoring, backup, dan pengelolaan sistem</p>
+                    <h1 className="page-title"><Server size={28} /> Status & Backup Sistem</h1>
+                    <p className="page-subtitle">Monitoring kesehatan server dan pusat backup data</p>
                 </div>
                 <button className="btn btn-primary" onClick={handleRefresh} disabled={refreshing}>
                     <RefreshCw size={18} className={refreshing ? 'spin' : ''} /> Refresh
@@ -268,7 +406,7 @@ const SystemStatusPage = () => {
                 </div>
             )}
 
-            {/* Health Overview */}
+            {/* --- SECTION 1: HEALTH SYSTEM (ORIGINAL LAYOUT) --- */}
             <div className="status-section">
                 <h2><Activity size={20} /> Kesehatan Sistem</h2>
 
@@ -339,45 +477,107 @@ const SystemStatusPage = () => {
                 </div>
             </div>
 
-            {/* DATABASE BACKUP SECTION */}
+            {/* --- SECTION 2: MODULAR BACKUP (NEW FEATURE) --- */}
             <div className="status-section">
-                <h2><Database size={20} /> Backup Database</h2>
+                <h2><Database size={20} /> Pusat Backup Data (Modular)</h2>
+                <p className="text-muted mb-4">Pilih jenis data yang ingin dibackup. Gunakan <strong>Restore (Raw)</strong> untuk backup sistem, dan <strong>Laporan</strong> untuk data yang mudah dibaca.</p>
 
-                <div className="backup-grid-compact">
-                    <div className="backup-action-card">
-                        <div className="backup-action-icon blue"><HardDrive size={28} /></div>
-                        <div className="backup-action-content">
-                            <h4>Backup Sekarang</h4>
-                            <p>Export semua data ke JSON</p>
-                            <button className="btn btn-primary btn-sm" onClick={handleDatabaseBackup} disabled={dbLoading}>
-                                {dbLoading ? <><RefreshCw size={16} className="spin" /> Memproses...</> : <><Database size={16} /> Backup</>}
+                <div className="backup-modules-grid">
+                    {/* MODUL PONDOK */}
+                    <div className="backup-card">
+                        <div className="card-icon " style={{ background: '#e0f2fe', color: '#0284c7' }}>
+                            <Briefcase size={24} />
+                        </div>
+                        <h3>Data Pondok</h3>
+                        <p>Santri, Guru, Kelas, Halaqoh</p>
+                        <div className="btn-group-vertical">
+                            <button className="btn btn-outline-primary btn-sm w-100 mb-2" onClick={() => handleModularBackup('PONDOK', 'RESTORE')} disabled={dbLoading}>
+                                <Database size={14} /> Backup Restore (Raw)
+                            </button>
+                            <button className="btn btn-sm btn-primary w-100" onClick={() => handleModularBackup('PONDOK', 'LAPORAN')} disabled={dbLoading}>
+                                <FileText size={14} /> Download Laporan
                             </button>
                         </div>
                     </div>
 
-                    <div className="backup-action-card">
-                        <div className="backup-action-icon green"><Download size={28} /></div>
-                        <div className="backup-action-content">
-                            <h4>Download Backup</h4>
-                            {dbBackupInfo ? (
-                                <>
-                                    <p>{dbBackupInfo.totalRecords} records • {dbBackupInfo.tableCount} tabel</p>
-                                    <button className="btn btn-success btn-sm" onClick={handleDatabaseDownload}>
-                                        <Download size={16} /> Download
-                                    </button>
-                                </>
-                            ) : <p className="text-muted">Belum ada backup</p>}
+                    {/* MODUL AKADEMIK */}
+                    <div className="backup-card">
+                        <div className="card-icon" style={{ background: '#fce7f3', color: '#db2777' }}>
+                            <GraduationCap size={24} />
+                        </div>
+                        <h3>Data Akademik</h3>
+                        <p>Hafalan, Nilai, Presensi, Mapel</p>
+                        <div className="btn-group-vertical">
+                            <button className="btn btn-outline-primary btn-sm w-100 mb-2" onClick={() => handleModularBackup('AKADEMIK', 'RESTORE')} disabled={dbLoading}>
+                                <Database size={14} /> Backup Restore (Raw)
+                            </button>
+                            <button className="btn btn-sm btn-primary w-100" onClick={() => handleModularBackup('AKADEMIK', 'LAPORAN')} disabled={dbLoading}>
+                                <FileText size={14} /> Download Laporan
+                            </button>
                         </div>
                     </div>
 
+                    {/* MODUL KEUANGAN */}
+                    <div className="backup-card">
+                        <div className="card-icon" style={{ background: '#dcfce7', color: '#16a34a' }}>
+                            <DollarSign size={24} />
+                        </div>
+                        <h3>Data Keuangan</h3>
+                        <p>Tagihan, Pembayaran, Kas, Anggaran</p>
+                        <div className="btn-group-vertical">
+                            <button className="btn btn-outline-primary btn-sm w-100 mb-2" onClick={() => handleModularBackup('KEUANGAN', 'RESTORE')} disabled={dbLoading}>
+                                <Database size={14} /> Backup Restore (Raw)
+                            </button>
+                            <button className="btn btn-sm btn-primary w-100" onClick={() => handleModularBackup('KEUANGAN', 'LAPORAN')} disabled={dbLoading}>
+                                <FileText size={14} /> Download Laporan
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MODUL FULL SYSTEM */}
+                    <div className="backup-card highlight">
+                        <div className="card-icon" style={{ background: '#f3f4f6', color: '#1f2937' }}>
+                            <HardDrive size={24} />
+                        </div>
+                        <h3>Semua Data</h3>
+                        <p>Full System Backup</p>
+                        <div className="btn-group-vertical">
+                            <button className="btn btn-outline-dark btn-sm w-100 mb-2" onClick={() => handleModularBackup('FULL', 'RESTORE')} disabled={dbLoading}>
+                                <Database size={14} /> Backup Lengkap (Raw)
+                            </button>
+                            <button className="btn btn-sm btn-dark w-100" onClick={() => handleModularBackup('FULL', 'LAPORAN')} disabled={dbLoading}>
+                                <FileText size={14} /> Laporan Lengkap
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- SECTION 3: LEGACY MAINTENANCE & CACHE --- */}
+            <div className="status-section mt-4">
+                <h2><Shield size={20} /> System Maintenance & Restore</h2>
+                <div className="backup-grid-compact">
+                    {/* JSON BACKUP */}
+                    <div className="backup-action-card">
+                        <div className="backup-action-icon blue"><FileJson size={28} /></div>
+                        <div className="backup-action-content">
+                            <h4>System Snapshot (JSON)</h4>
+                            <p>Backup format JSON ringan untuk disaster recovery.</p>
+                            <button className="btn btn-primary btn-sm" onClick={handleJsonBackup} disabled={dbLoading}>
+                                <Download size={14} /> Download JSON
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* RESTORE */}
                     <div className="backup-action-card">
                         <div className="backup-action-icon orange"><Upload size={28} /></div>
                         <div className="backup-action-content">
-                            <h4>Restore Backup</h4>
-                            <p>Pulihkan dari file JSON</p>
-                            <input type="file" ref={fileInputRef} accept=".json" onChange={handleDatabaseRestore} style={{ display: 'none' }} />
+                            <h4>Restore Database</h4>
+                            <p>Pulihkan sistem dari file JSON.</p>
+                            <input type="file" ref={fileInputRef} accept=".json" onChange={handleSystemRestoreCheck} style={{ display: 'none' }} />
                             <button className="btn btn-warning btn-sm" onClick={() => fileInputRef.current?.click()} disabled={restoreLoading}>
-                                {restoreLoading ? <><RefreshCw size={16} className="spin" /> Restoring...</> : <><Upload size={16} /> Restore</>}
+                                {restoreLoading ? <RefreshCw className="spin" size={14} /> : <Upload size={14} />} Upload & Restore
                             </button>
                         </div>
                     </div>
@@ -413,34 +613,6 @@ const SystemStatusPage = () => {
                 </div>
             </div>
 
-            {/* Disaster Recovery */}
-            <div className="status-section">
-                <h2><Shield size={20} /> Disaster Recovery (Lokal)</h2>
-
-                <div className="backup-info-row">
-                    <div className="backup-status">
-                        <CheckCircle size={20} style={{ color: backupInfo?.hasBackup ? '#10b981' : '#6b7280' }} />
-                        <span>{backupInfo?.hasBackup ? 'Backup tersedia' : 'Belum ada'}</span>
-                    </div>
-                    <div className="backup-status">
-                        <Clock size={20} />
-                        <span>Terakhir: {backupInfo?.lastBackupTime}</span>
-                    </div>
-                </div>
-
-                <div className="backup-actions">
-                    <button className="btn btn-primary" onClick={handleCreateBackup}>
-                        <Shield size={16} /> Backup Lokal
-                    </button>
-                    <button className="btn btn-secondary" onClick={handleExportBackup}>
-                        <Download size={16} /> Export
-                    </button>
-                    <label className="btn btn-secondary">
-                        <Upload size={16} /> Import
-                        <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportBackup} />
-                    </label>
-                </div>
-            </div>
         </div>
     )
 }

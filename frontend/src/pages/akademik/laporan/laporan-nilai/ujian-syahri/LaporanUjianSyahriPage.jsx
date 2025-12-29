@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Printer, Users } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-
+import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import '../../../../../pages/laporan/Laporan.css'
 
 const bulanOptions = [
@@ -158,37 +156,22 @@ const LaporanUjianSyahriPage = () => {
         return ''
     }
 
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (data.length === 0) return
 
-        const doc = new jsPDF('landscape')
-        const pageWidth = doc.internal.pageSize.getWidth()
         const selectedHalaqoh = halaqoh.find(h => h.id === filters.halaqoh_id)
         const bulanNama = bulanOptions.find(b => b.value === filters.bulan)?.label || '-'
 
-        // Header
-        doc.setFillColor(5, 150, 105)
-        doc.rect(0, 0, pageWidth, 25, 'F')
-        doc.setTextColor(255)
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        doc.text('LAPORAN UJIAN SYAHRI (BULANAN)', pageWidth / 2, 12, { align: 'center' })
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text('PTQA Batuan - Si-Taqua', pageWidth / 2, 19, { align: 'center' })
-
-        // Info
-        doc.setTextColor(0)
-        doc.setFontSize(10)
-        doc.text(`Halaqoh: ${selectedHalaqoh?.nama || '-'}`, 14, 35)
-        doc.text(`Periode: ${bulanNama} ${filters.tahun}`, 14, 42)
-
-        // Table
-        autoTable(doc, {
-            startY: 50,
-            head: [['No', 'NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian', 'Jml Hfln', 'Penguji']],
-            body: data.map((s, i) => [
-                i + 1,
+        await generateLaporanPDF({
+            title: 'LAPORAN UJIAN SYAHRI (BULANAN)',
+            subtitle: 'Hasil Ujian Bulanan Tahfizhiyah',
+            orientation: 'landscape',
+            additionalInfo: [
+                { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
+                { label: 'Periode', value: `${bulanNama} ${filters.tahun}` }
+            ],
+            columns: ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian', 'Jml Hfln', 'Penguji'],
+            data: data.map(s => [
                 s.nis,
                 s.nama,
                 s.hafalan,
@@ -200,33 +183,10 @@ const LaporanUjianSyahriPage = () => {
                 s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
                 s.penguji
             ]),
-            theme: 'grid',
-            headStyles: { fillColor: [5, 150, 105], fontSize: 7 },
-            styles: { fontSize: 7 },
-            columnStyles: {
-                0: { cellWidth: 8 },
-                1: { cellWidth: 15 },
-                2: { cellWidth: 35 },
-                3: { halign: 'center', cellWidth: 15 },
-                4: { halign: 'center', cellWidth: 15 },
-                5: { halign: 'center', cellWidth: 15 },
-                6: { halign: 'center', cellWidth: 15 },
-                7: { cellWidth: 30 },
-                8: { cellWidth: 40 },
-                9: { halign: 'center', cellWidth: 18 },
-                10: { cellWidth: 35 }
-            },
-            margin: { left: 10, right: 10 }
+            filename: `Ujian_Syahri_${bulanNama}_${filters.tahun}`,
+            totalLabel: 'Total Santri',
+            totalValue: `${data.length} Santri`
         })
-
-        // Footer
-        const finalY = doc.previousAutoTable.finalY + 15
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'italic')
-        doc.text(`Total: ${data.length} santri`, 14, finalY)
-        doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')} - Si-Taqua PTQA Batuan`, pageWidth / 2, finalY + 8, { align: 'center' })
-
-        doc.save(`Ujian_Syahri_${bulanNama}_${filters.tahun}.pdf`)
     }
 
     return (

@@ -1,6 +1,7 @@
 /**
  * PDF Utility Functions
- * Untuk generate PDF laporan keuangan
+ * Untuk generate PDF laporan keuangan dan akademik
+ * Professional Design with Logo
  */
 
 import jsPDF from 'jspdf'
@@ -10,62 +11,95 @@ import autoTable from 'jspdf-autotable'
  * Generate PDF laporan standar
  * @param {object} options - Opsi generate PDF
  */
-export const generateLaporanPDF = (options) => {
+export const generateLaporanPDF = async (options) => {
     const {
         title = 'Laporan',
         subtitle = '',
-        columns = [],
-        data = [],
+        columns = [], // Header columns: ['No', 'Nama', ...]
+        data = [], // Data rows: [['1', 'Fulan', ...], ...]
         filename = 'laporan',
         orientation = 'portrait',
         showTotal = true,
         totalLabel = 'Total',
         totalValue = null,
-        additionalInfo = []
+        additionalInfo = [] // [{label: 'Halaqoh', value: 'A'}, ...]
     } = options
 
     const doc = new jsPDF(orientation)
     const pageWidth = doc.internal.pageSize.getWidth()
     let y = 15
 
-    // Header - Kop Surat
-    doc.setFillColor(5, 150, 105)
-    doc.rect(14, y, pageWidth - 28, 25, 'F')
+    // ========== HEADER WITH LOGO ==========
+    // Async Image Loading
+    const logoSize = 25
+    const logoX = 14
+    let headerTextX = 45
 
-    doc.setTextColor(255)
+    try {
+        const logoImg = new Image()
+        logoImg.src = '/logo-pondok.png'
+        await new Promise((resolve) => {
+            logoImg.onload = resolve
+            logoImg.onerror = resolve // Continue even if fails
+            // Timeout safety
+            setTimeout(resolve, 1000)
+        })
+        doc.addImage(logoImg, 'PNG', logoX, y, logoSize, logoSize)
+    } catch (e) {
+        console.warn('Logo loading failed', e)
+    }
+
+    // Header Text - Professional Centered with Logo offset
+    doc.setTextColor(0)
     doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('YAYASAN ABDULLAH DEWI HASANAH', pageWidth / 2, y + 8, { align: 'center' })
+    doc.setFont('helvetica', 'normal')
+    doc.text('YAYASAN ABDULLAH DEWI HASANAH', headerTextX, y + 6)
+
     doc.setFontSize(12)
-    doc.text('PONDOK PESANTREN TAHFIZH QUR\'AN AL-USYMUNI BATUAN', pageWidth / 2, y + 15, { align: 'center' })
+    doc.setFont('helvetica', 'bold')
+    doc.text('PONDOK PESANTREN TAHFIZH QUR\'AN AL-USYMUNI BATUAN', headerTextX, y + 13)
+
     doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
-    doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep', pageWidth / 2, y + 21, { align: 'center' })
+    doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep', headerTextX, y + 19)
 
-    y += 30
-    doc.setTextColor(0)
+    // Line separator
+    y += 32
+    doc.setDrawColor(5, 150, 105)
+    doc.setLineWidth(1)
+    doc.line(14, y, pageWidth - 14, y)
+    doc.setLineWidth(0.5) // Reset line width
 
-    // Title
+    y += 10
+
+    // Title Section
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
+    doc.setTextColor(5, 150, 105) // Green theme
     doc.text(title.toUpperCase(), pageWidth / 2, y, { align: 'center' })
     y += 6
 
     if (subtitle) {
         doc.setFontSize(10)
+        doc.setTextColor(100)
         doc.setFont('helvetica', 'normal')
         doc.text(subtitle, pageWidth / 2, y, { align: 'center' })
-        y += 6
+        y += 8
     }
 
-    // Additional Info
+    // Additional Info Table (Key-Value)
     if (additionalInfo.length > 0) {
         y += 4
-        doc.setFontSize(10)
+        doc.setTextColor(0)
+        doc.setFontSize(9)
         additionalInfo.forEach(info => {
-            doc.text(`${info.label}: ${info.value}`, 14, y)
+            doc.setFont('helvetica', 'bold')
+            doc.text(`${info.label}:`, 14, y)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`${info.value}`, 50, y)
             y += 5
         })
+        y += 2
     }
 
     y += 4
@@ -73,8 +107,13 @@ export const generateLaporanPDF = (options) => {
     // Table
     const tableBody = data.map((row, index) => {
         if (Array.isArray(row)) {
+            // Already array row
+            // Check if user included numbering manually? Usually we add it. 
+            // The utility assumes numbering needs to be added if not present?
+            // Actually existing logic added No:
             return [index + 1, ...row]
         }
+        // Object row
         return [index + 1, ...Object.values(row)]
     })
 
@@ -93,7 +132,8 @@ export const generateLaporanPDF = (options) => {
         },
         styles: {
             fontSize: 9,
-            cellPadding: 3
+            cellPadding: 3,
+            valign: 'middle'
         },
         columnStyles: {
             0: { cellWidth: 12, halign: 'center' }
@@ -107,12 +147,14 @@ export const generateLaporanPDF = (options) => {
     if (showTotal && totalValue !== null) {
         doc.setFontSize(11)
         doc.setFont('helvetica', 'bold')
-        doc.text(`${totalLabel}: Rp ${Number(totalValue).toLocaleString('id-ID')}`, pageWidth - 14, finalY, { align: 'right' })
+        doc.setTextColor(0)
+        doc.text(`${totalLabel}: ${totalValue}`, pageWidth - 14, finalY, { align: 'right' })
     }
 
     // Footer
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
+    doc.setTextColor(100)
     doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, 14, finalY + 15)
     doc.text('Sistem Akademik PTQA Batuan', pageWidth / 2, finalY + 25, { align: 'center' })
 

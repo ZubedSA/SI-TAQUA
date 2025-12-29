@@ -25,9 +25,11 @@ import {
     X,
     Clock
 } from 'lucide-react'
+import { useToast } from '../../context/ToastContext'
 import './Pengaturan.css'
 
 const PengaturanPage = () => {
+    const { showToast } = useToast()
     const [activeTab, setActiveTab] = useState('import')
 
     // Data import states
@@ -142,9 +144,9 @@ const PengaturanPage = () => {
             }
 
             if (error) throw error
-            alert('Pengaturan berhasil disimpan!')
+            showToast.success('Pengaturan berhasil disimpan!')
         } catch (err) {
-            alert('Gagal menyimpan pengaturan: ' + err.message)
+            showToast.error('Gagal menyimpan pengaturan: ' + err.message)
         } finally {
             setSavingSettings(false)
         }
@@ -201,10 +203,10 @@ const PengaturanPage = () => {
 
             if (deleteError) throw deleteError
 
-            alert('Data berhasil dipulihkan!')
+            showToast.success('Data berhasil dipulihkan!')
             fetchTrashItems()
         } catch (err) {
-            alert('Gagal memulihkan: ' + err.message)
+            showToast.error('Gagal memulihkan: ' + err.message)
         } finally {
             setRestoringId(null)
         }
@@ -222,10 +224,10 @@ const PengaturanPage = () => {
 
             if (error) throw error
 
-            alert('Data berhasil dihapus permanen!')
+            showToast.success('Data berhasil dihapus permanen!')
             fetchTrashItems()
         } catch (err) {
-            alert('Gagal menghapus: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         } finally {
             setDeletingId(null)
         }
@@ -247,10 +249,10 @@ const PengaturanPage = () => {
 
             if (error) throw error
 
-            alert('Data lama (>30 hari) berhasil dihapus!')
+            showToast.success('Data lama (>30 hari) berhasil dihapus!')
             fetchTrashItems()
         } catch (err) {
-            alert('Gagal mengosongkan: ' + err.message)
+            showToast.error('Gagal mengosongkan: ' + err.message)
         } finally {
             setLoadingTrash(false)
         }
@@ -524,11 +526,13 @@ const PengaturanPage = () => {
             XLSX.utils.book_append_sheet(workbook, worksheet, type)
             XLSX.writeFile(workbook, `export_${type}_${new Date().toISOString().split('T')[0]}.xlsx`)
         } catch (err) {
-            alert('Gagal export: ' + err.message)
+            showToast.error('Gagal export: ' + err.message)
         } finally {
             setExporting(false)
         }
     }
+
+
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-'

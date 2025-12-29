@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Printer, Users } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanUjianSemesterPage = () => {
@@ -112,37 +111,21 @@ const LaporanUjianSemesterPage = () => {
         return ''
     }
 
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (data.length === 0) return
 
-        const doc = new jsPDF()
-        const pageWidth = doc.internal.pageSize.getWidth()
         const selectedHalaqoh = halaqoh.find(h => h.id === filters.halaqoh_id)
         const currentSem = semester.find(s => s.id === filters.semester_id)
 
-        // Header
-        doc.setFillColor(5, 150, 105)
-        doc.rect(0, 0, pageWidth, 25, 'F')
-        doc.setTextColor(255)
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        doc.text('LAPORAN UJIAN SEMESTER TAHFIZHIYAH', pageWidth / 2, 12, { align: 'center' })
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text('PTQA Batuan - Si-Taqua', pageWidth / 2, 19, { align: 'center' })
-
-        // Info
-        doc.setTextColor(0)
-        doc.setFontSize(10)
-        doc.text(`Halaqoh: ${selectedHalaqoh?.nama || '-'}`, 14, 35)
-        doc.text(`Semester: ${currentSem?.nama || '-'} - ${currentSem?.tahun_ajaran || '-'}`, 14, 42)
-
-        // Table
-        autoTable(doc, {
-            startY: 50,
-            head: [['No', 'NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']],
-            body: data.map((s, i) => [
-                i + 1,
+        await generateLaporanPDF({
+            title: 'LAPORAN UJIAN SEMESTER TAHFIZHIYAH',
+            subtitle: 'Laporan Hasil Ujian Semester Tahfizh',
+            additionalInfo: [
+                { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
+                { label: 'Semester', value: `${currentSem?.nama || '-'} - ${currentSem?.tahun_ajaran || '-'}` }
+            ],
+            columns: ['NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat'],
+            data: data.map(s => [
                 s.nis,
                 s.nama,
                 s.hafalan,
@@ -152,29 +135,10 @@ const LaporanUjianSemesterPage = () => {
                 s.rata_rata,
                 s.predikat
             ]),
-            theme: 'grid',
-            headStyles: { fillColor: [5, 150, 105] },
-            styles: { fontSize: 8 },
-            columnStyles: {
-                0: { cellWidth: 10 },
-                1: { cellWidth: 18 },
-                3: { halign: 'center' },
-                4: { halign: 'center' },
-                5: { halign: 'center' },
-                6: { halign: 'center' },
-                7: { halign: 'center' }
-            },
-            margin: { left: 14, right: 14 }
+            filename: `Ujian_Semester_${currentSem?.nama?.replace(/\s/g, '_') || 'Laporan'}`,
+            totalLabel: 'Total Santri',
+            totalValue: `${data.length} Santri`
         })
-
-        // Footer
-        const finalY = doc.previousAutoTable.finalY + 15
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'italic')
-        doc.text(`Total: ${data.length} santri`, 14, finalY)
-        doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')} - Si-Taqua PTQA Batuan`, pageWidth / 2, finalY + 8, { align: 'center' })
-
-        doc.save(`Ujian_Semester_${currentSem?.nama?.replace(/\s/g, '_') || 'Laporan'}.pdf`)
     }
 
     return (

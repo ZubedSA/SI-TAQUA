@@ -1,28 +1,33 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, RefreshCw, Upload, FileSpreadsheet, X, MoreVertical, ArrowLeft, Save } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { logCreate, logUpdate } from '../../lib/auditLog'
+import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
+import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
+import Spinner from '../../components/ui/Spinner'
 import './Santri.css'
 
 const SantriForm = () => {
     const navigate = useNavigate()
     const { id } = useParams()
     const location = useLocation()
+    const { isAdmin, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
 
     // Determine mode: view (read-only) vs edit
     // If URL is /santri/:id (without /edit), it's view mode
     // If URL is /santri/:id/edit, it's edit mode
     // If URL is /santri/create, it's create mode
-    const isViewMode = id && !location.pathname.includes('/edit')
+    // Check if view mode (based on URL)
+    const isViewMode = location.pathname.includes('/santri/') && !location.pathname.includes('/edit') && !location.pathname.includes('/create')
+    const canEdit = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const isEdit = Boolean(id)
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(isEdit)
     const [kelasList, setKelasList] = useState([])
     const [halaqohList, setHalaqohList] = useState([])
-    const [error, setError] = useState('')
-    const [success, setSuccess] = useState('')
 
     const [formData, setFormData] = useState({
         nis: '',
@@ -57,6 +62,7 @@ const SantriForm = () => {
             setHalaqohList(halaqohRes.data || [])
         } catch (err) {
             console.error('Error fetching options:', err)
+            showToast.error('Gagal memuat options: ' + err.message)
         }
     }
 
@@ -98,7 +104,7 @@ const SantriForm = () => {
                 angkatan: angkatanNama
             })
         } catch (err) {
-            setError('Gagal memuat data: ' + err.message)
+            showToast.error('Gagal memuat data santri: ' + err.message)
         } finally {
             setFetching(false)
         }
@@ -112,8 +118,6 @@ const SantriForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
-        setError('')
-        setSuccess('')
 
         try {
             // Find or Create Angkatan by nama
@@ -166,30 +170,26 @@ const SantriForm = () => {
                     .eq('id', id)
                 if (error) throw error
                 await logUpdate('santri', formData.nama, `Edit data santri: ${formData.nama} (${formData.nis})`)
-                setSuccess('Data santri berhasil diupdate!')
+                showToast.success('Data santri berhasil diupdate!')
             } else {
                 const { error } = await supabase
                     .from('santri')
                     .insert([payload])
                 if (error) throw error
                 await logCreate('santri', formData.nama, `Tambah santri baru: ${formData.nama} (${formData.nis})`)
-                setSuccess('Data santri berhasil disimpan!')
+                showToast.success('Data santri berhasil disimpan!')
             }
 
             setTimeout(() => navigate('/santri'), 1500)
         } catch (err) {
-            setError('Gagal menyimpan: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setLoading(false)
         }
     }
 
     if (fetching) {
-        return (
-            <div className="text-center py-4">
-                <RefreshCw size={24} className="spin" /> Loading...
-            </div>
-        )
+        return <Spinner className="py-12" label="Memuat data santri..." />
     }
 
     return (
@@ -203,9 +203,6 @@ const SantriForm = () => {
                     <p className="page-subtitle">{isViewMode ? 'Informasi lengkap data santri' : isEdit ? 'Update data santri' : 'Isi form untuk menambah santri baru'}</p>
                 </div>
             </div>
-
-            {error && <div className="alert alert-error mb-3">{error}</div>}
-            {success && <div className="alert alert-success mb-3">{success}</div>}
 
             <form onSubmit={handleSubmit} className="form-card">
                 {/* Data Pribadi */}
@@ -269,6 +266,7 @@ const SantriForm = () => {
                             <label className="form-label">Kelas</label>
                             <select name="kelas_id" className="form-control" value={formData.kelas_id} onChange={handleChange} disabled={isViewMode}>
                                 <option value="">Pilih Kelas</option>
+                                <option value="unknown">Tidak Ada Kelas</option>
                                 {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
                             </select>
                         </div>
@@ -311,9 +309,11 @@ const SantriForm = () => {
                         {isViewMode ? 'Kembali' : 'Batal'}
                     </button>
                     {isViewMode ? (
-                        <button type="button" className="btn btn-primary" onClick={() => navigate(`/santri/${id}/edit`)}>
-                            Edit Data
-                        </button>
+                        canEdit && (
+                            <button type="button" className="btn btn-primary" onClick={() => navigate(`/santri/${id}/edit`)}>
+                                Edit Data
+                            </button>
+                        )
                     ) : (
                         <button type="submit" className="btn btn-primary" disabled={loading}>
                             {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}

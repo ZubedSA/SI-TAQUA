@@ -3,13 +3,17 @@ import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check,
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import { generateLaporanPDF, generateKwitansiPDF } from '../../utils/pdfGenerator'
 import { sendWhatsApp, templateKonfirmasiPembayaran, templateTagihanSantri } from '../../utils/whatsapp'
 import { logCreate } from '../../lib/auditLog'
+import Spinner from '../../components/ui/Spinner'
+import EmptyState from '../../components/ui/EmptyState'
 import './Keuangan.css'
 
 const PembayaranSantriPage = () => {
     const { user } = useAuth()
+    const { showToast } = useToast()
     const [santriList, setSantriList] = useState([])
     const [selectedSantri, setSelectedSantri] = useState(null)
     const [tagihanSantri, setTagihanSantri] = useState([])
@@ -30,6 +34,7 @@ const PembayaranSantriPage = () => {
         metode: 'Tunai',
         keterangan: ''
     })
+    const [saving, setSaving] = useState(false)
 
     const metodeOptions = ['Tunai', 'Transfer', 'QRIS', 'Lainnya']
 
@@ -68,10 +73,10 @@ const PembayaranSantriPage = () => {
                 console.error('Supabase error:', error)
                 throw error
             }
-            console.log('Santri search result:', data)
             setSantriList(data || [])
         } catch (err) {
             console.error('Error fetching santri:', err)
+            showToast.error('Gagal mencari santri: ' + err.message)
             setSantriList([])
         } finally {
             setLoading(false)
@@ -103,6 +108,7 @@ const PembayaranSantriPage = () => {
             setSelectedTagihanIds([]) // Reset selection
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data tagihan: ' + err.message)
         } finally {
             setLoadingTagihan(false)
         }
@@ -146,7 +152,7 @@ const PembayaranSantriPage = () => {
     // Open payment modal
     const handleOpenPayment = () => {
         if (selectedTagihanIds.length === 0) {
-            alert('Pilih tagihan yang akan dibayar')
+            showToast.error('Pilih tagihan yang akan dibayar')
             return
         }
         setForm({
@@ -161,6 +167,7 @@ const PembayaranSantriPage = () => {
     // Submit payment for selected tagihan
     const handleSubmitPayment = async (e) => {
         e.preventDefault()
+        setSaving(true)
         try {
             const jumlahBayar = parseFloat(form.jumlah)
 
@@ -201,8 +208,11 @@ const PembayaranSantriPage = () => {
             setShowPaymentModal(false)
             setShowSuccessModal(true)
             fetchTagihanSantri(selectedSantri.id)
+            showToast.success('Pembayaran berhasil disimpan!')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal memproses pembayaran: ' + err.message)
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -210,7 +220,7 @@ const PembayaranSantriPage = () => {
     const handleSendGroupedWA = () => {
         const phone = selectedSantri?.no_telp_wali
         if (!phone) {
-            alert('Nomor WhatsApp wali tidak tersedia')
+            showToast.error('Nomor WhatsApp wali tidak tersedia')
             return
         }
 
@@ -231,13 +241,14 @@ Mohon untuk segera melakukan pembayaran. Jazakumullah khairan.
 - PTQA Batuan`
 
         sendWhatsApp(phone, message)
+        showToast.success('WhatsApp siap dikirim')
     }
 
     // Send confirmation WhatsApp
     const handleSendKonfirmasiWA = () => {
         const phone = selectedSantri?.no_telp_wali
         if (!phone) {
-            alert('Nomor WhatsApp wali tidak tersedia')
+            showToast.error('Nomor WhatsApp wali tidak tersedia')
             return
         }
 
@@ -257,6 +268,7 @@ Jazakumullah khairan atas pembayarannya.
 - PTQA Batuan`
 
         sendWhatsApp(phone, message)
+        showToast.success('WhatsApp konfirmasi siap dikirim')
     }
 
     // Print receipt
@@ -276,6 +288,7 @@ Jazakumullah khairan atas pembayarannya.
             metode: lastPayment.metode,
             kasir: 'Bendahara PTQA'
         })
+        showToast.success('Kwitansi berhasil dicetak')
     }
 
     // ======= LUNAS SECTION HANDLERS =======
@@ -284,7 +297,7 @@ Jazakumullah khairan atas pembayarannya.
     const handleSendLunasWAGlobal = () => {
         const phone = selectedSantri?.no_telp_wali
         if (!phone) {
-            alert('Nomor WhatsApp wali tidak tersedia')
+            showToast.error('Nomor WhatsApp wali tidak tersedia')
             return
         }
 
@@ -306,13 +319,14 @@ Jazakumullah khairan atas pembayarannya.
 - PTQA Batuan`
 
         sendWhatsApp(phone, message)
+        showToast.success('WhatsApp konfirmasi lunas siap dikirim')
     }
 
     // Send WA for single lunas item
     const handleSendLunasWASingle = (tagihan) => {
         const phone = selectedSantri?.no_telp_wali
         if (!phone) {
-            alert('Nomor WhatsApp wali tidak tersedia')
+            showToast.error('Nomor WhatsApp wali tidak tersedia')
             return
         }
 
@@ -329,6 +343,7 @@ Jazakumullah khairan.
 - PTQA Batuan`
 
         sendWhatsApp(phone, message)
+        showToast.success('WhatsApp konfirmasi lunas siap dikirim')
     }
 
     // Download PDF for all lunas
@@ -347,6 +362,7 @@ Jazakumullah khairan.
             totalLabel: 'Total Lunas',
             totalValue: sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0)
         })
+        showToast.success('Laporan lunas berhasil didownload')
     }
 
     // Print kwitansi for single lunas
@@ -366,6 +382,7 @@ Jazakumullah khairan.
             metode: 'Tunai',
             kasir: 'Bendahara PTQA'
         })
+        showToast.success('Kwitansi berhasil dicetak')
     }
 
     // ======= HISTORY SECTION HANDLERS =======
@@ -374,7 +391,7 @@ Jazakumullah khairan.
     const handleSendHistoryWAGlobal = () => {
         const phone = selectedSantri?.no_telp_wali
         if (!phone) {
-            alert('Nomor WhatsApp wali tidak tersedia')
+            showToast.error('Nomor WhatsApp wali tidak tersedia')
             return
         }
 
@@ -394,13 +411,14 @@ ${items}
 - PTQA Batuan`
 
         sendWhatsApp(phone, message)
+        showToast.success('WhatsApp riwayat siap dikirim')
     }
 
     // Send WA for single history item
     const handleSendHistoryWASingle = (pembayaran) => {
         const phone = selectedSantri?.no_telp_wali
         if (!phone) {
-            alert('Nomor WhatsApp wali tidak tersedia')
+            showToast.error('Nomor WhatsApp wali tidak tersedia')
             return
         }
 
@@ -418,6 +436,7 @@ Jazakumullah khairan.
 - PTQA Batuan`
 
         sendWhatsApp(phone, message)
+        showToast.success('WhatsApp riwayat siap dikirim')
     }
 
     // Download PDF for all history
@@ -437,6 +456,7 @@ Jazakumullah khairan.
             totalLabel: 'Total Pembayaran',
             totalValue: pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0)
         })
+        showToast.success('Laporan riwayat berhasil didownload')
     }
 
     // Print kwitansi for single history
@@ -456,6 +476,7 @@ Jazakumullah khairan.
             metode: pembayaran.metode,
             kasir: 'Bendahara PTQA'
         })
+        showToast.success('Kwitansi berhasil dicetak')
     }
 
     const isOverdue = (jatuhTempo) => new Date(jatuhTempo) < new Date()
@@ -530,7 +551,7 @@ Jazakumullah khairan.
             {selectedSantri && (
                 <div className="pembayaran-content">
                     {loadingTagihan ? (
-                        <div className="loading-state">Memuat data tagihan...</div>
+                        <Spinner className="py-8" label="Memuat data tagihan..." />
                     ) : (
                         <>
                             {/* Unpaid Section - Grouped */}
@@ -788,8 +809,8 @@ Jazakumullah khairan.
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary">
-                                    <Check size={18} /> Bayar Sekarang
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Memproses...</> : <><Check size={18} /> Bayar Sekarang</>}
                                 </button>
                             </div>
                         </form>
@@ -798,33 +819,25 @@ Jazakumullah khairan.
             )}
 
             {/* Success Modal */}
-            {showSuccessModal && lastPayment && (
+            {showSuccessModal && (
                 <div className="modal-overlay active">
-                    <div className="modal success-modal">
-                        <div className="modal-header success">
-                            <h3>✅ Pembayaran Berhasil!</h3>
-                            <button className="modal-close" onClick={() => setShowSuccessModal(false)}>×</button>
+                    <div className="modal modal-sm">
+                        <div className="modal-header">
+                            <h3 className="green"><CheckCircle size={24} /> Pembayaran Berhasil</h3>
                         </div>
                         <div className="modal-body">
-                            <div className="success-icon">
-                                <CheckCircle size={64} />
-                            </div>
-                            <div className="success-details">
-                                <p><strong>Santri:</strong> {selectedSantri?.nama}</p>
-                                <p><strong>Tagihan:</strong> {lastPayment.items.map(t => t.kategori?.nama).join(', ')}</p>
-                                <p><strong>Jumlah:</strong> Rp {Number(lastPayment.jumlah).toLocaleString('id-ID')}</p>
+                            <p style={{ textAlign: 'center' }}>Pembayaran telah disimpan.</p>
+                            <div className="success-actions">
+                                <button className="btn btn-outline btn-block" onClick={handleSendKonfirmasiWA}>
+                                    <MessageCircle size={16} /> Kirim Konfirmasi WA
+                                </button>
+                                <button className="btn btn-outline btn-block" onClick={handlePrintKwitansi}>
+                                    <Printer size={16} /> Cetak Kwitansi
+                                </button>
                             </div>
                         </div>
-                        <div className="modal-footer success-actions">
-                            <button className="btn btn-wa" onClick={handleSendKonfirmasiWA}>
-                                <MessageCircle size={18} /> Kirim WhatsApp
-                            </button>
-                            <button className="btn btn-secondary" onClick={handlePrintKwitansi}>
-                                <Printer size={18} /> Cetak Kwitansi
-                            </button>
-                            <button className="btn btn-primary" onClick={() => setShowSuccessModal(false)}>
-                                <Check size={18} /> Selesai
-                            </button>
+                        <div className="modal-footer">
+                            <button className="btn btn-primary btn-block" onClick={() => setShowSuccessModal(false)}>Tutup</button>
                         </div>
                     </div>
                 </div>

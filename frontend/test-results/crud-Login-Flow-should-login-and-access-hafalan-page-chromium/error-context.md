@@ -1,0 +1,297 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - img "Logo" [ref=e7]
+      - generic [ref=e9]: Si-Taqua
+    - navigation [ref=e10]:
+      - list [ref=e11]:
+        - listitem [ref=e12]:
+          - link "Dashboard" [ref=e13] [cursor=pointer]:
+            - /url: /
+            - img [ref=e15]
+            - generic [ref=e20]: Dashboard
+        - listitem [ref=e21]:
+          - button "Data Pondok" [ref=e22] [cursor=pointer]:
+            - img [ref=e24]
+            - generic [ref=e28]: Data Pondok
+            - generic:
+              - img
+          - list:
+            - listitem [ref=e29]:
+              - link "Data Santri" [ref=e30] [cursor=pointer]:
+                - /url: /santri
+                - img [ref=e32]
+                - generic [ref=e37]: Data Santri
+            - listitem [ref=e38]:
+              - link "Data Guru" [ref=e39] [cursor=pointer]:
+                - /url: /guru
+                - img [ref=e41]
+                - generic [ref=e44]: Data Guru
+            - listitem [ref=e45]:
+              - link "Kelas" [ref=e46] [cursor=pointer]:
+                - /url: /kelas
+                - img [ref=e48]
+                - generic [ref=e51]: Kelas
+            - listitem [ref=e52]:
+              - link "Mapel" [ref=e53] [cursor=pointer]:
+                - /url: /mapel
+                - img [ref=e55]
+                - generic [ref=e57]: Mapel
+            - listitem [ref=e58]:
+              - link "Halaqoh" [ref=e59] [cursor=pointer]:
+                - /url: /halaqoh
+                - img [ref=e61]
+                - generic [ref=e63]: Halaqoh
+        - listitem [ref=e64]:
+          - button "Akademik" [ref=e65] [cursor=pointer]:
+            - img [ref=e67]
+            - generic [ref=e72]: Akademik
+            - generic:
+              - img
+          - list [ref=e73]:
+            - listitem [ref=e74]:
+              - button "Input Nilai" [ref=e75] [cursor=pointer]:
+                - img [ref=e77]
+                - generic [ref=e79]: Input Nilai
+                - generic:
+                  - img
+              - list:
+                - listitem [ref=e80]:
+                  - link "Ujian Syahri" [ref=e81] [cursor=pointer]:
+                    - /url: /akademik/nilai/tahfizh/syahri
+                    - img [ref=e83]
+                    - generic [ref=e85]: Ujian Syahri
+                - listitem [ref=e86]:
+                  - button "Ujian Semester" [ref=e87] [cursor=pointer]:
+                    - img [ref=e89]
+                    - generic [ref=e92]: Ujian Semester
+                    - generic:
+                      - img
+                  - list:
+                    - listitem [ref=e93]:
+                      - button "Tahfiziyah" [ref=e94] [cursor=pointer]:
+                        - img [ref=e96]
+                        - generic [ref=e99]: Tahfiziyah
+                        - generic:
+                          - img
+                      - list:
+                        - listitem [ref=e100]:
+                          - link "Ujian Semester" [ref=e101] [cursor=pointer]:
+                            - /url: /akademik/nilai/tahfizh/semester
+                            - img [ref=e103]
+                            - generic [ref=e106]: Ujian Semester
+                    - listitem [ref=e107]:
+                      - button "Madrasiyah" [ref=e108] [cursor=pointer]:
+                        - img [ref=e110]
+                        - generic [ref=e112]: Madrasiyah
+                        - generic:
+                          - img
+                      - list:
+                        - listitem [ref=e113]:
+                          - link "Ujian Harian" [ref=e114] [cursor=pointer]:
+                            - /url: /akademik/nilai/madros/harian
+                            - img [ref=e116]
+                            - generic [ref=e118]: Ujian Harian
+                        - listitem [ref=e119]:
+                          - link "UTS" [ref=e120] [cursor=pointer]:
+                            - /url: /akademik/nilai/madros/uts
+                            - img [ref=e122]
+                            - generic [ref=e125]: UTS
+                        - listitem [ref=e126]:
+                          - link "UAS" [ref=e127] [cursor=pointer]:
+                            - /url: /akademik/nilai/madros/uas
+                            - img [ref=e129]
+                            - generic [ref=e132]: UAS
+            - listitem [ref=e133]:
+              - button "Hafalan" [ref=e134] [cursor=pointer]:
+                - img [ref=e136]
+                - generic [ref=e139]: Hafalan
+                - generic:
+                  - img
+              - list [ref=e140]:
+                - listitem [ref=e141]:
+                  - link "Input Hafalan" [ref=e142] [cursor=pointer]:
+                    - /url: /hafalan
+                    - img [ref=e144]
+                    - generic [ref=e146]: Input Hafalan
+                - listitem [ref=e147]:
+                  - link "Rekap Hafalan" [ref=e148] [cursor=pointer]:
+                    - /url: /hafalan?tab=rekap
+                    - img [ref=e150]
+                    - generic [ref=e153]: Rekap Hafalan
+            - listitem [ref=e154]:
+              - button "Laporan" [ref=e155] [cursor=pointer]:
+                - img [ref=e157]
+                - generic [ref=e160]: Laporan
+                - generic:
+                  - img
+              - list:
+                - listitem [ref=e161]:
+                  - button "Laporan Nilai" [ref=e162] [cursor=pointer]:
+                    - img [ref=e164]
+                    - generic [ref=e167]: Laporan Nilai
+                    - generic:
+                      - img
+                  - list:
+                    - listitem [ref=e168]:
+                      - link "Ujian Syahri" [ref=e169] [cursor=pointer]:
+                        - /url: /laporan/ujian-syahri
+                        - img [ref=e171]
+                        - generic [ref=e173]: Ujian Syahri
+                    - listitem [ref=e174]:
+                      - link "Ujian Semester" [ref=e175] [cursor=pointer]:
+                        - /url: /laporan/ujian-semester
+                        - img [ref=e177]
+                        - generic [ref=e180]: Ujian Semester
+                - listitem [ref=e181]:
+                  - button "Laporan Hafalan" [ref=e182] [cursor=pointer]:
+                    - img [ref=e184]
+                    - generic [ref=e187]: Laporan Hafalan
+                    - generic:
+                      - img
+                  - list:
+                    - listitem [ref=e188]:
+                      - link "Harian" [ref=e189] [cursor=pointer]:
+                        - /url: /laporan/hafalan-harian
+                        - img [ref=e191]
+                        - generic [ref=e193]: Harian
+                    - listitem [ref=e194]:
+                      - link "Mingguan" [ref=e195] [cursor=pointer]:
+                        - /url: /laporan/rekap-mingguan
+                        - img [ref=e197]
+                        - generic [ref=e199]: Mingguan
+                    - listitem [ref=e200]:
+                      - link "Bulanan" [ref=e201] [cursor=pointer]:
+                        - /url: /hafalan/pencapaian/bulanan
+                        - img [ref=e203]
+                        - generic [ref=e205]: Bulanan
+                    - listitem [ref=e206]:
+                      - link "Semester" [ref=e207] [cursor=pointer]:
+                        - /url: /hafalan/pencapaian/semester
+                        - img [ref=e209]
+                        - generic [ref=e212]: Semester
+                - listitem [ref=e213]:
+                  - button "Laporan Akademik" [ref=e214] [cursor=pointer]:
+                    - img [ref=e216]
+                    - generic [ref=e221]: Laporan Akademik
+                    - generic:
+                      - img
+                  - list:
+                    - listitem [ref=e222]:
+                      - link "Raport" [ref=e223] [cursor=pointer]:
+                        - /url: /laporan/akademik-santri
+                        - img [ref=e225]
+                        - generic [ref=e230]: Raport
+                    - listitem [ref=e231]:
+                      - link "Grafik Perkembangan" [ref=e232] [cursor=pointer]:
+                        - /url: /rekap-nilai/grafik
+                        - img [ref=e234]
+                        - generic [ref=e236]: Grafik Perkembangan
+            - listitem [ref=e237]:
+              - link "Pembinaan Santri" [ref=e238] [cursor=pointer]:
+                - /url: /presensi
+                - img [ref=e240]
+                - generic [ref=e243]: Pembinaan Santri
+            - listitem [ref=e244]:
+              - link "Semester" [ref=e245] [cursor=pointer]:
+                - /url: /semester
+                - img [ref=e247]
+                - generic [ref=e249]: Semester
+    - button "Keluar" [ref=e251] [cursor=pointer]:
+      - img [ref=e253]
+      - generic [ref=e256]: Keluar
+  - main [ref=e257]:
+    - generic [ref=e259]:
+      - button "Cari... Ctrl+K" [ref=e260] [cursor=pointer]:
+        - img [ref=e261]
+        - generic [ref=e264]: Cari...
+        - generic [ref=e265]: Ctrl+K
+      - generic [ref=e266]:
+        - img [ref=e267]
+        - generic [ref=e270]:
+          - generic [ref=e271]: 01.44.30
+          - generic [ref=e272]: Selasa, 30 Des 2025
+        - generic [ref=e273]: WIB
+      - button "Mode Malam" [ref=e274] [cursor=pointer]:
+        - img [ref=e275]
+      - button [ref=e278] [cursor=pointer]:
+        - img [ref=e279]
+      - generic [ref=e283] [cursor=pointer]:
+        - img [ref=e285]
+        - generic [ref=e288]:
+          - generic [ref=e289]: Administrator
+          - generic [ref=e290]: Guru/Pengajar
+        - img [ref=e291]
+    - generic [ref=e294]:
+      - generic [ref=e295]:
+        - generic [ref=e296]:
+          - heading "👋 Selamat Malam!" [level=1] [ref=e297]
+          - paragraph [ref=e298]: Dashboard Akademik PTQA Batuan
+        - generic [ref=e299]:
+          - img [ref=e300]
+          - generic [ref=e303]: Akademik
+      - generic [ref=e304]:
+        - generic [ref=e305]:
+          - generic [ref=e306]:
+            - generic [ref=e307]: Total Santri
+            - generic [ref=e308]: "48"
+          - img [ref=e310]
+        - generic [ref=e315]:
+          - generic [ref=e316]:
+            - generic [ref=e317]: Total Halaqoh
+            - generic [ref=e318]: "6"
+          - img [ref=e320]
+        - generic [ref=e322]:
+          - generic [ref=e323]:
+            - generic [ref=e324]: Total Hafalan
+            - generic [ref=e325]: "9"
+          - img [ref=e327]
+        - generic [ref=e330]:
+          - generic [ref=e331]:
+            - generic [ref=e332]: Hafalan Lancar
+            - generic [ref=e333]: "7"
+          - img [ref=e335]
+      - generic [ref=e338]:
+        - generic [ref=e339]:
+          - heading "Trend Hafalan 2025" [level=3] [ref=e341]:
+            - img [ref=e342]
+            - text: Trend Hafalan 2025
+          - img [ref=e346]
+        - generic [ref=e347]:
+          - heading "Status Hafalan" [level=3] [ref=e349]:
+            - img [ref=e350]
+            - text: Status Hafalan
+          - img [ref=e354]
+      - generic [ref=e355]:
+        - heading "Menu Akademik" [level=3] [ref=e357]:
+          - img [ref=e358]
+          - text: Menu Akademik
+        - generic [ref=e360]:
+          - link "Input Nilai" [ref=e361] [cursor=pointer]:
+            - /url: /input-nilai
+            - img [ref=e362]
+            - generic [ref=e364]: Input Nilai
+          - link "Rekap Nilai" [ref=e365] [cursor=pointer]:
+            - /url: /rekap-nilai
+            - img [ref=e366]
+            - generic [ref=e369]: Rekap Nilai
+          - link "Hafalan" [ref=e370] [cursor=pointer]:
+            - /url: /hafalan
+            - img [ref=e371]
+            - generic [ref=e374]: Hafalan
+          - link "Pembinaan" [ref=e375] [cursor=pointer]:
+            - /url: /presensi
+            - img [ref=e376]
+            - generic [ref=e379]: Pembinaan
+          - link "Halaqoh" [ref=e380] [cursor=pointer]:
+            - /url: /halaqoh
+            - img [ref=e381]
+            - generic [ref=e383]: Halaqoh
+          - link "Laporan" [ref=e384] [cursor=pointer]:
+            - /url: /laporan
+            - img [ref=e385]
+            - generic [ref=e388]: Laporan
+```

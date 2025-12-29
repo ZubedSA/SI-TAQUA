@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BookMarked, RefreshCw, MessageCircle, Users, Send, Download, Printer } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 
 import '../../../../../pages/laporan/Laporan.css'
 
@@ -112,56 +111,31 @@ _PTQA Batuan - Si-Taqua_`
         })
     }
 
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (data.length === 0) return
 
-        const doc = new jsPDF()
-        const pageWidth = doc.internal.pageSize.getWidth()
         const selectedHalaqoh = halaqoh.find(h => h.id === filters.halaqoh_id)
+        const tanggalFormatted = new Date(filters.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-        // Header
-        doc.setFillColor(5, 150, 105)
-        doc.rect(0, 0, pageWidth, 25, 'F')
-        doc.setTextColor(255)
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        doc.text('LAPORAN HAFALAN HARIAN', pageWidth / 2, 12, { align: 'center' })
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text('PTQA Batuan - Si-Taqua', pageWidth / 2, 19, { align: 'center' })
-
-        // Info
-        doc.setTextColor(0)
-        doc.setFontSize(10)
-        doc.text(`Halaqoh: ${selectedHalaqoh?.nama || '-'}`, 14, 35)
-        doc.text(`Tanggal: ${new Date(filters.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`, 14, 42)
-
-        // Table
-        autoTable(doc, {
-            startY: 50,
-            head: [['No', 'Santri', 'Juz/Surah', 'Ayat', 'Jenis', 'Status']],
-            body: data.map((item, i) => [
-                i + 1,
+        await generateLaporanPDF({
+            title: 'LAPORAN HAFALAN HARIAN',
+            subtitle: 'Laporan Hafalan Santri Harian',
+            additionalInfo: [
+                { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
+                { label: 'Tanggal', value: tanggalFormatted }
+            ],
+            columns: ['Santri', 'Juz/Surah', 'Ayat', 'Jenis', 'Status'],
+            data: data.map(item => [
                 item.santri?.nama || '-',
                 `Juz ${item.juz_mulai || item.juz} - ${item.surah_mulai || item.surah}`,
                 `${item.ayat_mulai} - ${item.ayat_selesai}`,
                 item.jenis,
                 item.status
             ]),
-            theme: 'grid',
-            headStyles: { fillColor: [5, 150, 105] },
-            styles: { fontSize: 9 },
-            margin: { left: 14, right: 14 }
+            filename: `Hafalan_Harian_${filters.tanggal}`,
+            totalLabel: 'Total Santri',
+            totalValue: `${data.length} Santri`
         })
-
-        // Footer
-        const finalY = doc.previousAutoTable.finalY + 15
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'italic')
-        doc.text(`Total: ${data.length} santri`, 14, finalY)
-        doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')} - Si-Taqua PTQA Batuan`, pageWidth / 2, finalY + 8, { align: 'center' })
-
-        doc.save(`Hafalan_Harian_${filters.tanggal}.pdf`)
     }
 
     return (

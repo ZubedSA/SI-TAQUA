@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Search, Edit2, Trash2, Tag, RefreshCw, MoreVertical, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../context/ToastContext'
 import './Keuangan.css'
 
 const KategoriPembayaranPage = () => {
+    const { showToast } = useToast()
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -80,8 +82,9 @@ const KategoriPembayaranPage = () => {
             setShowModal(false)
             resetForm()
             fetchData()
+            showToast.success('Anggaran berhasil disimpan')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         }
     }
 
@@ -91,8 +94,9 @@ const KategoriPembayaranPage = () => {
             const { error } = await supabase.from('kategori_pembayaran').delete().eq('id', id)
             if (error) throw error
             fetchData()
+            showToast.success('Kategori berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         }
     }
 

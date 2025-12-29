@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save, Printer, Download, MoreVertical, Send } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import { useToast } from '../../context/ToastContext'
+import Spinner from '../../components/ui/Spinner'
+import EmptyState from '../../components/ui/EmptyState'
 
 import './Hafalan.css'
 
 const HafalanList = () => {
     // Read initial tab from URL param
     const [searchParams] = useSearchParams()
+    const navigate = useNavigate()
     const initialTab = searchParams.get('tab') || 'list'
+    const { showToast } = useToast()
 
     const [hafalan, setHafalan] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
@@ -192,9 +197,9 @@ const HafalanList = () => {
 
     const savePencapaian = async () => {
         // Validasi berdasarkan kategori
-        if (pencapaianKategori === 'semester' && !pencapaianSemester) return alert('Pilih semester terlebih dahulu')
-        if (pencapaianKategori === 'mingguan' && (!pencapaianTanggal.dari || !pencapaianTanggal.sampai)) return alert('Pilih rentang tanggal terlebih dahulu')
-        if (pencapaianKategori === 'bulanan' && !pencapaianBulan) return alert('Pilih bulan terlebih dahulu')
+        if (pencapaianKategori === 'semester' && !pencapaianSemester) return showToast.error('Pilih semester terlebih dahulu')
+        if (pencapaianKategori === 'mingguan' && (!pencapaianTanggal.dari || !pencapaianTanggal.sampai)) return showToast.error('Pilih rentang tanggal terlebih dahulu')
+        if (pencapaianKategori === 'bulanan' && !pencapaianBulan) return showToast.error('Pilih bulan terlebih dahulu')
 
         setSavingPencapaian(true)
         try {
@@ -223,10 +228,10 @@ const HafalanList = () => {
                 const { error } = await supabase.from('pencapaian_hafalan').insert(insertData)
                 if (error) throw error
             }
-            alert('Pencapaian hafalan berhasil disimpan!')
+            showToast.success('Pencapaian hafalan berhasil disimpan!')
         } catch (err) {
             console.error('Error:', err.message)
-            alert('Gagal menyimpan: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setSavingPencapaian(false)
         }
@@ -327,7 +332,7 @@ const HafalanList = () => {
             setSelectedHafalan(null)
             fetchHafalan()
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -414,7 +419,7 @@ _PTQA Batuan_`
         console.log('Button clicked. Data length:', rekapData.length)
 
         if (!rekapData || rekapData.length === 0) {
-            alert('Tidak ada data rekap untuk dikirim. Silakan filter data terlebih dahulu.')
+            showToast.error('Tidak ada data rekap untuk dikirim. Silakan filter data terlebih dahulu.')
             return
         }
 
@@ -630,7 +635,7 @@ _PTQA Batuan_`
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
 
-        alert('✅ File berhasil didownload!\n\n💡 Tips: Buka file tersebut di browser, lalu gunakan Ctrl+P dan pilih "Save as PDF" untuk menyimpan sebagai PDF.')
+        showToast.success('✅ File berhasil didownload!\n\n💡 Tips: Buka file tersebut di browser, lalu gunakan Ctrl+P dan pilih "Save as PDF" untuk menyimpan sebagai PDF.')
     }
 
     useEffect(() => {
@@ -836,9 +841,19 @@ _PTQA Batuan_`
                                 </thead>
                                 <tbody>
                                     {loading ? (
-                                        <tr><td colSpan="8" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                        <tr><td colSpan="8"><Spinner className="py-8" label="Memuat data hafalan..." /></td></tr>
                                     ) : filteredHafalan.length === 0 ? (
-                                        <tr><td colSpan="8" className="text-center">Tidak ada data hafalan</td></tr>
+                                        <tr>
+                                            <td colSpan="8">
+                                                <EmptyState
+                                                    icon={FileText}
+                                                    title="Belum ada data hafalan"
+                                                    message={searchTerm ? "Tidak ditemukan data yang sesuai pencarian." : "Belum ada hafalan santri yang diinput."}
+                                                    actionLabel="Input Hafalan Baruu"
+                                                    onAction={() => navigate('/hafalan/create?jenis=Setoran')}
+                                                />
+                                            </td>
+                                        </tr>
                                     ) : (
                                         filteredHafalan.map((item) => (
                                             <tr key={item.id}>
@@ -1010,9 +1025,17 @@ _PTQA Batuan_`
                                 </thead>
                                 <tbody>
                                     {loading ? (
-                                        <tr><td colSpan="8" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                        <tr><td colSpan="8"><Spinner className="py-8" label="Memuat data rekap..." /></td></tr>
                                     ) : rekapData.length === 0 ? (
-                                        <tr><td colSpan="8" className="text-center">Tidak ada data. Sesuaikan filter.</td></tr>
+                                        <tr>
+                                            <td colSpan="8">
+                                                <EmptyState
+                                                    icon={BarChart3}
+                                                    title="Tidak ada data rekap"
+                                                    message="Sesuaikan filter di atas untuk melihat data rekap hafalan."
+                                                />
+                                            </td>
+                                        </tr>
                                     ) : (
                                         rekapData.map((item, idx) => (
                                             <tr key={item.id}>
@@ -1199,7 +1222,15 @@ _PTQA Batuan_`
                                         </thead>
                                         <tbody>
                                             {santriList.filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh))).length === 0 ? (
-                                                <tr><td colSpan="6" className="text-center">Tidak ada data santri</td></tr>
+                                                <tr>
+                                                    <td colSpan="6">
+                                                        <EmptyState
+                                                            icon={Trophy}
+                                                            title="Tidak ada data santri"
+                                                            message="Tidak ditemukan santri yang sesuai dengan filter pencarian."
+                                                        />
+                                                    </td>
+                                                </tr>
                                             ) : (
                                                 santriList
                                                     .filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh)))
@@ -1471,7 +1502,7 @@ _PTQA Batuan_`
                                         document.body.removeChild(a)
                                         URL.revokeObjectURL(url)
 
-                                        alert('File HTML berhasil didownload! Buka file dan gunakan Print > Save as PDF untuk konversi ke PDF.')
+                                        showToast.success('File HTML berhasil didownload! Buka file dan gunakan Print > Save as PDF untuk konversi ke PDF.')
                                     }}
                                 >
                                     <Download size={16} /> Download PDF
@@ -1500,7 +1531,15 @@ _PTQA Batuan_`
                                         </thead>
                                         <tbody>
                                             {santriList.filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh))).length === 0 ? (
-                                                <tr><td colSpan="8" className="text-center">Tidak ada data</td></tr>
+                                                <tr>
+                                                    <td colSpan="8">
+                                                        <EmptyState
+                                                            icon={Trophy}
+                                                            title="Tidak ada data"
+                                                            message="Tidak ditemukan data pencapaian yang sesuai."
+                                                        />
+                                                    </td>
+                                                </tr>
                                             ) : (
                                                 santriList
                                                     .filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh)))

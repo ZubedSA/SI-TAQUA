@@ -3,12 +3,15 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Save, RefreshCw, Check, MessageCircle, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate } from '../../lib/auditLog'
+import { useToast } from '../../context/ToastContext'
+import Spinner from '../../components/ui/Spinner'
 import './Hafalan.css'
 
 const HafalanForm = () => {
     const navigate = useNavigate()
     const { id } = useParams()
     const [searchParams] = useSearchParams()
+    const { showToast } = useToast()
     const isEdit = Boolean(id)
 
     // Ambil jenis dari URL query param (jika ada)
@@ -20,8 +23,6 @@ const HafalanForm = () => {
     const [guruList, setGuruList] = useState([])
     const [halaqohList, setHalaqohList] = useState([])
     const [selectedHalaqoh, setSelectedHalaqoh] = useState('')
-    const [error, setError] = useState('')
-    const [success, setSuccess] = useState('')
     // State untuk menyimpan data hafalan yang baru diinput hari ini
     const [recentHafalan, setRecentHafalan] = useState([])
 
@@ -84,6 +85,7 @@ const HafalanForm = () => {
             setHalaqohList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data halaqoh')
         }
     }
 
@@ -98,6 +100,7 @@ const HafalanForm = () => {
             setSantriList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data santri')
         }
     }
 
@@ -159,7 +162,7 @@ const HafalanForm = () => {
                 catatan: data.catatan || ''
             })
         } catch (err) {
-            setError('Gagal memuat data: ' + err.message)
+            showToast.error('Gagal memuat data: ' + err.message)
         } finally {
             setFetching(false)
         }
@@ -173,8 +176,6 @@ const HafalanForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
-        setError('')
-        setSuccess('')
 
         try {
             const payload = {
@@ -202,7 +203,7 @@ const HafalanForm = () => {
                 if (error) throw error
                 const santri = santriList.find(s => s.id === formData.santri_id)
                 await logUpdate('hafalan', santri?.nama || 'Santri', `Edit hafalan: ${santri?.nama || 'Santri'} - ${formData.surah_mulai}`)
-                setSuccess('Data hafalan berhasil diupdate!')
+                showToast.success('Data hafalan berhasil diupdate!')
                 setTimeout(() => navigate('/hafalan'), 1500)
             } else {
                 const { error } = await supabase.from('hafalan').insert([payload])
@@ -211,7 +212,7 @@ const HafalanForm = () => {
                 await logCreate('hafalan', santriForLog?.nama || 'Santri', `Tambah hafalan: ${santriForLog?.nama || 'Santri'} - ${formData.surah_mulai}`)
 
                 // Data berhasil disimpan - tampilkan sukses
-                setSuccess('✅ Data hafalan berhasil disimpan!')
+                showToast.success('✅ Data hafalan berhasil disimpan!')
 
                 // Refresh daftar hafalan yang baru diinput
                 await fetchRecentHafalan()
@@ -294,19 +295,17 @@ _PTQA Batuan_`
                     catatan: ''
                 })
 
-                // Clear success setelah 3 detik
-                setTimeout(() => setSuccess(''), 3000)
                 return
             }
         } catch (err) {
-            setError('Gagal menyimpan: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setLoading(false)
         }
     }
 
     if (fetching) {
-        return <div className="text-center py-4"><RefreshCw size={24} className="spin" /> Loading...</div>
+        return <Spinner className="py-8" label="Memuat data hafalan..." />
     }
 
     return (
@@ -320,9 +319,6 @@ _PTQA Batuan_`
                     <p className="page-subtitle">{isEdit ? 'Update data hafalan' : 'Catat progress hafalan santri'}</p>
                 </div>
             </div>
-
-            {error && <div className="alert alert-error mb-3">{error}</div>}
-            {success && <div className="alert alert-success mb-3">{success}</div>}
 
             <form onSubmit={handleSubmit} className="form-card">
                 <div className="form-section">
@@ -491,7 +487,7 @@ _PTQA Batuan_`
                                                         onClick={() => {
                                                             const santri = item.santri
                                                             if (!santri?.no_telp_wali) {
-                                                                alert('Nomor WA wali tidak tersedia')
+                                                                showToast.error('Nomor WA wali tidak tersedia')
                                                                 return
                                                             }
                                                             let phone = santri.no_telp_wali.replace(/\D/g, '')

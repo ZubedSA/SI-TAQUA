@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, ArrowDownCircle, Download, RefreshCw } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, ArrowDownCircle, Download, RefreshCw, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useToast } from '../../context/ToastContext'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import Spinner from '../../components/ui/Spinner'
+import EmptyState from '../../components/ui/EmptyState'
 import './Keuangan.css'
 
 const KasPengeluaranPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const { canCreate, canUpdate, canDelete } = usePermissions()
+    const { showToast } = useToast()
+
     // Multiple checks - admin dan bendahara bisa CRUD
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -20,6 +25,7 @@ const KasPengeluaranPage = () => {
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
     const [editItem, setEditItem] = useState(null)
+    const [saving, setSaving] = useState(false)
     const [filters, setFilters] = useState({
         search: '',
         bulan: '',
@@ -84,6 +90,7 @@ const KasPengeluaranPage = () => {
             setData(result || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -91,6 +98,7 @@ const KasPengeluaranPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        setSaving(true)
         try {
             const payload = {
                 ...form,
@@ -110,6 +118,7 @@ const KasPengeluaranPage = () => {
                     { keperluan: editItem.keperluan, jumlah: editItem.jumlah, kategori: editItem.kategori },
                     { keperluan: payload.keperluan, jumlah: payload.jumlah, kategori: payload.kategori }
                 )
+                showToast.success('Pengeluaran berhasil diperbarui')
             } else {
                 const { error } = await supabase.from('kas_pengeluaran').insert([payload])
                 if (error) throw error
@@ -120,13 +129,16 @@ const KasPengeluaranPage = () => {
                     payload.keperluan,
                     `Tambah pengeluaran: ${payload.keperluan} - Rp ${Number(payload.jumlah).toLocaleString('id-ID')}`
                 )
+                showToast.success('Pengeluaran baru berhasil ditambahkan')
             }
 
             setShowModal(false)
             resetForm()
             fetchData()
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -148,8 +160,9 @@ const KasPengeluaranPage = () => {
             }
 
             fetchData()
+            showToast.success('Data berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -193,6 +206,7 @@ const KasPengeluaranPage = () => {
             totalLabel: 'Total Pengeluaran',
             totalValue: data.reduce((sum, d) => sum + Number(d.jumlah), 0)
         })
+        showToast.success('Laporan berhasil didownload')
     }
 
     const totalPengeluaran = data.reduce((sum, d) => sum + Number(d.jumlah), 0)
@@ -277,9 +291,15 @@ const KasPengeluaranPage = () => {
 
             <div className="data-card">
                 {loading ? (
-                    <div className="loading-state">Memuat data...</div>
+                    <Spinner className="py-8" label="Memuat data pengeluaran..." />
                 ) : filteredData.length === 0 ? (
-                    <div className="empty-state">Belum ada data pengeluaran</div>
+                    <EmptyState
+                        icon={FileText}
+                        title="Belum ada data pengeluaran"
+                        message={filters.search || filters.dateFrom ? "Tidak ditemukan data yang sesuai filter." : "Belum ada data pengeluaran kas yang tercatat."}
+                        actionLabel={canEditKas ? "Tambah Pengeluaran" : null}
+                        onAction={canEditKas ? () => { resetForm(); setShowModal(true) } : null}
+                    />
                 ) : (
                     <table className="data-table">
                         <thead>
@@ -394,7 +414,9 @@ const KasPengeluaranPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary">{editItem ? 'Simpan' : 'Tambah'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
+                                </button>
                             </div>
                         </form>
                     </div>

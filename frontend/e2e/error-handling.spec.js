@@ -6,9 +6,10 @@ import { test, expect } from '@playwright/test'
  */
 
 // GANTI DENGAN CREDENTIALS YANG VALID
+// GANTI DENGAN CREDENTIALS YANG VALID
 const CREDENTIALS = {
-    username: 'admin',
-    password: 'admin123'
+    username: process.env.VITE_TEST_EMAIL || 'admin',
+    password: process.env.VITE_TEST_PASSWORD || 'admin123'
 }
 
 test.describe('Login Error Handling', () => {
@@ -84,6 +85,6 @@ test.describe('Responsive Design', () => {
         await page.setViewportSize({ width: 375, height: 667 })
         await page.goto('/login')
 
-        await expect(page.locator('.login-card, .login-box, form')).toBeVisible()
+        await expect(page.locator('.login-card')).toBeVisible()
     })
 })

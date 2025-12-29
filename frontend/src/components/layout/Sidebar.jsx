@@ -283,7 +283,7 @@ const operatorMenuItems = [
         roles: ['admin', 'bendahara', 'pengasuh'],
         children: [
             { path: '/keuangan/dana/anggaran', icon: PiggyBank, label: 'Anggaran', roles: ['admin', 'bendahara'] },
-            { path: '/keuangan/dana/persetujuan', icon: CheckCircle, label: 'Persetujuan' },
+            { path: '/keuangan/dana/persetujuan', icon: CheckCircle, label: 'Persetujuan', roles: ['admin', 'pengasuh'] },
             { path: '/keuangan/dana/realisasi', icon: TrendingUp, label: 'Realisasi Dana' },
             { path: '/keuangan/dana/laporan', icon: FileBarChart, label: 'Laporan Penyaluran' },
         ]

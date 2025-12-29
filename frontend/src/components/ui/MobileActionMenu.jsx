@@ -70,13 +70,16 @@ const MobileActionMenu = ({ children, actions }) => {
                         e.stopPropagation()
                         setIsOpen(!isOpen)
                     }}
-                    title="Menu"
+                    title="Menu Aksi"
+                    aria-label="Menu Aksi"
+                    aria-haspopup="true"
+                    aria-expanded={isOpen}
                     type="button"
                 >
-                    <MoreVertical size={18} />
+                    <MoreVertical size={18} aria-hidden="true" />
                 </button>
                 {isOpen && (
-                    <div className="mobile-action-menu show">
+                    <div className="mobile-action-menu show" role="menu">
                         {actions.map((action, index) => (
                             <button
                                 key={index}
@@ -84,8 +87,9 @@ const MobileActionMenu = ({ children, actions }) => {
                                 onClick={(e) => handleActionClick(action, e)}
                                 onTouchEnd={(e) => handleActionClick(action, e)}
                                 type="button"
+                                role="menuitem"
                             >
-                                {action.icon}
+                                <span className="action-icon" aria-hidden="true">{action.icon}</span>
                                 <span>{action.label}</span>
                             </button>
                         ))}

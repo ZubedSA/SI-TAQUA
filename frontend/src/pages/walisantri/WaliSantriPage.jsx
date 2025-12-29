@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Book, Award, Calendar, FileText, ArrowLeft, RefreshCw, Download, CheckCircle, Clock, AlertCircle, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../context/ToastContext'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import './WaliSantri.css'
 
 const WaliSantriPage = () => {
+    const { showToast } = useToast()
     const [activeMenu, setActiveMenu] = useState(null)
     const [loading, setLoading] = useState(false)
 
@@ -56,7 +58,7 @@ const WaliSantriPage = () => {
 
     // ==================== HAFALAN ====================
     const fetchHafalan = async () => {
-        if (!selectedSantri) return alert('Pilih santri terlebih dahulu')
+        if (!selectedSantri) return showToast.error('Pilih santri terlebih dahulu')
         setLoading(true)
         try {
             let query = supabase
@@ -73,7 +75,7 @@ const WaliSantriPage = () => {
             setHafalanData(data || [])
         } catch (err) {
             console.error('Error:', err.message)
-            alert('Gagal memuat data hafalan: ' + err.message)
+            showToast.error('Gagal memuat data hafalan: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -81,7 +83,7 @@ const WaliSantriPage = () => {
 
     // ==================== NILAI ====================
     const fetchNilai = async () => {
-        if (!selectedSantri || !selectedSemester) return alert('Pilih santri dan semester')
+        if (!selectedSantri || !selectedSemester) return showToast.error('Pilih santri dan semester')
         setLoading(true)
         try {
             const { data, error } = await supabase
@@ -93,6 +95,7 @@ const WaliSantriPage = () => {
             setNilaiData(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Error: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -100,7 +103,7 @@ const WaliSantriPage = () => {
 
     // ==================== PRESENSI ====================
     const fetchPresensi = async () => {
-        if (!selectedSantri) return alert('Pilih santri terlebih dahulu')
+        if (!selectedSantri) return showToast.error('Pilih santri terlebih dahulu')
         setLoading(true)
         try {
             let query = supabase
@@ -124,7 +127,7 @@ const WaliSantriPage = () => {
 
     // ==================== RAPORT ====================
     const fetchRaport = async () => {
-        if (!selectedSantri || !selectedSemester) return alert('Pilih santri dan semester')
+        if (!selectedSantri || !selectedSemester) return showToast.error('Pilih santri dan semester')
         setLoading(true)
         try {
             // Fetch santri
@@ -191,7 +194,7 @@ const WaliSantriPage = () => {
             })
         } catch (err) {
             console.error('Error:', err.message)
-            alert('Gagal memuat data raport')
+            showToast.error('Gagal memuat data raport')
         } finally {
             setLoading(false)
         }

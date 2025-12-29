@@ -12,8 +12,8 @@ import { test, expect } from '@playwright/test'
 // GANTI CREDENTIALS INI SESUAI DATABASE ANDA
 // ===========================================
 const VALID_CREDENTIALS = {
-    email: 'admin',        // Username yang valid di database
-    password: 'admin123'   // Password yang valid
+    email: process.env.VITE_TEST_EMAIL || 'admin',
+    password: process.env.VITE_TEST_PASSWORD || 'admin123'
 }
 
 const INVALID_CREDENTIALS = {

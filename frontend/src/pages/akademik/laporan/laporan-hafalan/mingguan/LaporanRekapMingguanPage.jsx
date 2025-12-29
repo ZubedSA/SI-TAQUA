@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Calendar, RefreshCw, Download, Printer, Users, Search } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanRekapMingguanPage = () => {
@@ -190,36 +189,22 @@ const LaporanRekapMingguanPage = () => {
     // =============================================
     // GENERATE PDF
     // =============================================
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (reportData.length === 0) return
 
-        const doc = new jsPDF('landscape')
-        const pageWidth = doc.internal.pageSize.getWidth()
         const selectedHalaqoh = halaqohList.find(h => h.id === filters.halaqoh_id)
+        const periodeStr = `${new Date(filters.tanggal_mulai).toLocaleDateString('id-ID')} s/d ${new Date(filters.tanggal_akhir).toLocaleDateString('id-ID')}`
 
-        // Header
-        doc.setFillColor(5, 150, 105)
-        doc.rect(0, 0, pageWidth, 25, 'F')
-        doc.setTextColor(255)
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        doc.text('LAPORAN REKAP HAFALAN MINGGUAN', pageWidth / 2, 12, { align: 'center' })
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text('Si-Taqua - PTQA Batuan', pageWidth / 2, 19, { align: 'center' })
-
-        // Info
-        doc.setTextColor(0)
-        doc.setFontSize(10)
-        doc.text(`Halaqoh: ${selectedHalaqoh?.nama || '-'}`, 14, 35)
-        doc.text(`Periode: ${new Date(filters.tanggal_mulai).toLocaleDateString('id-ID')} s/d ${new Date(filters.tanggal_akhir).toLocaleDateString('id-ID')}`, 14, 42)
-
-        // Table
-        autoTable(doc, {
-            startY: 50,
-            head: [['No', 'NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']],
-            body: reportData.map((row, i) => [
-                i + 1,
+        await generateLaporanPDF({
+            title: 'LAPORAN REKAP HAFALAN MINGGUAN',
+            subtitle: 'Rekapitulasi Hafalan Mingguan Santri',
+            orientation: 'landscape', // Landscape for wide tables
+            additionalInfo: [
+                { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
+                { label: 'Periode', value: periodeStr }
+            ],
+            columns: ['NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status'],
+            data: reportData.map(row => [
                 row.nis,
                 row.nama,
                 `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
@@ -229,23 +214,10 @@ const LaporanRekapMingguanPage = () => {
                 row.kehadiran,
                 row.status
             ]),
-            theme: 'grid',
-            headStyles: { fillColor: [5, 150, 105], fontSize: 8 },
-            styles: { fontSize: 8 },
-            columnStyles: {
-                0: { cellWidth: 10 },
-                6: { halign: 'center' },
-                7: { halign: 'center' }
-            }
+            filename: `Laporan_Mingguan_${filters.tanggal_mulai}_${filters.tanggal_akhir}`,
+            totalLabel: 'Total Santri',
+            totalValue: `${reportData.length} Santri`
         })
-
-        // Footer totals
-        const finalY = doc.previousAutoTable.finalY + 10
-        doc.setFontSize(9)
-        doc.text(`Total Santri: ${reportData.length}`, 14, finalY)
-        doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, pageWidth - 50, finalY)
-
-        doc.save(`Laporan_Mingguan_${filters.tanggal_mulai}_${filters.tanggal_akhir}.pdf`)
     }
 
     // =============================================

@@ -148,25 +148,61 @@ const LaporanAkademikSantriPage = () => {
         return 'E'
     }
 
-    const generatePDF = () => {
+    const generatePDF = async () => {
         if (!selectedSantri) return
 
         const doc = new jsPDF()
         const pageWidth = doc.internal.pageSize.getWidth()
         let y = 15
 
-        // Header
-        doc.setFillColor(5, 150, 105)
-        doc.rect(0, 0, pageWidth, 25, 'F')
-        doc.setTextColor(255)
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        doc.text('LAPORAN AKADEMIK SANTRI', pageWidth / 2, 12, { align: 'center' })
+        // ========== HEADER WITH LOGO ==========
+        const logoSize = 25
+        const logoX = 14
+        let headerTextX = 45
+
+        try {
+            const logoImg = new Image()
+            logoImg.src = '/logo-pondok.png'
+            await new Promise((resolve) => {
+                logoImg.onload = resolve
+                logoImg.onerror = resolve
+                setTimeout(resolve, 1000)
+            })
+            doc.addImage(logoImg, 'PNG', logoX, y, logoSize, logoSize)
+        } catch (e) {
+            console.warn('Logo loading failed', e)
+        }
+
+        // Header Text
+        doc.setTextColor(0)
         doc.setFontSize(10)
         doc.setFont('helvetica', 'normal')
-        doc.text('PTQA Batuan - Si-Taqua', pageWidth / 2, 19, { align: 'center' })
+        doc.text('YAYASAN ABDULLAH DEWI HASANAH', headerTextX, y + 6)
 
-        y = 35
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.text('PONDOK PESANTREN TAHFIZH QUR\'AN AL-USYMUNI BATUAN', headerTextX, y + 13)
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep', headerTextX, y + 19)
+
+        // Line separator
+        y += 32
+        doc.setDrawColor(5, 150, 105)
+        doc.setLineWidth(1)
+        doc.line(14, y, pageWidth - 14, y)
+        doc.setLineWidth(0.5)
+
+        y += 10
+
+        // Title
+        doc.setFontSize(14)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(5, 150, 105)
+        doc.text('LAPORAN AKADEMIK SANTRI', pageWidth / 2, y, { align: 'center' })
+
+        y += 10
         doc.setTextColor(0)
 
         // Biodata Santri

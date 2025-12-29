@@ -178,5 +178,108 @@ CREATE POLICY "delete_policy" ON pembayaran_santri FOR DELETE USING (get_current
 
 
 -- =====================================================
+-- 6. ADMIN USER MANAGEMENT (SECURE EMAIL UPDATE)
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION admin_update_user_email(
+    target_user_id UUID,
+    new_email TEXT,
+    new_username TEXT,
+    new_full_name TEXT,
+    new_role TEXT,
+    new_roles TEXT[],
+    new_active_role TEXT DEFAULT NULL,
+    new_phone TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_old_email TEXT;
+    v_check_id UUID;
+    v_final_active_role TEXT;
+    v_rows_affected INT;
+BEGIN
+    -- 1. Check Permissions (Admin Only)
+    IF NOT EXISTS (
+        SELECT 1 FROM user_profiles
+        WHERE user_id = auth.uid()
+        AND (role = 'admin' OR 'admin' = ANY(roles))
+    ) THEN
+        RETURN jsonb_build_object('success', false, 'message', 'Unauthorized: Admin only');
+    END IF;
+
+    -- 2. Validate Target User
+    SELECT email INTO v_old_email FROM auth.users WHERE id = target_user_id;
+    IF v_old_email IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'message', 'User not found in Auth');
+    END IF;
+
+    -- 3. Check Email Uniqueness (if changed)
+    IF v_old_email <> new_email THEN
+        SELECT id INTO v_check_id FROM auth.users WHERE email = new_email;
+        IF v_check_id IS NOT NULL THEN
+             RETURN jsonb_build_object('success', false, 'message', 'Email already used by another user');
+        END IF;
+    END IF;
+
+    -- 4. Calculate Active Role
+    v_final_active_role := COALESCE(new_active_role, new_role);
+
+    -- 5. Update Auth User (Email & Metadata)
+    -- We force email update and clear any pending change tokens
+    UPDATE auth.users
+    SET 
+        email = new_email,
+        updated_at = NOW(),
+        email_confirmed_at = COALESCE(email_confirmed_at, NOW()),
+        email_change = '',
+        email_change_token_new = '',
+        email_change_confirm_status = 0,
+        raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object(
+            'nama', new_full_name,
+            'role', new_role,
+            'username', new_username
+        )
+    WHERE id = target_user_id;
+    
+    GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+    IF v_rows_affected = 0 THEN
+        RETURN jsonb_build_object('success', false, 'message', 'Critical Error: Failed to update auth.users (No rows affected).');
+    END IF;
+
+    -- 5b. Update Auth Identities (CRITICAL for Dashboard Visibility)
+    -- Sync email in identities table to match the new email
+    UPDATE auth.identities
+    SET 
+        email = new_email,
+        identity_data = jsonb_set(COALESCE(identity_data, '{}'::jsonb), '{email}', to_jsonb(new_email)),
+        updated_at = NOW()
+    WHERE user_id = target_user_id AND provider = 'email';
+
+    -- 6. Update Profile
+    UPDATE user_profiles
+    SET
+        email = new_email,
+        nama = new_full_name,
+        username = new_username,
+        role = new_role,
+        roles = new_roles,
+        active_role = v_final_active_role,
+        phone = new_phone
+    WHERE user_id = target_user_id;
+
+    RETURN jsonb_build_object('success', true, 'message', 'User and Auth Data updated successfully');
+
+EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Database Error: ' || SQLERRM);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION admin_update_user_email TO authenticated;
+
+-- =====================================================
 -- SELESAI
 -- =====================================================

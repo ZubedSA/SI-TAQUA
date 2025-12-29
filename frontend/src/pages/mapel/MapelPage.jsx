@@ -3,11 +3,16 @@ import { Plus, Edit, Trash2, BookOpen, Search, RefreshCw, BookMarked, Graduation
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import Spinner from '../../components/ui/Spinner'
+import EmptyState from '../../components/ui/EmptyState'
 import './Mapel.css'
 
 const MapelPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
+
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -33,6 +38,7 @@ const MapelPage = () => {
             setMapelList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat mapel: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -53,17 +59,19 @@ const MapelPage = () => {
                 const { error } = await supabase.from('mapel').update(formData).eq('id', editData.id)
                 if (error) throw error
                 await logUpdate('mapel', formData.nama, `Edit mapel: ${formData.nama} (${formData.kode})`)
+                showToast.success('Mapel berhasil diperbarui')
             } else {
                 const { error } = await supabase.from('mapel').insert([formData])
                 if (error) throw error
                 await logCreate('mapel', formData.nama, `Tambah mapel baru: ${formData.nama} (${formData.kode})`)
+                showToast.success('Mapel baru berhasil ditambahkan')
             }
             fetchMapel()
             setShowModal(false)
             setEditData(null)
             setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' })
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setSaving(false)
         }
@@ -83,8 +91,9 @@ const MapelPage = () => {
             if (error) throw error
             await logDelete('mapel', mapel?.nama || 'Mapel', `Hapus mapel: ${mapel?.nama} (${mapel?.kode})`)
             setMapelList(mapelList.filter(m => m.id !== id))
+            showToast.success('Mapel berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -147,9 +156,19 @@ const MapelPage = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={canEdit ? 5 : 4} className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                <tr><td colSpan={canEdit ? 5 : 4}><Spinner className="py-8" label="Memuat data mapel..." /></td></tr>
                             ) : filteredMapel.length === 0 ? (
-                                <tr><td colSpan={canEdit ? 5 : 4} className="text-center">Tidak ada data</td></tr>
+                                <tr>
+                                    <td colSpan={canEdit ? 5 : 4}>
+                                        <EmptyState
+                                            icon={BookOpen}
+                                            title="Belum ada mata pelajaran"
+                                            message={searchTerm ? `Tidak ditemukan mapel untuk "${searchTerm}"` : "Belum ada mata pelajaran yang terdaftar."}
+                                            actionLabel={canEdit && !searchTerm ? "Tambah Mapel" : null}
+                                            onAction={canEdit && !searchTerm ? () => { setEditData(null); setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' }); setShowModal(true) } : null}
+                                        />
+                                    </td>
+                                </tr>
                             ) : (
                                 filteredMapel.map(mapel => (
                                     <tr key={mapel.id}>
@@ -250,7 +269,9 @@ const MapelPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : 'Simpan'}
+                                </button>
                             </div>
                         </form>
                     </div>

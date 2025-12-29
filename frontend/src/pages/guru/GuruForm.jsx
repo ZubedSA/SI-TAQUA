@@ -2,22 +2,26 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import { logCreate, logUpdate } from '../../lib/auditLog'
+import Spinner from '../../components/ui/Spinner'
 import './Guru.css'
 
 const GuruForm = () => {
     const navigate = useNavigate()
     const { id } = useParams()
     const location = useLocation()
+    const { isAdmin, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
 
     // Determine mode: view (read-only) vs edit
-    const isViewMode = id && !location.pathname.includes('/edit')
+    const isViewMode = location.pathname.includes('/guru/') && !location.pathname.includes('/edit') && !location.pathname.includes('/create')
     const isEdit = Boolean(id)
+    const canEdit = (isAdmin() || userProfile?.role === 'admin' || hasRole('admin')) && isEdit
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(isEdit)
-    const [error, setError] = useState('')
-    const [success, setSuccess] = useState('')
 
     const [formData, setFormData] = useState({
         nip: '',
@@ -64,7 +68,7 @@ const GuruForm = () => {
                 status: data.status || 'Aktif'
             })
         } catch (err) {
-            setError('Gagal memuat data: ' + err.message)
+            showToast.error('Gagal memuat data: ' + err.message)
         } finally {
             setFetching(false)
         }
@@ -78,8 +82,6 @@ const GuruForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
-        setError('')
-        setSuccess('')
 
         try {
             const payload = {
@@ -94,30 +96,26 @@ const GuruForm = () => {
                     .eq('id', id)
                 if (error) throw error
                 await logUpdate('guru', formData.nama, `Edit data guru: ${formData.nama} (${formData.nip})`)
-                setSuccess('Data guru berhasil diupdate!')
+                showToast.success('Data guru berhasil diupdate!')
             } else {
                 const { error } = await supabase
                     .from('guru')
                     .insert([payload])
                 if (error) throw error
                 await logCreate('guru', formData.nama, `Tambah guru baru: ${formData.nama} (${formData.nip})`)
-                setSuccess('Data guru berhasil disimpan!')
+                showToast.success('Data guru berhasil disimpan!')
             }
 
             setTimeout(() => navigate('/guru'), 1500)
         } catch (err) {
-            setError('Gagal menyimpan: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setLoading(false)
         }
     }
 
     if (fetching) {
-        return (
-            <div className="text-center py-4">
-                <RefreshCw size={24} className="spin" /> Loading...
-            </div>
-        )
+        return <Spinner className="py-12" label="Memuat data guru..." />
     }
 
     return (
@@ -131,9 +129,6 @@ const GuruForm = () => {
                     <p className="page-subtitle">{isViewMode ? 'Informasi lengkap data guru' : isEdit ? 'Update data guru' : 'Isi form untuk menambah guru baru'}</p>
                 </div>
             </div>
-
-            {error && <div className="alert alert-error mb-3">{error}</div>}
-            {success && <div className="alert alert-success mb-3">{success}</div>}
 
             <form onSubmit={handleSubmit} className="form-card">
                 {/* Data Pribadi */}
@@ -221,9 +216,11 @@ const GuruForm = () => {
                         {isViewMode ? 'Kembali' : 'Batal'}
                     </button>
                     {isViewMode ? (
-                        <button type="button" className="btn btn-primary" onClick={() => navigate(`/guru/${id}/edit`)}>
-                            Edit Data
-                        </button>
+                        canEdit && (
+                            <button type="button" className="btn btn-primary" onClick={() => navigate(`/guru/${id}/edit`)}>
+                                Edit Data
+                            </button>
+                        )
                     ) : (
                         <button type="submit" className="btn btn-primary" disabled={loading}>
                             {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}

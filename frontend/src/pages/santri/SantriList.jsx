@@ -1,35 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Eye, RefreshCw, Upload, FileSpreadsheet, X, MoreVertical } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { Plus, Search, Edit, Trash2, Eye, RefreshCw, Upload, FileSpreadsheet, X, MoreVertical, UserX } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import { logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import EmptyState from '../../components/ui/EmptyState'
+import Spinner from '../../components/ui/Spinner'
 import * as XLSX from 'xlsx'
 import './Santri.css'
 
 const SantriList = () => {
-    const { activeRole, userProfile, role, isAdmin, isGuru, isBendahara, hasRole } = useAuth()
+    const { activeRole, userProfile, isAdmin, isGuru, isBendahara, hasRole } = useAuth()
+    const { showToast } = useToast()
 
     // Multiple checks to ensure role is correctly detected
-    // Check using helper functions first, then fall back to direct role checks
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || userProfile?.activeRole === 'admin' || hasRole('admin')
-    const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || userProfile?.activeRole === 'bendahara' || hasRole('bendahara')
-    const guruCheck = isGuru() || userProfile?.role === 'guru' || userProfile?.activeRole === 'guru' || hasRole('guru')
 
     // Admin dan Bendahara bisa CRUD santri, Guru hanya read-only
     const canEditSantri = adminCheck
-
-    // DEBUG: Log role info
-    console.log('🔐 SantriList Debug:', {
-        activeRole,
-        'userProfile?.role': userProfile?.role,
-        'userProfile?.activeRole': userProfile?.activeRole,
-        adminCheck,
-        bendaharaCheck,
-        guruCheck,
-        canEditSantri
-    })
+    const navigate = useNavigate()
 
     const [santri, setSantri] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
@@ -38,11 +29,9 @@ const SantriList = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [showImportModal, setShowImportModal] = useState(false)
     const [selectedSantri, setSelectedSantri] = useState(null)
-    const [error, setError] = useState(null)
     const [importData, setImportData] = useState([])
     const [importing, setImporting] = useState(false)
     const [importSuccess, setImportSuccess] = useState('')
-    const [manualAngkatan, setManualAngkatan] = useState('')
     const [detectedHeaders, setDetectedHeaders] = useState([]) // New: Store headers
 
     const fileInputRef = useRef(null)
@@ -53,7 +42,6 @@ const SantriList = () => {
 
     const fetchSantri = async () => {
         setLoading(true)
-        setError('')
         try {
             // Fetch santri without angkatan JOIN (to avoid schema cache issue)
             const { data, error } = await supabase
@@ -85,7 +73,7 @@ const SantriList = () => {
             })))
         } catch (err) {
             console.error('Error fetching santri:', err.message)
-            setError(err.message)
+            showToast.error('Gagal memuat data santri: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -97,7 +85,7 @@ const SantriList = () => {
 
         // Validate file type
         if (!file.name.match(/\.(xlsx|xls)$/i)) {
-            alert('❌ File harus berformat .xlsx atau .xls')
+            showToast.error('File harus berformat .xlsx atau .xls')
             return
         }
 
@@ -172,7 +160,7 @@ const SantriList = () => {
                 setImportData(mappedData)
                 setShowImportModal(true)
             } catch (err) {
-                alert('Gagal membaca file: ' + err.message)
+                showToast.error('Gagal membaca file: ' + err.message)
             }
         }
         reader.readAsBinaryString(file)
@@ -182,30 +170,23 @@ const SantriList = () => {
     const handleImport = async () => {
         if (importData.length === 0) return
 
-        // Filter only valid rows
         const validRows = importData.filter(d => d.isValid)
         const skippedCount = importData.length - validRows.length
 
         if (validRows.length === 0) {
-            alert('❌ Tidak ada data valid untuk diimport!\nPerbaiki data yang error terlebih dahulu.')
+            showToast.error('Tidak ada data valid untuk diimport!')
             return
         }
 
         setImporting(true)
         try {
-            // ========================================
             // STEP 1: Collect unique angkatan names
-            // ========================================
             const uniqueAngkatan = [...new Set(validRows.map(d => d.nama_angkatan).filter(Boolean))]
-            console.log('Unique Angkatan:', uniqueAngkatan)
 
-            // ========================================
             // STEP 2: Find or Create each Angkatan
-            // ========================================
-            const angkatanMap = {} // { "Angkatan 1": "uuid-xxx" }
+            const angkatanMap = {}
 
             for (const namaAngkatan of uniqueAngkatan) {
-                // Try to find existing
                 const { data: existing } = await supabase
                     .from('angkatan')
                     .select('id')
@@ -214,43 +195,32 @@ const SantriList = () => {
 
                 if (existing) {
                     angkatanMap[namaAngkatan] = existing.id
-                    console.log(`Found angkatan "${namaAngkatan}":`, existing.id)
                 } else {
-                    // Create new
                     const { data: created, error: createErr } = await supabase
                         .from('angkatan')
                         .insert({ nama: namaAngkatan })
                         .select('id')
                         .single()
 
-                    if (createErr) {
-                        throw new Error(`Gagal membuat angkatan "${namaAngkatan}": ${createErr.message}`)
-                    }
+                    if (createErr) throw createErr
                     angkatanMap[namaAngkatan] = created.id
-                    console.log(`Created angkatan "${namaAngkatan}":`, created.id)
                 }
             }
 
-            // ========================================
-            // STEP 3: Prepare Santri Data with angkatan_id
-            // ========================================
+            // STEP 3: Prepare Santri Data
             const santriData = validRows.map(d => ({
                 nis: d.nis,
                 nama: d.nama,
                 jenis_kelamin: d.jenis_kelamin || 'Laki-laki',
                 alamat: d.alamat || null,
                 nama_wali: d.nama_wali || null,
-                no_telp: d.no_telp_wali || null, // Santri phone
-                no_telp_wali: d.no_telp_wali || null, // Wali phone (same for now)
+                no_telp: d.no_telp_wali || null,
+                no_telp_wali: d.no_telp_wali || null,
                 status: 'Aktif',
                 angkatan_id: angkatanMap[d.nama_angkatan] || null
             }))
 
-            console.log('Santri Data Sample:', santriData[0])
-
-            // ========================================
-            // STEP 4: Upsert Santri (INSERT or UPDATE)
-            // ========================================
+            // STEP 4: Upsert Santri
             const { error: upsertError } = await supabase
                 .from('santri')
                 .upsert(santriData, {
@@ -258,28 +228,24 @@ const SantriList = () => {
                     ignoreDuplicates: false
                 })
 
-            if (upsertError) {
-                throw new Error('Gagal menyimpan data: ' + upsertError.message)
-            }
+            if (upsertError) throw upsertError
 
-            // ========================================
-            // SUCCESS!
-            // ========================================
-            const msg = skippedCount > 0
-                ? `✅ Import selesai!\n\n• Berhasil: ${validRows.length} data\n• Dilewati (error): ${skippedCount} data`
-                : `✅ Sukses! ${validRows.length} data santri berhasil diimport.`
+            const successMsg = skippedCount > 0
+                ? `Berhasil import ${validRows.length} data. ${skippedCount} data error dilewati.`
+                : `Berhasil import ${validRows.length} data santri.`
 
-            setImportSuccess(msg)
+            showToast.success(successMsg)
+
             setTimeout(() => {
                 setShowImportModal(false)
                 setImportData([])
                 setImportSuccess('')
                 fetchSantri()
-            }, 2500)
+            }, 1000)
 
         } catch (err) {
             console.error('Import failed:', err)
-            alert('Gagal Import: ' + err.message)
+            showToast.error('Gagal Import: ' + err.message)
         } finally {
             setImporting(false)
         }
@@ -290,12 +256,15 @@ const SantriList = () => {
         try {
             const { error } = await supabase.from('santri').delete().eq('id', selectedSantri.id)
             if (error) throw error
+
             await logDelete('santri', selectedSantri.nama, `Hapus data santri: ${selectedSantri.nama} (${selectedSantri.nis})`)
+
             setSantri(santri.filter(s => s.id !== selectedSantri.id))
             setShowDeleteModal(false)
             setSelectedSantri(null)
+            showToast.success('Data santri berhasil dihapus')
         } catch (err) {
-            alert('Gagal menghapus: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -346,15 +315,6 @@ const SantriList = () => {
                 </div>
             </div>
 
-            {error && (
-                <div className="alert alert-error mb-3">
-                    Error: {error}
-                    <button className="btn btn-sm btn-secondary ml-2" onClick={fetchSantri}>
-                        <RefreshCw size={14} /> Retry
-                    </button>
-                </div>
-            )}
-
             <div className="table-container">
                 <div className="table-header">
                     <h3 className="table-title">Daftar Santri ({filteredSantri.length})</h3>
@@ -401,12 +361,27 @@ const SantriList = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={canEditSantri ? 8 : 7} className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                <tr><td colSpan={canEditSantri ? 8 : 7}><Spinner className="py-8" label="Memuat data santri..." /></td></tr>
                             ) : filteredSantri.length === 0 ? (
-                                <tr><td colSpan={canEditSantri ? 8 : 7} className="text-center">{error ? 'Gagal memuat data' : 'Tidak ada data santri'}</td></tr>
+                                <tr>
+                                    <td colSpan={canEditSantri ? 8 : 7}>
+                                        <EmptyState
+                                            icon={UserX}
+                                            title="Belum ada data santri"
+                                            message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada santri yang terdaftar."}
+                                            actionLabel={canEditSantri && !searchTerm ? "Tambah Santri Data" : null}
+                                            onAction={canEditSantri && !searchTerm ? () => navigate('/santri/create') : null}
+                                        />
+                                    </td>
+                                </tr>
                             ) : (
                                 filteredSantri.map((item) => (
-                                    <tr key={item.id}>
+                                    <tr
+                                        key={item.id}
+                                        onClick={() => navigate(`/santri/${item.id}`)}
+                                        style={{ cursor: 'pointer' }}
+                                        className="hover:bg-gray-50"
+                                    >
                                         <td>{item.nis}</td>
                                         <td className="name-cell">{item.nama}</td>
                                         <td>{item.jenis_kelamin}</td>
@@ -625,5 +600,4 @@ const SantriList = () => {
         </div>
     )
 }
-
 export default SantriList

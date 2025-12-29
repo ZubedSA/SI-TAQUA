@@ -71,17 +71,32 @@ const ProfilSettingsPage = () => {
                 throw new Error('Email tidak boleh kosong')
             }
 
-            // Update email di user_profiles saja (untuk keperluan display/kontak)
-            // TIDAK update di Supabase Auth karena login menggunakan USERNAME
-            const { error: profileError } = await supabase
-                .from('user_profiles')
-                .update({ email: email, updated_at: new Date().toISOString() })
-                .eq('user_id', user.id)
+            // [FIX] Gunakan RPC untuk SEMUA USER agar bisa update email "fake" tanpa konfirmasi
+            // Ini untuk mengakomodasi kebutuhan development/testing user, termasuk self-update.
+            // Fitur ini diaktifkan karena user mengalami masalah verifikasi email fake.
 
-            if (profileError) throw profileError
+            const updatePayload = {
+                target_user_id: user.id,
+                new_email: email,
+                new_username: userProfile?.username,     // Keep existing
+                new_full_name: userProfile?.nama,        // Keep existing
+                new_role: userProfile?.role,             // Keep existing
+                new_roles: userProfile?.roles || [],     // Keep existing
+                new_active_role: userProfile?.active_role, // Keep existing
+                new_phone: userProfile?.phone || null    // Keep existing
+            }
 
-            setSuccess('Email berhasil diperbarui!')
+            console.log('🚀 Calling admin_update_user_email RPC from Profile (Self Update):', updatePayload)
+
+            const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_user_email', updatePayload)
+
+            if (rpcError) throw rpcError
+            if (!rpcResult.success) throw new Error(rpcResult.message || 'Gagal update email via RPC')
+
+            setSuccess('Email berhasil diperbarui (Instan & Terverifikasi)!')
+
         } catch (err) {
+            console.error('Update email error:', err)
             setError(err.message)
         } finally {
             setLoadingEmail(false)

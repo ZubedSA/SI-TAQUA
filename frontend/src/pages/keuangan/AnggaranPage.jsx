@@ -5,10 +5,12 @@ import { useAuth } from '../../context/AuthContext'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import { useToast } from '../../context/ToastContext'
 import './Keuangan.css'
 
 const AnggaranPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
     // Multiple checks - admin dan bendahara bisa CRUD
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -124,7 +126,7 @@ const AnggaranPage = () => {
 
     const openEdit = (item) => {
         if (item.status !== 'Pending') {
-            alert('Hanya anggaran dengan status Pending yang dapat diedit')
+            showToast.error('Hanya anggaran dengan status Pending yang dapat diedit')
             return
         }
         setEditItem(item)

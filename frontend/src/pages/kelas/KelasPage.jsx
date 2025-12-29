@@ -3,10 +3,15 @@ import { Plus, Edit, Trash2, Users, RefreshCw, Eye, X, UserPlus, Check } from 'l
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
+import Spinner from '../../components/ui/Spinner'
+import EmptyState from '../../components/ui/EmptyState'
 import './Kelas.css'
 
 const KelasPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
+
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -54,6 +59,7 @@ const KelasPage = () => {
             setSantriCounts(counts)
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data kelas: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -67,9 +73,6 @@ const KelasPage = () => {
             console.error('Error:', err.message)
         }
     }
-
-    // ... (helper functions remain same) ...
-    // Note: I'm skipping re-writing all helper functions for brevity but will ensure imports are correct
 
     const fetchSantriByKelas = async (kelas) => {
         setSelectedKelas(kelas)
@@ -85,6 +88,7 @@ const KelasPage = () => {
             setSantriList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat santri: ' + err.message)
         } finally {
             setLoadingSantri(false)
         }
@@ -101,6 +105,7 @@ const KelasPage = () => {
             setAvailableSantri(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data santri: ' + err.message)
         }
     }
 
@@ -126,8 +131,9 @@ const KelasPage = () => {
             fetchSantriByKelas(selectedKelas)
             setShowAddSantriModal(false)
             setSelectedSantriIds([])
+            showToast.success(`${selectedSantriIds.length} santri berhasil ditambahkan`)
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menambahkan santri: ' + err.message)
         } finally {
             setSavingSantri(false)
         }
@@ -140,8 +146,9 @@ const KelasPage = () => {
             if (error) throw error
             fetchKelas()
             fetchSantriByKelas(selectedKelas)
+            showToast.success('Santri berhasil dihapus dari kelas')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus santri: ' + err.message)
         }
     }
 
@@ -154,17 +161,19 @@ const KelasPage = () => {
                 const { error } = await supabase.from('kelas').update(payload).eq('id', editData.id)
                 if (error) throw error
                 await logUpdate('kelas', formData.nama, `Edit kelas: ${formData.nama}`)
+                showToast.success('Data kelas berhasil diperbarui')
             } else {
                 const { error } = await supabase.from('kelas').insert([payload])
                 if (error) throw error
                 await logCreate('kelas', formData.nama, `Tambah kelas baru: ${formData.nama}`)
+                showToast.success('Kelas baru berhasil ditambahkan')
             }
             fetchKelas()
             setShowModal(false)
             setEditData(null)
             setFormData({ nama: '', wali_kelas_id: '' })
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setSaving(false)
         }
@@ -184,8 +193,9 @@ const KelasPage = () => {
             if (error) throw error
             await logDelete('kelas', kelas?.nama || 'Kelas', `Hapus kelas: ${kelas?.nama}`)
             setKelasList(kelasList.filter(k => k.id !== id))
+            showToast.success('Kelas berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -209,9 +219,15 @@ const KelasPage = () => {
             </div>
 
             {loading ? (
-                <div className="text-center py-4"><RefreshCw size={24} className="spin" /></div>
+                <Spinner className="py-12" label="Memuat data kelas..." />
             ) : kelasList.length === 0 ? (
-                <div className="text-center py-4 text-muted">Belum ada data kelas</div>
+                <EmptyState
+                    icon={Users}
+                    title="Belum ada data kelas"
+                    message="Silakan buat kelas baru untuk mulai mengelola santri."
+                    actionLabel={canEdit ? "Buat Kelas Baru" : null}
+                    onAction={canEdit ? () => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) } : null}
+                />
             ) : (
                 <div className="kelas-grid">
                     {kelasList.map(kelas => (
@@ -248,9 +264,12 @@ const KelasPage = () => {
                         </div>
                         <div className="modal-body">
                             {loadingSantri ? (
-                                <div className="text-center py-3"><RefreshCw size={20} className="spin" /> Memuat...</div>
+                                <Spinner className="py-4" label="Memuat data santri..." />
                             ) : santriList.length === 0 ? (
-                                <div className="text-center py-3 text-muted">Belum ada santri di kelas ini</div>
+                                <div className="text-center py-8 text-muted">
+                                    <p>Belum ada santri di kelas ini.</p>
+                                    {canEdit && <button className="btn btn-sm btn-primary mt-2" onClick={() => openAddSantriModal(selectedKelas)}>Tambah Santri</button>}
+                                </div>
                             ) : (
                                 <table className="table">
                                     <thead>
@@ -388,7 +407,9 @@ const KelasPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : 'Simpan'}
+                                </button>
                             </div>
                         </form>
                     </div>

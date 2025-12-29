@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Eye, RefreshCw, MoreVertical } from 'lucide-react'
+import { useNavigate, Link } from 'react-router-dom'
+import { Plus, Search, Edit, Trash2, Eye, RefreshCw, MoreVertical, UserX } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import EmptyState from '../../components/ui/EmptyState'
+import Spinner from '../../components/ui/Spinner'
 import './Guru.css'
 
 const GuruList = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
+
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
     const canEdit = adminCheck
+    const navigate = useNavigate()
     const [guru, setGuru] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
     const [sortBy, setSortBy] = useState('nama-asc')
@@ -26,7 +32,6 @@ const GuruList = () => {
     }, [])
 
     const fetchGuru = async () => {
-        // ... (existing fetch logic)
         setLoading(true)
         setError(null)
         try {
@@ -39,6 +44,7 @@ const GuruList = () => {
             setGuru(data || [])
         } catch (err) {
             console.error('Error fetching guru:', err.message)
+            showToast.error('Gagal memuat data guru: ' + err.message)
             setError(err.message)
         } finally {
             setLoading(false)
@@ -46,7 +52,6 @@ const GuruList = () => {
     }
 
     const handleDelete = async () => {
-        // ... (existing delete logic)
         if (!selectedGuru) return
 
         try {
@@ -61,9 +66,10 @@ const GuruList = () => {
             setGuru(guru.filter(g => g.id !== selectedGuru.id))
             setShowDeleteModal(false)
             setSelectedGuru(null)
+            showToast.success('Data guru berhasil dihapus')
         } catch (err) {
             console.error('Error deleting guru:', err.message)
-            alert('Gagal menghapus: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -98,15 +104,6 @@ const GuruList = () => {
                     </Link>
                 )}
             </div>
-
-            {error && (
-                <div className="alert alert-error mb-3">
-                    Error: {error}
-                    <button className="btn btn-sm btn-secondary ml-2" onClick={fetchGuru}>
-                        <RefreshCw size={14} /> Retry
-                    </button>
-                </div>
-            )}
 
             <div className="table-container">
                 <div className="table-header">
@@ -151,18 +148,27 @@ const GuruList = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr>
-                                    <td colSpan={canEdit ? 7 : 6} className="text-center">
-                                        <RefreshCw size={20} className="spin" /> Loading...
-                                    </td>
-                                </tr>
+                                <tr><td colSpan={canEdit ? 7 : 6}><Spinner className="py-8" label="Memuat data guru..." /></td></tr>
                             ) : filteredGuru.length === 0 ? (
                                 <tr>
-                                    <td colSpan={canEdit ? 7 : 6} className="text-center">Tidak ada data guru</td>
+                                    <td colSpan={canEdit ? 7 : 6}>
+                                        <EmptyState
+                                            icon={UserX}
+                                            title="Belum ada data guru"
+                                            message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada guru yang terdaftar."}
+                                            actionLabel={canEdit && !searchTerm ? "Tambah Guru Baru" : null}
+                                            onAction={canEdit && !searchTerm ? () => navigate('/guru/create') : null}
+                                        />
+                                    </td>
                                 </tr>
                             ) : (
-                                filteredGuru.map((item) => (
-                                    <tr key={item.id}>
+                                filteredGuru.map((item, i) => (
+                                    <tr
+                                        key={item.id}
+                                        onClick={() => navigate(`/guru/${item.id}`)}
+                                        style={{ cursor: 'pointer' }}
+                                        className="hover:bg-gray-50"
+                                    >
                                         <td>{item.nip}</td>
                                         <td className="name-cell">{item.nama}</td>
                                         <td>{item.jenis_kelamin}</td>

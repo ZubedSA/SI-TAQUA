@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Users, Clock, RefreshCw, UserPlus, X, Check } from 'lucide-react'
+import { Plus, Edit, Trash2, Users, Clock, RefreshCw, UserPlus, X, Check, BookOpen } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
+import Spinner from '../../components/ui/Spinner'
+import EmptyState from '../../components/ui/EmptyState'
 import './Halaqoh.css'
 
 const HalaqohPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
+    const { showToast } = useToast()
+
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -54,6 +59,7 @@ const HalaqohPage = () => {
             setSantriCounts(counts)
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data halaqoh: ' + err.message)
         } finally {
             setLoading(false)
         }
@@ -82,6 +88,7 @@ const HalaqohPage = () => {
             setSantriList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat santri: ' + err.message)
         } finally {
             setLoadingSantri(false)
         }
@@ -99,6 +106,7 @@ const HalaqohPage = () => {
             setAvailableSantri(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+            showToast.error('Gagal memuat data santri: ' + err.message)
         }
     }
 
@@ -136,8 +144,9 @@ const HalaqohPage = () => {
             fetchSantriByHalaqoh(selectedHalaqoh)
             setShowAddSantriModal(false)
             setSelectedSantriIds([])
+            showToast.success(`${selectedSantriIds.length} santri berhasil ditambahkan`)
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menambahkan santri: ' + err.message)
         } finally {
             setSavingSantri(false)
         }
@@ -145,7 +154,7 @@ const HalaqohPage = () => {
 
     // Hapus santri dari halaqoh
     const handleRemoveSantriFromHalaqoh = async (santriId) => {
-        if (!confirm('Hapus santri ini dari halaqoh?')) return
+        if (!confirm('Yakin ingin menghapus santri ini dari halaqoh?')) return
         try {
             const { error } = await supabase
                 .from('santri')
@@ -155,8 +164,9 @@ const HalaqohPage = () => {
             if (error) throw error
             fetchHalaqoh()
             fetchSantriByHalaqoh(selectedHalaqoh)
+            showToast.success('Santri berhasil dihapus dari halaqoh')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus santri: ' + err.message)
         }
     }
 
@@ -181,10 +191,12 @@ const HalaqohPage = () => {
                 const { error } = await supabase.from('halaqoh').update(payload).eq('id', editData.id)
                 if (error) throw error
                 await logUpdate('halaqoh', formData.nama, `Mengubah data halaqoh: ${formData.nama}`)
+                showToast.success('Data halaqoh berhasil diperbarui')
             } else {
                 const { error } = await supabase.from('halaqoh').insert([payload])
                 if (error) throw error
                 await logCreate('halaqoh', formData.nama, `Menambah halaqoh baru: ${formData.nama}`)
+                showToast.success('Halaqoh baru berhasil ditambahkan')
             }
 
             fetchHalaqoh()
@@ -192,7 +204,7 @@ const HalaqohPage = () => {
             setEditData(null)
             setFormData({ nama: '', musyrif_id: '', waktu: '', keterangan: '' })
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setSaving(false)
         }
@@ -217,8 +229,9 @@ const HalaqohPage = () => {
             if (error) throw error
             await logDelete('halaqoh', halaqoh?.nama, `Menghapus halaqoh: ${halaqoh?.nama}`)
             setHalaqohList(halaqohList.filter(h => h.id !== id))
+            showToast.success('Halaqoh berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Gagal menghapus: ' + err.message)
         }
     }
 
@@ -237,9 +250,15 @@ const HalaqohPage = () => {
             </div>
 
             {loading ? (
-                <div className="text-center py-4"><RefreshCw size={24} className="spin" /></div>
+                <Spinner className="py-12" label="Memuat data halaqoh..." />
             ) : halaqohList.length === 0 ? (
-                <div className="text-center py-4 text-muted">Belum ada data halaqoh</div>
+                <EmptyState
+                    icon={BookOpen}
+                    title="Belum ada data halaqoh"
+                    message="Silakan buat halaqoh baru untuk mulai mengelola tahfizh."
+                    actionLabel={canEdit ? "Buat Halaqoh Baru" : null}
+                    onAction={canEdit ? () => { setEditData(null); setFormData({ nama: '', musyrif_id: '', waktu: '', keterangan: '' }); setShowModal(true) } : null}
+                />
             ) : (
                 <div className="halaqoh-grid">
                     {halaqohList.map(halaqoh => (
@@ -275,9 +294,12 @@ const HalaqohPage = () => {
                         </div>
                         <div className="modal-body">
                             {loadingSantri ? (
-                                <div className="text-center py-3"><RefreshCw size={20} className="spin" /> Memuat...</div>
+                                <Spinner className="py-4" label="Memuat data santri..." />
                             ) : santriList.length === 0 ? (
-                                <div className="text-center py-3 text-muted">Belum ada santri di halaqoh ini</div>
+                                <div className="text-center py-8 text-muted">
+                                    <p>Belum ada santri di halaqoh ini.</p>
+                                    {canEdit && <button className="btn btn-sm btn-primary mt-2" onClick={() => openAddSantriModal(selectedHalaqoh)}>Tambah Santri</button>}
+                                </div>
                             ) : (
                                 <table className="table">
                                     <thead>
@@ -304,7 +326,7 @@ const HalaqohPage = () => {
                             )}
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-primary" onClick={() => openAddSantriModal(selectedHalaqoh)}><UserPlus size={16} /> Tambah Santri</button>
+                            {canEdit && <button className="btn btn-primary" onClick={() => openAddSantriModal(selectedHalaqoh)}><UserPlus size={16} /> Tambah Santri</button>}
                             <button className="btn btn-secondary" onClick={() => setShowSantriModal(false)}>Tutup</button>
                         </div>
                     </div>
@@ -422,7 +444,9 @@ const HalaqohPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : 'Simpan'}
+                                </button>
                             </div>
                         </form>
                     </div>

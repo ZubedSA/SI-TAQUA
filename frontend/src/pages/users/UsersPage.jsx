@@ -19,6 +19,7 @@ import {
     Key
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useToast } from '../../context/ToastContext'
 import './UsersPage.css'
 
 /**
@@ -26,6 +27,7 @@ import './UsersPage.css'
  * Manage all system users, their roles and status
  */
 const UsersPage = () => {
+    const { showToast } = useToast()
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -273,29 +275,46 @@ const UsersPage = () => {
 
             if (editingUser) {
                 // ... Existing Edit Logic ...
-                const updateData = {
+                // Calculate Active Role based on new roles selection
+                const resolvedActiveRole = (editingUser.active_role && formData.roles.includes(editingUser.active_role))
+                    ? editingUser.active_role
+                    : primaryRole
+
+                const updatePayload = {
+                    target_user_id: editingUser.user_id,
+                    new_email: formData.email,
+                    new_username: formData.username,
+                    new_full_name: formData.nama,
+                    new_role: primaryRole,
+                    new_roles: formData.roles,
+                    new_active_role: resolvedActiveRole,
+                    new_phone: formData.phone || null
+                }
+
+                console.log('🚀 Calling admin_update_user_email RPC with payload:', updatePayload)
+
+                // Call RPC to update AUTH (Atomic) and Profile
+                const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_user_email', updatePayload)
+
+                console.log('✅ RPC Result:', { rpcResult, rpcError })
+
+                if (rpcError) throw rpcError
+                if (!rpcResult.success) throw new Error(rpcResult.message)
+
+                // Update Local State
+                const finalUpdateData = {
                     nama: formData.nama,
                     username: formData.username,
                     roles: formData.roles,
                     role: primaryRole,
-                    active_role: primaryRole,
+                    active_role: resolvedActiveRole,
+                    email: formData.email,
                     phone: formData.phone || null
                 }
 
-                if (editingUser.active_role && !formData.roles.includes(editingUser.active_role)) {
-                    updateData.active_role = primaryRole
-                }
-
-                const { error } = await supabase
-                    .from('user_profiles')
-                    .update(updateData)
-                    .eq('user_id', editingUser.user_id)
-
-                if (error) throw error
-
                 setUsers(users.map(u =>
                     u.user_id === editingUser.user_id
-                        ? { ...u, ...updateData }
+                        ? { ...u, ...finalUpdateData }
                         : u
                 ))
 
@@ -303,7 +322,13 @@ const UsersPage = () => {
                     await linkSantriToWali(editingUser.user_id, selectedSantriIds)
                 }
 
-                alert('User berhasil diperbarui!')
+                if (rpcResult && rpcResult.message) {
+                    showToast.success('Status Server: ' + rpcResult.message)
+                } else {
+                    showToast.success('User berhasil diperbarui')
+                }
+
+                fetchUsers()
                 closeModal()
             } else {
                 // CREATE USER FLOW
@@ -362,11 +387,13 @@ const UsersPage = () => {
                             if (retryError) throw retryError
 
                             if (retryData.user) {
-                                await finalizeUserCreation(retryData.user, primaryRole)
-                                alert('User berhasil diperbaiki dan dibuat ulang!')
-                                fetchUsers()
-                                closeModal()
-                                return
+                                if (retryData.user) {
+                                    await finalizeUserCreation(retryData.user, primaryRole)
+                                    showToast.success('User berhasil diperbaiki dan dibuat ulang!')
+                                    fetchUsers()
+                                    closeModal()
+                                    return
+                                }
                             }
                         } else {
                             return // User cancelled
@@ -377,14 +404,14 @@ const UsersPage = () => {
 
                 if (authData.user) {
                     await finalizeUserCreation(authData.user, primaryRole)
-                    alert('User berhasil ditambahkan!')
+                    showToast.success('User berhasil ditambahkan!')
                     fetchUsers()
                     closeModal()
                 }
             }
         } catch (error) {
             console.error('Save error details:', error)
-            alert('Gagal menyimpan: ' + (error.message || 'Error tidak diketahui'))
+            showToast.error('Gagal menyimpan: ' + (error.message || 'Error tidak diketahui'))
         } finally {
             setSaving(false)
         }
@@ -466,7 +493,7 @@ const UsersPage = () => {
 
             // Remove from local state
             setUsers(users.filter(u => u.user_id !== userId))
-            alert('User berhasil dihapus sepenuhnya.')
+            showToast.success('User berhasil dihapus sepenuhnya.')
         } catch (error) {
             console.error('Delete error:', error)
 
@@ -478,13 +505,13 @@ const UsersPage = () => {
                     .eq('user_id', userId)
 
                 if (fallbackError) {
-                    alert('Gagal menghapus user: ' + fallbackError.message)
+                    showToast.error('Gagal menghapus user: ' + fallbackError.message)
                 } else {
                     setUsers(users.filter(u => u.user_id !== userId))
-                    alert('User profile dihapus (Auth login mungkin masih ada).')
+                    showToast.success('User profile dihapus (Auth login mungkin masih ada).')
                 }
             } else {
-                alert('Gagal menghapus user: ' + error.message)
+                showToast.error('Gagal menghapus user: ' + error.message)
             }
         }
     }
@@ -556,16 +583,16 @@ const UsersPage = () => {
 
             if (error) throw error
 
-            alert(`✅ Password untuk ${passwordTarget.nama} berhasil diubah!`)
+            showToast.success(`✅ Password untuk ${passwordTarget.nama} berhasil diubah!`)
             closePasswordModal()
         } catch (error) {
             console.error('Change password error:', error)
 
             // If RPC doesn't exist, show helpful message
             if (error.message.includes('function') && error.message.includes('does not exist')) {
-                alert('Fitur ubah password memerlukan fungsi database. Silakan hubungi administrator.')
+                showToast.error('Fitur ubah password memerlukan fungsi database. Silakan hubungi administrator.')
             } else {
-                alert('Gagal mengubah password: ' + error.message)
+                showToast.error('Gagal mengubah password: ' + error.message)
             }
         } finally {
             setSavingPassword(false)
@@ -709,7 +736,7 @@ const UsersPage = () => {
                                         </span>
                                     </td>
                                     <td>
-                                        <div className="action-buttons">
+                                        <div className="action-buttons" style={{ display: 'flex', gap: '6px' }}>
                                             <button
                                                 className="btn-action edit"
                                                 title="Edit"

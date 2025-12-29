@@ -10,8 +10,8 @@ import { test, expect } from '@playwright/test'
 // GANTI CREDENTIALS INI SESUAI DATABASE ANDA!
 // =============================================
 const CREDENTIALS = {
-    username: 'admin',     // Username valid di database
-    password: 'admin123'   // Password valid
+    username: process.env.VITE_TEST_EMAIL || 'admin',
+    password: process.env.VITE_TEST_PASSWORD || 'admin123'
 }
 
 test.describe('Login Flow', () => {
