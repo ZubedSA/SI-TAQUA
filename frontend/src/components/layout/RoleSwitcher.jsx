@@ -53,7 +53,7 @@ const roleConfig = {
         icon: Users,
         color: '#8b5cf6',
         bgColor: 'rgba(139, 92, 246, 0.1)',
-        path: '/dashboard/walisantri',
+        path: '/wali/beranda',
         description: 'Pantau perkembangan anak'
     }
 }

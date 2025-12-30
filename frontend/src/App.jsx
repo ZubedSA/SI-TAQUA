@@ -30,6 +30,19 @@ import AuditLogPage from './pages/auditlog/AuditLogPage'
 import PengaturanPage from './pages/pengaturan/PengaturanPage'
 import ProfilSettingsPage from './pages/profil/ProfilSettingsPage'
 import WaliSantriPage from './pages/walisantri/WaliSantriPage'
+// New Wali Portal Components
+import WaliLayout from './pages/walisantri/WaliLayout'
+import WaliDashboardPage from './pages/walisantri/dashboard/WaliDashboardPage'
+import HafalanWaliPage from './pages/walisantri/akademik/HafalanWaliPage'
+import EvaluasiWaliPage from './pages/walisantri/akademik/EvaluasiWaliPage'
+import KehadiranWaliPage from './pages/walisantri/akademik/KehadiranWaliPage'
+import TagihanWaliPage from './pages/walisantri/keuangan/TagihanWaliPage'
+import RiwayatBayarPage from './pages/walisantri/keuangan/RiwayatBayarPage'
+import UploadBuktiPage from './pages/walisantri/keuangan/UploadBuktiPage'
+import PengumumanPage from './pages/walisantri/informasi/PengumumanPage'
+import InboxPesanPage from './pages/walisantri/pesan/InboxPesanPage'
+import KirimPesanPage from './pages/walisantri/pesan/KirimPesanPage'
+import ProfilWaliPage from './pages/walisantri/profil/ProfilWaliPage'
 import BackupPage from './pages/backup/BackupPage'
 import SystemStatusPage from './pages/system/SystemStatusPage'
 // Admin Pages
@@ -73,7 +86,7 @@ const dashboardRoutes = {
   guru: '/dashboard/akademik',
   bendahara: '/dashboard/keuangan',
   pengasuh: '/dashboard/keuangan',
-  wali: '/dashboard/walisantri'
+  wali: '/wali/beranda'
 }
 
 // Component untuk redirect berdasarkan role setelah login
@@ -464,14 +477,7 @@ function App() {
                     </ProtectedRoute>
                   } />
 
-                  {/* ============ ALL AUTHENTICATED USERS ============ */}
-
-                  {/* Wali Santri Portal */}
-                  <Route path="/wali-santri" element={
-                    <ProtectedRoute roles={['wali']}>
-                      <WaliSantriPage />
-                    </ProtectedRoute>
-                  } />
+                  {/* ============ WALI PORTAL ROUTES ============ */}
 
                   {/* Profil Settings */}
                   <Route path="/profil-settings" element={
@@ -482,6 +488,42 @@ function App() {
 
                   {/* 404 - Redirect to home */}
                   <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+
+                {/* ============ WALI PORTAL ROUTES (OUTSIDE MAIN LAYOUT) ============ */}
+                {/* Wali Portal with separate layout - NO SIDEBAR */}
+                {/* Admin can also access for testing purposes */}
+                <Route path="/wali" element={
+                  <ProtectedRoute roles={['wali', 'admin']}>
+                    <WaliLayout />
+                  </ProtectedRoute>
+                }>
+                  {/* Redirect /wali to /wali/beranda */}
+                  <Route index element={<Navigate to="/wali/beranda" replace />} />
+
+                  {/* Dashboard */}
+                  <Route path="beranda" element={<WaliDashboardPage />} />
+
+                  {/* Akademik Routes */}
+                  <Route path="akademik" element={<Navigate to="/wali/akademik/hafalan" replace />} />
+                  <Route path="akademik/hafalan" element={<HafalanWaliPage />} />
+                  <Route path="akademik/evaluasi" element={<EvaluasiWaliPage />} />
+                  <Route path="akademik/kehadiran" element={<KehadiranWaliPage />} />
+
+                  {/* Keuangan Routes */}
+                  <Route path="keuangan" element={<TagihanWaliPage />} />
+                  <Route path="keuangan/riwayat" element={<RiwayatBayarPage />} />
+                  <Route path="keuangan/upload" element={<UploadBuktiPage />} />
+
+                  {/* Informasi */}
+                  <Route path="informasi" element={<PengumumanPage />} />
+
+                  {/* Pesan Routes */}
+                  <Route path="pesan" element={<InboxPesanPage />} />
+                  <Route path="pesan/kirim" element={<KirimPesanPage />} />
+
+                  {/* Profil */}
+                  <Route path="profil" element={<ProfilWaliPage />} />
                 </Route>
               </Routes>
             </ToastProvider>

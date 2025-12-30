@@ -122,17 +122,18 @@ const ProfilSettingsPage = () => {
         }
 
         try {
-            // Update password via Supabase Auth langsung
+            // Update password via Supabase Auth Standard
+            // Syarat: Trigger DB pada auth.users yang error harus sudah dihapus (hotfix trigger)
             const { error: authError } = await supabase.auth.updateUser({
                 password: newPassword
             })
 
             if (authError) throw authError
 
-            // Update password_ref di user_profiles
+            // Update password_ref di user_profiles (optional log)
             await supabase
                 .from('user_profiles')
-                .update({ password_ref: newPassword, updated_at: new Date().toISOString() })
+                .update({ updated_at: new Date().toISOString() }) // Don't store plain password
                 .eq('user_id', user.id)
 
             setSuccess('Password berhasil diubah!')

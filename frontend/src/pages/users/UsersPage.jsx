@@ -16,10 +16,12 @@ import {
     EyeOff,
     Save,
     Loader2,
-    Key
+    Key,
+    Lock
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import './UsersPage.css'
 
 /**
@@ -32,17 +34,15 @@ const UsersPage = () => {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [filterRole, setFilterRole] = useState('')
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+    const [userToDelete, setUserToDelete] = useState(null)
     const [showAddModal, setShowAddModal] = useState(false)
     const [editingUser, setEditingUser] = useState(null)
+    const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
+    const [passwordResetUser, setPasswordResetUser] = useState(null)
+    const [newPasswordReset, setNewPasswordReset] = useState('')
     const [saving, setSaving] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
-
-    // Change Password Modal State
-    const [showPasswordModal, setShowPasswordModal] = useState(false)
-    const [passwordTarget, setPasswordTarget] = useState(null)
-    const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' })
-    const [passwordErrors, setPasswordErrors] = useState({})
-    const [savingPassword, setSavingPassword] = useState(false)
 
     // Form state
     const [formData, setFormData] = useState({
@@ -147,8 +147,11 @@ const UsersPage = () => {
         }
     }
 
+    const [fetchError, setFetchError] = useState(null)
+
     const fetchUsers = async () => {
         setLoading(true)
+        setFetchError(null)
         try {
             const { data, error } = await supabase
                 .from('user_profiles')
@@ -166,6 +169,7 @@ const UsersPage = () => {
             setUsers(normalizedUsers)
         } catch (error) {
             console.error('Error fetching users:', error.message)
+            setFetchError(error.message)
         } finally {
             setLoading(false)
         }
@@ -264,18 +268,62 @@ const UsersPage = () => {
         }
     }
 
-    const handleSaveUser = async () => {
-        if (!validateForm()) return
+    const handleResetPassword = async () => {
+        if (!newPasswordReset || newPasswordReset.length < 6) {
+            showToast?.error('Password minimal 6 karakter')
+            return
+        }
 
-        setSaving(true)
         try {
-            // Determine primary role for legacy compatibility
-            const rolePriority = ['admin', 'bendahara', 'guru', 'pengasuh', 'wali']
-            const primaryRole = rolePriority.find(r => formData.roles.includes(r)) || formData.roles[0]
+            setSaving(true)
+            const { data, error } = await supabase.rpc('admin_reset_password', {
+                target_user_id: passwordResetUser.user_id,
+                new_password: newPasswordReset
+            })
 
+            if (error) throw error
+            if (!data.success) throw new Error(data.message)
+
+            if (showToast?.success) showToast.success('Password berhasil direset!')
+            setResetPasswordOpen(false)
+            setNewPasswordReset('')
+            setPasswordResetUser(null)
+        } catch (err) {
+            console.error('Reset Password Error:', err)
+            if (showToast?.error) showToast.error('Gagal reset password: ' + err.message)
+            else alert('Gagal: ' + err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    // V2 Function to bypass cache key issues
+    const handleSaveUserV2 = async () => {
+        console.log('🚀 handleSaveUser V2 - START', new Date().toISOString())
+        console.log('📝 FormData Check:', formData)
+
+        const isValid = validateForm()
+        console.log('🔍 Validation Result:', isValid, 'Errors:', formErrors) // Note: formErrors might show previous state, relying on return value
+
+        if (!isValid) {
+            console.error('❌ VALIDATION FAILED - STOPPING')
+            return
+        }
+
+        console.log('✅ Validation OK - Proceeding to Save')
+        setSaving(true)
+
+        // Determine primary role for legacy compatibility
+        const rolePriority = ['admin', 'bendahara', 'guru', 'pengasuh', 'wali']
+        const primaryRole = rolePriority.find(r => formData.roles.includes(r)) || formData.roles[0]
+        console.log('👤 Determined Primary Role:', primaryRole)
+
+        try {
             if (editingUser) {
-                // ... Existing Edit Logic ...
-                // Calculate Active Role based on new roles selection
+                console.log('✏️ MODE: EDIT USER', editingUser.user_id)
+                // ============ EDIT USER (VIA RPC) ============
+                // Menggunakan RPC agar Email & Auth Data ikut terupdate (Sync)
+
                 const resolvedActiveRole = (editingUser.active_role && formData.roles.includes(editingUser.active_role))
                     ? editingUser.active_role
                     : primaryRole
@@ -291,127 +339,104 @@ const UsersPage = () => {
                     new_phone: formData.phone || null
                 }
 
-                console.log('🚀 Calling admin_update_user_email RPC with payload:', updatePayload)
+                console.log('📡 Calling RPC admin_update_user_email:', updatePayload)
+                const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_user_email', updatePayload)
 
-                // Call RPC to update AUTH (Atomic) and Profile
-                const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_user_email', updatePayload)
+                if (rpcError) throw new Error('RPC Error: ' + rpcError.message)
+                if (!rpcData?.success) throw new Error('Update Failed: ' + (rpcData?.message || 'Unknown RPC error'))
 
-                console.log('✅ RPC Result:', { rpcResult, rpcError })
+                // RPC sudah mengupdate Profile + Auth. Jadi tidak perlu update manual lagi.
 
-                if (rpcError) throw rpcError
-                if (!rpcResult.success) throw new Error(rpcResult.message)
+                /* KODE LAMA (BACKUP) - UPDATE LANGSUNG TABEL
+                const updateRes = await supabase
+                    .from('user_profiles')
+                    .update(...)
+                */
 
-                // Update Local State
-                const finalUpdateData = {
+                // Link santri if wali role
+                if (formData.roles.includes('wali')) {
+                    console.log('🔗 Linking Santri for Wali:', editingUser.user_id, 'Selected:', selectedSantriIds)
+
+                    // 1. Reset old links (Wajib dilakukan agar uncheck santri tersimpan)
+                    const { error: resetError } = await supabase
+                        .from('santri')
+                        .update({ wali_id: null })
+                        .eq('wali_id', editingUser.user_id)
+
+                    if (resetError) console.error('❌ Error resetting santri links:', resetError)
+
+                    // 2. Set new links (Only if selected)
+                    if (selectedSantriIds.length > 0) {
+                        const { error: linkError } = await supabase
+                            .from('santri')
+                            .update({ wali_id: editingUser.user_id })
+                            .in('id', selectedSantriIds)
+
+                        if (linkError) console.error('❌ Error linking santri:', linkError)
+                    }
+                }
+
+                // Update local state
+                setUsers(prev => prev.map(u => u.user_id === editingUser.user_id ? { ...u, nama: formData.nama, username: formData.username, roles: formData.roles, role: primaryRole, active_role: resolvedActiveRole, phone: formData.phone || null } : u))
+
+                if (showToast?.success) {
+                    showToast.success('User berhasil diperbarui')
+                }
+                fetchUsers()
+                closeModal()
+
+            } else {
+                // ============ CREATE USER ============
+                const signUpRes = await supabase.auth.signUp({
+                    email: formData.email,
+                    password: formData.password,
+                    options: { data: { nama: formData.nama, role: primaryRole } }
+                })
+
+                if (signUpRes.error) {
+                    throw new Error('Signup failed: ' + signUpRes.error.message)
+                }
+
+                if (!signUpRes.data || !signUpRes.data.user) {
+                    throw new Error('User creation failed - no user returned')
+                }
+
+                const newUser = signUpRes.data.user
+
+                // Insert profile
+                const insertRes = await supabase.from('user_profiles').insert({
+                    user_id: newUser.id,
+                    email: formData.email,
                     nama: formData.nama,
                     username: formData.username,
                     roles: formData.roles,
                     role: primaryRole,
-                    active_role: resolvedActiveRole,
-                    email: formData.email,
+                    active_role: primaryRole,
                     phone: formData.phone || null
-                }
-
-                setUsers(users.map(u =>
-                    u.user_id === editingUser.user_id
-                        ? { ...u, ...finalUpdateData }
-                        : u
-                ))
-
-                if (formData.roles.includes('wali')) {
-                    await linkSantriToWali(editingUser.user_id, selectedSantriIds)
-                }
-
-                if (rpcResult && rpcResult.message) {
-                    showToast.success('Status Server: ' + rpcResult.message)
-                } else {
-                    showToast.success('User berhasil diperbarui')
-                }
-
-                fetchUsers()
-                closeModal()
-            } else {
-                // CREATE USER FLOW
-
-                // 1. Attempt Sign Up
-                const { data: authData, error: authError } = await supabase.auth.signUp({
-                    email: formData.email,
-                    password: formData.password,
-                    options: {
-                        data: {
-                            nama: formData.nama,
-                            role: primaryRole
-                        }
-                    }
                 })
 
-                if (authError) {
-                    // CHECK FOR DUPLICATE/ZOMBIE ERROR
-                    // 406 Error often masked as generic error or duplicate
-                    if (authError.message.includes('already registered') ||
-                        authError.status === 422 ||
-                        authError.status === 406) {
-
-                        const doReset = window.confirm(
-                            `Email ${formData.email} mengalami konflik data (Error ${authError.status || 'Duplicate'}).\n\nKlik OK untuk membersihkan data lama dan membuat ulang user baru.`
-                        )
-
-                        if (doReset) {
-                            // Call Robust Cleanup RPC
-                            const { data: resultMsg, error: rpcError } = await supabase.rpc('admin_cleanup_user_by_email', {
-                                target_email: formData.email
-                            })
-
-                            if (rpcError) {
-                                throw new Error('Gagal membersihkan data: ' + rpcError.message)
-                            }
-
-                            if (resultMsg && resultMsg.startsWith('Error')) {
-                                throw new Error(resultMsg)
-                            }
-
-                            console.log('Cleanup result:', resultMsg)
-
-                            // Short delay to ensure propagation
-                            await new Promise(r => setTimeout(r, 500))
-
-                            // Retry Creation
-                            const { data: retryData, error: retryError } = await supabase.auth.signUp({
-                                email: formData.email,
-                                password: formData.password,
-                                options: {
-                                    data: { nama: formData.nama, role: primaryRole }
-                                }
-                            })
-
-                            if (retryError) throw retryError
-
-                            if (retryData.user) {
-                                if (retryData.user) {
-                                    await finalizeUserCreation(retryData.user, primaryRole)
-                                    showToast.success('User berhasil diperbaiki dan dibuat ulang!')
-                                    fetchUsers()
-                                    closeModal()
-                                    return
-                                }
-                            }
-                        } else {
-                            return // User cancelled
-                        }
-                    }
-                    throw authError
+                if (insertRes.error) {
+                    throw new Error('Profile creation failed: ' + insertRes.error.message)
                 }
 
-                if (authData.user) {
-                    await finalizeUserCreation(authData.user, primaryRole)
+                // Link santri if wali role
+                if (formData.roles.includes('wali') && selectedSantriIds.length > 0) {
+                    await supabase.from('santri').update({ wali_id: newUser.id }).in('id', selectedSantriIds)
+                }
+
+                if (showToast?.success) {
                     showToast.success('User berhasil ditambahkan!')
-                    fetchUsers()
-                    closeModal()
                 }
+                fetchUsers()
+                closeModal()
             }
-        } catch (error) {
-            console.error('Save error details:', error)
-            showToast.error('Gagal menyimpan: ' + (error.message || 'Error tidak diketahui'))
+        } catch (err) {
+            console.error('Save error:', err)
+            if (showToast?.error) {
+                showToast?.error('Gagal menyimpan: ' + (err.message || 'Unknown error'))
+            } else {
+                alert('Gagal menyimpan: ' + (err.message || 'Unknown error'))
+            }
         } finally {
             setSaving(false)
         }
@@ -419,7 +444,7 @@ const UsersPage = () => {
 
     // Helper to insert profile and link wali
     const finalizeUserCreation = async (user, primaryRole) => {
-        const { error: profileError } = await supabase
+        const insertRes = await supabase
             .from('user_profiles')
             .insert({
                 user_id: user.id,
@@ -432,10 +457,8 @@ const UsersPage = () => {
                 phone: formData.phone || null
             })
 
-        if (profileError) {
-            // If profile creation fails, we should rollback auth user to prevent zombies
-            // But for now just throw
-            throw new Error('Gagal membuat profil: ' + profileError.message)
+        if (insertRes && insertRes.error) {
+            throw new Error('Gagal membuat profil: ' + (insertRes.error.message || 'Unknown'))
         }
 
         if (formData.roles.includes('wali') && selectedSantriIds.length > 0) {
@@ -447,23 +470,30 @@ const UsersPage = () => {
     const linkSantriToWali = async (waliUserId, santriIds) => {
         try {
             // First, remove this wali from all santri (reset)
-            await supabase
+            const resetRes = await supabase
                 .from('santri')
                 .update({ wali_id: null })
                 .eq('wali_id', waliUserId)
 
+            if (resetRes.error) {
+                console.warn('Warning resetting wali:', resetRes.error)
+            }
+
             // Then, set wali_id for selected santri
-            if (santriIds.length > 0) {
-                const { error } = await supabase
+            if (santriIds && santriIds.length > 0) {
+                const linkRes = await supabase
                     .from('santri')
                     .update({ wali_id: waliUserId })
                     .in('id', santriIds)
 
-                if (error) throw error
+                if (linkRes.error) {
+                    throw new Error('Gagal link santri: ' + (linkRes.error.message || 'Unknown'))
+                }
             }
-        } catch (error) {
-            console.error('Error linking santri to wali:', error.message)
-            throw error
+            console.log('✅ Santri linked to wali successfully')
+        } catch (err) {
+            console.error('Error linking santri to wali:', err)
+            throw new Error('Gagal menghubungkan santri: ' + (err?.message || 'Unknown error'))
         }
     }
 
@@ -493,7 +523,7 @@ const UsersPage = () => {
 
             // Remove from local state
             setUsers(users.filter(u => u.user_id !== userId))
-            showToast.success('User berhasil dihapus sepenuhnya.')
+            showToast?.success('User berhasil dihapus sepenuhnya.')
         } catch (error) {
             console.error('Delete error:', error)
 
@@ -505,13 +535,13 @@ const UsersPage = () => {
                     .eq('user_id', userId)
 
                 if (fallbackError) {
-                    showToast.error('Gagal menghapus user: ' + fallbackError.message)
+                    showToast?.error('Gagal menghapus user: ' + fallbackError.message)
                 } else {
                     setUsers(users.filter(u => u.user_id !== userId))
-                    showToast.success('User profile dihapus (Auth login mungkin masih ada).')
+                    showToast?.success('User profile dihapus (Auth login mungkin masih ada).')
                 }
             } else {
-                showToast.error('Gagal menghapus user: ' + error.message)
+                showToast?.error('Gagal menghapus user: ' + error.message)
             }
         }
     }
@@ -530,74 +560,8 @@ const UsersPage = () => {
         setFormErrors({})
     }
 
-    // ==========================================
-    // CHANGE PASSWORD FUNCTIONS
-    // ==========================================
-    const openPasswordModal = (user) => {
-        setPasswordTarget(user)
-        setPasswordForm({ newPassword: '', confirmPassword: '' })
-        setPasswordErrors({})
-        setShowPasswordModal(true)
-    }
+    // Legacy Password Functions Removed
 
-    const closePasswordModal = () => {
-        setShowPasswordModal(false)
-        setPasswordTarget(null)
-        setPasswordForm({ newPassword: '', confirmPassword: '' })
-        setPasswordErrors({})
-    }
-
-    const validatePasswordForm = () => {
-        const errors = {}
-
-        if (!passwordForm.newPassword) {
-            errors.newPassword = 'Password baru wajib diisi'
-        } else if (passwordForm.newPassword.length < 8) {
-            errors.newPassword = 'Password minimal 8 karakter'
-        }
-
-        if (!passwordForm.confirmPassword) {
-            errors.confirmPassword = 'Konfirmasi password wajib diisi'
-        } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-            errors.confirmPassword = 'Password tidak sama'
-        }
-
-        setPasswordErrors(errors)
-        return Object.keys(errors).length === 0
-    }
-
-    const handleChangePassword = async () => {
-        if (!validatePasswordForm()) return
-        if (!passwordTarget?.user_id) {
-            alert('User tidak valid')
-            return
-        }
-
-        setSavingPassword(true)
-        try {
-            // Use Supabase RPC to change password (requires admin function)
-            const { data, error } = await supabase.rpc('admin_change_user_password', {
-                target_user_id: passwordTarget.user_id,
-                new_password: passwordForm.newPassword
-            })
-
-            if (error) throw error
-
-            showToast.success(`✅ Password untuk ${passwordTarget.nama} berhasil diubah!`)
-            closePasswordModal()
-        } catch (error) {
-            console.error('Change password error:', error)
-
-            // If RPC doesn't exist, show helpful message
-            if (error.message.includes('function') && error.message.includes('does not exist')) {
-                showToast.error('Fitur ubah password memerlukan fungsi database. Silakan hubungi administrator.')
-            } else {
-                showToast.error('Gagal mengubah password: ' + error.message)
-            }
-        } finally {
-            setSavingPassword(false)
-        }
-    }
 
     return (
         <div className="users-page">
@@ -672,6 +636,15 @@ const UsersPage = () => {
 
             {/* Users Table */}
             <div className="users-table-container">
+                {/* Error State */}
+                {fetchError && (
+                    <div className="alert alert-error mb-4">
+                        <span>Gagal memuat data: {fetchError}</span>
+                        <button className="btn-xs btn-secondary ml-2" onClick={fetchUsers}>Coba Lagi</button>
+                    </div>
+                )}
+
+                {/* Loading State or Table */}
                 {loading ? (
                     <div className="loading-state">
                         <div className="spinner"></div>
@@ -736,30 +709,55 @@ const UsersPage = () => {
                                         </span>
                                     </td>
                                     <td>
-                                        <div className="action-buttons" style={{ display: 'flex', gap: '6px' }}>
+                                        <MobileActionMenu
+                                            actions={[
+                                                {
+                                                    icon: <Edit size={16} />,
+                                                    label: 'Edit',
+                                                    onClick: () => setEditingUser(user)
+                                                },
+                                                {
+                                                    icon: <Lock size={16} />,
+                                                    label: 'Reset Password',
+                                                    onClick: () => {
+                                                        setPasswordResetUser(user)
+                                                        setResetPasswordOpen(true)
+                                                    }
+                                                },
+                                                {
+                                                    icon: <Trash2 size={16} />,
+                                                    label: 'Hapus',
+                                                    danger: true,
+                                                    onClick: () => handleDeleteUser(user.user_id)
+                                                }
+                                            ]}
+                                        >
+                                            {/* Desktop buttons */}
                                             <button
                                                 className="btn-action edit"
                                                 title="Edit"
                                                 onClick={() => setEditingUser(user)}
                                             >
-                                                <Edit size={14} />
+                                                <Edit size={16} />
                                             </button>
                                             <button
-                                                className="btn-action password"
-                                                title="Ubah Password"
-                                                onClick={() => openPasswordModal(user)}
-                                                style={{ background: '#f59e0b', color: 'white' }}
+                                                className="btn-action warning"
+                                                title="Reset Password"
+                                                onClick={() => {
+                                                    setPasswordResetUser(user)
+                                                    setResetPasswordOpen(true)
+                                                }}
                                             >
-                                                <Key size={14} />
+                                                <Lock size={16} />
                                             </button>
                                             <button
                                                 className="btn-action delete"
                                                 title="Hapus"
                                                 onClick={() => handleDeleteUser(user.user_id)}
                                             >
-                                                <Trash2 size={14} />
+                                                <Trash2 size={16} />
                                             </button>
-                                        </div>
+                                        </MobileActionMenu>
                                     </td>
                                 </tr>
                             ))}
@@ -767,6 +765,39 @@ const UsersPage = () => {
                     </table>
                 )}
             </div>
+
+            {/* Modal Reset Password */}
+            {resetPasswordOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content small-modal">
+                        <div className="modal-header">
+                            <h2>Reset Password</h2>
+                            <button className="close-btn" onClick={() => setResetPasswordOpen(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Reset password untuk user <strong>{passwordResetUser?.nama}</strong>?</p>
+                            <div className="form-group">
+                                <label>Password Baru</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={newPasswordReset}
+                                    onChange={(e) => setNewPasswordReset(e.target.value)}
+                                    placeholder="Masukkan password baru"
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn-secondary" onClick={() => setResetPasswordOpen(false)}>Batal</button>
+                            <button className="btn-primary btn-warning" onClick={handleResetPassword} disabled={saving}>
+                                {saving ? 'Memproses...' : 'Reset Password'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Add/Edit Modal */}
             {(showAddModal || editingUser) && (
@@ -916,8 +947,9 @@ const UsersPage = () => {
                                 Batal
                             </button>
                             <button
+                                type="button"
                                 className="btn-primary"
-                                onClick={handleSaveUser}
+                                onClick={handleSaveUserV2}
                                 disabled={saving}
                             >
                                 {saving ? (
@@ -931,97 +963,7 @@ const UsersPage = () => {
                 </div>
             )}
 
-            {/* Change Password Modal */}
-            {showPasswordModal && passwordTarget && (
-                <div className="modal-overlay" onClick={closePasswordModal}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '450px' }}>
-                        <div className="modal-header">
-                            <h2><Key size={20} /> Ubah Password</h2>
-                            <button className="modal-close" onClick={closePasswordModal}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="form-body">
-                            <div style={{
-                                background: '#f0fdf4',
-                                border: '1px solid #bbf7d0',
-                                borderRadius: '8px',
-                                padding: '12px',
-                                marginBottom: '16px'
-                            }}>
-                                <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                                    <strong>User:</strong> {passwordTarget.nama}
-                                </p>
-                                <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
-                                    {passwordTarget.email}
-                                </p>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Password Baru *</label>
-                                <div className="password-input">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={passwordForm.newPassword}
-                                        onChange={e => {
-                                            setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))
-                                            if (passwordErrors.newPassword) {
-                                                setPasswordErrors(prev => ({ ...prev, newPassword: null }))
-                                            }
-                                        }}
-                                        placeholder="Minimal 8 karakter"
-                                        className={passwordErrors.newPassword ? 'error' : ''}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="password-toggle"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                </div>
-                                {passwordErrors.newPassword && <span className="error-text">{passwordErrors.newPassword}</span>}
-                            </div>
-
-                            <div className="form-group">
-                                <label>Konfirmasi Password Baru *</label>
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={passwordForm.confirmPassword}
-                                    onChange={e => {
-                                        setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))
-                                        if (passwordErrors.confirmPassword) {
-                                            setPasswordErrors(prev => ({ ...prev, confirmPassword: null }))
-                                        }
-                                    }}
-                                    placeholder="Ulangi password baru"
-                                    className={passwordErrors.confirmPassword ? 'error' : ''}
-                                />
-                                {passwordErrors.confirmPassword && <span className="error-text">{passwordErrors.confirmPassword}</span>}
-                            </div>
-                        </div>
-
-                        <div className="modal-footer">
-                            <button className="btn-secondary" onClick={closePasswordModal}>
-                                Batal
-                            </button>
-                            <button
-                                className="btn-primary"
-                                onClick={handleChangePassword}
-                                disabled={savingPassword}
-                                style={{ background: '#f59e0b' }}
-                            >
-                                {savingPassword ? (
-                                    <><Loader2 size={18} className="spin" /> Menyimpan...</>
-                                ) : (
-                                    <><Key size={18} /> Ubah Password</>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Legacy Password Modal Removed */}
         </div>
     )
 }

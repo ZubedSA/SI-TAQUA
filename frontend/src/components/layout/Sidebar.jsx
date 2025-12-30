@@ -114,6 +114,8 @@ const adminMenuItems = [
         ]
     },
 
+    // Portal Wali - untuk testing
+    { path: '/wali/beranda', icon: UserCircle, label: 'Portal Wali (Test)' },
 
     // Pengaturan
     { path: '/pengaturan', icon: Settings, label: 'Pengaturan' },
@@ -290,7 +292,7 @@ const operatorMenuItems = [
     },
 
     // Portal Wali - hanya untuk admin dan wali (BUKAN guru)
-    { path: '/wali-santri', icon: UserCircle, label: 'Portal Wali', roles: ['admin', 'wali'] },
+    { path: '/wali/beranda', icon: UserCircle, label: 'Portal Wali', roles: ['admin', 'wali'] },
 
     // Admin-only menus
     { path: '/audit-log', icon: ClipboardList, label: 'Audit Log', roles: ['admin'] },

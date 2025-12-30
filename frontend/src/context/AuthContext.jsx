@@ -236,45 +236,69 @@ export const AuthProvider = ({ children }) => {
     const signIn = async (input, password) => {
         let authEmail = input.trim()
 
-        // Cek apakah input adalah email valid (mengandung @)
-        // Jika TIDAK mengandung @, kita asumsikan sebagai USERNAME
+        // ================================================================
+        // LANGKAH 1: USERNAME LOOKUP (jika bukan email)
+        // ================================================================
+        // Input yang tidak mengandung @ dianggap sebagai USERNAME
+        // Kita lookup email dari database via RPC
         if (!authEmail.includes('@')) {
-            console.log('Looking up username:', authEmail)
-            const { data: foundEmail, error: rpcError } = await supabase
-                .rpc('get_email_by_username', { p_username: authEmail })
+            console.log('🔍 Looking up username:', authEmail)
 
-            if (rpcError) {
-                console.error('Error finding username:', rpcError)
-                if (rpcError.message.includes('function get_email_by_username')) {
-                    throw new Error('Database belum update (MIGRATE_TO_USERNAME.sql)')
+            try {
+                const { data: foundEmail, error: rpcError } = await supabase
+                    .rpc('get_email_by_username', { p_username: authEmail })
+
+                if (rpcError) {
+                    console.error('❌ RPC Error:', rpcError)
+                    // Cek apakah function belum ada
+                    if (rpcError.message.includes('function') || rpcError.code === '42883') {
+                        throw new Error('Database perlu diupdate. Jalankan REBUILD_AUTH_SYSTEM.sql')
+                    }
+                    throw new Error('Gagal mencari username: ' + rpcError.message)
                 }
+
+                if (!foundEmail) {
+                    throw new Error('Username tidak ditemukan!')
+                }
+
+                authEmail = foundEmail
+                console.log('✅ Username found, using email:', authEmail)
+            } catch (err) {
+                // Re-throw jika sudah Error object
+                if (err instanceof Error) throw err
                 throw new Error('Gagal mencari username')
             }
-
-            if (!foundEmail) {
-                throw new Error('Username tidak ditemukan!')
-            }
-
-            authEmail = foundEmail
         }
 
+        // ================================================================
+        // LANGKAH 2: AUTH LOGIN (Supabase Auth API)
+        // ================================================================
+        // Login menggunakan email + password via Supabase Auth
+        // TIDAK ADA DATABASE QUERY DI SINI - murni auth API
         const { data, error } = await supabase.auth.signInWithPassword({
             email: authEmail,
             password,
         })
         if (error) throw error
 
-        // Fetch profile untuk mendapatkan roles
+        // ================================================================
+        // LANGKAH 3: FETCH PROFILE (setelah auth sukses)
+        // ================================================================
+        // Ambil profile lengkap dari user_profiles
+        // PENTING: Tidak query wali-santri di sini!
         const { data: profile } = await supabase
             .from('user_profiles')
-            .select('roles, active_role, role')
+            .select('*')
             .eq('user_id', data.user.id)
             .single()
 
+        // ================================================================
+        // LANGKAH 4: NORMALIZE ROLES
+        // ================================================================
         let roles = profile?.roles || (profile?.role ? [profile.role] : ['guest'])
         const activeRole = profile?.active_role || profile?.role || (roles.length > 0 ? roles[0] : 'guest')
 
-        // If user is admin, grant access to all dashboards
+        // Admin dapat akses ke semua dashboard
         if (roles.includes('admin') || profile?.role === 'admin') {
             roles = ['admin', 'guru', 'bendahara', 'wali']
         }
@@ -286,6 +310,7 @@ export const AuthProvider = ({ children }) => {
             role: activeRole
         })
 
+        console.log('✅ Login successful. Role:', activeRole)
         return { ...data, roles, activeRole, role: activeRole }
     }
 
