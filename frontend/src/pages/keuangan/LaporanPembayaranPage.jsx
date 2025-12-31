@@ -67,7 +67,6 @@ const LaporanPembayaranPage = () => {
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Pembayaran Santri',
-            title: 'Laporan Pembayaran Santri',
             subtitle: filters.dateFrom && filters.dateTo
                 ? `Periode ${new Date(filters.dateFrom).toLocaleDateString('id-ID')} - ${new Date(filters.dateTo).toLocaleDateString('id-ID')}`
                 : filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,

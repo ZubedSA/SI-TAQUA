@@ -1,0 +1,484 @@
+/* =====================================================
+   PENGURUS DASHBOARD STYLES
+   Dashboard khusus untuk pembinaan & pengawasan santri
+   ===================================================== */
+
+.pengurus-dashboard {
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Welcome Header */
+.pengurus-welcome {
+    background: linear-gradient(135deg, var(--color-danger, #ea4335) 0%, var(--color-danger-dark, #c5221f) 100%);
+}
+
+.pengurus-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Stats Grid */
+.pengurus-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+    .pengurus-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .pengurus-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pengurus-stat-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pengurus-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.pengurus-stat-card .stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pengurus-stat-card .stat-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.pengurus-stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.stat-icon-box.danger {
+    background: linear-gradient(135deg, #ea4335, #c5221f);
+}
+
+.stat-icon-box.warning {
+    background: linear-gradient(135deg, #fbbc04, #f9a825);
+}
+
+.stat-icon-box.info {
+    background: linear-gradient(135deg, #4285f4, #1a73e8);
+}
+
+.stat-icon-box.success {
+    background: linear-gradient(135deg, #34a853, #1e8e3e);
+}
+
+.stat-icon-box.purple {
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+}
+
+/* Secondary Stats */
+.pengurus-secondary-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .pengurus-secondary-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+.secondary-stat-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.secondary-stat-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.secondary-stat-icon.purple {
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+}
+
+.secondary-stat-icon.blue {
+    background: linear-gradient(135deg, #4285f4, #1a73e8);
+}
+
+.secondary-stat-icon.green {
+    background: linear-gradient(135deg, #34a853, #1e8e3e);
+}
+
+.secondary-stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.secondary-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.secondary-stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Main Content Row */
+.pengurus-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+    .pengurus-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Cards */
+.pengurus-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.pengurus-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pengurus-card .card-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.pengurus-card .card-link {
+    font-size: 0.875rem;
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.pengurus-card .card-link:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+/* Pelanggaran List */
+.pelanggaran-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pelanggaran-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.pelanggaran-item:hover {
+    background: var(--bg-hover);
+}
+
+.pelanggaran-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pelanggaran-status .status-open {
+    color: var(--color-danger, #ea4335);
+}
+
+.pelanggaran-status .status-proses {
+    color: var(--color-warning, #fbbc04);
+}
+
+.pelanggaran-status .status-selesai {
+    color: var(--color-success, #34a853);
+}
+
+.pelanggaran-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.pelanggaran-santri {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pelanggaran-jenis {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pelanggaran-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.pelanggaran-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Tingkat Badges */
+.tingkat-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.tingkat-ringan {
+    background: rgba(52, 168, 83, 0.15);
+    color: #34a853;
+}
+
+.tingkat-sedang {
+    background: rgba(251, 188, 4, 0.15);
+    color: #f9a825;
+}
+
+.tingkat-berat {
+    background: rgba(234, 67, 53, 0.15);
+    color: #ea4335;
+}
+
+.tingkat-sangat-berat {
+    background: rgba(156, 39, 176, 0.15);
+    color: #9c27b0;
+}
+
+/* Quick Actions Grid */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 576px) {
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: center;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-action-btn.danger {
+    background: linear-gradient(135deg, #ea4335, #c5221f);
+}
+
+.quick-action-btn.warning {
+    background: linear-gradient(135deg, #fbbc04, #f9a825);
+    color: #333;
+}
+
+.quick-action-btn.info {
+    background: linear-gradient(135deg, #4285f4, #1a73e8);
+}
+
+.quick-action-btn.success {
+    background: linear-gradient(135deg, #34a853, #1e8e3e);
+}
+
+.quick-action-btn.purple {
+    background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+}
+
+.quick-action-btn.gray {
+    background: linear-gradient(135deg, #666, #444);
+}
+
+/* Summary Card */
+.summary-card {
+    margin-top: 1.5rem;
+}
+
+.summary-period {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.summary-content {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .summary-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+}
+
+.summary-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.summary-icon.danger {
+    background: linear-gradient(135deg, #ea4335, #c5221f);
+}
+
+.summary-icon.success {
+    background: linear-gradient(135deg, #34a853, #1e8e3e);
+}
+
+.summary-icon.info {
+    background: linear-gradient(135deg, #4285f4, #1a73e8);
+}
+
+.summary-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.summary-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    gap: 0.75rem;
+}
+
+.empty-state svg {
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}

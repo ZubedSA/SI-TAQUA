@@ -40,7 +40,11 @@ import {
     UserCog,
     BarChart3,
     FileSearch,
-    ScrollText
+    ScrollText,
+    AlertTriangle,
+    Bell,
+    Newspaper,
+    Archive
 } from 'lucide-react'
 import './Sidebar.css'
 
@@ -119,6 +123,37 @@ const adminMenuItems = [
 
     // Pengaturan
     { path: '/pengaturan', icon: Settings, label: 'Pengaturan' },
+]
+
+// ============ PENGURUS MENU - Pembinaan Santri ============
+const pengurusMenuItems = [
+    { path: '/dashboard/pengurus', icon: LayoutDashboard, label: 'Overview' },
+
+    // Pembinaan
+    {
+        id: 'pembinaan',
+        icon: UserCog,
+        label: 'Pembinaan',
+        children: [
+            { path: '/pengurus/pelanggaran', icon: AlertTriangle, label: 'Pelanggaran' },
+            { path: '/pengurus/santri-bermasalah', icon: Users, label: 'Santri Bermasalah' },
+        ]
+    },
+
+    // Informasi
+    {
+        id: 'informasi',
+        icon: Bell,
+        label: 'Informasi',
+        children: [
+            { path: '/pengurus/pengumuman', icon: Bell, label: 'Pengumuman' },
+            { path: '/pengurus/informasi', icon: FileText, label: 'Info Pondok' },
+            { path: '/pengurus/buletin', icon: Newspaper, label: 'Buletin' },
+        ]
+    },
+
+    // Arsip
+    { path: '/pengurus/arsip', icon: Archive, label: 'Arsip' },
 ]
 
 // ============ OPERATOR MENU - Guru/Akademik ============
@@ -307,8 +342,11 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     const [openMenus, setOpenMenus] = useState({})
 
     // Select menu based on active role
-    // Admin gets special controller menu, others get operator menu
-    const baseMenuItems = activeRole === 'admin' ? adminMenuItems : operatorMenuItems
+    // Admin gets special controller menu, pengurus gets pembinaan menu, others get operator menu
+    const baseMenuItems =
+        activeRole === 'admin' ? adminMenuItems :
+            activeRole === 'pengurus' ? pengurusMenuItems :
+                operatorMenuItems
 
     // Filter menu berdasarkan role user (for operator menu)
     const filteredMenuItems = baseMenuItems.filter(item => {

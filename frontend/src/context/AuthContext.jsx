@@ -338,6 +338,7 @@ export const AuthProvider = ({ children }) => {
     const isGuru = () => userProfile?.activeRole === 'guru'
     const isBendahara = () => userProfile?.activeRole === 'bendahara'
     const isWali = () => userProfile?.activeRole === 'wali'
+    const isPengurus = () => userProfile?.activeRole === 'pengurus'
 
     // Check if user has specific role in their roles array
     const hasRole = (roles) => {
@@ -371,6 +372,7 @@ export const AuthProvider = ({ children }) => {
         isGuru,
         isBendahara,
         isWali,
+        isPengurus,
         hasRole,
         canAccessWithActiveRole,
         hasMultipleRoles,

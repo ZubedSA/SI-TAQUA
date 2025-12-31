@@ -7,7 +7,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Login from './pages/auth/Login'
 // New Dashboard Components
-import { AdminDashboard, AkademikDashboard, KeuanganDashboard, WaliSantriDashboard } from './pages/dashboards'
+import { AdminDashboard, AkademikDashboard, KeuanganDashboard, WaliSantriDashboard, PengurusDashboard } from './pages/dashboards'
 import SantriList from './pages/santri/SantriList'
 import SantriForm from './pages/santri/SantriForm'
 import GuruList from './pages/guru/GuruList'
@@ -77,8 +77,17 @@ import LaporanRekapMingguanPage from './pages/akademik/laporan/laporan-hafalan/m
 import LaporanUjianSyahriPage from './pages/akademik/laporan/laporan-nilai/ujian-syahri/LaporanUjianSyahriPage'
 import LaporanUjianSemesterPage from './pages/akademik/laporan/laporan-nilai/ujian-semester/LaporanUjianSemesterPage'
 import LaporanAkademikSantriPage from './pages/akademik/laporan/laporan-akademik/raport/LaporanAkademikSantriPage'
+// Pengurus Pages
+import PelanggaranPage from './pages/pengurus/pelanggaran/PelanggaranPage'
+import PelanggaranForm from './pages/pengurus/pelanggaran/PelanggaranForm'
+import PengumumanInternalPage from './pages/pengurus/pengumuman/PengumumanPage'
+import SantriBermasalahPage from './pages/pengurus/santri-bermasalah/SantriBermasalahPage'
+import InformasiPondokPage from './pages/pengurus/informasi/InformasiPondokPage'
+import BuletinPage from './pages/pengurus/buletin/BuletinPage'
+import ArsipPage from './pages/pengurus/arsip/ArsipPage'
 import './index.css'
 import './components/common/ErrorBoundary.css'
+
 
 // Dashboard redirect mapping based on active role
 const dashboardRoutes = {
@@ -86,6 +95,7 @@ const dashboardRoutes = {
   guru: '/dashboard/akademik',
   bendahara: '/dashboard/keuangan',
   pengasuh: '/dashboard/keuangan',
+  pengurus: '/dashboard/pengurus',
   wali: '/wali/beranda'
 }
 
@@ -150,6 +160,13 @@ function App() {
                   <Route path="/dashboard/walisantri" element={
                     <ProtectedRoute roles={['wali']}>
                       <WaliSantriDashboard />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Pengurus Dashboard - Pembinaan Santri */}
+                  <Route path="/dashboard/pengurus" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']}>
+                      <PengurusDashboard />
                     </ProtectedRoute>
                   } />
 
@@ -474,6 +491,65 @@ function App() {
                   <Route path="/keuangan/dana/laporan" element={
                     <ProtectedRoute roles={['admin', 'bendahara', 'pengasuh']} fallbackRedirect="/dashboard/admin">
                       <LaporanPenyaluranPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* ============ PENGURUS ROUTES ============ */}
+
+                  {/* Pelanggaran */}
+                  <Route path="/pengurus/pelanggaran" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <PelanggaranPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/pengurus/pelanggaran/create" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <PelanggaranForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/pengurus/pelanggaran/:id" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <PelanggaranForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/pengurus/pelanggaran/:id/edit" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <PelanggaranForm />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Santri Bermasalah */}
+                  <Route path="/pengurus/santri-bermasalah" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <SantriBermasalahPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Pengumuman */}
+                  <Route path="/pengurus/pengumuman" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <PengumumanInternalPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Informasi Pondok */}
+                  <Route path="/pengurus/informasi" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <InformasiPondokPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Buletin */}
+                  <Route path="/pengurus/buletin" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <BuletinPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Arsip */}
+                  <Route path="/pengurus/arsip" element={
+                    <ProtectedRoute roles={['admin', 'pengurus']} fallbackRedirect="/dashboard/pengurus">
+                      <ArsipPage />
                     </ProtectedRoute>
                   } />
 
