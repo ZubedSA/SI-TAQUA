@@ -763,3 +763,302 @@
         font-size: 10pt;
     }
 }
+
+/* =====================================================
+   OTA LIST PAGE ENHANCEMENTS
+   ===================================================== */
+
+.ota-list-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.ota-list-page h1 {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Enhanced OTA Card */
+.ota-card,
+.ota-list-page .bg-white {
+    transition: all 0.2s ease;
+}
+
+.ota-card:hover,
+.ota-list-page>.bg-white:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Table Row Enhancement */
+.ota-table tbody tr,
+.ota-list-page table tbody tr {
+    transition: all 0.15s ease;
+}
+
+.ota-table tbody tr:hover,
+.ota-list-page table tbody tr:hover {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.03) 0%, rgba(16, 185, 129, 0.06) 50%, rgba(16, 185, 129, 0.03) 100%);
+}
+
+/* Enhanced Action Buttons */
+.ota-action-buttons button,
+.ota-list-page .group button[title] {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ota-action-buttons button:hover,
+.ota-list-page .group button[title]:hover {
+    transform: translateY(-1px);
+}
+
+.ota-action-buttons button:active,
+.ota-list-page .group button[title]:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* Avatar Enhancement */
+.ota-list-page .rounded-full.bg-gradient-to-br {
+    transition: all 0.2s ease;
+}
+
+.ota-list-page tr:hover .rounded-full.bg-gradient-to-br {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+/* Badge Animation */
+.ota-badge,
+.ota-list-page span[class*="rounded-full"],
+.ota-list-page span[class*="rounded-md"] {
+    transition: all 0.15s ease;
+}
+
+.ota-table tr:hover .ota-badge,
+.ota-list-page tr:hover span[class*="rounded-full"] {
+    transform: scale(1.02);
+}
+
+/* Search Input Enhancement */
+.ota-search input:focus,
+.ota-list-page input[type="text"]:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.ota-search input::placeholder,
+.ota-list-page input::placeholder {
+    color: #94a3b8;
+}
+
+/* =====================================================
+   OTA KATEGORI PAGE ENHANCEMENTS
+   ===================================================== */
+
+/* Enhanced Header for Kategori */
+.ota-container .ota-header h1 {
+    position: relative;
+    display: inline-block;
+}
+
+.ota-container .ota-header h1::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    width: 48px;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 3px;
+}
+
+/* Card Header with Icon Indicator */
+.ota-card-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ota-card-header h2::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, #10b981, #059669);
+    border-radius: 4px;
+}
+
+/* Enhanced Table Cells for Kategori */
+.ota-table td:first-child {
+    font-weight: 600;
+    color: #64748b;
+    width: 60px;
+}
+
+.ota-table tbody tr td:nth-child(2) {
+    font-weight: 500;
+}
+
+/* Tag Icon Color Animation */
+.ota-table td svg[class*="lucide-tag"] {
+    transition: all 0.2s ease;
+}
+
+.ota-table tr:hover td svg[class*="lucide-tag"] {
+    transform: rotate(-8deg) scale(1.1);
+    filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.3));
+}
+
+/* Empty State Enhancement */
+.ota-empty {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.ota-empty h3 {
+    background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Modal Enhancements */
+.ota-modal {
+    animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ota-modal-overlay {
+    backdrop-filter: blur(4px);
+}
+
+.ota-modal-header h2 {
+    font-size: 1.25rem;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Form Input Focus Glow */
+.ota-form-input:focus,
+.ota-form-select:focus,
+.ota-form-textarea:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-color: #10b981;
+}
+
+/* Button Enhancements */
+.ota-btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.ota-btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.4s ease;
+}
+
+.ota-btn-primary:hover::before {
+    left: 100%;
+}
+
+.ota-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.ota-btn-primary:active {
+    transform: translateY(0);
+}
+
+.ota-btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* Loading Spinner Enhancement */
+.ota-loading-spinner {
+    border-width: 3px;
+    border-color: #e2e8f0;
+    border-top-color: #10b981;
+}
+
+/* Scrollbar Styling for Tables */
+.ota-table-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.ota-table-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.ota-table-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 3px;
+}
+
+.ota-table-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #059669, #047857);
+}
+
+/* Dark Mode Enhancements */
+[data-theme="dark"] .ota-list-page {
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+[data-theme="dark"] .ota-list-page h1 {
+    background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+[data-theme="dark"] .ota-table tbody tr:hover {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, rgba(16, 185, 129, 0.08) 50%, rgba(16, 185, 129, 0.05) 100%);
+}
+
+[data-theme="dark"] .ota-modal {
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+[data-theme="dark"] .ota-modal-header h2 {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+[data-theme="dark"] .ota-form-input,
+[data-theme="dark"] .ota-form-select,
+[data-theme="dark"] .ota-form-textarea {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .ota-form-input:focus,
+[data-theme="dark"] .ota-form-select:focus,
+[data-theme="dark"] .ota-form-textarea:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}

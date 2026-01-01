@@ -135,17 +135,34 @@ const OTAKategoriPage = () => {
 
     return (
         <div className="ota-container">
-            {/* Header */}
-            <div className="ota-header">
-                <div className="ota-header-top">
-                    <div>
-                        <h1>Kategori OTA</h1>
-                        <p>Kelola master data kategori Orang Tua Asuh</p>
+            {/* === GRADIENT HEADER === */}
+            <div className="relative overflow-hidden rounded-2xl p-6 text-white shadow-lg mb-6" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)' }}>
+                <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-white rounded-full" style={{ transform: 'translate(30%, -50%)' }}></div>
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full" style={{ transform: 'translate(-30%, 50%)' }}></div>
+                </div>
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                            <Tag size={28} />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold m-0">Kategori OTA</h1>
+                            <p className="text-emerald-100 mt-1 m-0">Kelola master data kategori Orang Tua Asuh</p>
+                        </div>
                     </div>
-                    <button className="ota-btn ota-btn-primary" onClick={openAdd}>
-                        <Plus size={18} />
-                        Tambah Kategori
-                    </button>
+                    <div className="flex flex-wrap gap-3">
+                        <div className="px-4 py-2 rounded-xl text-sm font-medium" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                            {data.length} Kategori
+                        </div>
+                        <button
+                            onClick={openAdd}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium shadow-lg transition hover:shadow-xl border-none cursor-pointer"
+                            style={{ background: 'white', color: '#059669' }}
+                        >
+                            <Plus size={18} /> Tambah Kategori
+                        </button>
+                    </div>
                 </div>
             </div>
 
