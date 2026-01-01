@@ -271,37 +271,59 @@ const AdminDashboard = () => {
 
             {/* Quick Actions */}
             <div className="admin-card">
-                <div className="card-header">
-                    <h3><Settings size={20} /> Aksi Cepat Admin</h3>
+                <div className="card-header mb-4">
+                    <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800">
+                        <Settings size={20} /> Aksi Cepat Admin
+                    </h3>
                 </div>
-                <div className="quick-actions">
-                    <Link to="/santri" className="quick-action-btn">
-                        <Users size={20} />
-                        <span>Kelola Santri</span>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Link to="/santri" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-emerald-500 hover:text-emerald-600 transition-all group">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3 text-emerald-600 group-hover:scale-110 transition-transform">
+                            <Users size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-emerald-600">Kelola Santri</span>
                     </Link>
-                    <Link to="/guru" className="quick-action-btn">
-                        <GraduationCap size={20} />
-                        <span>Kelola Guru</span>
+
+                    <Link to="/guru" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-blue-500 hover:text-blue-600 transition-all group">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3 text-blue-600 group-hover:scale-110 transition-transform">
+                            <GraduationCap size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-blue-600">Kelola Guru</span>
                     </Link>
-                    <Link to="/kelas" className="quick-action-btn">
-                        <Home size={20} />
-                        <span>Kelola Kelas</span>
+
+                    <Link to="/kelas" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-amber-500 hover:text-amber-600 transition-all group">
+                        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-3 text-amber-600 group-hover:scale-110 transition-transform">
+                            <Home size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-amber-600">Kelola Kelas</span>
                     </Link>
-                    <Link to="/audit-log" className="quick-action-btn">
-                        <ClipboardList size={20} />
-                        <span>Audit Log</span>
+
+                    <Link to="/audit-log" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-indigo-500 hover:text-indigo-600 transition-all group">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-3 text-indigo-600 group-hover:scale-110 transition-transform">
+                            <ClipboardList size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-indigo-600">Audit Log</span>
                     </Link>
-                    <Link to="/pengaturan" className="quick-action-btn">
-                        <Settings size={20} />
-                        <span>Pengaturan</span>
+
+                    <Link to="/pengaturan" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-slate-500 hover:text-slate-600 transition-all group">
+                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-600 group-hover:scale-110 transition-transform">
+                            <Settings size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-slate-600">Pengaturan</span>
                     </Link>
-                    <Link to="/backup" className="quick-action-btn">
-                        <Database size={20} />
-                        <span>Backup Data</span>
+
+                    <Link to="/backup" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-rose-500 hover:text-rose-600 transition-all group">
+                        <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mb-3 text-rose-600 group-hover:scale-110 transition-transform">
+                            <Database size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-rose-600">Backup Data</span>
                     </Link>
-                    <Link to="/keuangan/dana/persetujuan" className="quick-action-btn">
-                        <CheckCircle size={20} />
-                        <span>Persetujuan Dana</span>
+
+                    <Link to="/keuangan/dana/persetujuan" className="flex flex-col items-center justify-center p-6 bg-white border border-slate-200 rounded-xl hover:shadow-lg hover:border-teal-500 hover:text-teal-600 transition-all group col-span-2">
+                        <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mb-3 text-teal-600 group-hover:scale-110 transition-transform">
+                            <CheckCircle size={24} />
+                        </div>
+                        <span className="font-semibold text-slate-700 group-hover:text-teal-600">Persetujuan Dana</span>
                     </Link>
                 </div>
             </div>

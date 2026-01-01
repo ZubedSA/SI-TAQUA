@@ -634,6 +634,7 @@ const UsersPage = () => {
                         <option value="guru">Guru</option>
                         <option value="bendahara">Bendahara</option>
                         <option value="pengurus">Pengurus</option>
+                        <option value="ota">Orang Tua Asuh</option>
                         <option value="wali">Wali Santri</option>
                     </select>
                 </div>
@@ -667,6 +668,10 @@ const UsersPage = () => {
                 <div className="stat-chip">
                     <span className="stat-number">{users.filter(u => (u.roles || []).includes('pengurus')).length}</span>
                     <span className="stat-label">Pengurus</span>
+                </div>
+                <div className="stat-chip">
+                    <span className="stat-number">{users.filter(u => (u.roles || []).includes('ota')).length}</span>
+                    <span className="stat-label">OTA</span>
                 </div>
                 <div className="stat-chip">
                     <span className="stat-number">{users.filter(u => (u.roles || []).includes('wali')).length}</span>

@@ -293,17 +293,17 @@ const AkademikDashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* Akses Cepat */}
             <div className="akademik-card">
                 <div className="card-header">
-                    <h3><PenLine size={20} /> Menu Akademik</h3>
+                    <h3><Clock size={20} /> Akses Cepat</h3>
                 </div>
                 <div className="quick-actions">
-                    <Link to="/input-nilai" className="quick-action-btn">
+                    <Link to="/akademik/menu/input-nilai" className="quick-action-btn">
                         <PenLine size={20} />
                         <span>Input Nilai</span>
                     </Link>
-                    <Link to="/rekap-nilai" className="quick-action-btn">
+                    <Link to="/akademik/menu/rekap-nilai" className="quick-action-btn">
                         <FileText size={20} />
                         <span>Rekap Nilai</span>
                     </Link>
@@ -311,20 +311,15 @@ const AkademikDashboard = () => {
                         <BookMarked size={20} />
                         <span>Hafalan</span>
                     </Link>
-                    <Link to="/presensi" className="quick-action-btn">
-                        <CalendarCheck size={20} />
-                        <span>Pembinaan</span>
-                    </Link>
-                    <Link to="/halaqoh" className="quick-action-btn">
-                        <Circle size={20} />
-                        <span>Halaqoh</span>
-                    </Link>
-                    <Link to="/laporan" className="quick-action-btn">
+                    <Link to="/akademik/menu/laporan" className="quick-action-btn">
                         <Download size={20} />
                         <span>Laporan</span>
                     </Link>
                 </div>
             </div>
+
+            {/* Quick Actions */}
+
         </div>
     )
 }

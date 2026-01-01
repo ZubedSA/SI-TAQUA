@@ -45,7 +45,8 @@ import {
     Bell,
     Newspaper,
     Archive,
-    HeartHandshake // For OTA
+    HeartHandshake, // For OTA
+    Send // For Penyaluran
 } from 'lucide-react'
 import './Sidebar.css'
 
@@ -170,18 +171,19 @@ const otaMenuItems = [
         children: [
             { path: '/ota/pemasukan', icon: ArrowUpCircle, label: 'Pemasukan' },
             { path: '/ota/pengeluaran', icon: ArrowDownCircle, label: 'Pengeluaran' },
-            { path: '/ota/laporan', icon: FileBarChart, label: 'Laporan' },
+            { path: '/ota/penyaluran', icon: Send, label: 'Penyaluran Dana' },
+            { path: '/ota/laporan-penyaluran', icon: FileBarChart, label: 'Laporan Penyaluran' },
         ]
     },
 
-    // Data
+    // Data OTA
     {
         id: 'data-ota',
         icon: Database,
         label: 'Data',
         children: [
-            { path: '/admin/ota', icon: HeartHandshake, label: 'Daftar OTA' },
-            { path: '/ota/santri', icon: Users, label: 'Santri Penerima' },
+            { path: '/admin/ota', icon: HeartHandshake, label: 'Data OTA' },
+            { path: '/ota/santri', icon: Users, label: 'Data Santri Penerima' },
             { path: '/ota/kategori', icon: Tag, label: 'Kategori OTA' },
         ]
     },

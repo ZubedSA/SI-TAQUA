@@ -1,24 +1,247 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Tag, X, RefreshCw } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Tag, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
-import EmptyState from '../../components/ui/EmptyState'
-import './OTA.css'
 
-/**
- * OTA Kategori Page - Master Data Kategori OTA
- * Admin Only - Full CRUD
- */
+const styles = {
+    container: {
+        padding: '24px',
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
+    },
+    header: {
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: '16px',
+        padding: '24px',
+        color: 'white',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+        boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+        marginBottom: '24px'
+    },
+    headerContent: {
+        position: 'relative',
+        zIndex: 10,
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '16px'
+    },
+    headerInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px'
+    },
+    headerIcon: {
+        width: '56px',
+        height: '56px',
+        borderRadius: '14px',
+        background: 'rgba(255,255,255,0.2)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    headerTitle: {
+        fontSize: '1.5rem',
+        fontWeight: 700,
+        margin: 0
+    },
+    headerSubtitle: {
+        fontSize: '0.9rem',
+        color: 'rgba(255,255,255,0.85)',
+        margin: '4px 0 0 0'
+    },
+    badge: {
+        padding: '8px 16px',
+        borderRadius: '10px',
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        background: 'rgba(255,255,255,0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    addBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '12px 20px',
+        borderRadius: '12px',
+        fontWeight: 600,
+        background: 'white',
+        color: '#059669',
+        border: 'none',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        transition: 'all 0.2s'
+    },
+    card: {
+        background: 'white',
+        borderRadius: '16px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
+    },
+    cardHeader: {
+        padding: '20px 24px',
+        borderBottom: '1px solid #f3f4f6',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '16px',
+        background: 'linear-gradient(180deg, #f8fafc 0%, white 100%)'
+    },
+    cardTitle: {
+        fontSize: '1.125rem',
+        fontWeight: 600,
+        color: '#1f2937',
+        margin: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    searchBox: {
+        position: 'relative',
+        minWidth: '250px'
+    },
+    searchInput: {
+        width: '100%',
+        padding: '10px 14px 10px 40px',
+        border: '1px solid #e5e7eb',
+        borderRadius: '10px',
+        fontSize: '0.875rem',
+        outline: 'none',
+        transition: 'all 0.2s'
+    },
+    table: {
+        width: '100%',
+        borderCollapse: 'collapse'
+    },
+    th: {
+        padding: '14px 20px',
+        textAlign: 'left',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        color: '#6b7280',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        background: 'linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%)',
+        borderBottom: '2px solid #e5e7eb'
+    },
+    td: {
+        padding: '16px 20px',
+        borderBottom: '1px solid #f3f4f6',
+        fontSize: '0.875rem',
+        color: '#374151'
+    },
+    categoryIcon: {
+        width: '36px',
+        height: '36px',
+        borderRadius: '10px',
+        background: 'linear-gradient(135deg, #10b981, #059669)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+    },
+    actionBtn: {
+        padding: '8px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    modal: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+    },
+    modalContent: {
+        background: 'white',
+        borderRadius: '16px',
+        width: '90%',
+        maxWidth: '500px',
+        overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+    },
+    modalHeader: {
+        padding: '20px 24px',
+        background: 'linear-gradient(135deg, #10b981, #059669)',
+        color: 'white',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+    modalBody: {
+        padding: '24px'
+    },
+    modalFooter: {
+        padding: '16px 24px',
+        borderTop: '1px solid #f3f4f6',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '12px'
+    },
+    formGroup: {
+        marginBottom: '20px'
+    },
+    label: {
+        display: 'block',
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        color: '#374151',
+        marginBottom: '8px'
+    },
+    input: {
+        width: '100%',
+        padding: '12px 14px',
+        border: '1px solid #e5e7eb',
+        borderRadius: '10px',
+        fontSize: '0.9rem',
+        outline: 'none',
+        transition: 'all 0.2s'
+    },
+    emptyState: {
+        padding: '80px 24px',
+        textAlign: 'center'
+    },
+    emptyIcon: {
+        width: '80px',
+        height: '80px',
+        borderRadius: '20px',
+        background: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 20px'
+    }
+}
+
 const OTAKategoriPage = () => {
     const showToast = useToast()
     const [loading, setLoading] = useState(true)
     const [data, setData] = useState([])
     const [search, setSearch] = useState('')
+
+    // Modal state
     const [showModal, setShowModal] = useState(false)
     const [editItem, setEditItem] = useState(null)
-    const [saving, setSaving] = useState(false)
     const [formData, setFormData] = useState({ nama: '', keterangan: '' })
+    const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         fetchData()
@@ -27,24 +250,19 @@ const OTAKategoriPage = () => {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const { data: result, error } = await supabase
+            const { data, error } = await supabase
                 .from('ota_kategori')
                 .select('*')
                 .order('nama')
 
             if (error) throw error
-            setData(result || [])
+            setData(data || [])
         } catch (err) {
             showToast.error('Gagal memuat data: ' + err.message)
         } finally {
             setLoading(false)
         }
     }
-
-    const filteredData = data.filter(item =>
-        item.nama.toLowerCase().includes(search.toLowerCase()) ||
-        (item.keterangan && item.keterangan.toLowerCase().includes(search.toLowerCase()))
-    )
 
     const openAdd = () => {
         setEditItem(null)
@@ -58,16 +276,9 @@ const OTAKategoriPage = () => {
         setShowModal(true)
     }
 
-    const closeModal = () => {
-        setShowModal(false)
-        setEditItem(null)
-        setFormData({ nama: '', keterangan: '' })
-    }
-
-    const handleSubmit = async (e) => {
-        e.preventDefault()
+    const handleSubmit = async () => {
         if (!formData.nama.trim()) {
-            showToast.error('Nama kategori wajib diisi')
+            showToast.error('Nama kategori harus diisi')
             return
         }
 
@@ -76,28 +287,18 @@ const OTAKategoriPage = () => {
             if (editItem) {
                 const { error } = await supabase
                     .from('ota_kategori')
-                    .update({
-                        nama: formData.nama.trim(),
-                        keterangan: formData.keterangan.trim() || null,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update({ nama: formData.nama.trim(), keterangan: formData.keterangan.trim() })
                     .eq('id', editItem.id)
-
                 if (error) throw error
                 showToast.success('Kategori berhasil diperbarui')
             } else {
                 const { error } = await supabase
                     .from('ota_kategori')
-                    .insert([{
-                        nama: formData.nama.trim(),
-                        keterangan: formData.keterangan.trim() || null
-                    }])
-
+                    .insert([{ nama: formData.nama.trim(), keterangan: formData.keterangan.trim() }])
                 if (error) throw error
                 showToast.success('Kategori berhasil ditambahkan')
             }
-
-            closeModal()
+            setShowModal(false)
             fetchData()
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
@@ -107,14 +308,13 @@ const OTAKategoriPage = () => {
     }
 
     const handleDelete = async (item) => {
-        if (!confirm(`Hapus kategori "${item.nama}"?\n\nOTA dengan kategori ini akan menjadi tanpa kategori.`)) return
+        if (!window.confirm(`Hapus kategori "${item.nama}"?`)) return
 
         try {
             const { error } = await supabase
                 .from('ota_kategori')
                 .delete()
                 .eq('id', item.id)
-
             if (error) throw error
             showToast.success('Kategori berhasil dihapus')
             fetchData()
@@ -123,10 +323,15 @@ const OTAKategoriPage = () => {
         }
     }
 
+    const filteredData = data.filter(item =>
+        item.nama.toLowerCase().includes(search.toLowerCase()) ||
+        (item.keterangan || '').toLowerCase().includes(search.toLowerCase())
+    )
+
     if (loading) {
         return (
-            <div className="ota-container">
-                <div className="ota-loading">
+            <div style={styles.container}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
                     <Spinner label="Memuat data kategori..." />
                 </div>
             </div>
@@ -134,31 +339,32 @@ const OTAKategoriPage = () => {
     }
 
     return (
-        <div className="ota-container">
-            {/* === GRADIENT HEADER === */}
-            <div className="relative overflow-hidden rounded-2xl p-6 text-white shadow-lg mb-6" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)' }}>
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-white rounded-full" style={{ transform: 'translate(30%, -50%)' }}></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white rounded-full" style={{ transform: 'translate(-30%, 50%)' }}></div>
-                </div>
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                            <Tag size={28} />
+        <div style={styles.container}>
+            {/* Header */}
+            <div style={styles.header}>
+                <div style={{ position: 'absolute', top: 0, right: 0, width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', transform: 'translate(30%, -50%)' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '120px', height: '120px', background: 'rgba(255,255,255,0.08)', borderRadius: '50%', transform: 'translate(-30%, 50%)' }} />
+
+                <div style={styles.headerContent}>
+                    <div style={styles.headerInfo}>
+                        <div style={styles.headerIcon}>
+                            <Tag size={26} />
                         </div>
                         <div>
-                            <h1 className="text-2xl md:text-3xl font-bold m-0">Kategori OTA</h1>
-                            <p className="text-emerald-100 mt-1 m-0">Kelola master data kategori Orang Tua Asuh</p>
+                            <h1 style={styles.headerTitle}>Kategori OTA</h1>
+                            <p style={styles.headerSubtitle}>Kelola master data kategori Orang Tua Asuh</p>
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        <div className="px-4 py-2 rounded-xl text-sm font-medium" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={styles.badge}>
+                            <Tag size={16} />
                             {data.length} Kategori
                         </div>
                         <button
+                            style={styles.addBtn}
                             onClick={openAdd}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium shadow-lg transition hover:shadow-xl border-none cursor-pointer"
-                            style={{ background: 'white', color: '#059669' }}
+                            onMouseEnter={e => e.target.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={e => e.target.style.transform = 'translateY(0)'}
                         >
                             <Plus size={18} /> Tambah Kategori
                         </button>
@@ -166,174 +372,180 @@ const OTAKategoriPage = () => {
                 </div>
             </div>
 
-            {/* Card */}
-            <div className="ota-card">
-                <div className="ota-card-header">
-                    <h2>Daftar Kategori</h2>
-                    <div className="ota-search">
-                        <Search size={18} className="ota-search-icon" />
+            {/* Table Card */}
+            <div style={styles.card}>
+                {/* Header */}
+                <div style={styles.cardHeader}>
+                    <h2 style={styles.cardTitle}>
+                        <span style={{ width: '4px', height: '20px', background: 'linear-gradient(180deg, #10b981, #059669)', borderRadius: '2px' }}></span>
+                        Daftar Kategori
+                    </h2>
+                    <div style={styles.searchBox}>
+                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
                         <input
                             type="text"
                             placeholder="Cari kategori..."
+                            style={styles.searchInput}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
+                            onFocus={e => e.target.style.borderColor = '#10b981'}
+                            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
                         />
                     </div>
                 </div>
 
-                <div className="ota-table-container">
-                    {filteredData.length > 0 ? (
-                        <table className="ota-table">
+                {/* Table */}
+                {filteredData.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>No</th>
-                                    <th>Nama Kategori</th>
-                                    <th>Keterangan</th>
-                                    <th className="text-center">Aksi</th>
+                                    <th style={{ ...styles.th, width: '60px' }}>No</th>
+                                    <th style={styles.th}>Nama Kategori</th>
+                                    <th style={styles.th}>Keterangan</th>
+                                    <th style={{ ...styles.th, width: '120px', textAlign: 'center' }}>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filteredData.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td>{idx + 1}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <Tag size={16} style={{ color: '#10b981' }} />
-                                                <span style={{ fontWeight: 500 }}>{item.nama}</span>
+                                    <tr
+                                        key={item.id}
+                                        style={{ transition: 'background 0.2s' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <td style={{ ...styles.td, fontWeight: 500, color: '#9ca3af' }}>{idx + 1}</td>
+                                        <td style={styles.td}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={styles.categoryIcon}>
+                                                    <Tag size={16} />
+                                                </div>
+                                                <span style={{ fontWeight: 600, color: '#1f2937' }}>{item.nama}</span>
                                             </div>
                                         </td>
-                                        <td style={{ color: '#64748b' }}>{item.keterangan || '-'}</td>
-                                        <td>
-                                            <div className="ota-action-buttons desktop">
+                                        <td style={{ ...styles.td, color: '#6b7280' }}>
+                                            {item.keterangan || <span style={{ fontStyle: 'italic', color: '#9ca3af' }}>-</span>}
+                                        </td>
+                                        <td style={{ ...styles.td, textAlign: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                                 <button
-                                                    className="ota-action-btn edit"
+                                                    style={{ ...styles.actionBtn, background: '#fef3c7', color: '#d97706' }}
                                                     onClick={() => openEdit(item)}
                                                     title="Edit"
+                                                    onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
+                                                    onMouseLeave={e => e.target.style.transform = 'scale(1)'}
                                                 >
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button
-                                                    className="ota-action-btn delete"
+                                                    style={{ ...styles.actionBtn, background: '#fee2e2', color: '#dc2626' }}
                                                     onClick={() => handleDelete(item)}
                                                     title="Hapus"
+                                                    onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
+                                                    onMouseLeave={e => e.target.style.transform = 'scale(1)'}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
-                                            {/* Mobile Menu */}
-                                            <MobileActionMenu
-                                                onEdit={() => openEdit(item)}
-                                                onDelete={() => handleDelete(item)}
-                                            />
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                    ) : (
-                        <div className="ota-empty">
-                            <EmptyState
-                                icon={Tag}
-                                message={search ? 'Tidak ada kategori yang cocok' : 'Belum ada kategori OTA'}
-                            />
+                    </div>
+                ) : (
+                    <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>
+                            <Tag size={36} color="#9ca3af" />
                         </div>
-                    )}
-                </div>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: '0 0 8px' }}>
+                            {search ? 'Kategori tidak ditemukan' : 'Belum ada kategori'}
+                        </h3>
+                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                            {search ? 'Coba kata kunci lain' : 'Klik "Tambah Kategori" untuk membuat kategori baru'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Footer */}
+                {filteredData.length > 0 && (
+                    <div style={{ padding: '16px 24px', borderTop: '1px solid #f3f4f6', background: '#f9fafb', fontSize: '0.875rem', color: '#6b7280' }}>
+                        Menampilkan {filteredData.length} dari {data.length} kategori
+                    </div>
+                )}
             </div>
 
             {/* Modal */}
             {showModal && (
-                <div className="ota-modal-overlay" onClick={closeModal}>
-                    <div className="ota-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="ota-modal-header">
-                            <h2>{editItem ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
-                            <button className="ota-modal-close" onClick={closeModal}>
+                <div style={styles.modal} onClick={() => setShowModal(false)}>
+                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+                                {editItem ? 'Edit Kategori' : 'Tambah Kategori Baru'}
+                            </h2>
+                            <button
+                                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '8px', padding: '6px', cursor: 'pointer', color: 'white', display: 'flex' }}
+                                onClick={() => setShowModal(false)}
+                            >
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit}>
-                            <div className="ota-modal-body">
-                                <div className="ota-form-group">
-                                    <label className="ota-form-label">
-                                        Nama Kategori <span className="required">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="ota-form-input"
-                                        placeholder="Contoh: Perorangan"
-                                        value={formData.nama}
-                                        onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-                                        required
-                                        autoFocus
-                                    />
-                                </div>
-                                <div className="ota-form-group">
-                                    <label className="ota-form-label">Keterangan</label>
-                                    <textarea
-                                        className="ota-form-textarea"
-                                        placeholder="Deskripsi kategori (opsional)"
-                                        value={formData.keterangan}
-                                        onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-                                        rows={3}
-                                    />
-                                </div>
+
+                        <div style={styles.modalBody}>
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>
+                                    Nama Kategori <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    style={styles.input}
+                                    placeholder="Masukkan nama kategori"
+                                    value={formData.nama}
+                                    onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                                    onFocus={e => e.target.style.borderColor = '#10b981'}
+                                    onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                                />
                             </div>
-                            <div className="ota-modal-footer">
-                                <button type="button" className="ota-btn ota-btn-secondary" onClick={closeModal}>
-                                    Batal
-                                </button>
-                                <button type="submit" className="ota-btn ota-btn-primary" disabled={saving}>
-                                    {saving ? <RefreshCw size={16} className="animate-spin" /> : null}
-                                    {editItem ? 'Simpan Perubahan' : 'Tambah'}
-                                </button>
+
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Keterangan</label>
+                                <textarea
+                                    style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
+                                    placeholder="Keterangan tambahan (opsional)"
+                                    value={formData.keterangan}
+                                    onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+                                    onFocus={e => e.target.style.borderColor = '#10b981'}
+                                    onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                                />
                             </div>
-                        </form>
+                        </div>
+
+                        <div style={styles.modalFooter}>
+                            <button
+                                style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontWeight: 500 }}
+                                onClick={() => setShowModal(false)}
+                            >
+                                Batal
+                            </button>
+                            <button
+                                style={{
+                                    padding: '10px 24px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    opacity: saving ? 0.7 : 1
+                                }}
+                                onClick={handleSubmit}
+                                disabled={saving}
+                            >
+                                {saving ? 'Menyimpan...' : (editItem ? 'Simpan Perubahan' : 'Tambah Kategori')}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            )}
-        </div>
-    )
-}
-
-// Mobile Action Menu Component
-const MobileActionMenu = ({ onEdit, onDelete }) => {
-    const [open, setOpen] = useState(false)
-
-    return (
-        <div className="ota-mobile-menu">
-            <button
-                className="ota-mobile-menu-trigger"
-                onClick={() => setOpen(!open)}
-            >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                </svg>
-            </button>
-            {open && (
-                <>
-                    <div
-                        style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-                        onClick={() => setOpen(false)}
-                    />
-                    <div className="ota-mobile-menu-dropdown">
-                        <button
-                            className="ota-mobile-menu-item"
-                            onClick={() => { onEdit(); setOpen(false) }}
-                        >
-                            <Edit2 size={16} />
-                            Edit
-                        </button>
-                        <button
-                            className="ota-mobile-menu-item danger"
-                            onClick={() => { onDelete(); setOpen(false) }}
-                        >
-                            <Trash2 size={16} />
-                            Hapus
-                        </button>
-                    </div>
-                </>
             )}
         </div>
     )

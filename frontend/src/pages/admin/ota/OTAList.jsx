@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, User, Phone, Mail, Tag, HeartHandshake, Users } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, User, Phone, Mail, Tag, HeartHandshake, Users } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useToast } from '../../../context/ToastContext'
 import Spinner from '../../../components/ui/Spinner'
@@ -336,16 +336,16 @@ const OTAList = () => {
     }
 
     const handleDelete = async (id, nama) => {
-        if (!window.confirm(`Yakin ingin menonaktifkan OTA ${nama}?`)) return
+        if (!window.confirm(`Yakin ingin menghapus OTA "${nama}"? Data akan dihapus permanen.`)) return
 
         try {
             const { error } = await supabase
                 .from('orang_tua_asuh')
-                .update({ status: false })
+                .delete()
                 .eq('id', id)
 
             if (error) throw error
-            showToast.success('OTA berhasil dinonaktifkan')
+            showToast.success('OTA berhasil dihapus')
             fetchOtas()
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
@@ -567,13 +567,13 @@ const OTAList = () => {
                                         <td style={{ ...styles.td, textAlign: 'right' }}>
                                             <div style={styles.actionsCell}>
                                                 <button
-                                                    title="Hubungkan Santri"
+                                                    title="Lihat Detail"
                                                     style={{ ...styles.actionBtn, background: 'linear-gradient(135deg, #e0f2fe, #bae6fd)', color: '#0284c7' }}
-                                                    onClick={() => navigate(`/admin/ota/${ota.id}/link`)}
+                                                    onClick={() => navigate(`/admin/ota/${ota.id}`)}
                                                     onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
                                                     onMouseLeave={e => e.target.style.transform = 'scale(1)'}
                                                 >
-                                                    <LinkIcon size={16} />
+                                                    <Eye size={16} />
                                                 </button>
                                                 <button
                                                     title="Edit Profil"

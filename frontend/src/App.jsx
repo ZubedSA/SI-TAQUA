@@ -13,20 +13,16 @@ import SantriForm from './pages/santri/SantriForm'
 import GuruList from './pages/guru/GuruList'
 import GuruForm from './pages/guru/GuruForm'
 import KelasPage from './pages/kelas/KelasPage'
-import HalaqohPage from './pages/halaqoh/HalaqohPage'
 import MapelPage from './pages/mapel/MapelPage'
-import InputNilaiPage from './pages/nilai/InputNilaiPage'
-import RekapNilaiPage from './pages/nilai/RekapNilaiPage'
+
 // Hafalan - dari akademik folder baru
 import HafalanList from './pages/akademik/hafalan/input-hafalan/HafalanList'
 import HafalanForm from './pages/akademik/hafalan/input-hafalan/HafalanForm'
 import PencapaianMingguanPage from './pages/akademik/hafalan/rekap-hafalan/PencapaianMingguanPage'
 import PencapaianBulananPage from './pages/akademik/hafalan/rekap-hafalan/PencapaianBulananPage'
 import PencapaianSemesterPage from './pages/akademik/hafalan/rekap-hafalan/PencapaianSemesterPage'
-import PresensiPage from './pages/presensi/PresensiPage'
 import SemesterPage from './pages/semester/SemesterPage'
-import LaporanPage from './pages/laporan/LaporanPage'
-import AuditLogPage from './pages/auditlog/AuditLogPage'
+
 import PengaturanPage from './pages/pengaturan/PengaturanPage'
 import ProfilSettingsPage from './pages/profil/ProfilSettingsPage'
 import WaliSantriPage from './pages/walisantri/WaliSantriPage'
@@ -47,7 +43,6 @@ import BackupPage from './pages/backup/BackupPage'
 import SystemStatusPage from './pages/system/SystemStatusPage'
 // Admin Pages
 import UsersPage from './pages/users/UsersPage'
-import RolesPage from './pages/roles/RolesPage'
 // Keuangan Pages
 import KasPemasukanPage from './pages/keuangan/KasPemasukanPage'
 import KasPengeluaranPage from './pages/keuangan/KasPengeluaranPage'
@@ -60,6 +55,11 @@ import AnggaranPage from './pages/keuangan/AnggaranPage'
 import PersetujuanDanaPage from './pages/keuangan/PersetujuanDanaPage'
 import RealisasiDanaPage from './pages/keuangan/RealisasiDanaPage'
 import LaporanPenyaluranPage from './pages/keuangan/LaporanPenyaluranPage'
+// Akademik - Menu Pages
+import InputNilaiMenu from './pages/akademik/menus/InputNilaiMenu'
+import RekapNilaiMenu from './pages/akademik/menus/RekapNilaiMenu'
+import LaporanMenu from './pages/akademik/menus/LaporanMenu'
+
 // Akademik - Input Nilai Pages (dari akademik folder baru)
 import TahfizhSyahriPage from './pages/akademik/input-nilai/ujian-syahri/TahfizhSyahriPage'
 import TahfizhSemesterPage from './pages/akademik/input-nilai/ujian-semester/tahfizhiyah/TahfizhSemesterPage'
@@ -80,14 +80,15 @@ import LaporanAkademikSantriPage from './pages/akademik/laporan/laporan-akademik
 // OTA Admin Pages
 import OTAList from './pages/admin/ota/OTAList'
 import OTAForm from './pages/admin/ota/OTAForm'
-import OTALinking from './pages/admin/ota/OTALinking'
 import OTADetail from './pages/admin/ota/OTADetail'
 // OTA Module Pages
 import OTAKategoriPage from './pages/ota/OTAKategoriPage'
 import OTASantriPage from './pages/ota/OTASantriPage'
 import OTAPemasukanPage from './pages/ota/OTAPemasukanPage'
 import OTAPengeluaranPage from './pages/ota/OTAPengeluaranPage'
+import OTAPenyaluranPage from './pages/ota/OTAPenyaluranPage'
 import OTALaporanPage from './pages/ota/OTALaporanPage'
+import OTALaporanPenyaluranPage from './pages/ota/OTALaporanPenyaluranPage'
 // Pengurus Pages
 import PelanggaranPage from './pages/pengurus/pelanggaran/PelanggaranPage'
 import PelanggaranForm from './pages/pengurus/pelanggaran/PelanggaranForm'
@@ -197,11 +198,7 @@ function App() {
                       <UsersPage />
                     </ProtectedRoute>
                   } />
-                  <Route path="/roles" element={
-                    <ProtectedRoute roles={['admin']}>
-                      <RolesPage />
-                    </ProtectedRoute>
-                  } />
+
 
                   <Route path="/santri" element={
                     <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
@@ -264,11 +261,7 @@ function App() {
                   } />
 
                   {/* Admin Settings */}
-                  <Route path="/audit-log" element={
-                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
-                      <AuditLogPage />
-                    </ProtectedRoute>
-                  } />
+
                   <Route path="/pengaturan" element={
                     <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
                       <PengaturanPage />
@@ -287,30 +280,25 @@ function App() {
 
 
 
-                  {/* OTA Management - Admin Only */}
+                  {/* OTA Management - Admin + OTA */}
                   <Route path="/admin/ota" element={
-                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
                       <OTAList />
                     </ProtectedRoute>
                   } />
                   <Route path="/admin/ota/create" element={
-                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
                       <OTAForm />
                     </ProtectedRoute>
                   } />
                   <Route path="/admin/ota/:id" element={
-                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
                       <OTADetail />
                     </ProtectedRoute>
                   } />
                   <Route path="/admin/ota/:id/edit" element={
-                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
                       <OTAForm />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/admin/ota/:id/link" element={
-                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
-                      <OTALinking />
                     </ProtectedRoute>
                   } />
 
@@ -323,7 +311,7 @@ function App() {
                     </ProtectedRoute>
                   } />
 
-                  {/* OTA Santri - Admin + OTA */}
+                  {/* OTA Santri Penerima - Admin + OTA */}
                   <Route path="/ota/santri" element={
                     <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
                       <OTASantriPage />
@@ -344,21 +332,30 @@ function App() {
                     </ProtectedRoute>
                   } />
 
-                  {/* OTA Laporan - Admin + OTA */}
+                  {/* OTA Penyaluran Dana - Admin + OTA */}
+                  <Route path="/ota/penyaluran" element={
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
+                      <OTAPenyaluranPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* OTA Laporan Keuangan - Admin + OTA */}
                   <Route path="/ota/laporan" element={
                     <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
                       <OTALaporanPage />
                     </ProtectedRoute>
                   } />
 
-                  {/* ============ ADMIN + GURU ROUTES ============ */}
-
-                  {/* Halaqoh */}
-                  <Route path="/halaqoh" element={
-                    <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
-                      <HalaqohPage />
+                  {/* OTA Laporan Penyaluran - Admin + OTA (NEW) */}
+                  <Route path="/ota/laporan-penyaluran" element={
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
+                      <OTALaporanPenyaluranPage />
                     </ProtectedRoute>
                   } />
+
+                  {/* ============ ADMIN + GURU ROUTES ============ */}
+
+
 
                   {/* Hafalan */}
                   <Route path="/hafalan" element={
@@ -395,30 +392,26 @@ function App() {
                   } />
 
                   {/* Presensi */}
-                  <Route path="/presensi" element={
-                    <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
-                      <PresensiPage />
-                    </ProtectedRoute>
-                  } />
+
 
                   {/* Nilai */}
-                  <Route path="/input-nilai" element={
+                  {/* Menu Navigasi Akademik */}
+                  <Route path="/akademik/menu/input-nilai" element={
                     <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
-                      <InputNilaiPage />
+                      <InputNilaiMenu />
                     </ProtectedRoute>
                   } />
-                  <Route path="/rekap-nilai" element={
+                  <Route path="/akademik/menu/rekap-nilai" element={
                     <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
-                      <RekapNilaiPage />
+                      <RekapNilaiMenu />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/akademik/menu/laporan" element={
+                    <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <LaporanMenu />
                     </ProtectedRoute>
                   } />
 
-                  {/* Laporan */}
-                  <Route path="/laporan" element={
-                    <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
-                      <LaporanPage />
-                    </ProtectedRoute>
-                  } />
 
                   {/* ============ AKADEMIK - INPUT NILAI ROUTES ============ */}
 

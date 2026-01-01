@@ -1,433 +1,672 @@
 import { useState, useEffect } from 'react'
-import { Search, Users, Link as LinkIcon, Unlink, Filter, GraduationCap } from 'lucide-react'
+import { Search, Users, Plus, Trash2, Filter, CheckCircle, XCircle, ToggleLeft, ToggleRight, GraduationCap } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
-import EmptyState from '../../components/ui/EmptyState'
-import './OTA.css'
 
-/**
- * OTA Santri Page - Data Santri Penerima
- * View active santri and their OTA connections
- */
+const styles = {
+    container: {
+        padding: '24px',
+        minHeight: '100vh',
+        background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
+    },
+    header: {
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: '16px',
+        padding: '24px',
+        color: 'white',
+        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+        boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+        marginBottom: '24px'
+    },
+    headerContent: {
+        position: 'relative',
+        zIndex: 10,
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '16px'
+    },
+    headerInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px'
+    },
+    headerIcon: {
+        width: '56px',
+        height: '56px',
+        borderRadius: '14px',
+        background: 'rgba(255,255,255,0.2)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    headerTitle: {
+        fontSize: '1.5rem',
+        fontWeight: 700,
+        margin: 0
+    },
+    headerSubtitle: {
+        fontSize: '0.9rem',
+        color: 'rgba(255,255,255,0.85)',
+        margin: '4px 0 0 0'
+    },
+    badge: {
+        padding: '8px 16px',
+        borderRadius: '10px',
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        background: 'rgba(255,255,255,0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+    },
+    addBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '12px 20px',
+        borderRadius: '12px',
+        fontWeight: 600,
+        background: 'white',
+        color: '#059669',
+        border: 'none',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+    },
+    statsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '16px',
+        marginBottom: '24px'
+    },
+    statCard: {
+        background: 'white',
+        borderRadius: '16px',
+        padding: '20px',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px'
+    },
+    statIcon: {
+        width: '48px',
+        height: '48px',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white'
+    },
+    statLabel: {
+        fontSize: '0.75rem',
+        color: '#6b7280',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        marginBottom: '4px'
+    },
+    statValue: {
+        fontSize: '1.5rem',
+        fontWeight: 700,
+        color: '#1f2937'
+    },
+    card: {
+        background: 'white',
+        borderRadius: '16px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.06)'
+    },
+    filterBar: {
+        padding: '20px 24px',
+        borderBottom: '1px solid #f3f4f6',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '16px',
+        alignItems: 'center'
+    },
+    searchBox: {
+        position: 'relative',
+        flex: 1,
+        minWidth: '200px',
+        maxWidth: '320px'
+    },
+    searchInput: {
+        width: '100%',
+        padding: '10px 14px 10px 40px',
+        border: '1px solid #e5e7eb',
+        borderRadius: '10px',
+        fontSize: '0.875rem',
+        outline: 'none'
+    },
+    select: {
+        padding: '10px 14px',
+        border: '1px solid #e5e7eb',
+        borderRadius: '10px',
+        fontSize: '0.875rem',
+        background: 'white',
+        cursor: 'pointer'
+    },
+    table: {
+        width: '100%',
+        borderCollapse: 'collapse'
+    },
+    th: {
+        padding: '14px 20px',
+        textAlign: 'left',
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        color: '#6b7280',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        background: '#f9fafb',
+        borderBottom: '1px solid #e5e7eb'
+    },
+    td: {
+        padding: '16px 20px',
+        borderBottom: '1px solid #f3f4f6',
+        fontSize: '0.875rem'
+    },
+    avatar: {
+        width: '40px',
+        height: '40px',
+        borderRadius: '10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 600,
+        fontSize: '0.8rem'
+    },
+    statusBadge: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 12px',
+        borderRadius: '20px',
+        fontSize: '0.75rem',
+        fontWeight: 500
+    },
+    toggleBtn: {
+        padding: '8px 16px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: '0.8rem',
+        fontWeight: 500,
+        transition: 'all 0.2s'
+    },
+    modal: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+    },
+    modalContent: {
+        background: 'white',
+        borderRadius: '16px',
+        width: '90%',
+        maxWidth: '500px',
+        maxHeight: '90vh',
+        overflow: 'auto'
+    },
+    modalHeader: {
+        padding: '20px 24px',
+        borderBottom: '1px solid #f3f4f6',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+    modalBody: {
+        padding: '24px'
+    },
+    modalFooter: {
+        padding: '16px 24px',
+        borderTop: '1px solid #f3f4f6',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '12px'
+    },
+    emptyState: {
+        padding: '80px 24px',
+        textAlign: 'center'
+    }
+}
+
 const OTASantriPage = () => {
     const showToast = useToast()
     const [loading, setLoading] = useState(true)
-    const [santriList, setSantriList] = useState([])
-    const [otaList, setOtaList] = useState([])
-    const [kelasList, setKelasList] = useState([])
-    const [connections, setConnections] = useState([])
+    const [data, setData] = useState([])
+    const [allSantri, setAllSantri] = useState([])
+    const [searchTerm, setSearchTerm] = useState('')
+    const [filterStatus, setFilterStatus] = useState('all')
 
-    const [search, setSearch] = useState('')
-    const [filterKelas, setFilterKelas] = useState('all')
-    const [filterStatus, setFilterStatus] = useState('connected') // 'all', 'connected', 'unconnected'
-
-    const [showLinkModal, setShowLinkModal] = useState(false)
-    const [selectedSantri, setSelectedSantri] = useState(null)
-    const [selectedOta, setSelectedOta] = useState('')
+    // Modal state
+    const [showModal, setShowModal] = useState(false)
+    const [selectedSantri, setSelectedSantri] = useState('')
+    const [tanggalMulai, setTanggalMulai] = useState(new Date().toISOString().split('T')[0])
     const [saving, setSaving] = useState(false)
 
     useEffect(() => {
-        fetchAllData()
+        fetchData()
+        fetchAllSantri()
     }, [])
 
-    const fetchAllData = async () => {
+    const fetchData = async () => {
         setLoading(true)
         try {
-            // Fetch santri aktif
-            const { data: santri, error: santriErr } = await supabase
-                .from('santri')
-                .select('id, nis, nama, jenis_kelamin, kelas_id, status, kelas:kelas_id(id, nama)')
-                .in('status', ['Aktif'])
-                .order('nama')
+            const { data, error } = await supabase
+                .from('santri_penerima_ota')
+                .select(`
+                    *,
+                    santri:santri_id(id, nama, nis, kelas:kelas_id(nama))
+                `)
+                .order('created_at', { ascending: false })
 
-            if (santriErr) throw santriErr
-
-            // Fetch OTA aktif
-            const { data: ota, error: otaErr } = await supabase
-                .from('orang_tua_asuh')
-                .select('id, nama, no_hp')
-                .eq('status', true)
-                .order('nama')
-
-            if (otaErr) throw otaErr
-
-            // Fetch existing connections
-            const { data: links, error: linksErr } = await supabase
-                .from('ota_santri')
-                .select('id, ota_id, santri_id, ota:ota_id(nama), santri:santri_id(nama)')
-
-            if (linksErr) throw linksErr
-
-            // Fetch kelas for filter
-            const { data: kelas, error: kelasErr } = await supabase
-                .from('kelas')
-                .select('id, nama')
-                .order('nama')
-
-            if (kelasErr) throw kelasErr
-
-            setSantriList(santri || [])
-            setOtaList(ota || [])
-            setConnections(links || [])
-            setKelasList(kelas || [])
+            if (error) throw error
+            setData(data || [])
         } catch (err) {
-            showToast.error('Gagal memuat data: ' + err.message)
+            console.log('Info: santri_penerima_ota table may not exist yet')
+            setData([])
         } finally {
             setLoading(false)
         }
     }
 
-    // Build santri data with connection info
-    const enrichedSantri = santriList.map(s => {
-        const conn = connections.find(c => c.santri_id === s.id)
-        return {
-            ...s,
-            connection: conn || null,
-            otaNama: conn?.ota?.nama || null
+    const fetchAllSantri = async () => {
+        try {
+            // Fetch all santri (try without status filter first for debugging)
+            const { data, error } = await supabase
+                .from('santri')
+                .select('id, nama, nis, status')
+                .order('nama')
+
+            if (error) {
+                console.error('Error fetching santri:', error)
+                return
+            }
+
+            console.log('All santri fetched:', data?.length, 'records')
+
+            // Filter active santri (status could be 'aktif' or true or 'Aktif')
+            const activeSantri = (data || []).filter(s =>
+                s.status === 'aktif' || s.status === 'Aktif' || s.status === true
+            )
+
+            console.log('Active santri:', activeSantri.length, 'records')
+            setAllSantri(activeSantri)
+        } catch (err) {
+            console.error('fetchAllSantri error:', err)
+            setAllSantri([])
         }
-    })
-
-    // Filter santri
-    const filteredSantri = enrichedSantri.filter(s => {
-        const matchSearch = s.nama.toLowerCase().includes(search.toLowerCase()) ||
-            s.nis.toLowerCase().includes(search.toLowerCase())
-        const matchKelas = filterKelas === 'all' || s.kelas_id === filterKelas
-        const matchStatus = filterStatus === 'all' ||
-            (filterStatus === 'connected' && s.connection) ||
-            (filterStatus === 'unconnected' && !s.connection)
-        return matchSearch && matchKelas && matchStatus
-    })
-
-    // Stats
-    const totalSantri = santriList.length
-    const connectedCount = enrichedSantri.filter(s => s.connection).length
-    const unconnectedCount = totalSantri - connectedCount
-
-    const openLinkModal = (santri) => {
-        setSelectedSantri(santri)
-        setSelectedOta(santri.connection?.ota_id || '')
-        setShowLinkModal(true)
     }
 
-    const handleLink = async () => {
-        if (!selectedSantri) return
+    // Get santri yang belum menjadi penerima
+    const availableSantri = allSantri.filter(s =>
+        !data.some(d => d.santri_id === s.id)
+    )
+
+    const handleAddPenerima = async () => {
+        if (!selectedSantri) {
+            showToast.error('Pilih santri terlebih dahulu')
+            return
+        }
 
         setSaving(true)
         try {
-            // If already connected, remove old connection first
-            if (selectedSantri.connection) {
-                await supabase
-                    .from('ota_santri')
-                    .delete()
-                    .eq('id', selectedSantri.connection.id)
-            }
+            const { error } = await supabase
+                .from('santri_penerima_ota')
+                .insert([{
+                    santri_id: selectedSantri,
+                    status: 'aktif',
+                    tanggal_mulai: tanggalMulai
+                }])
 
-            // If new OTA selected, create connection
-            if (selectedOta) {
-                const { error } = await supabase
-                    .from('ota_santri')
-                    .insert([{
-                        ota_id: selectedOta,
-                        santri_id: selectedSantri.id
-                    }])
-
-                if (error) throw error
-                showToast.success('Santri berhasil dihubungkan dengan OTA')
-            } else {
-                showToast.success('Koneksi OTA berhasil dilepas')
-            }
-
-            setShowLinkModal(false)
-            fetchAllData()
+            if (error) throw error
+            showToast.success('Santri berhasil ditambahkan sebagai penerima OTA')
+            setShowModal(false)
+            setSelectedSantri('')
+            fetchData()
         } catch (err) {
-            showToast.error('Gagal menyimpan: ' + err.message)
+            showToast.error('Gagal menambahkan: ' + err.message)
         } finally {
             setSaving(false)
         }
     }
 
-    const handleUnlink = async (santri) => {
-        if (!santri.connection) return
-        if (!confirm(`Lepas hubungan santri "${santri.nama}" dengan OTA "${santri.otaNama}"?`)) return
+    const handleToggleStatus = async (item) => {
+        const newStatus = item.status === 'aktif' ? 'nonaktif' : 'aktif'
+        const updateData = { status: newStatus }
+
+        if (newStatus === 'nonaktif') {
+            updateData.tanggal_selesai = new Date().toISOString().split('T')[0]
+        } else {
+            updateData.tanggal_selesai = null
+        }
 
         try {
             const { error } = await supabase
-                .from('ota_santri')
-                .delete()
-                .eq('id', santri.connection.id)
+                .from('santri_penerima_ota')
+                .update(updateData)
+                .eq('id', item.id)
 
             if (error) throw error
-            showToast.success('Koneksi berhasil dilepas')
-            fetchAllData()
+            showToast.success(`Status diubah menjadi ${newStatus}`)
+            fetchData()
         } catch (err) {
-            showToast.error('Gagal melepas koneksi: ' + err.message)
+            showToast.error('Gagal mengubah status: ' + err.message)
         }
     }
 
-    if (loading) {
-        return (
-            <div className="ota-container">
-                <div className="ota-loading">
-                    <Spinner label="Memuat data santri..." />
-                </div>
-            </div>
-        )
+    const handleDelete = async (id) => {
+        if (!window.confirm('Yakin ingin menghapus santri dari daftar penerima?')) return
+
+        try {
+            const { error } = await supabase
+                .from('santri_penerima_ota')
+                .delete()
+                .eq('id', id)
+            if (error) throw error
+            showToast.success('Data berhasil dihapus')
+            fetchData()
+        } catch (err) {
+            showToast.error('Gagal menghapus: ' + err.message)
+        }
     }
 
+    // Filter data
+    const filteredData = data.filter(item => {
+        const matchSearch = (item.santri?.nama || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.santri?.nis || '').toLowerCase().includes(searchTerm.toLowerCase())
+        const matchStatus = filterStatus === 'all' || item.status === filterStatus
+        return matchSearch && matchStatus
+    })
+
+    const activeCount = data.filter(d => d.status === 'aktif').length
+    const inactiveCount = data.filter(d => d.status === 'nonaktif').length
+
     return (
-        <div className="ota-container">
+        <div style={styles.container}>
             {/* Header */}
-            <div className="ota-header">
-                <div>
-                    <h1>Data Santri Penerima</h1>
-                    <p>Kelola hubungan santri dengan Orang Tua Asuh</p>
-                </div>
-            </div>
+            <div style={styles.header}>
+                <div style={{ position: 'absolute', top: 0, right: 0, width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', transform: 'translate(30%, -50%)' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '120px', height: '120px', background: 'rgba(255,255,255,0.08)', borderRadius: '50%', transform: 'translate(-30%, 50%)' }} />
 
-            {/* Summary Cards */}
-            <div className="ota-summary-grid">
-                <div className="ota-summary-card">
-                    <div className="ota-summary-icon blue">
-                        <Users size={24} />
+                <div style={styles.headerContent}>
+                    <div style={styles.headerInfo}>
+                        <div style={styles.headerIcon}>
+                            <Users size={26} />
+                        </div>
+                        <div>
+                            <h1 style={styles.headerTitle}>Data Santri Penerima OTA</h1>
+                            <p style={styles.headerSubtitle}>Daftar santri yang menerima dana dari Pool OTA</p>
+                        </div>
                     </div>
-                    <div className="ota-summary-content">
-                        <h3>Total Santri Aktif</h3>
-                        <p>{totalSantri}</p>
-                    </div>
-                </div>
-                <div className="ota-summary-card">
-                    <div className="ota-summary-icon green">
-                        <LinkIcon size={24} />
-                    </div>
-                    <div className="ota-summary-content">
-                        <h3>Terhubung OTA</h3>
-                        <p>{connectedCount}</p>
-                    </div>
-                </div>
-                <div className="ota-summary-card">
-                    <div className="ota-summary-icon orange">
-                        <Unlink size={24} />
-                    </div>
-                    <div className="ota-summary-content">
-                        <h3>Belum Terhubung</h3>
-                        <p>{unconnectedCount}</p>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={styles.badge}>
+                            <CheckCircle size={16} />
+                            {activeCount} Aktif
+                        </div>
+                        <button style={styles.addBtn} onClick={() => setShowModal(true)}>
+                            <Plus size={18} /> Tambah Penerima
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Card */}
-            <div className="ota-card">
-                <div className="ota-card-header">
-                    <h2>Daftar Santri</h2>
-                </div>
-
-                <div className="ota-card-body">
-                    {/* Filters */}
-                    <div className="ota-filters">
-                        <div className="ota-search">
-                            <Search size={18} className="ota-search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Cari nama atau NIS..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="ota-filter-group">
-                            <Filter size={16} />
-                            <select
-                                value={filterKelas}
-                                onChange={(e) => setFilterKelas(e.target.value)}
-                            >
-                                <option value="all">Semua Kelas</option>
-                                {kelasList.map(k => (
-                                    <option key={k.id} value={k.id}>{k.nama}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="ota-filter-group">
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                            >
-                                <option value="all">Semua Status</option>
-                                <option value="connected">Terhubung OTA</option>
-                                <option value="unconnected">Belum Terhubung</option>
-                            </select>
-                        </div>
+            {/* Stats Grid */}
+            <div style={styles.statsGrid}>
+                <div style={styles.statCard}>
+                    <div style={{ ...styles.statIcon, background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                        <Users size={22} />
+                    </div>
+                    <div>
+                        <div style={styles.statLabel}>Total Penerima</div>
+                        <div style={styles.statValue}>{data.length}</div>
                     </div>
                 </div>
+                <div style={styles.statCard}>
+                    <div style={{ ...styles.statIcon, background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}>
+                        <CheckCircle size={22} />
+                    </div>
+                    <div>
+                        <div style={styles.statLabel}>Penerima Aktif</div>
+                        <div style={styles.statValue}>{activeCount}</div>
+                    </div>
+                </div>
+                <div style={styles.statCard}>
+                    <div style={{ ...styles.statIcon, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                        <XCircle size={22} />
+                    </div>
+                    <div>
+                        <div style={styles.statLabel}>Non-Aktif</div>
+                        <div style={styles.statValue}>{inactiveCount}</div>
+                    </div>
+                </div>
+            </div>
 
-                <div className="ota-table-container">
-                    {filteredSantri.length > 0 ? (
-                        <table className="ota-table">
+            {/* Table Card */}
+            <div style={styles.card}>
+                {/* Filter Bar */}
+                <div style={styles.filterBar}>
+                    <div style={styles.searchBox}>
+                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+                        <input
+                            type="text"
+                            placeholder="Cari nama atau NIS..."
+                            style={styles.searchInput}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Filter size={16} color="#6b7280" />
+                        <select style={styles.select} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                            <option value="all">Semua Status</option>
+                            <option value="aktif">Aktif</option>
+                            <option value="nonaktif">Non-Aktif</option>
+                        </select>
+                    </div>
+
+                    <span style={{ marginLeft: 'auto', fontSize: '0.875rem', color: '#6b7280' }}>
+                        {filteredData.length} data
+                    </span>
+                </div>
+
+                {/* Table */}
+                {loading ? (
+                    <div style={{ padding: '60px', textAlign: 'center' }}>
+                        <Spinner label="Memuat data..." />
+                    </div>
+                ) : filteredData.length > 0 ? (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th>Kelas</th>
-                                    <th>OTA Terhubung</th>
-                                    <th className="text-center">Aksi</th>
+                                    <th style={styles.th}>Santri</th>
+                                    <th style={styles.th}>Status</th>
+                                    <th style={styles.th}>Tanggal Mulai</th>
+                                    <th style={styles.th}>Tanggal Selesai</th>
+                                    <th style={{ ...styles.th, textAlign: 'center' }}>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredSantri.map((santri, idx) => (
-                                    <tr key={santri.id}>
-                                        <td>{idx + 1}</td>
-                                        <td style={{ fontFamily: 'monospace', fontSize: '0.813rem' }}>{santri.nis}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <GraduationCap size={16} style={{ color: '#3b82f6' }} />
-                                                <span style={{ fontWeight: 500 }}>{santri.nama}</span>
+                                {filteredData.map((item) => (
+                                    <tr key={item.id}>
+                                        <td style={styles.td}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ ...styles.avatar, background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                                                    {item.santri?.nama?.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, color: '#1f2937' }}>{item.santri?.nama}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                        NIS: {item.santri?.nis} • {item.santri?.kelas?.nama || '-'}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td>{santri.kelas?.nama || '-'}</td>
-                                        <td>
-                                            {santri.connection ? (
-                                                <span className="ota-badge ota-badge-success">
-                                                    {santri.otaNama}
-                                                </span>
-                                            ) : (
-                                                <span className="ota-badge ota-badge-warning">
-                                                    Belum terhubung
-                                                </span>
-                                            )}
+                                        <td style={styles.td}>
+                                            <span style={{
+                                                ...styles.statusBadge,
+                                                background: item.status === 'aktif' ? '#d1fae5' : '#fee2e2',
+                                                color: item.status === 'aktif' ? '#047857' : '#dc2626'
+                                            }}>
+                                                {item.status === 'aktif' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                                                {item.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
+                                            </span>
                                         </td>
-                                        <td>
-                                            <div className="ota-action-buttons desktop">
+                                        <td style={styles.td}>
+                                            {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString('id-ID') : '-'}
+                                        </td>
+                                        <td style={styles.td}>
+                                            {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString('id-ID') : '-'}
+                                        </td>
+                                        <td style={{ ...styles.td, textAlign: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                                                 <button
-                                                    className="ota-action-btn link"
-                                                    onClick={() => openLinkModal(santri)}
-                                                    title={santri.connection ? 'Ubah OTA' : 'Hubungkan OTA'}
+                                                    style={{
+                                                        ...styles.toggleBtn,
+                                                        background: item.status === 'aktif' ? '#fef3c7' : '#d1fae5',
+                                                        color: item.status === 'aktif' ? '#b45309' : '#047857'
+                                                    }}
+                                                    onClick={() => handleToggleStatus(item)}
+                                                    title={item.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
                                                 >
-                                                    <LinkIcon size={16} />
+                                                    {item.status === 'aktif' ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                                                    {item.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
                                                 </button>
-                                                {santri.connection && (
-                                                    <button
-                                                        className="ota-action-btn delete"
-                                                        onClick={() => handleUnlink(santri)}
-                                                        title="Lepas Koneksi"
-                                                    >
-                                                        <Unlink size={16} />
-                                                    </button>
-                                                )}
+                                                <button
+                                                    style={{ padding: '8px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: '#fee2e2', color: '#dc2626' }}
+                                                    onClick={() => handleDelete(item.id)}
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
-                                            {/* Mobile Menu */}
-                                            <MobileActionMenu
-                                                santri={santri}
-                                                onLink={() => openLinkModal(santri)}
-                                                onUnlink={() => handleUnlink(santri)}
-                                            />
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                    ) : (
-                        <div className="ota-empty">
-                            <EmptyState
-                                icon={Users}
-                                message={search || filterKelas !== 'all' ? 'Tidak ada santri yang cocok' : 'Belum ada data santri'}
-                            />
+                    </div>
+                ) : (
+                    <div style={styles.emptyState}>
+                        <div style={{ width: '80px', height: '80px', borderRadius: '20px', background: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <Users size={36} color="#9ca3af" />
                         </div>
-                    )}
-                </div>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: '0 0 8px' }}>
+                            Belum ada santri penerima OTA
+                        </h3>
+                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+                            Klik "Tambah Penerima" untuk menandai santri sebagai penerima dana OTA.
+                        </p>
+                        <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: '8px' }}>
+                            Pastikan SQL migration sudah dijalankan di Supabase.
+                        </p>
+                    </div>
+                )}
             </div>
 
-            {/* Link Modal */}
-            {showLinkModal && selectedSantri && (
-                <div className="ota-modal-overlay" onClick={() => setShowLinkModal(false)}>
-                    <div className="ota-modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="ota-modal-header">
-                            <h2>Hubungkan Santri ke OTA</h2>
-                            <button className="ota-modal-close" onClick={() => setShowLinkModal(false)}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
+            {/* Modal Tambah Penerima */}
+            {showModal && (
+                <div style={styles.modal} onClick={() => setShowModal(false)}>
+                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+                                Tambah Santri Penerima OTA
+                            </h2>
+                            <button
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: '#6b7280' }}
+                                onClick={() => setShowModal(false)}
+                            >
+                                ×
                             </button>
                         </div>
-                        <div className="ota-modal-body">
-                            <div className="ota-form-group">
-                                <label className="ota-form-label">Santri</label>
-                                <input
-                                    type="text"
-                                    className="ota-form-input"
-                                    value={`${selectedSantri.nama} (${selectedSantri.nis})`}
-                                    disabled
-                                />
-                            </div>
-                            <div className="ota-form-group">
-                                <label className="ota-form-label">Pilih OTA</label>
+
+                        <div style={styles.modalBody}>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '8px' }}>
+                                    Pilih Santri <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
                                 <select
-                                    className="ota-form-select"
-                                    value={selectedOta}
-                                    onChange={(e) => setSelectedOta(e.target.value)}
+                                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem' }}
+                                    value={selectedSantri}
+                                    onChange={(e) => setSelectedSantri(e.target.value)}
                                 >
-                                    <option value="">-- Tidak Ada (Lepas Koneksi) --</option>
-                                    {otaList.map(ota => (
-                                        <option key={ota.id} value={ota.id}>
-                                            {ota.nama} {ota.no_hp ? `(${ota.no_hp})` : ''}
-                                        </option>
+                                    <option value="">-- Pilih Santri ({allSantri.length} tersedia) --</option>
+                                    {availableSantri.map(s => (
+                                        <option key={s.id} value={s.id}>{s.nama} (NIS: {s.nis})</option>
                                     ))}
                                 </select>
+                                {allSantri.length === 0 && (
+                                    <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '8px' }}>
+                                        ⚠️ Tidak ada data santri. Pastikan ada santri aktif di database dan RLS mengizinkan akses.
+                                    </p>
+                                )}
+                                {allSantri.length > 0 && availableSantri.length === 0 && (
+                                    <p style={{ fontSize: '0.8rem', color: '#f59e0b', marginTop: '8px' }}>
+                                        Semua santri aktif sudah terdaftar sebagai penerima.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '8px' }}>
+                                    Tanggal Mulai Menerima
+                                </label>
+                                <input
+                                    type="date"
+                                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #e5e7eb', borderRadius: '10px', fontSize: '0.9rem' }}
+                                    value={tanggalMulai}
+                                    onChange={(e) => setTanggalMulai(e.target.value)}
+                                />
+                            </div>
+
+                            <div style={{ padding: '16px', background: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                                    <CheckCircle size={20} color="#16a34a" style={{ marginTop: '2px' }} />
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: '#166534', fontSize: '0.9rem' }}>Info:</div>
+                                        <p style={{ fontSize: '0.8rem', color: '#166534', margin: '4px 0 0' }}>
+                                            Santri yang ditambahkan akan menerima dana dari Pool OTA bersama.
+                                            Dana tidak terikat ke donatur tertentu.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="ota-modal-footer">
+
+                        <div style={styles.modalFooter}>
                             <button
-                                className="ota-btn ota-btn-secondary"
-                                onClick={() => setShowLinkModal(false)}
+                                style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer' }}
+                                onClick={() => setShowModal(false)}
                             >
                                 Batal
                             </button>
                             <button
-                                className="ota-btn ota-btn-primary"
-                                onClick={handleLink}
-                                disabled={saving}
+                                style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+                                onClick={handleAddPenerima}
+                                disabled={saving || !selectedSantri}
                             >
-                                {saving ? 'Menyimpan...' : 'Simpan'}
+                                {saving ? 'Menyimpan...' : 'Tambah Penerima'}
                             </button>
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
-    )
-}
-
-// Mobile Action Menu
-const MobileActionMenu = ({ santri, onLink, onUnlink }) => {
-    const [open, setOpen] = useState(false)
-
-    return (
-        <div className="ota-mobile-menu">
-            <button className="ota-mobile-menu-trigger" onClick={() => setOpen(!open)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                </svg>
-            </button>
-            {open && (
-                <>
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setOpen(false)} />
-                    <div className="ota-mobile-menu-dropdown">
-                        <button className="ota-mobile-menu-item" onClick={() => { onLink(); setOpen(false) }}>
-                            <LinkIcon size={16} />
-                            {santri.connection ? 'Ubah OTA' : 'Hubungkan OTA'}
-                        </button>
-                        {santri.connection && (
-                            <button className="ota-mobile-menu-item danger" onClick={() => { onUnlink(); setOpen(false) }}>
-                                <Unlink size={16} />
-                                Lepas Koneksi
-                            </button>
-                        )}
-                    </div>
-                </>
             )}
         </div>
     )

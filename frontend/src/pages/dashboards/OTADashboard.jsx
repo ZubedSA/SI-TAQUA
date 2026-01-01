@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
     Wallet, TrendingUp, TrendingDown, Users,
     ChevronRight, Info, HeartHandshake, AlertCircle,
     ArrowUpCircle, ArrowDownCircle, PieChart, BarChart3,
-    Plus, RefreshCw, Target, Award, Shield
+    Plus, RefreshCw, Target, Award, Shield, FileText
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Spinner from '../../components/ui/Spinner'
-import './OTADashboard.css'
 
 /**
  * OTA Dashboard - Professional Design
- * Consistent with KeuanganDashboard styling
+ * Consistent with Admin & Pengurus styling
  */
 const OTADashboard = () => {
     const { user } = useAuth()
@@ -109,26 +108,25 @@ const OTADashboard = () => {
 
     if (loading) {
         return (
-            <div className="ota-dashboard">
-                <div className="ota-dashboard-inner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-                    <Spinner label="Memuat Dashboard OTA..." />
-                </div>
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Spinner label="Memuat Dashboard OTA..." />
             </div>
         )
     }
 
     if (error) {
         return (
-            <div className="ota-dashboard">
-                <div className="ota-dashboard-inner">
-                    <div style={{ maxWidth: 480, margin: '4rem auto', padding: '2rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '1rem', textAlign: 'center' }}>
-                        <AlertCircle style={{ margin: '0 auto 1rem', color: '#dc2626' }} size={48} />
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#b91c1c', marginBottom: '0.5rem' }}>Terjadi Kesalahan</h3>
-                        <p style={{ color: '#dc2626', marginBottom: '1rem' }}>{error}</p>
-                        <button onClick={fetchDashboardData} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#fee2e2', color: '#b91c1c', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                            <RefreshCw size={16} /> Coba Lagi
-                        </button>
-                    </div>
+            <div className="flex items-center justify-center min-h-[60vh] p-4">
+                <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+                    <AlertCircle className="mx-auto text-red-600 mb-4" size={48} />
+                    <h3 className="text-lg font-bold text-red-800 mb-2">Terjadi Kesalahan</h3>
+                    <p className="text-red-600 mb-6">{error}</p>
+                    <button
+                        onClick={fetchDashboardData}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
+                    >
+                        <RefreshCw size={16} /> Coba Lagi
+                    </button>
                 </div>
             </div>
         )
@@ -137,264 +135,291 @@ const OTADashboard = () => {
     const progressPercent = stats.totalDonasi > 0 ? Math.min(Math.round((stats.pengeluaran / stats.totalDonasi) * 100), 100) : 0
 
     return (
-        <div className="ota-dashboard">
-            <div className="ota-dashboard-inner">
+        <div className="p-4 lg:p-6 space-y-6">
 
-                {/* === WELCOME HEADER === */}
-                <div className="ota-welcome-header">
-                    <div className="ota-welcome-content">
-                        <div className="ota-welcome-info">
-                            <div className="ota-welcome-icon">
-                                <HeartHandshake size={28} />
-                            </div>
-                            <div className="ota-welcome-text">
-                                <h1>Dashboard Orang Tua Asuh</h1>
-                                <p>Kelola program donasi dan monitoring santri penerima</p>
-                            </div>
+            {/* === WELCOME HEADER === */}
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 lg:p-8 text-white shadow-lg relative overflow-hidden">
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
+                            <HeartHandshake size={32} className="text-white" />
                         </div>
-                        <div className="ota-welcome-actions">
-                            <button className="ota-welcome-btn secondary" onClick={() => navigate('/ota/pemasukan')}>
-                                <Plus size={16} /> Tambah Donasi
-                            </button>
-                            <button className="ota-welcome-btn primary" onClick={() => navigate('/ota/laporan')}>
-                                <BarChart3 size={16} /> Lihat Laporan
-                            </button>
+                        <div>
+                            <h1 className="text-2xl lg:text-3xl font-bold mb-1">Dashboard Orang Tua Asuh</h1>
+                            <p className="text-emerald-50 text-sm lg:text-base">Kelola program donasi dan monitoring santri penerima</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white rounded-lg transition-colors text-sm font-medium"
+                            onClick={() => navigate('/ota/pemasukan')}
+                        >
+                            <Plus size={16} /> Tambah Donasi
+                        </button>
+                        <button
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-emerald-700 hover:bg-emerald-50 rounded-lg shadow-md transition-colors text-sm font-medium"
+                            onClick={() => navigate('/ota/laporan')}
+                        >
+                            <BarChart3 size={16} /> Lihat Laporan
+                        </button>
+                    </div>
+                </div>
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-3xl -ml-12 -mb-12"></div>
+            </div>
+
+            {/* === STATS GRID === */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-blue-100 transition-colors"></div>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div>
+                            <p className="text-sm text-slate-500 font-medium mb-1 uppercase tracking-wide">Total OTA Aktif</p>
+                            <h3 className="text-2xl font-bold text-slate-800 mb-2">{stats.otaCount}</h3>
+                        </div>
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                            <Users size={20} />
                         </div>
                     </div>
                 </div>
 
-                {/* === STATS GRID === */}
-                <div className="ota-stats-grid">
-                    <div className="ota-stat-card blue">
-                        <div className="ota-stat-info">
-                            <span className="ota-stat-label">Total OTA Aktif</span>
-                            <span className="ota-stat-value">{stats.otaCount}</span>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-purple-100 transition-colors"></div>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div>
+                            <p className="text-sm text-slate-500 font-medium mb-1 uppercase tracking-wide">Santri Penerima</p>
+                            <h3 className="text-2xl font-bold text-slate-800 mb-2">{stats.santriCount}</h3>
                         </div>
-                        <div className="ota-stat-icon-box">
-                            <Users size={24} />
-                        </div>
-                    </div>
-                    <div className="ota-stat-card purple">
-                        <div className="ota-stat-info">
-                            <span className="ota-stat-label">Santri Penerima</span>
-                            <span className="ota-stat-value">{stats.santriCount}</span>
-                        </div>
-                        <div className="ota-stat-icon-box">
-                            <Target size={24} />
-                        </div>
-                    </div>
-                    <div className="ota-stat-card green">
-                        <div className="ota-stat-info">
-                            <span className="ota-stat-label">Total Donasi</span>
-                            <span className="ota-stat-value">{formatRupiah(stats.totalDonasi)}</span>
-                            <span className="ota-stat-subvalue">+{formatRupiah(stats.donasiThisMonth)} bulan ini</span>
-                        </div>
-                        <div className="ota-stat-icon-box">
-                            <ArrowUpCircle size={24} />
-                        </div>
-                    </div>
-                    <div className={`ota-stat-card ${stats.saldo >= 0 ? 'emerald' : 'red'}`}>
-                        <div className="ota-stat-info">
-                            <span className="ota-stat-label">Saldo Tersedia</span>
-                            <span className="ota-stat-value">{formatRupiah(stats.saldo)}</span>
-                        </div>
-                        <div className="ota-stat-icon-box">
-                            <Wallet size={24} />
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+                            <Target size={20} />
                         </div>
                     </div>
                 </div>
 
-                {/* === MAIN CONTENT === */}
-                <div className="ota-content-grid">
-
-                    {/* LEFT COLUMN */}
-                    <div>
-                        {/* Recent Pemasukan */}
-                        <div className="ota-panel">
-                            <div className="ota-panel-header">
-                                <div className="ota-panel-title">
-                                    <div className="ota-panel-title-icon green">
-                                        <ArrowUpCircle size={18} />
-                                    </div>
-                                    <div>
-                                        <h3>Donasi Terbaru</h3>
-                                        <p>5 donasi terakhir</p>
-                                    </div>
-                                </div>
-                                <button className="ota-panel-link" onClick={() => navigate('/ota/pemasukan')}>
-                                    Lihat Semua <ChevronRight size={16} />
-                                </button>
-                            </div>
-                            <div className="ota-transaction-list">
-                                {recentPemasukan.length > 0 ? recentPemasukan.map((item, idx) => (
-                                    <div key={idx} className="ota-transaction-item">
-                                        <div className="ota-transaction-info">
-                                            <div className="ota-transaction-avatar income">
-                                                {item.ota?.nama?.substring(0, 2).toUpperCase() || 'OT'}
-                                            </div>
-                                            <div className="ota-transaction-details">
-                                                <h4>{item.ota?.nama || '-'}</h4>
-                                                <p>{formatDate(item.tanggal)}</p>
-                                            </div>
-                                        </div>
-                                        <span className="ota-transaction-amount income">{formatRupiah(item.jumlah)}</span>
-                                    </div>
-                                )) : (
-                                    <div className="ota-empty-state">
-                                        <TrendingUp size={32} style={{ color: '#d1d5db', marginBottom: '0.5rem' }} />
-                                        <p>Belum ada data donasi</p>
-                                    </div>
-                                )}
-                            </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full blur-2xl -mr-6 -mt-6 group-hover:bg-emerald-100 transition-colors"></div>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div>
+                            <p className="text-sm text-slate-500 font-medium mb-1 uppercase tracking-wide">Total Donasi</p>
+                            <h3 className="text-2xl font-bold text-slate-800 mb-1">{formatRupiah(stats.totalDonasi)}</h3>
+                            <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                <ArrowUpCircle size={12} /> +{formatRupiah(stats.donasiThisMonth)} bulan ini
+                            </p>
                         </div>
-
-                        {/* Recent Pengeluaran */}
-                        <div className="ota-panel">
-                            <div className="ota-panel-header">
-                                <div className="ota-panel-title">
-                                    <div className="ota-panel-title-icon orange">
-                                        <ArrowDownCircle size={18} />
-                                    </div>
-                                    <div>
-                                        <h3>Pengeluaran Terbaru</h3>
-                                        <p>5 pengeluaran terakhir</p>
-                                    </div>
-                                </div>
-                                <button className="ota-panel-link" onClick={() => navigate('/ota/pengeluaran')}>
-                                    Lihat Semua <ChevronRight size={16} />
-                                </button>
-                            </div>
-                            <div className="ota-transaction-list">
-                                {recentPengeluaran.length > 0 ? recentPengeluaran.map((item, idx) => (
-                                    <div key={idx} className="ota-transaction-item">
-                                        <div className="ota-transaction-info">
-                                            <div className="ota-transaction-avatar expense">
-                                                <TrendingDown size={16} />
-                                            </div>
-                                            <div className="ota-transaction-details">
-                                                <h4>{item.keperluan || item.keterangan || '-'}</h4>
-                                                <p>{formatDate(item.tanggal)}</p>
-                                            </div>
-                                        </div>
-                                        <span className="ota-transaction-amount expense">-{formatRupiah(item.jumlah)}</span>
-                                    </div>
-                                )) : (
-                                    <div className="ota-empty-state">
-                                        <TrendingDown size={32} style={{ color: '#d1d5db', marginBottom: '0.5rem' }} />
-                                        <p>Belum ada data pengeluaran</p>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                            <TrendingUp size={20} />
                         </div>
                     </div>
+                </div>
 
-                    {/* RIGHT COLUMN */}
-                    <div>
-                        {/* Financial Summary */}
-                        <div className="ota-panel">
-                            <div className="ota-panel-header">
-                                <div className="ota-panel-title">
-                                    <div className="ota-panel-title-icon emerald">
-                                        <PieChart size={18} />
-                                    </div>
-                                    <div>
-                                        <h3>Ringkasan Keuangan</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="ota-summary-panel">
-                                <div className="ota-summary-row">
-                                    <span className="ota-summary-label">Total Pemasukan</span>
-                                    <span className="ota-summary-value income">{formatRupiah(stats.totalDonasi)}</span>
-                                </div>
-                                <div className="ota-summary-row">
-                                    <span className="ota-summary-label">Total Pengeluaran</span>
-                                    <span className="ota-summary-value expense">{formatRupiah(stats.pengeluaran)}</span>
-                                </div>
-                                <div className="ota-summary-row total">
-                                    <span className="ota-summary-label" style={{ fontWeight: 600, color: '#1f2937' }}>Saldo Akhir</span>
-                                    <span className={`ota-summary-value balance ${stats.saldo < 0 ? 'negative' : ''}`}>
-                                        {formatRupiah(stats.saldo)}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="ota-progress-wrapper">
-                                <div className="ota-progress-header">
-                                    <span>Dana Tersalurkan</span>
-                                    <span>{progressPercent}%</span>
-                                </div>
-                                <div className="ota-progress-bar">
-                                    <div className="ota-progress-fill" style={{ width: `${progressPercent}%` }}></div>
-                                </div>
-                            </div>
+                <div className={`bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all relative overflow-hidden group`}>
+                    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -mr-6 -mt-6 transition-colors ${stats.saldo >= 0 ? 'bg-emerald-50 group-hover:bg-emerald-100' : 'bg-red-50 group-hover:bg-red-100'}`}></div>
+                    <div className="flex justify-between items-start relative z-10">
+                        <div>
+                            <p className="text-sm text-slate-500 font-medium mb-1 uppercase tracking-wide">Saldo Tersedia</p>
+                            <h3 className={`text-2xl font-bold mb-2 ${stats.saldo >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatRupiah(stats.saldo)}</h3>
                         </div>
-
-                        {/* Top Donors */}
-                        <div className="ota-panel" style={{ marginTop: '1.5rem' }}>
-                            <div className="ota-panel-header">
-                                <div className="ota-panel-title">
-                                    <div className="ota-panel-title-icon amber">
-                                        <Award size={18} />
-                                    </div>
-                                    <div>
-                                        <h3>Top Donatur</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div>
-                                {topDonors.length > 0 ? topDonors.map((donor, idx) => (
-                                    <div key={idx} className="ota-donor-item">
-                                        <div className={`ota-donor-rank ${idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : 'default'}`}>
-                                            {idx + 1}
-                                        </div>
-                                        <span className="ota-donor-name">{donor.nama}</span>
-                                        <span className="ota-donor-amount">{formatRupiah(donor.total)}</span>
-                                    </div>
-                                )) : (
-                                    <div className="ota-empty-state">
-                                        <p>Belum ada data donatur</p>
-                                    </div>
-                                )}
-                            </div>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.saldo >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                            <Wallet size={20} />
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        {/* Announcements */}
-                        {announcements.length > 0 && (
-                            <div className="ota-panel ota-announcements" style={{ marginTop: '1.5rem' }}>
-                                <div className="ota-panel-header">
-                                    <div className="ota-panel-title">
-                                        <Info size={18} style={{ color: '#d97706' }} />
-                                        <div>
-                                            <h3>Pengumuman</h3>
-                                        </div>
-                                    </div>
+            {/* === MAIN CONTENT === */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* LEFT COLUMN */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Recent Pemasukan */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
+                                    <ArrowUpCircle size={18} />
                                 </div>
                                 <div>
-                                    {announcements.map((item, idx) => (
-                                        <div key={idx} className="ota-announcement-item">
-                                            <h4>{item.judul}</h4>
-                                            <p>{item.isi}</p>
-                                            <time>{formatDate(item.created_at)}</time>
-                                        </div>
-                                    ))}
+                                    <h3 className="font-bold text-slate-800">Donasi Terbaru</h3>
+                                    <p className="text-xs text-slate-500">5 donasi terakhir</p>
                                 </div>
                             </div>
-                        )}
+                            <button onClick={() => navigate('/ota/pemasukan')} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 transition-colors">
+                                Lihat Semua <ChevronRight size={16} />
+                            </button>
+                        </div>
+                        <div>
+                            {recentPemasukan.length > 0 ? recentPemasukan.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">
+                                            {item.ota?.nama?.substring(0, 2).toUpperCase() || 'OT'}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-slate-700">{item.ota?.nama || '-'}</h4>
+                                            <p className="text-xs text-slate-500">{formatDate(item.tanggal)}</p>
+                                        </div>
+                                    </div>
+                                    <span className="font-bold text-emerald-600">{formatRupiah(item.jumlah)}</span>
+                                </div>
+                            )) : (
+                                <div className="p-8 text-center text-slate-400">
+                                    <TrendingUp className="mx-auto mb-2 opacity-50" size={32} />
+                                    <p>Belum ada data donasi</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
-                        {/* Quick Links */}
-                        <div className="ota-quick-links" style={{ marginTop: '1.5rem' }}>
-                            <h4><Shield size={16} /> Akses Cepat</h4>
-                            <button className="ota-quick-link" onClick={() => navigate('/admin/ota')}>
-                                Data OTA <ChevronRight size={16} />
+                    {/* Recent Pengeluaran */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
+                                    <ArrowDownCircle size={18} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800">Pengeluaran Terbaru</h3>
+                                    <p className="text-xs text-slate-500">5 pengeluaran terakhir</p>
+                                </div>
+                            </div>
+                            <button onClick={() => navigate('/ota/pengeluaran')} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 transition-colors">
+                                Lihat Semua <ChevronRight size={16} />
                             </button>
-                            <button className="ota-quick-link" onClick={() => navigate('/ota/santri')}>
-                                Santri Penerima <ChevronRight size={16} />
+                        </div>
+                        <div>
+                            {recentPengeluaran.length > 0 ? recentPengeluaran.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center">
+                                            <TrendingDown size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-slate-700">{item.keperluan || item.keterangan || '-'}</h4>
+                                            <p className="text-xs text-slate-500">{formatDate(item.tanggal)}</p>
+                                        </div>
+                                    </div>
+                                    <span className="font-bold text-orange-600">-{formatRupiah(item.jumlah)}</span>
+                                </div>
+                            )) : (
+                                <div className="p-8 text-center text-slate-400">
+                                    <TrendingDown className="mx-auto mb-2 opacity-50" size={32} />
+                                    <p>Belum ada data pengeluaran</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* RIGHT COLUMN */}
+                <div className="space-y-6">
+                    {/* Financial Summary */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                                <PieChart size={18} />
+                            </div>
+                            <h3 className="font-bold text-slate-800">Ringkasan Keuangan</h3>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span className="text-sm text-slate-500">Total Pemasukan</span>
+                                <span className="font-semibold text-emerald-600">{formatRupiah(stats.totalDonasi)}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                                <span className="text-sm text-slate-500">Total Pengeluaran</span>
+                                <span className="font-semibold text-orange-600">{formatRupiah(stats.pengeluaran)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2">
+                                <span className="font-bold text-slate-800">Saldo Akhir</span>
+                                <span className={`text-xl font-bold ${stats.saldo < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                    {formatRupiah(stats.saldo)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                <span>Dana Tersalurkan</span>
+                                <span>{progressPercent}%</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                    style={{ width: `${progressPercent}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Access - Refactored to Grid */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Shield size={18} className="text-slate-400" />
+                            Akses Cepat
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={() => navigate('/admin/ota')} className="p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl flex flex-col items-center justify-center gap-2 transition-colors border border-blue-100 group">
+                                <Users size={24} className="group-hover:scale-110 transition-transform" />
+                                <span className="text-xs font-semibold text-center">Data OTA</span>
                             </button>
-                            <button className="ota-quick-link" onClick={() => navigate('/ota/laporan')}>
-                                Laporan Keuangan <ChevronRight size={16} />
+                            <button onClick={() => navigate('/ota/santri')} className="p-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl flex flex-col items-center justify-center gap-2 transition-colors border border-purple-100 group">
+                                <Target size={24} className="group-hover:scale-110 transition-transform" />
+                                <span className="text-xs font-semibold text-center">Santri Penerima</span>
+                            </button>
+                            <button onClick={() => navigate('/ota/laporan')} className="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl flex flex-col items-center justify-center gap-2 transition-colors border border-emerald-100 group col-span-2">
+                                <FileText size={24} className="group-hover:scale-110 transition-transform" />
+                                <span className="text-xs font-semibold text-center">Laporan Keuangan</span>
                             </button>
                         </div>
                     </div>
+
+                    {/* Top Donors */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg">
+                                <Award size={18} />
+                            </div>
+                            <h3 className="font-bold text-slate-800">Top Donatur</h3>
+                        </div>
+                        <div className="space-y-3">
+                            {topDonors.length > 0 ? topDonors.map((donor, idx) => (
+                                <div key={idx} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-sm
+                                        ${idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-slate-300' : idx === 2 ? 'bg-amber-700' : 'bg-slate-200 text-slate-500'}
+                                    `}>
+                                        {idx + 1}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-slate-700 truncate">{donor.nama}</p>
+                                    </div>
+                                    <span className="text-xs font-bold text-emerald-600">{formatRupiah(donor.total)}</span>
+                                </div>
+                            )) : (
+                                <p className="text-sm text-slate-400 text-center py-4">Belum ada data donatur</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Announcements */}
+                    {announcements.length > 0 && (
+                        <div className="bg-amber-50 rounded-xl border border-amber-100 p-5">
+                            <div className="flex items-center gap-2 mb-3 text-amber-800">
+                                <Info size={18} />
+                                <h3 className="font-bold">Pengumuman</h3>
+                            </div>
+                            <div className="space-y-3">
+                                {announcements.map((item, idx) => (
+                                    <div key={idx} className="pb-3 border-b border-amber-100 last:border-0">
+                                        <h4 className="font-semibold text-amber-900 text-sm mb-1">{item.judul}</h4>
+                                        <p className="text-xs text-amber-800 leading-relaxed line-clamp-2">{item.isi}</p>
+                                        <time className="text-[10px] text-amber-600 mt-1 block">{formatDate(item.created_at)}</time>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
