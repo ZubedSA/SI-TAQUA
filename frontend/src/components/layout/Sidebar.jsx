@@ -675,6 +675,9 @@ const Sidebar = ({ mobileOpen, onClose }) => {
             </nav>
 
             <div className="sidebar-footer">
+                <div className="px-4 py-2 text-xs text-slate-400 text-center border-b border-slate-700 mb-2">
+                    v.2025.01.02.1
+                </div>
                 <button className="nav-link logout-link" onClick={handleLogout}>
                     <span className="nav-icon">
                         <LogOut size={20} />

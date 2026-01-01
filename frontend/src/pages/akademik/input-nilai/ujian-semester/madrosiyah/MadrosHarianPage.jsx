@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, RefreshCw, BookOpen, Calendar } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
+import { logCreate, logUpdate } from '../../../../../lib/auditLog'
 import '../../../../../pages/nilai/Nilai.css'
 
 const MadrosHarianPage = () => {
@@ -123,9 +124,15 @@ const MadrosHarianPage = () => {
                 if (data.id) {
                     const { error } = await supabase.from('nilai').update(payload).eq('id', data.id)
                     if (error) throw error
+                    // Log Audit Update
+                    const s = santri.find(s => s.id === santriId)
+                    await logUpdate('nilai', s?.nama || 'Santri', `Update nilai harian: ${s?.nama} - ${filters.tanggal}`)
                 } else {
                     const { error } = await supabase.from('nilai').insert([payload])
                     if (error) throw error
+                    // Log Audit Create
+                    const s = santri.find(s => s.id === santriId)
+                    await logCreate('nilai', s?.nama || 'Santri', `Input nilai harian: ${s?.nama} - ${filters.tanggal}`)
                 }
             }
 

@@ -23,8 +23,10 @@ const BackupPage = () => {
         'hafalan',
         'nilai',
         'presensi',
+        'presensi',
         'pencapaian_hafalan',
-        'user_profiles'
+        'user_profiles',
+        'trash'
     ]
 
     // Backup all tables
@@ -180,7 +182,9 @@ const BackupPage = () => {
                 'hafalan',
                 'nilai',
                 'presensi',
-                'pencapaian_hafalan'
+                'presensi',
+                'pencapaian_hafalan',
+                'trash'
             ]
 
             for (const table of restoreOrder) {
