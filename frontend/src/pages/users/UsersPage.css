@@ -266,6 +266,16 @@
     color: #7c3aed;
 }
 
+.badge-teal {
+    background: rgba(20, 184, 166, 0.1);
+    color: #0d9488;
+}
+
+.badge-orange {
+    background: rgba(234, 67, 53, 0.1);
+    color: #ea4335;
+}
+
 .badge-gray {
     background: rgba(107, 114, 128, 0.1);
     color: #4b5563;

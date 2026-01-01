@@ -7,7 +7,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Login from './pages/auth/Login'
 // New Dashboard Components
-import { AdminDashboard, AkademikDashboard, KeuanganDashboard, WaliSantriDashboard, PengurusDashboard } from './pages/dashboards'
+import { AdminDashboard, AkademikDashboard, KeuanganDashboard, WaliSantriDashboard, PengurusDashboard, OTADashboard } from './pages/dashboards'
 import SantriList from './pages/santri/SantriList'
 import SantriForm from './pages/santri/SantriForm'
 import GuruList from './pages/guru/GuruList'
@@ -77,6 +77,17 @@ import LaporanRekapMingguanPage from './pages/akademik/laporan/laporan-hafalan/m
 import LaporanUjianSyahriPage from './pages/akademik/laporan/laporan-nilai/ujian-syahri/LaporanUjianSyahriPage'
 import LaporanUjianSemesterPage from './pages/akademik/laporan/laporan-nilai/ujian-semester/LaporanUjianSemesterPage'
 import LaporanAkademikSantriPage from './pages/akademik/laporan/laporan-akademik/raport/LaporanAkademikSantriPage'
+// OTA Admin Pages
+import OTAList from './pages/admin/ota/OTAList'
+import OTAForm from './pages/admin/ota/OTAForm'
+import OTALinking from './pages/admin/ota/OTALinking'
+import OTADetail from './pages/admin/ota/OTADetail'
+// OTA Module Pages
+import OTAKategoriPage from './pages/ota/OTAKategoriPage'
+import OTASantriPage from './pages/ota/OTASantriPage'
+import OTAPemasukanPage from './pages/ota/OTAPemasukanPage'
+import OTAPengeluaranPage from './pages/ota/OTAPengeluaranPage'
+import OTALaporanPage from './pages/ota/OTALaporanPage'
 // Pengurus Pages
 import PelanggaranPage from './pages/pengurus/pelanggaran/PelanggaranPage'
 import PelanggaranForm from './pages/pengurus/pelanggaran/PelanggaranForm'
@@ -96,6 +107,7 @@ const dashboardRoutes = {
   bendahara: '/dashboard/keuangan',
   pengasuh: '/dashboard/keuangan',
   pengurus: '/dashboard/pengurus',
+  ota: '/dashboard/ota',
   wali: '/wali/beranda'
 }
 
@@ -167,6 +179,13 @@ function App() {
                   <Route path="/dashboard/pengurus" element={
                     <ProtectedRoute roles={['admin', 'pengurus']}>
                       <PengurusDashboard />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* OTA Dashboard - Orang Tua Asuh */}
+                  <Route path="/dashboard/ota" element={
+                    <ProtectedRoute roles={['admin', 'ota']}>
+                      <OTADashboard />
                     </ProtectedRoute>
                   } />
 
@@ -263,6 +282,72 @@ function App() {
                   <Route path="/system-status" element={
                     <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
                       <SystemStatusPage />
+                    </ProtectedRoute>
+                  } />
+
+
+
+                  {/* OTA Management - Admin Only */}
+                  <Route path="/admin/ota" element={
+                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                      <OTAList />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/ota/create" element={
+                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                      <OTAForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/ota/:id" element={
+                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                      <OTADetail />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/ota/:id/edit" element={
+                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                      <OTAForm />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/ota/:id/link" element={
+                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/admin">
+                      <OTALinking />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* ============ OTA MODULE ROUTES ============ */}
+
+                  {/* OTA Kategori - Admin Only */}
+                  <Route path="/ota/kategori" element={
+                    <ProtectedRoute roles={['admin']} fallbackRedirect="/dashboard/ota">
+                      <OTAKategoriPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* OTA Santri - Admin + OTA */}
+                  <Route path="/ota/santri" element={
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
+                      <OTASantriPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* OTA Pemasukan - Admin + OTA */}
+                  <Route path="/ota/pemasukan" element={
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
+                      <OTAPemasukanPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* OTA Pengeluaran - Admin + OTA */}
+                  <Route path="/ota/pengeluaran" element={
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
+                      <OTAPengeluaranPage />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* OTA Laporan - Admin + OTA */}
+                  <Route path="/ota/laporan" element={
+                    <ProtectedRoute roles={['admin', 'ota']} fallbackRedirect="/dashboard/ota">
+                      <OTALaporanPage />
                     </ProtectedRoute>
                   } />
 

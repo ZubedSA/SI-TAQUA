@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react'
 import { FileBarChart, Download, ArrowUpCircle, ArrowDownCircle, TrendingUp, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import { useToast } from '../../context/ToastContext'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const KasLaporanPage = () => {
+    const showToast = useToast()
     const [pemasukan, setPemasukan] = useState([])
     const [pengeluaran, setPengeluaran] = useState([])
     const [loading, setLoading] = useState(true)
@@ -62,6 +66,44 @@ const KasLaporanPage = () => {
     const totalPengeluaran = pengeluaran.reduce((sum, d) => sum + Number(d.jumlah), 0)
     const saldo = totalPemasukan - totalPengeluaran
 
+    const handleDownloadExcel = () => {
+        const columns = ['Tanggal', 'Jenis', 'Keterangan', 'Masuk', 'Keluar']
+        const allData = [
+            ...pemasukan.map(d => ({ ...d, type: 'Pemasukan' })),
+            ...pengeluaran.map(d => ({ ...d, type: 'Pengeluaran' }))
+        ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+
+        const exportData = allData.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Jenis: d.type,
+            Keterangan: d.sumber || d.keperluan,
+            Masuk: d.type === 'Pemasukan' ? Number(d.jumlah) : 0,
+            Keluar: d.type === 'Pengeluaran' ? Number(d.jumlah) : 0
+        }))
+
+        exportToExcel(exportData, columns, 'laporan_alur_kas')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Tanggal', 'Jenis', 'Keterangan', 'Masuk', 'Keluar']
+        const allData = [
+            ...pemasukan.map(d => ({ ...d, type: 'Pemasukan' })),
+            ...pengeluaran.map(d => ({ ...d, type: 'Pengeluaran' }))
+        ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+
+        const exportData = allData.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Jenis: d.type,
+            Keterangan: d.sumber || d.keperluan,
+            Masuk: d.type === 'Pemasukan' ? Number(d.jumlah) : 0,
+            Keluar: d.type === 'Pengeluaran' ? Number(d.jumlah) : 0
+        }))
+
+        exportToCSV(exportData, columns, 'laporan_alur_kas')
+        showToast.success('Export CSV berhasil')
+    }
+
     const handleDownloadPDF = () => {
         const allData = [
             ...pemasukan.map(d => ({ ...d, type: 'Pemasukan' })),
@@ -88,6 +130,7 @@ const KasLaporanPage = () => {
                 { label: 'Saldo', value: `Rp ${saldo.toLocaleString('id-ID')}` }
             ]
         })
+        showToast.success('Laporan berhasil didownload')
     }
 
     return (
@@ -100,9 +143,11 @@ const KasLaporanPage = () => {
                     <p className="page-subtitle">Ringkasan pemasukan dan pengeluaran</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-primary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                 </div>
             </div>
 

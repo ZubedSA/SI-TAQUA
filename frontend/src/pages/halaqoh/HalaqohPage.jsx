@@ -10,7 +10,7 @@ import './Halaqoh.css'
 
 const HalaqohPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')

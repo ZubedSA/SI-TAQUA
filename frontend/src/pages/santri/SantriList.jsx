@@ -9,11 +9,14 @@ import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import * as XLSX from 'xlsx'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import './Santri.css'
 
 const SantriList = () => {
     const { activeRole, userProfile, isAdmin, isGuru, isBendahara, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Multiple checks to ensure role is correctly detected
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || userProfile?.activeRole === 'admin' || hasRole('admin')
@@ -268,6 +271,54 @@ const SantriList = () => {
         }
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['NIS', 'Nama', 'L/P', 'Angkatan', 'Kelas', 'Halaqoh', 'Status']
+        const exportData = filteredSantri.map(s => ({
+            NIS: s.nis,
+            Nama: s.nama,
+            'L/P': s.jenis_kelamin,
+            Angkatan: s.angkatan,
+            Kelas: s.kelas,
+            Halaqoh: s.halaqoh,
+            Status: s.status
+        }))
+        exportToExcel(exportData, columns, 'data_santri')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['NIS', 'Nama', 'L/P', 'Angkatan', 'Kelas', 'Halaqoh', 'Status']
+        const exportData = filteredSantri.map(s => ({
+            NIS: s.nis,
+            Nama: s.nama,
+            'L/P': s.jenis_kelamin,
+            Angkatan: s.angkatan,
+            Kelas: s.kelas,
+            Halaqoh: s.halaqoh,
+            Status: s.status
+        }))
+        exportToCSV(exportData, columns, 'data_santri')
+        showToast.success('Export CSV berhasil')
+    }
+
+    const handleDownloadPDF = () => {
+        generateLaporanPDF({
+            title: 'Data Santri',
+            columns: ['NIS', 'Nama', 'L/P', 'Angkatan', 'Kelas', 'Halaqoh', 'Status'],
+            data: filteredSantri.map(s => [
+                s.nis,
+                s.nama,
+                s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P',
+                s.angkatan,
+                s.kelas,
+                s.halaqoh,
+                s.status
+            ]),
+            filename: 'data_santri'
+        })
+        showToast.success('PDF berhasil didownload')
+    }
+
     const filteredSantri = santri
         .filter(s =>
             s.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -295,6 +346,11 @@ const SantriList = () => {
                     <p className="page-subtitle">Kelola data santri pondok pesantren</p>
                 </div>
                 <div className="header-actions">
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                     {canEditSantri && (
                         <>
                             <input

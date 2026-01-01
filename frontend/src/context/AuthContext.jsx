@@ -190,7 +190,7 @@ export const AuthProvider = ({ children }) => {
             // If user is admin (either in roles array or single role), grant access to all dashboards
             if (roles.includes('admin') || data.role === 'admin') {
                 // Admin can switch to any dashboard
-                roles = ['admin', 'guru', 'bendahara', 'pengurus', 'wali']
+                roles = ['admin', 'guru', 'bendahara', 'pengurus', 'wali', 'ota']
             }
 
             setUserProfile({
@@ -300,7 +300,7 @@ export const AuthProvider = ({ children }) => {
 
         // Admin dapat akses ke semua dashboard
         if (roles.includes('admin') || profile?.role === 'admin') {
-            roles = ['admin', 'guru', 'bendahara', 'wali']
+            roles = ['admin', 'guru', 'bendahara', 'wali', 'pengurus', 'ota']
         }
 
         setUserProfile({
@@ -339,6 +339,7 @@ export const AuthProvider = ({ children }) => {
     const isBendahara = () => userProfile?.activeRole === 'bendahara'
     const isWali = () => userProfile?.activeRole === 'wali'
     const isPengurus = () => userProfile?.activeRole === 'pengurus'
+    const isOTA = () => userProfile?.activeRole === 'ota'
 
     // Check if user has specific role in their roles array
     const hasRole = (roles) => {
@@ -372,7 +373,9 @@ export const AuthProvider = ({ children }) => {
         isGuru,
         isBendahara,
         isWali,
+        isWali,
         isPengurus,
+        isOTA,
         hasRole,
         canAccessWithActiveRole,
         hasMultipleRoles,

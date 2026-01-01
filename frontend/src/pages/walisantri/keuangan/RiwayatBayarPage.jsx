@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
     ChevronLeft, Receipt, Calendar, CheckCircle, Clock,
-    Download, Filter, CreditCard
+    Filter, CreditCard
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
+import DownloadButton from '../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../utils/exportUtils'
 import '../WaliPortal.css'
 
 /**
@@ -140,6 +142,30 @@ const RiwayatBayarPage = () => {
     // Calculate total
     const totalPembayaran = pembayaranData.reduce((sum, p) => sum + parseFloat(p.jumlah), 0)
 
+    const handleDownloadExcel = () => {
+        const columns = ['Tanggal', 'Kategori', 'Metode', 'Jumlah', 'Santri']
+        const exportData = pembayaranData.map(p => ({
+            Tanggal: formatDate(p.tanggal),
+            Kategori: p.tagihan?.kategori?.nama || 'Pembayaran',
+            Metode: p.metode || 'Tunai',
+            Jumlah: parseFloat(p.jumlah),
+            Santri: selectedSantri?.nama || '-'
+        }))
+        exportToExcel(exportData, columns, 'riwayat_pembayaran')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Tanggal', 'Kategori', 'Metode', 'Jumlah', 'Santri']
+        const exportData = pembayaranData.map(p => ({
+            Tanggal: formatDate(p.tanggal),
+            Kategori: p.tagihan?.kategori?.nama || 'Pembayaran',
+            Metode: p.metode || 'Tunai',
+            Jumlah: parseFloat(p.jumlah),
+            Santri: selectedSantri?.nama || '-'
+        }))
+        exportToCSV(exportData, columns, 'riwayat_pembayaran')
+    }
+
     if (loading) {
         return (
             <div className="wali-loading">
@@ -176,19 +202,29 @@ const RiwayatBayarPage = () => {
 
             {/* Filter */}
             <div className="wali-section" style={{ marginTop: santriList.length > 1 ? 0 : '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
-                    <select
-                        value={filterBulan}
-                        onChange={(e) => setFilterBulan(e.target.value)}
-                        className="wali-form-select"
-                        style={{ flex: 1 }}
-                    >
-                        <option value="">Semua Waktu</option>
-                        {getMonthOptions().map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+                        <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
+                        <select
+                            value={filterBulan}
+                            onChange={(e) => setFilterBulan(e.target.value)}
+                            className="wali-form-select"
+                            style={{ flex: 1 }}
+                        >
+                            <option value="">Semua Waktu</option>
+                            {getMonthOptions().map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {pembayaranData.length > 0 && (
+                        <div style={{ flexShrink: 0 }}>
+                            <DownloadButton
+                                onDownloadExcel={handleDownloadExcel}
+                                onDownloadCSV={handleDownloadCSV}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 

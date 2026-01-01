@@ -13,7 +13,7 @@ import './Keuangan.css'
 
 const PembayaranSantriPage = () => {
     const { user } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [santriList, setSantriList] = useState([])
     const [selectedSantri, setSelectedSantri] = useState(null)
     const [tagihanSantri, setTagihanSantri] = useState([])

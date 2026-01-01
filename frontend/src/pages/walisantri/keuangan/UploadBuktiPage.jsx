@@ -16,7 +16,7 @@ import '../WaliPortal.css'
  */
 const UploadBuktiPage = () => {
     const { user } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)

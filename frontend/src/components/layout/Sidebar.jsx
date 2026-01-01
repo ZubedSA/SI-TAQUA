@@ -44,7 +44,8 @@ import {
     AlertTriangle,
     Bell,
     Newspaper,
-    Archive
+    Archive,
+    HeartHandshake // For OTA
 } from 'lucide-react'
 import './Sidebar.css'
 
@@ -76,6 +77,7 @@ const adminMenuItems = [
             { path: '/mapel', icon: BookOpen, label: 'Mata Pelajaran' },
             { path: '/halaqoh', icon: Circle, label: 'Halaqoh' },
             { path: '/semester', icon: Calendar, label: 'Semester' },
+            { path: '/admin/ota', icon: HeartHandshake, label: 'Orang Tua Asuh' },
         ]
     },
 
@@ -101,9 +103,40 @@ const adminMenuItems = [
         label: 'Monitoring Keuangan',
         children: [
             { path: '/dashboard/keuangan', icon: Wallet, label: 'Dashboard Keuangan' },
+
             { path: '/keuangan/kas/laporan', icon: FileBarChart, label: 'Laporan Kas' },
             { path: '/keuangan/pembayaran/laporan', icon: Receipt, label: 'Laporan Pembayaran' },
             { path: '/keuangan/dana/laporan', icon: TrendingUp, label: 'Laporan Penyaluran' },
+        ]
+    },
+
+    // Monitoring Pengurus
+    {
+        id: 'monitoring-pengurus',
+        icon: UserCog,
+        label: 'Monitoring Pengurus',
+        children: [
+            { path: '/dashboard/pengurus', icon: LayoutDashboard, label: 'Dashboard Pengurus' },
+            { path: '/pengurus/pelanggaran', icon: AlertTriangle, label: 'Pelanggaran' },
+            { path: '/pengurus/santri-bermasalah', icon: Users, label: 'Santri Bermasalah' },
+            { path: '/pengurus/arsip', icon: Archive, label: 'Arsip' },
+        ]
+    },
+
+
+
+
+
+    // Monitoring OTA
+    {
+        id: 'monitoring-ota',
+        icon: HeartHandshake,
+        label: 'Monitoring OTA',
+        children: [
+            // Using same list for now, later can be specific stats page if needed
+            { path: '/admin/ota', icon: Users, label: 'Data OTA' },
+            // Placeholder for financial monitoring
+            // { path: '/admin/ota/finance', icon: TrendingUp, label: 'Keuangan OTA' }, 
         ]
     },
 
@@ -123,6 +156,35 @@ const adminMenuItems = [
 
     // Pengaturan
     { path: '/pengaturan', icon: Settings, label: 'Pengaturan' },
+]
+
+// ============ OTA MENU - Donasi & Monitoring ============
+const otaMenuItems = [
+    { path: '/dashboard/ota', icon: LayoutDashboard, label: 'Dashboard OTA' },
+
+    // Keuangan OTA
+    {
+        id: 'keuangan-ota',
+        icon: Wallet,
+        label: 'Keuangan',
+        children: [
+            { path: '/ota/pemasukan', icon: ArrowUpCircle, label: 'Pemasukan' },
+            { path: '/ota/pengeluaran', icon: ArrowDownCircle, label: 'Pengeluaran' },
+            { path: '/ota/laporan', icon: FileBarChart, label: 'Laporan' },
+        ]
+    },
+
+    // Data
+    {
+        id: 'data-ota',
+        icon: Database,
+        label: 'Data',
+        children: [
+            { path: '/admin/ota', icon: HeartHandshake, label: 'Daftar OTA' },
+            { path: '/ota/santri', icon: Users, label: 'Santri Penerima' },
+            { path: '/ota/kategori', icon: Tag, label: 'Kategori OTA' },
+        ]
+    },
 ]
 
 // ============ PENGURUS MENU - Pembinaan Santri ============
@@ -336,23 +398,29 @@ const operatorMenuItems = [
 ]
 
 const Sidebar = ({ mobileOpen, onClose }) => {
-    const { signOut, activeRole } = useAuth()
+    const { signOut, activeRole, roles } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
     const [openMenus, setOpenMenus] = useState({})
 
+    // Check if user is effectively an admin (even if activeRole is different)
+    const isRealAdmin = roles?.includes('admin')
+
     // Select menu based on active role
-    // Admin gets special controller menu, pengurus gets pembinaan menu, others get operator menu
+    // Admin gets special controller menu, pengurus gets pembinaan menu, OTA gets donasi menu, others get operator menu
     const baseMenuItems =
         activeRole === 'admin' ? adminMenuItems :
             activeRole === 'pengurus' ? pengurusMenuItems :
-                operatorMenuItems
+                activeRole === 'ota' ? otaMenuItems :
+                    operatorMenuItems
 
     // Filter menu berdasarkan role user (for operator menu)
     const filteredMenuItems = baseMenuItems.filter(item => {
         if (!item.roles || item.roles.length === 0) return true
         return item.roles.includes(activeRole)
     })
+
+
 
     const handleLogout = async () => {
         try {
@@ -370,7 +438,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     // Get all top-level menu IDs (both admin and operator menus)
     const topLevelMenuIds = [
         // Admin menu IDs
-        'users-roles', 'master-data', 'monitoring-akademik', 'monitoring-keuangan', 'logs',
+        'users-roles', 'master-data', 'monitoring-akademik', 'monitoring-keuangan', 'monitoring-pengurus', 'monitoring-ota', 'logs',
         // Operator menu IDs
         'data-pondok', 'akademik', 'alur-kas', 'pembayaran', 'penyaluran'
     ]
@@ -515,6 +583,9 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         // Filter children by role if they exist
         const filteredChildren = item.children?.filter(child => {
             if (!child.roles || child.roles.length === 0) return true
+            // Allow if activeRole is allowed OR if user is real admin and admin is allowed
+            // This ensures Admin masquerading as Bendahara sees 'Persetujuan' (which allows 'admin')
+            if (isRealAdmin && child.roles.includes('admin')) return true
             return child.roles.includes(activeRole)
         })
 

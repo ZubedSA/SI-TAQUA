@@ -13,7 +13,7 @@ const SantriForm = () => {
     const { id } = useParams()
     const location = useLocation()
     const { isAdmin, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Determine mode: view (read-only) vs edit
     // If URL is /santri/:id (without /edit), it's view mode

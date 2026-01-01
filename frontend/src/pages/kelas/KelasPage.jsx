@@ -6,11 +6,14 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import './Kelas.css'
 
 const KelasPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
@@ -199,6 +202,42 @@ const KelasPage = () => {
         }
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['Nama Kelas', 'Wali Kelas', 'Jumlah Santri']
+        const exportData = kelasList.map(k => ({
+            'Nama Kelas': k.nama,
+            'Wali Kelas': k.wali_kelas?.nama || '-',
+            'Jumlah Santri': santriCounts[k.id] || 0
+        }))
+        exportToExcel(exportData, columns, 'data_kelas')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Nama Kelas', 'Wali Kelas', 'Jumlah Santri']
+        const exportData = kelasList.map(k => ({
+            'Nama Kelas': k.nama,
+            'Wali Kelas': k.wali_kelas?.nama || '-',
+            'Jumlah Santri': santriCounts[k.id] || 0
+        }))
+        exportToCSV(exportData, columns, 'data_kelas')
+        showToast.success('Export CSV berhasil')
+    }
+
+    const handleDownloadPDF = () => {
+        generateLaporanPDF({
+            title: 'Data Kelas',
+            columns: ['Nama Kelas', 'Wali Kelas', 'Jumlah Santri'],
+            data: kelasList.map(k => [
+                k.nama,
+                k.wali_kelas?.nama || '-',
+                santriCounts[k.id] || 0
+            ]),
+            filename: 'data_kelas'
+        })
+        showToast.success('PDF berhasil didownload')
+    }
+
     const filteredAvailableSantri = availableSantri.filter(s =>
         s.nama.toLowerCase().includes(searchSantri.toLowerCase()) ||
         (s.nis && s.nis.toLowerCase().includes(searchSantri.toLowerCase()))
@@ -211,11 +250,18 @@ const KelasPage = () => {
                     <h1 className="page-title">Manajemen Kelas</h1>
                     <p className="page-subtitle">Kelola data kelas dan wali kelas</p>
                 </div>
-                {canEdit && (
-                    <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) }}>
-                        <Plus size={18} /> Tambah Kelas
-                    </button>
-                )}
+                <div className="header-actions">
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
+                    {canEdit && (
+                        <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) }}>
+                            <Plus size={18} /> Tambah Kelas
+                        </button>
+                    )}
+                </div>
             </div>
 
             {loading ? (

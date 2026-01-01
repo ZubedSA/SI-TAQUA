@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Newspaper, Plus, Upload, Archive, Calendar, FileText, Download, Eye } from 'lucide-react'
+import { Newspaper, Plus, Upload, Archive, Calendar, FileText, Eye } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 

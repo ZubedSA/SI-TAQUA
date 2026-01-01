@@ -13,7 +13,7 @@ const GuruForm = () => {
     const { id } = useParams()
     const location = useLocation()
     const { isAdmin, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Determine mode: view (read-only) vs edit
     const isViewMode = location.pathname.includes('/guru/') && !location.pathname.includes('/edit') && !location.pathname.includes('/create')

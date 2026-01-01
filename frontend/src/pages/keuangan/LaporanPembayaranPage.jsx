@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react'
 import { FileBarChart, Download, CreditCard, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import { useToast } from '../../context/ToastContext'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const LaporanPembayaranPage = () => {
+    const showToast = useToast()
     const [pembayaran, setPembayaran] = useState([])
     const [tagihan, setTagihan] = useState([])
     const [loading, setLoading] = useState(true)
@@ -64,6 +68,34 @@ const LaporanPembayaranPage = () => {
     const lunasCount = tagihan.filter(t => t.status === 'Lunas').length
     const belumLunasCount = tagihan.filter(t => t.status !== 'Lunas').length
 
+    const handleDownloadExcel = () => {
+        const columns = ['Tanggal', 'Santri', 'NIS', 'Kategori', 'Jumlah', 'Metode']
+        const exportData = pembayaran.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Santri: d.santri?.nama || '-',
+            NIS: d.santri?.nis || '-',
+            Kategori: d.tagihan?.kategori?.nama || '-',
+            Jumlah: Number(d.jumlah),
+            Metode: d.metode
+        }))
+        exportToExcel(exportData, columns, 'laporan_pembayaran_santri')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Tanggal', 'Santri', 'NIS', 'Kategori', 'Jumlah', 'Metode']
+        const exportData = pembayaran.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Santri: d.santri?.nama || '-',
+            NIS: d.santri?.nis || '-',
+            Kategori: d.tagihan?.kategori?.nama || '-',
+            Jumlah: Number(d.jumlah),
+            Metode: d.metode
+        }))
+        exportToCSV(exportData, columns, 'laporan_pembayaran_santri')
+        showToast.success('Export CSV berhasil')
+    }
+
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Pembayaran Santri',
@@ -84,6 +116,7 @@ const LaporanPembayaranPage = () => {
             totalLabel: 'Total Pembayaran',
             totalValue: totalPembayaran
         })
+        showToast.success('Laporan berhasil didownload')
     }
 
     return (
@@ -96,9 +129,11 @@ const LaporanPembayaranPage = () => {
                     <p className="page-subtitle">Ringkasan pembayaran santri</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-primary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                 </div>
             </div>
 

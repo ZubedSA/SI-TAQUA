@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Calendar, RefreshCw, Download, Printer, Users, Search } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
+import DownloadButton from '../../../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanRekapMingguanPage = () => {
@@ -220,6 +222,36 @@ const LaporanRekapMingguanPage = () => {
         })
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']
+        const exportData = reportData.map(row => ({
+            NIS: row.nis,
+            'Nama Santri': row.nama,
+            Setoran: `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
+            'Muroja\'ah': `${row.murajaah_count}x (${row.murajaah_ayat} ayat)`,
+            'Ziyadah Ulang': `${row.ziyadah_count}x (${row.ziyadah_ayat} ayat)`,
+            'Total Ayat': row.total_ayat,
+            Kehadiran: row.kehadiran,
+            Status: row.status
+        }))
+        exportToExcel(exportData, columns, 'laporan_rekap_mingguan')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']
+        const exportData = reportData.map(row => ({
+            NIS: row.nis,
+            'Nama Santri': row.nama,
+            Setoran: `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
+            'Muroja\'ah': `${row.murajaah_count}x (${row.murajaah_ayat} ayat)`,
+            'Ziyadah Ulang': `${row.ziyadah_count}x (${row.ziyadah_ayat} ayat)`,
+            'Total Ayat': row.total_ayat,
+            Kehadiran: row.kehadiran,
+            Status: row.status
+        }))
+        exportToCSV(exportData, columns, 'laporan_rekap_mingguan')
+    }
+
     // =============================================
     // RENDER
     // =============================================
@@ -234,13 +266,12 @@ const LaporanRekapMingguanPage = () => {
                     <p className="page-subtitle">Rekap hafalan per rentang tanggal</p>
                 </div>
                 <div className="header-actions">
-                    <button
-                        className="btn btn-primary"
+                    <DownloadButton
+                        onDownloadPDF={generatePDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
                         disabled={reportData.length === 0}
-                        onClick={generatePDF}
-                    >
-                        <Download size={18} /> Download PDF
-                    </button>
+                    />
                     <button
                         className="btn btn-outline"
                         disabled={reportData.length === 0}

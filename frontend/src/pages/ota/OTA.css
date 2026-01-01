@@ -1,0 +1,765 @@
+/* =====================================================
+   OTA Module Styles
+   Dashboard Orang Tua Asuh - Consistent with Keuangan.css
+   ===================================================== */
+
+/* Base Container */
+.ota-container {
+    padding: 1.5rem;
+    min-height: 100vh;
+    background: var(--bg-secondary, #f8fafc);
+}
+
+/* Header Section */
+.ota-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.ota-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.ota-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 0;
+}
+
+.ota-header p {
+    color: var(--text-secondary, #64748b);
+    margin: 0.25rem 0 0 0;
+    font-size: 0.875rem;
+}
+
+/* Card Container */
+.ota-card {
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.ota-card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.ota-card-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+    margin: 0;
+}
+
+.ota-card-body {
+    padding: 1.5rem;
+}
+
+/* Summary Cards */
+.ota-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.ota-summary-card {
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    padding: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.ota-summary-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.ota-summary-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 0.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ota-summary-icon.blue {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.ota-summary-icon.green {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.ota-summary-icon.orange {
+    background: #ffedd5;
+    color: #ea580c;
+}
+
+.ota-summary-icon.purple {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.ota-summary-icon.emerald {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.ota-summary-content h3 {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary, #64748b);
+    margin: 0 0 0.25rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.ota-summary-content p {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 0;
+}
+
+/* Filters Section */
+.ota-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.ota-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ota-filter-group label {
+    font-size: 0.813rem;
+    color: var(--text-secondary, #64748b);
+    white-space: nowrap;
+}
+
+.ota-filter-group select,
+.ota-filter-group input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: white;
+    color: var(--text-primary, #1e293b);
+    min-width: 120px;
+}
+
+.ota-filter-group select:focus,
+.ota-filter-group input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Search Box */
+.ota-search {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+}
+
+.ota-search input {
+    width: 100%;
+    padding: 0.625rem 0.875rem 0.625rem 2.5rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: white;
+}
+
+.ota-search input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.ota-search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary, #64748b);
+}
+
+/* Action Buttons */
+.ota-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ota-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.ota-btn-primary {
+    background: #10b981;
+    color: white;
+}
+
+.ota-btn-primary:hover {
+    background: #059669;
+}
+
+.ota-btn-secondary {
+    background: white;
+    color: var(--text-primary, #1e293b);
+    border: 1px solid var(--border-color, #e2e8f0);
+}
+
+.ota-btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.ota-btn-danger {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.ota-btn-danger:hover {
+    background: #fee2e2;
+}
+
+.ota-btn-icon {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+}
+
+/* Table */
+.ota-table-container {
+    overflow-x: auto;
+}
+
+.ota-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.ota-table thead {
+    background: #f8fafc;
+}
+
+.ota-table th {
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    white-space: nowrap;
+}
+
+.ota-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    color: var(--text-primary, #1e293b);
+}
+
+.ota-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.ota-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.ota-table .text-right {
+    text-align: right;
+}
+
+.ota-table .text-center {
+    text-align: center;
+}
+
+/* Status Badge */
+.ota-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.ota-badge-success {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.ota-badge-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.ota-badge-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.ota-badge-info {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+/* Action Menu (Desktop) */
+.ota-action-buttons {
+    display: flex;
+    gap: 0.375rem;
+    justify-content: flex-end;
+}
+
+.ota-action-btn {
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-secondary, #64748b);
+    transition: all 0.15s ease;
+}
+
+.ota-action-btn:hover {
+    background: #f1f5f9;
+    color: var(--text-primary, #1e293b);
+}
+
+.ota-action-btn.edit:hover {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.ota-action-btn.delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.ota-action-btn.link:hover {
+    background: #d1fae5;
+    color: #059669;
+}
+
+/* Mobile Action Menu */
+.ota-mobile-menu {
+    position: relative;
+}
+
+.ota-mobile-menu-trigger {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-secondary, #64748b);
+}
+
+.ota-mobile-menu-trigger:hover {
+    background: #f1f5f9;
+}
+
+.ota-mobile-menu-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: white;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    min-width: 160px;
+    z-index: 50;
+    overflow: hidden;
+}
+
+.ota-mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-primary, #1e293b);
+    transition: background 0.15s ease;
+}
+
+.ota-mobile-menu-item:hover {
+    background: #f8fafc;
+}
+
+.ota-mobile-menu-item.danger {
+    color: #dc2626;
+}
+
+.ota-mobile-menu-item.danger:hover {
+    background: #fef2f2;
+}
+
+/* Modal */
+.ota-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+}
+
+.ota-modal {
+    background: white;
+    border-radius: 0.75rem;
+    max-width: 540px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+}
+
+.ota-modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ota-modal-header h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+    margin: 0;
+}
+
+.ota-modal-close {
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-secondary, #64748b);
+}
+
+.ota-modal-close:hover {
+    background: #f1f5f9;
+    color: var(--text-primary, #1e293b);
+}
+
+.ota-modal-body {
+    padding: 1.5rem;
+}
+
+.ota-modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Form Elements */
+.ota-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.ota-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.ota-form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary, #1e293b);
+    margin-bottom: 0.5rem;
+}
+
+.ota-form-label .required {
+    color: #dc2626;
+}
+
+.ota-form-input,
+.ota-form-select,
+.ota-form-textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: white;
+    color: var(--text-primary, #1e293b);
+    transition: all 0.15s ease;
+}
+
+.ota-form-input:focus,
+.ota-form-select:focus,
+.ota-form-textarea:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.ota-form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.ota-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Empty State */
+.ota-empty {
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.ota-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    color: #cbd5e1;
+}
+
+.ota-empty h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+    margin: 0 0 0.5rem 0;
+}
+
+.ota-empty p {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #64748b);
+    margin: 0;
+}
+
+/* Loading State */
+.ota-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    gap: 1rem;
+}
+
+.ota-loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #10b981;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Download Dropdown */
+.ota-download-dropdown {
+    position: relative;
+}
+
+.ota-download-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 0.25rem;
+    background: white;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    min-width: 140px;
+    z-index: 50;
+    overflow: hidden;
+}
+
+.ota-download-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-primary, #1e293b);
+}
+
+.ota-download-item:hover {
+    background: #f8fafc;
+}
+
+/* WhatsApp Button */
+.ota-btn-whatsapp {
+    background: #25d366;
+    color: white;
+}
+
+.ota-btn-whatsapp:hover {
+    background: #1da851;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ota-container {
+        padding: 1rem;
+    }
+
+    .ota-header-top {
+        flex-direction: column;
+    }
+
+    .ota-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .ota-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ota-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ota-search {
+        max-width: none;
+    }
+
+    .ota-actions {
+        width: 100%;
+    }
+
+    .ota-actions .ota-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .ota-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .ota-table th,
+    .ota-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    /* Hide desktop actions, show mobile menu */
+    .ota-action-buttons.desktop {
+        display: none;
+    }
+
+    .ota-mobile-menu {
+        display: block;
+    }
+}
+
+@media (min-width: 769px) {
+
+    /* Show desktop actions, hide mobile menu */
+    .ota-action-buttons.desktop {
+        display: flex;
+    }
+
+    .ota-mobile-menu {
+        display: none;
+    }
+}
+
+/* Print Styles */
+@media print {
+
+    .ota-btn,
+    .ota-actions,
+    .ota-filters,
+    .ota-mobile-menu {
+        display: none !important;
+    }
+
+    .ota-card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    .ota-table {
+        font-size: 10pt;
+    }
+}

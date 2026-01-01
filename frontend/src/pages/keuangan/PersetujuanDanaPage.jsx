@@ -9,7 +9,7 @@ import './Keuangan.css'
 
 const PersetujuanDanaPage = () => {
     const { user, role, userProfile } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)

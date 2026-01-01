@@ -7,11 +7,14 @@ import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import './Mapel.css'
 
 const MapelPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
@@ -97,6 +100,45 @@ const MapelPage = () => {
         }
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['Kode', 'Nama Mapel', 'Kategori', 'Deskripsi']
+        const exportData = filteredMapel.map(m => ({
+            Kode: m.kode,
+            'Nama Mapel': m.nama,
+            Kategori: m.kategori || 'Madrosiyah',
+            Deskripsi: m.deskripsi || '-'
+        }))
+        exportToExcel(exportData, columns, 'data_mapel')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Kode', 'Nama Mapel', 'Kategori', 'Deskripsi']
+        const exportData = filteredMapel.map(m => ({
+            Kode: m.kode,
+            'Nama Mapel': m.nama,
+            Kategori: m.kategori || 'Madrosiyah',
+            Deskripsi: m.deskripsi || '-'
+        }))
+        exportToCSV(exportData, columns, 'data_mapel')
+        showToast.success('Export CSV berhasil')
+    }
+
+    const handleDownloadPDF = () => {
+        generateLaporanPDF({
+            title: 'Data Mata Pelajaran',
+            columns: ['Kode', 'Nama Mapel', 'Kategori', 'Deskripsi'],
+            data: filteredMapel.map(m => [
+                m.kode,
+                m.nama,
+                m.kategori || 'Madrosiyah',
+                m.deskripsi || '-'
+            ]),
+            filename: 'data_mapel'
+        })
+        showToast.success('PDF berhasil didownload')
+    }
+
     const countByKategori = (kat) => mapelList.filter(m => m.kategori === kat).length
 
     return (
@@ -106,11 +148,18 @@ const MapelPage = () => {
                     <h1 className="page-title">Mata Pelajaran</h1>
                     <p className="page-subtitle">Kelola daftar mata pelajaran</p>
                 </div>
-                {canEdit && (
-                    <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' }); setShowModal(true) }}>
-                        <Plus size={18} /> Tambah Mapel
-                    </button>
-                )}
+                <div className="header-actions">
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
+                    {canEdit && (
+                        <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' }); setShowModal(true) }}>
+                            <Plus size={18} /> Tambah Mapel
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Kategori Filter Buttons */}

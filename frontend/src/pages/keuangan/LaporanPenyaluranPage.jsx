@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react'
 import { FileBarChart, Download, PiggyBank, TrendingUp, CheckCircle, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import { useToast } from '../../context/ToastContext'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const LaporanPenyaluranPage = () => {
+    const showToast = useToast()
     const [anggaran, setAnggaran] = useState([])
     const [realisasi, setRealisasi] = useState([])
     const [loading, setLoading] = useState(true)
@@ -34,6 +38,42 @@ const LaporanPenyaluranPage = () => {
     const totalRealisasi = realisasi.reduce((sum, d) => sum + Number(d.jumlah_terpakai), 0)
     const sisaDana = totalDisetujui - totalRealisasi
 
+    const handleDownloadExcel = () => {
+        const columns = ['Program', 'Diajukan', 'Disetujui', 'Terealisasi', 'Status']
+        const exportData = anggaran.map(d => {
+            const realisasiProgram = realisasi
+                .filter(r => r.anggaran_id === d.id)
+                .reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0)
+            return {
+                Program: d.nama_program,
+                Diajukan: Number(d.jumlah_diajukan),
+                Disetujui: d.jumlah_disetujui ? Number(d.jumlah_disetujui) : 0,
+                Terealisasi: realisasiProgram,
+                Status: d.status
+            }
+        })
+        exportToExcel(exportData, columns, 'laporan_penyaluran_dana')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Program', 'Diajukan', 'Disetujui', 'Terealisasi', 'Status']
+        const exportData = anggaran.map(d => {
+            const realisasiProgram = realisasi
+                .filter(r => r.anggaran_id === d.id)
+                .reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0)
+            return {
+                Program: d.nama_program,
+                Diajukan: Number(d.jumlah_diajukan),
+                Disetujui: d.jumlah_disetujui ? Number(d.jumlah_disetujui) : 0,
+                Terealisasi: realisasiProgram,
+                Status: d.status
+            }
+        })
+        exportToCSV(exportData, columns, 'laporan_penyaluran_dana')
+        showToast.success('Export CSV berhasil')
+    }
+
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Penyaluran Dana',
@@ -57,6 +97,7 @@ const LaporanPenyaluranPage = () => {
                 { label: 'Sisa Dana', value: `Rp ${sisaDana.toLocaleString('id-ID')}` }
             ]
         })
+        showToast.success('Laporan berhasil didownload')
     }
 
     return (
@@ -69,9 +110,11 @@ const LaporanPenyaluranPage = () => {
                     <p className="page-subtitle">Ringkasan anggaran dan realisasi dana</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-primary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                 </div>
             </div>
 

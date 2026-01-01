@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Printer, Users } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
+import DownloadButton from '../../../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanUjianSemesterPage = () => {
@@ -141,6 +143,36 @@ const LaporanUjianSemesterPage = () => {
         })
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']
+        const exportData = data.map(s => ({
+            NIS: s.nis,
+            Nama: s.nama,
+            Hafalan: s.hafalan,
+            Murajaah: s.murajaah,
+            Tajwid: s.tajwid,
+            Kelancaran: s.kelancaran,
+            'Rata-rata': s.rata_rata,
+            Predikat: s.predikat
+        }))
+        exportToExcel(exportData, columns, 'laporan_ujian_semester')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']
+        const exportData = data.map(s => ({
+            NIS: s.nis,
+            Nama: s.nama,
+            Hafalan: s.hafalan,
+            Murajaah: s.murajaah,
+            Tajwid: s.tajwid,
+            Kelancaran: s.kelancaran,
+            'Rata-rata': s.rata_rata,
+            Predikat: s.predikat
+        }))
+        exportToCSV(exportData, columns, 'laporan_ujian_semester')
+    }
+
     return (
         <div className="laporan-page">
             <div className="page-header">
@@ -151,9 +183,12 @@ const LaporanUjianSemesterPage = () => {
                     <p className="page-subtitle">Laporan hasil ujian semester - Tahfizhiyah</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-primary" disabled={data.length === 0} onClick={generatePDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={generatePDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                        disabled={data.length === 0}
+                    />
                     <button className="btn btn-outline" disabled={data.length === 0} onClick={() => window.print()}>
                         <Printer size={18} /> Print
                     </button>

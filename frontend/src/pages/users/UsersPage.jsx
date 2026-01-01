@@ -22,6 +22,8 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './UsersPage.css'
 
 /**
@@ -29,7 +31,7 @@ import './UsersPage.css'
  * Manage all system users, their roles and status
  */
 const UsersPage = () => {
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [users, setUsers] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -181,6 +183,9 @@ const UsersPage = () => {
             guru: 'badge-blue',
             bendahara: 'badge-green',
             pengasuh: 'badge-teal',
+            pengasuh: 'badge-teal',
+            pengurus: 'badge-orange',
+            ota: 'badge-orange',
             wali: 'badge-purple'
         }
         return colors[role] || 'badge-gray'
@@ -192,6 +197,9 @@ const UsersPage = () => {
             guru: 'Guru',
             bendahara: 'Bendahara',
             pengasuh: 'Pengasuh',
+            pengasuh: 'Pengasuh',
+            pengurus: 'Pengurus',
+            ota: 'Orang Tua Asuh',
             wali: 'Wali'
         }
         return labels[role] || role
@@ -314,7 +322,7 @@ const UsersPage = () => {
         setSaving(true)
 
         // Determine primary role for legacy compatibility
-        const rolePriority = ['admin', 'bendahara', 'guru', 'pengasuh', 'wali']
+        const rolePriority = ['admin', 'bendahara', 'guru', 'pengurus', 'pengasuh', 'wali']
         const primaryRole = rolePriority.find(r => formData.roles.includes(r)) || formData.roles[0]
         console.log('👤 Determined Primary Role:', primaryRole)
 
@@ -562,6 +570,32 @@ const UsersPage = () => {
 
     // Legacy Password Functions Removed
 
+    const handleDownloadExcel = () => {
+        const columns = ['Nama', 'Email', 'Username', 'Roles', 'Phone', 'Created At']
+        const exportData = filteredUsers.map(u => ({
+            Nama: u.nama,
+            Email: u.email,
+            Username: u.username,
+            Roles: (u.roles || [u.role]).join(', '),
+            Phone: u.phone || '-',
+            'Created At': new Date(u.created_at).toLocaleDateString('id-ID')
+        }))
+        exportToExcel(exportData, columns, 'users_data')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Nama', 'Email', 'Username', 'Roles', 'Phone', 'Created At']
+        const exportData = filteredUsers.map(u => ({
+            Nama: u.nama,
+            Email: u.email,
+            Username: u.username,
+            Roles: (u.roles || [u.role]).join(', '),
+            Phone: u.phone || '-',
+            'Created At': new Date(u.created_at).toLocaleDateString('id-ID')
+        }))
+        exportToCSV(exportData, columns, 'users_data')
+    }
+
 
     return (
         <div className="users-page">
@@ -599,15 +633,17 @@ const UsersPage = () => {
                         <option value="admin">Administrator</option>
                         <option value="guru">Guru</option>
                         <option value="bendahara">Bendahara</option>
+                        <option value="pengurus">Pengurus</option>
                         <option value="wali">Wali Santri</option>
                     </select>
                 </div>
                 <button className="btn-icon" onClick={fetchUsers} title="Refresh">
                     <RefreshCw size={18} />
                 </button>
-                <button className="btn-icon" title="Export">
-                    <Download size={18} />
-                </button>
+                <DownloadButton
+                    onDownloadExcel={handleDownloadExcel}
+                    onDownloadCSV={handleDownloadCSV}
+                />
             </div>
 
             {/* Stats */}
@@ -627,6 +663,10 @@ const UsersPage = () => {
                 <div className="stat-chip">
                     <span className="stat-number">{users.filter(u => (u.roles || []).includes('bendahara')).length}</span>
                     <span className="stat-label">Bendahara</span>
+                </div>
+                <div className="stat-chip">
+                    <span className="stat-number">{users.filter(u => (u.roles || []).includes('pengurus')).length}</span>
+                    <span className="stat-label">Pengurus</span>
                 </div>
                 <div className="stat-chip">
                     <span className="stat-number">{users.filter(u => (u.roles || []).includes('wali')).length}</span>
@@ -880,7 +920,7 @@ const UsersPage = () => {
                             <div className="form-group">
                                 <label>Roles (Hak Akses) *</label>
                                 <div className="roles-checkbox-group">
-                                    {['admin', 'guru', 'bendahara', 'pengasuh', 'wali'].map(role => (
+                                    {['admin', 'guru', 'bendahara', 'pengurus', 'pengasuh', 'wali', 'ota'].map(role => (
                                         <label key={role} className={`role-checkbox ${formData.roles.includes(role) ? 'checked' : ''}`}>
                                             <input
                                                 type="checkbox"

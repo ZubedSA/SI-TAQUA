@@ -7,6 +7,8 @@ import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { sendWhatsApp, templateTagihanSantri, templatePengingatTagihan } from '../../utils/whatsapp'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const TagihanSantriPage = () => {
@@ -222,16 +224,42 @@ const TagihanSantriPage = () => {
         sendWhatsApp(phone, message)
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['Santri', 'NIS', 'Kategori', 'Jumlah', 'Periode', 'Status']
+        const exportData = filteredData.map(d => ({
+            Santri: d.santri?.nama || '-',
+            NIS: d.santri?.nis || '-',
+            Kategori: d.kategori?.nama || '-',
+            Jumlah: Number(d.jumlah),
+            Periode: new Date(d.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+            Status: d.status
+        }))
+        exportToExcel(exportData, columns, 'laporan_tagihan_santri')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Santri', 'NIS', 'Kategori', 'Jumlah', 'Periode', 'Status']
+        const exportData = filteredData.map(d => ({
+            Santri: d.santri?.nama || '-',
+            NIS: d.santri?.nis || '-',
+            Kategori: d.kategori?.nama || '-',
+            Jumlah: Number(d.jumlah),
+            Periode: new Date(d.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+            Status: d.status
+        }))
+        exportToCSV(exportData, columns, 'laporan_tagihan_santri')
+    }
+
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Tagihan Santri',
-            columns: ['Santri', 'NIS', 'Kategori', 'Jumlah', 'Jatuh Tempo', 'Status'],
+            columns: ['Santri', 'NIS', 'Kategori', 'Jumlah', 'Periode', 'Status'],
             data: filteredData.map(d => [
                 d.santri?.nama || '-',
                 d.santri?.nis || '-',
                 d.kategori?.nama || '-',
                 `Rp ${Number(d.jumlah).toLocaleString('id-ID')}`,
-                new Date(d.jatuh_tempo).toLocaleDateString('id-ID'),
+                new Date(d.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
                 d.status
             ]),
             filename: 'laporan_tagihan_santri',
@@ -274,9 +302,11 @@ const TagihanSantriPage = () => {
                     <p className="page-subtitle">Kelola tagihan pembayaran santri</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-secondary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                     {canCreate('tagihan') && (
                         <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
                             <Plus size={18} /> Buat Tagihan
@@ -338,7 +368,7 @@ const TagihanSantriPage = () => {
                                 <th>Santri</th>
                                 <th>Kategori</th>
                                 <th>Jumlah</th>
-                                <th>Jatuh Tempo</th>
+                                <th>Periode</th>
                                 <th>Status</th>
                                 <th>Aksi</th>
                             </tr>
@@ -356,7 +386,7 @@ const TagihanSantriPage = () => {
                                     <td><span className="badge blue">{item.kategori?.nama || '-'}</span></td>
                                     <td className="amount">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
                                     <td>
-                                        {new Date(item.jatuh_tempo).toLocaleDateString('id-ID')}
+                                        {new Date(item.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
                                         {isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' && (
                                             <span className="overdue-badge">Terlambat</span>
                                         )}
@@ -430,14 +460,13 @@ const TagihanSantriPage = () => {
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label>Jatuh Tempo (Bulan & Tahun) *</label>
+                                    <label>Periode (Bulan & Tahun) *</label>
                                     <input
                                         type="month"
                                         value={form.jatuh_tempo_bulan}
                                         onChange={e => setForm({ ...form, jatuh_tempo_bulan: e.target.value })}
                                         required
                                     />
-                                    <small className="text-muted">Tanggal jatuh tempo otomatis diset ke tanggal 10 bulan tersebut</small>
                                 </div>
                                 <div className="form-group">
                                     <label>Keterangan</label>

@@ -16,7 +16,7 @@ import '../WaliPortal.css'
  */
 const ProfilWaliPage = () => {
     const { user, userProfile, signOut } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)

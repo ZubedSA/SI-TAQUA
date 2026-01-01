@@ -5,7 +5,7 @@ import { useToast } from '../../context/ToastContext'
 import './Keuangan.css'
 
 const KategoriPembayaranPage = () => {
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [data, setData] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)

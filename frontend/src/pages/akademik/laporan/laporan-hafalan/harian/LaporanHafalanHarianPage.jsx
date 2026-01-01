@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { BookMarked, RefreshCw, MessageCircle, Users, Send, Download, Printer } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
-
+import DownloadButton from '../../../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanHafalanHarianPage = () => {
@@ -136,6 +137,31 @@ _PTQA Batuan - Si-Taqua_`
             totalLabel: 'Total Santri',
             totalValue: `${data.length} Santri`
         })
+
+    }
+
+    const handleDownloadExcel = () => {
+        const columns = ['Santri', 'Juz/Surah', 'Ayat', 'Jenis', 'Status']
+        const exportData = data.map(item => ({
+            Santri: item.santri?.nama || '-',
+            'Juz/Surah': `Juz ${item.juz_mulai || item.juz} - ${item.surah_mulai || item.surah}`,
+            Ayat: `${item.ayat_mulai} - ${item.ayat_selesai}`,
+            Jenis: item.jenis,
+            Status: item.status
+        }))
+        exportToExcel(exportData, columns, 'hafalan_harian')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Santri', 'Juz/Surah', 'Ayat', 'Jenis', 'Status']
+        const exportData = data.map(item => ({
+            Santri: item.santri?.nama || '-',
+            'Juz/Surah': `Juz ${item.juz_mulai || item.juz} - ${item.surah_mulai || item.surah}`,
+            Ayat: `${item.ayat_mulai} - ${item.ayat_selesai}`,
+            Jenis: item.jenis,
+            Status: item.status
+        }))
+        exportToCSV(exportData, columns, 'hafalan_harian')
     }
 
     return (
@@ -150,9 +176,11 @@ _PTQA Batuan - Si-Taqua_`
                 <div className="header-actions">
                     {data.length > 0 && (
                         <>
-                            <button className="btn btn-primary" onClick={generatePDF}>
-                                <Download size={18} /> Download PDF
-                            </button>
+                            <DownloadButton
+                                onDownloadPDF={generatePDF}
+                                onDownloadExcel={handleDownloadExcel}
+                                onDownloadCSV={handleDownloadCSV}
+                            />
                             <button className="btn btn-success" onClick={sendAllWhatsApp}>
                                 <Send size={18} /> Kirim Semua WA
                             </button>

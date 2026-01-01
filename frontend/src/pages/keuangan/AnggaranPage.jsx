@@ -6,11 +6,13 @@ import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useToast } from '../../context/ToastContext'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const AnggaranPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
     // Multiple checks - admin dan bendahara bisa CRUD
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -139,6 +141,32 @@ const AnggaranPage = () => {
         setShowModal(true)
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['Program', 'Jumlah Diajukan', 'Jumlah Disetujui', 'Tanggal', 'Status']
+        const exportData = filteredData.map(d => ({
+            Program: d.nama_program,
+            'Jumlah Diajukan': Number(d.jumlah_diajukan),
+            'Jumlah Disetujui': d.jumlah_disetujui ? Number(d.jumlah_disetujui) : 0,
+            Tanggal: new Date(d.tanggal_pengajuan).toLocaleDateString('id-ID'),
+            Status: d.status
+        }))
+        exportToExcel(exportData, columns, 'laporan_anggaran')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Program', 'Jumlah Diajukan', 'Jumlah Disetujui', 'Tanggal', 'Status']
+        const exportData = filteredData.map(d => ({
+            Program: d.nama_program,
+            'Jumlah Diajukan': Number(d.jumlah_diajukan),
+            'Jumlah Disetujui': d.jumlah_disetujui ? Number(d.jumlah_disetujui) : 0,
+            Tanggal: new Date(d.tanggal_pengajuan).toLocaleDateString('id-ID'),
+            Status: d.status
+        }))
+        exportToCSV(exportData, columns, 'laporan_anggaran')
+        showToast.success('Export CSV berhasil')
+    }
+
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Pengajuan Anggaran',
@@ -183,9 +211,11 @@ const AnggaranPage = () => {
                     <p className="page-subtitle">Ajukan anggaran untuk program pesantren</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-secondary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                     {canEditKas && (
                         <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
                             <Plus size={18} /> Ajukan Anggaran

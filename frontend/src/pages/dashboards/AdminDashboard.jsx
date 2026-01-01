@@ -299,6 +299,10 @@ const AdminDashboard = () => {
                         <Database size={20} />
                         <span>Backup Data</span>
                     </Link>
+                    <Link to="/keuangan/dana/persetujuan" className="quick-action-btn">
+                        <CheckCircle size={20} />
+                        <span>Persetujuan Dana</span>
+                    </Link>
                 </div>
             </div>
         </div>

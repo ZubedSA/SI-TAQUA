@@ -4,6 +4,9 @@ import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle
 import { supabase } from '../../../../lib/supabase'
 import { logDelete } from '../../../../lib/auditLog'
 import MobileActionMenu from '../../../../components/ui/MobileActionMenu'
+import DownloadButton from '../../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../../utils/exportUtils'
+import { generateLaporanPDF } from '../../../../utils/pdfGenerator'
 
 import './Hafalan.css'
 
@@ -558,81 +561,52 @@ _PTQA Batuan_`
         setTimeout(() => printWindow.print(), 250)
     }
 
-    // Fungsi Download PDF (generate HTML file untuk download)
-    const handleDownloadPDF = () => {
-        const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Rekap Hafalan - PTQA Batuan</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
-        .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-        th { background-color: #2c3e50; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .stats { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .stat-item { padding: 10px 15px; background: #f0f0f0; border-radius: 5px; text-align: center; }
-        .stat-label { font-size: 11px; color: #666; }
-        .stat-value { font-size: 16px; font-weight: bold; color: #2c3e50; }
-        .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #666; }
-        @media print { body { margin: 0; } }
-    </style>
-</head>
-<body>
-    <h1>📖 REKAP HAFALAN SANTRI</h1>
-    <p class="subtitle">PTQA Batuan - Tanggal: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-    <div class="stats">
-        <div class="stat-item"><span class="stat-label">Total Data</span><br/><span class="stat-value">${rekapData.length}</span></div>
-        <div class="stat-item"><span class="stat-label">Lancar</span><br/><span class="stat-value">${rekapStats.lancar || 0}</span></div>
-        <div class="stat-item"><span class="stat-label">Sedang</span><br/><span class="stat-value">${rekapStats.sedang || 0}</span></div>
-        <div class="stat-item"><span class="stat-label">Lemah</span><br/><span class="stat-value">${rekapStats.lemah || 0}</span></div>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>No</th>
-                <th>Tanggal</th>
-                <th>Nama Santri</th>
-                <th>Halaqoh</th>
-                <th>Jenis</th>
-                <th>Hafalan</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${rekapData.map((h, i) => `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td>${h.tanggal}</td>
-                    <td>${h.santri_nama}</td>
-                    <td>${h.halaqoh_nama || '-'}</td>
-                    <td>${h.jenis}</td>
-                    <td>Juz ${h.juz_mulai || h.juz || '-'}${(h.juz_selesai && h.juz_selesai !== h.juz_mulai) ? ' - ' + h.juz_selesai : ''}: ${h.surah_mulai || h.surah || '-'}${(h.surah_selesai && h.surah_selesai !== h.surah_mulai) ? ' s/d ' + h.surah_selesai : ''} (${h.ayat_mulai || 1}-${h.ayat_selesai || 1})</td>
-                    <td>${h.status}</td>
-                </tr>
-            `).join('')}
-        </tbody>
-    </table>
-    <p class="footer">Dokumen ini digenerate dari Sistem Akademik PTQA Batuan</p>
-</body>
-</html>`
+    // Fungsi Download PDF via Standard Generator
+    const handleDownloadPDF = async () => {
+        if (!rekapData || rekapData.length === 0) return
 
-        // Create blob and download
-        const blob = new Blob([htmlContent], { type: 'text/html' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `Rekap_Hafalan_${new Date().toISOString().split('T')[0]}.html`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        await generateLaporanPDF({
+            title: 'REKAP HAFALAN SANTRI',
+            subtitle: `Dicetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+            orientation: 'landscape',
+            columns: ['No', 'Tanggal', 'Nama Santri', 'Halaqoh', 'Jenis', 'Hafalan', 'Status'],
+            data: rekapData.map((h, i) => [
+                i + 1,
+                h.tanggal,
+                h.santri_nama,
+                h.halaqoh_nama || '-',
+                h.jenis,
+                `${h.surah_mulai || h.surah || '-'} (${h.ayat_mulai}-${h.ayat_selesai})`,
+                h.status
+            ]),
+            filename: `Rekap_Hafalan_${new Date().toISOString().split('T')[0]}`
+        })
+    }
 
-        alert('✅ File berhasil didownload!\n\n💡 Tips: Buka file tersebut di browser, lalu gunakan Ctrl+P dan pilih "Save as PDF" untuk menyimpan sebagai PDF.')
+    const handleDownloadExcel = () => {
+        const columns = ['Tanggal', 'Nama Santri', 'Halaqoh', 'Jenis', 'Hafalan', 'Status']
+        const exportData = rekapData.map(h => ({
+            Tanggal: h.tanggal,
+            'Nama Santri': h.santri_nama,
+            Halaqoh: h.halaqoh_nama || '-',
+            Jenis: h.jenis,
+            Hafalan: `${h.surah_mulai || h.surah || '-'} (${h.ayat_mulai}-${h.ayat_selesai})`,
+            Status: h.status
+        }))
+        exportToExcel(exportData, columns, 'rekap_hafalan')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Tanggal', 'Nama Santri', 'Halaqoh', 'Jenis', 'Hafalan', 'Status']
+        const exportData = rekapData.map(h => ({
+            Tanggal: h.tanggal,
+            'Nama Santri': h.santri_nama,
+            Halaqoh: h.halaqoh_nama || '-',
+            Jenis: h.jenis,
+            Hafalan: `${h.surah_mulai || h.surah || '-'} (${h.ayat_mulai}-${h.ayat_selesai})`,
+            Status: h.status
+        }))
+        exportToCSV(exportData, columns, 'rekap_hafalan')
     }
 
     useEffect(() => {
@@ -924,12 +898,19 @@ _PTQA Batuan_`
                             <button className="btn btn-secondary" onClick={() => setRekapFilters({ tanggalMulai: '', tanggalSelesai: '', halaqoh_id: '', santri_nama: '' })}>
                                 <RefreshCw size={14} /> Reset
                             </button>
-                            <button className="btn btn-primary" onClick={handlePrint}>
-                                <Printer size={14} /> Print
-                            </button>
-                            <button className="btn btn-success" onClick={handleDownloadPDF}>
-                                <Download size={14} /> PDF
-                            </button>
+                            <div className="filter-group self-end">
+                                <label className="form-label text-transparent">Action</label>
+                                <div className="flex gap-2">
+                                    <button className="btn btn-outline" onClick={handlePrint}>
+                                        <Printer size={18} /> Print
+                                    </button>
+                                    <DownloadButton
+                                        onDownloadPDF={handleDownloadPDF}
+                                        onDownloadExcel={handleDownloadExcel}
+                                        onDownloadCSV={handleDownloadCSV}
+                                    />
+                                </div>
+                            </div>
                             <button
                                 className="btn btn-success"
                                 onClick={sendAllWhatsApp}

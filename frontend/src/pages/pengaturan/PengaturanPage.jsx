@@ -29,7 +29,7 @@ import { useToast } from '../../context/ToastContext'
 import './Pengaturan.css'
 
 const PengaturanPage = () => {
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [activeTab, setActiveTab] = useState('import')
 
     // Data import states

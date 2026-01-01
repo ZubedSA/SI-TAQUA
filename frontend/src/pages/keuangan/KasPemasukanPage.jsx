@@ -9,12 +9,14 @@ import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const KasPemasukanPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const { canCreate, canUpdate, canDelete } = usePermissions()
-    const { showToast } = useToast()
+    const showToast = useToast() // showToast is returned directly from context, not destructured
 
     // Multiple checks - admin dan bendahara bisa CRUD
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
@@ -139,8 +141,9 @@ const KasPemasukanPage = () => {
 
             setShowModal(false)
             resetForm()
-            fetchData()
+            await fetchData() // Added await for proper data refresh
         } catch (err) {
+            console.error('Submit error:', err)
             showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
             setSaving(false)
@@ -168,9 +171,10 @@ const KasPemasukanPage = () => {
                 )
             }
 
-            fetchData()
+            await fetchData() // Added await for proper data refresh
             showToast.success('Data berhasil dihapus')
         } catch (err) {
+            console.error('Delete error:', err)
             showToast.error('Gagal menghapus: ' + err.message)
         }
     }
@@ -196,6 +200,32 @@ const KasPemasukanPage = () => {
             keterangan: item.keterangan || ''
         })
         setShowModal(true)
+    }
+
+    const handleDownloadExcel = () => {
+        const columns = ['Tanggal', 'Sumber', 'Kategori', 'Jumlah', 'Keterangan']
+        const exportData = data.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Sumber: d.sumber,
+            Kategori: d.kategori || '-',
+            Jumlah: Number(d.jumlah),
+            Keterangan: d.keterangan || '-'
+        }))
+        exportToExcel(exportData, columns, 'laporan_pemasukan_kas')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Tanggal', 'Sumber', 'Kategori', 'Jumlah', 'Keterangan']
+        const exportData = data.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Sumber: d.sumber,
+            Kategori: d.kategori || '-',
+            Jumlah: Number(d.jumlah),
+            Keterangan: d.keterangan || '-'
+        }))
+        exportToCSV(exportData, columns, 'laporan_pemasukan_kas')
+        showToast.success('Export CSV berhasil')
     }
 
     const handleDownloadPDF = () => {
@@ -236,10 +266,12 @@ const KasPemasukanPage = () => {
                     <p className="page-subtitle">Kelola data pemasukan kas pesantren</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-secondary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
-                    {canEditKas && canCreate('kas') && (
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
+                    {canEditKas && (
                         <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
                             <Plus size={18} /> Tambah Pemasukan
                         </button>

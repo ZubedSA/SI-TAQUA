@@ -11,7 +11,7 @@ const HafalanForm = () => {
     const navigate = useNavigate()
     const { id } = useParams()
     const [searchParams] = useSearchParams()
-    const { showToast } = useToast()
+    const showToast = useToast()
     const isEdit = Boolean(id)
 
     // Ambil jenis dari URL query param (jika ada)

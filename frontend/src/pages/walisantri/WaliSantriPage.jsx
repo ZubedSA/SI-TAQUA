@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable'
 import './WaliSantri.css'
 
 const WaliSantriPage = () => {
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [activeMenu, setActiveMenu] = useState(null)
     const [loading, setLoading] = useState(false)
 

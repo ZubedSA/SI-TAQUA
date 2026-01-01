@@ -6,11 +6,13 @@ import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useToast } from '../../context/ToastContext'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import './Keuangan.css'
 
 const RealisasiDanaPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
     // Multiple checks - admin dan bendahara bisa CRUD
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
@@ -162,6 +164,30 @@ const RealisasiDanaPage = () => {
         setShowModal(true)
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['Tanggal', 'Program', 'Keperluan', 'Jumlah']
+        const exportData = data.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Program: d.anggaran?.nama_program || '-',
+            Keperluan: d.keperluan || '-',
+            Jumlah: Number(d.jumlah_terpakai)
+        }))
+        exportToExcel(exportData, columns, 'laporan_realisasi_dana')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['Tanggal', 'Program', 'Keperluan', 'Jumlah']
+        const exportData = data.map(d => ({
+            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Program: d.anggaran?.nama_program || '-',
+            Keperluan: d.keperluan || '-',
+            Jumlah: Number(d.jumlah_terpakai)
+        }))
+        exportToCSV(exportData, columns, 'laporan_realisasi_dana')
+        showToast.success('Export CSV berhasil')
+    }
+
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Laporan Realisasi Dana',
@@ -191,9 +217,11 @@ const RealisasiDanaPage = () => {
                     <p className="page-subtitle">Catat penggunaan dana dari anggaran yang disetujui</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-secondary" onClick={handleDownloadPDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
                     {canEditKas && (
                         <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
                             <Plus size={18} /> Tambah Realisasi

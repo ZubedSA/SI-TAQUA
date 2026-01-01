@@ -5,7 +5,7 @@ import { useToast } from '../../context/ToastContext'
 import './Semester.css'
 
 const SemesterPage = () => {
-    const { showToast } = useToast()
+    const showToast = useToast()
     const [semesterList, setSemesterList] = useState([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)

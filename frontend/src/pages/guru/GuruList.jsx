@@ -8,11 +8,14 @@ import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
+import DownloadButton from '../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import './Guru.css'
 
 const GuruList = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
-    const { showToast } = useToast()
+    const showToast = useToast()
 
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
@@ -53,13 +56,8 @@ const GuruList = () => {
 
     const handleDelete = async () => {
         if (!selectedGuru) return
-
         try {
-            const { error } = await supabase
-                .from('guru')
-                .delete()
-                .eq('id', selectedGuru.id)
-
+            const { error } = await supabase.from('guru').delete().eq('id', selectedGuru.id)
             if (error) throw error
             await logDelete('guru', selectedGuru.nama, `Hapus data guru: ${selectedGuru.nama} (${selectedGuru.nip})`)
 
@@ -71,6 +69,51 @@ const GuruList = () => {
             console.error('Error deleting guru:', err.message)
             showToast.error('Gagal menghapus: ' + err.message)
         }
+    }
+
+    const handleDownloadExcel = () => {
+        const columns = ['NIP', 'Nama', 'L/P', 'Jabatan', 'No Telp', 'Status']
+        const exportData = filteredGuru.map(g => ({
+            NIP: g.nip,
+            Nama: g.nama,
+            'L/P': g.jenis_kelamin,
+            Jabatan: g.jabatan,
+            'No Telp': g.no_telp || '-',
+            Status: g.status
+        }))
+        exportToExcel(exportData, columns, 'data_guru')
+        showToast.success('Export Excel berhasil')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['NIP', 'Nama', 'L/P', 'Jabatan', 'No Telp', 'Status']
+        const exportData = filteredGuru.map(g => ({
+            NIP: g.nip,
+            Nama: g.nama,
+            'L/P': g.jenis_kelamin,
+            Jabatan: g.jabatan,
+            'No Telp': g.no_telp || '-',
+            Status: g.status
+        }))
+        exportToCSV(exportData, columns, 'data_guru')
+        showToast.success('Export CSV berhasil')
+    }
+
+    const handleDownloadPDF = () => {
+        generateLaporanPDF({
+            title: 'Data Guru',
+            columns: ['NIP', 'Nama', 'L/P', 'Jabatan', 'No Telp', 'Status'],
+            data: filteredGuru.map(g => [
+                g.nip,
+                g.nama,
+                g.jenis_kelamin === 'Laki-laki' ? 'L' : 'P',
+                g.jabatan,
+                g.no_telp || '-',
+                g.status
+            ]),
+            filename: 'data_guru'
+        })
+        showToast.success('PDF berhasil didownload')
     }
 
     const filteredGuru = guru
@@ -97,12 +140,19 @@ const GuruList = () => {
                     <h1 className="page-title">Data Guru</h1>
                     <p className="page-subtitle">Kelola data pengajar dan wali kelas</p>
                 </div>
-                {canEdit && (
-                    <Link to="/guru/create" className="btn btn-primary">
-                        <Plus size={18} />
-                        Tambah Guru
-                    </Link>
-                )}
+                <div className="header-actions">
+                    <DownloadButton
+                        onDownloadPDF={handleDownloadPDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
+                    {canEdit && (
+                        <Link to="/guru/create" className="btn btn-primary">
+                            <Plus size={18} />
+                            Tambah Guru
+                        </Link>
+                    )}
+                </div>
             </div>
 
             <div className="table-container">

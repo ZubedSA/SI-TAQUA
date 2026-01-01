@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Printer, Users } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
+import DownloadButton from '../../../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import '../../../../../pages/laporan/Laporan.css'
 
 const bulanOptions = [
@@ -189,6 +191,40 @@ const LaporanUjianSyahriPage = () => {
         })
     }
 
+    const handleDownloadExcel = () => {
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian Terakhir', 'Jml Hafalan', 'Mukhtabir']
+        const exportData = data.map(s => ({
+            NIS: s.nis,
+            Nama: s.nama,
+            Hafalan: s.hafalan,
+            Tajwid: s.tajwid,
+            Tilawah: s.tilawah,
+            'Rata-rata': s.rata_rata,
+            Predikat: s.predikat,
+            'Pencapaian Terakhir': s.pencapaian_juz !== '-' ? `Juz ${s.pencapaian_juz} - ${s.pencapaian_surah}` : '-',
+            'Jml Hafalan': s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+            Mukhtabir: s.penguji
+        }))
+        exportToExcel(exportData, columns, 'laporan_ujian_syahri')
+    }
+
+    const handleDownloadCSV = () => {
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian Terakhir', 'Jml Hafalan', 'Mukhtabir']
+        const exportData = data.map(s => ({
+            NIS: s.nis,
+            Nama: s.nama,
+            Hafalan: s.hafalan,
+            Tajwid: s.tajwid,
+            Tilawah: s.tilawah,
+            'Rata-rata': s.rata_rata,
+            Predikat: s.predikat,
+            'Pencapaian Terakhir': s.pencapaian_juz !== '-' ? `Juz ${s.pencapaian_juz} - ${s.pencapaian_surah}` : '-',
+            'Jml Hafalan': s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+            Mukhtabir: s.penguji
+        }))
+        exportToCSV(exportData, columns, 'laporan_ujian_syahri')
+    }
+
     return (
         <div className="laporan-page">
             <div className="page-header">
@@ -199,9 +235,12 @@ const LaporanUjianSyahriPage = () => {
                     <p className="page-subtitle">Laporan hasil ujian bulanan (Syahri) - Tahfizhiyah</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-primary" disabled={data.length === 0} onClick={generatePDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={generatePDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                        disabled={data.length === 0}
+                    />
                     <button className="btn btn-outline" disabled={data.length === 0} onClick={() => window.print()}>
                         <Printer size={18} /> Print
                     </button>

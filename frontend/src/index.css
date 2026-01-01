@@ -1048,7 +1048,7 @@ select option:hover {
 }
 
 /* ================================
-   Modal
+   Modal - Fixed for all pages
    ================================ */
 .modal-overlay {
   position: fixed;
@@ -1061,28 +1061,46 @@ select option:hover {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
+  /* Default visible when rendered - no need for .active class */
+}
+
+/* For pages that use .active toggle pattern */
+.modal-overlay.needs-active {
   opacity: 0;
   visibility: hidden;
   transition: all var(--transition-normal);
 }
 
-.modal-overlay.active {
+.modal-overlay.needs-active.active {
   opacity: 1;
   visibility: visible;
 }
 
-.modal {
-  background: var(--bg-white);
+.modal,
+.modal-content {
+  background: #ffffff;
   border-radius: var(--border-radius);
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  color: #1f2937;
+}
+
+[data-theme="dark"] .modal,
+[data-theme="dark"] .modal-content {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.modal-overlay.needs-active .modal {
   transform: scale(0.9);
   transition: transform var(--transition-normal);
 }
 
-.modal-overlay.active .modal {
+.modal-overlay.needs-active.active .modal {
   transform: scale(1);
 }
 
@@ -1091,13 +1109,17 @@ select option:hover {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .modal-header {
+  border-bottom-color: #475569;
 }
 
 .modal-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--text-dark);
+  color: inherit;
 }
 
 .modal-close {
@@ -1107,13 +1129,18 @@ select option:hover {
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  color: var(--text-muted);
+  color: #64748b;
   transition: all var(--transition-fast);
 }
 
 .modal-close:hover {
-  background: var(--bg-light);
-  color: var(--text-dark);
+  background: #f1f5f9;
+  color: #1f2937;
+}
+
+[data-theme="dark"] .modal-close:hover {
+  background: #334155;
+  color: #f1f5f9;
 }
 
 .modal-body {
@@ -1125,7 +1152,66 @@ select option:hover {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #e2e8f0;
+}
+
+[data-theme="dark"] .modal-footer {
+  border-top-color: #475569;
+}
+
+/* ================================
+   Global Form Input Fixes
+   ================================ */
+.modal .form-group input,
+.modal .form-group select,
+.modal .form-group textarea,
+.modal-content .form-group input,
+.modal-content .form-group select,
+.modal-content .form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  color: #1f2937;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .modal .form-group input,
+[data-theme="dark"] .modal .form-group select,
+[data-theme="dark"] .modal .form-group textarea,
+[data-theme="dark"] .modal-content .form-group input,
+[data-theme="dark"] .modal-content .form-group select,
+[data-theme="dark"] .modal-content .form-group textarea {
+  background-color: #334155;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+.modal .form-group input:focus,
+.modal .form-group select:focus,
+.modal .form-group textarea:focus,
+.modal-content .form-group input:focus,
+.modal-content .form-group select:focus,
+.modal-content .form-group textarea:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+}
+
+.modal .form-group label,
+.modal-content .form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+[data-theme="dark"] .modal .form-group label,
+[data-theme="dark"] .modal-content .form-group label {
+  color: #e2e8f0;
 }
 
 /* ================================

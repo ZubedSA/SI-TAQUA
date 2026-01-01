@@ -50,6 +50,11 @@ const SystemStatusPage = () => {
             label: 'Data Keuangan',
             tables: ['tagihan_santri', 'pembayaran_santri', 'kas_pemasukan', 'kas_pengeluaran', 'anggaran', 'realisasi_dana']
         },
+        PENGURUS: {
+            name: 'PENGURUS',
+            label: 'Data Pengurus',
+            tables: ['pelanggaran', 'tindak_lanjut_pelanggaran', 'pengumuman_internal', 'buletin_pondok', 'catatan_pembinaan', 'informasi_pondok']
+        },
         FULL: {
             name: 'FULL',
             label: 'Semua Data',
@@ -57,6 +62,7 @@ const SystemStatusPage = () => {
                 'santri', 'guru', 'kelas', 'halaqoh',
                 'semester', 'mapel', 'hafalan', 'nilai', 'presensi', 'pencapaian_hafalan',
                 'tagihan_santri', 'pembayaran_santri', 'kas_pemasukan', 'kas_pengeluaran', 'anggaran', 'realisasi_dana',
+                'pelanggaran', 'tindak_lanjut_pelanggaran', 'pengumuman_internal', 'buletin_pondok', 'catatan_pembinaan', 'informasi_pondok',
                 'user_profiles'
             ]
         }
@@ -529,6 +535,23 @@ const SystemStatusPage = () => {
                                 <Database size={14} /> Backup Restore (Raw)
                             </button>
                             <button className="btn btn-sm btn-primary w-100" onClick={() => handleModularBackup('KEUANGAN', 'LAPORAN')} disabled={dbLoading}>
+                                <FileText size={14} /> Download Laporan
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MODUL PENGURUS (NEW) */}
+                    <div className="backup-card">
+                        <div className="card-icon" style={{ background: '#fef3c7', color: '#d97706' }}>
+                            <Shield size={24} />
+                        </div>
+                        <h3>Data Pengurus</h3>
+                        <p>Pelanggaran, Pembinaan, Pengumuman, Buletin</p>
+                        <div className="btn-group-vertical">
+                            <button className="btn btn-outline-primary btn-sm w-100 mb-2" onClick={() => handleModularBackup('PENGURUS', 'RESTORE')} disabled={dbLoading}>
+                                <Database size={14} /> Backup Restore (Raw)
+                            </button>
+                            <button className="btn btn-sm btn-primary w-100" onClick={() => handleModularBackup('PENGURUS', 'LAPORAN')} disabled={dbLoading}>
                                 <FileText size={14} /> Download Laporan
                             </button>
                         </div>

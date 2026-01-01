@@ -3,6 +3,8 @@ import { Users, RefreshCw, Download, Printer, BookMarked, FileText, Calendar } f
 import { supabase } from '../../../../../lib/supabase'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import DownloadButton from '../../../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanAkademikSantriPage = () => {
@@ -311,6 +313,60 @@ const LaporanAkademikSantriPage = () => {
         doc.save(`Laporan_Akademik_${selectedSantri.nama.replace(/\s/g, '_')}.pdf`)
     }
 
+    const handleDownloadExcel = () => {
+        if (!selectedSantri) return
+        const currentSem = semester.find(s => s.id === filters.semester_id)
+
+        const exportData = [{
+            NIS: selectedSantri.nis,
+            Nama: selectedSantri.nama,
+            Kelas: selectedSantri.kelas?.nama || '-',
+            Halaqoh: selectedSantri.halaqoh?.nama || '-',
+            Semester: currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-',
+            'Nilai Tahfizh Avg': nilaiTahfizh?.nilai_akhir?.toFixed(1) || '-',
+            // Calculate Madros Avg from displayed table if needed, or just list subjects?
+            // For summary, maybe just list average of averages or leave strict detail to PDF.
+            // Let's output Presensi:
+            'Hadir': presensiData.hadir,
+            'Izin': presensiData.izin,
+            'Sakit': presensiData.sakit,
+            'Alpha': presensiData.alpha,
+        }]
+
+        // Flatten Nilai Madros as columns? e.g. "Mapel X": 80
+        nilaiMadros.forEach(m => {
+            exportData[0][`Nilai ${m.nama}`] = m.rata_rata
+        })
+
+        const columns = Object.keys(exportData[0])
+        exportToExcel(exportData, columns, `laporan_akademik_${selectedSantri.nama.replace(/\s/g, '_')}`)
+    }
+
+    const handleDownloadCSV = () => {
+        if (!selectedSantri) return
+        const currentSem = semester.find(s => s.id === filters.semester_id)
+
+        const exportData = [{
+            NIS: selectedSantri.nis,
+            Nama: selectedSantri.nama,
+            Kelas: selectedSantri.kelas?.nama || '-',
+            Halaqoh: selectedSantri.halaqoh?.nama || '-',
+            Semester: currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-',
+            'Nilai Tahfizh Avg': nilaiTahfizh?.nilai_akhir?.toFixed(1) || '-',
+            'Hadir': presensiData.hadir,
+            'Izin': presensiData.izin,
+            'Sakit': presensiData.sakit,
+            'Alpha': presensiData.alpha,
+        }]
+
+        nilaiMadros.forEach(m => {
+            exportData[0][`Nilai ${m.nama}`] = m.rata_rata
+        })
+
+        const columns = Object.keys(exportData[0])
+        exportToCSV(exportData, columns, `laporan_akademik_${selectedSantri.nama.replace(/\s/g, '_')}`)
+    }
+
     return (
         <div className="laporan-page">
             <div className="page-header">
@@ -321,9 +377,12 @@ const LaporanAkademikSantriPage = () => {
                     <p className="page-subtitle">Laporan lengkap per santri</p>
                 </div>
                 <div className="header-actions">
-                    <button className="btn btn-primary" disabled={!selectedSantri} onClick={generatePDF}>
-                        <Download size={18} /> Download PDF
-                    </button>
+                    <DownloadButton
+                        onDownloadPDF={generatePDF}
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                        disabled={!selectedSantri}
+                    />
                     <button className="btn btn-outline" disabled={!selectedSantri} onClick={() => window.print()}>
                         <Printer size={18} /> Print
                     </button>

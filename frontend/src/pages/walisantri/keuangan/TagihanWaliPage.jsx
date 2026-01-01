@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
     ChevronLeft, Wallet, Calendar, AlertCircle, CheckCircle,
-    Clock, CreditCard, Download, ChevronRight
+    Clock, CreditCard, ChevronRight
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
+import DownloadButton from '../../../components/ui/DownloadButton'
+import { exportToExcel, exportToCSV } from '../../../utils/exportUtils'
 import '../WaliPortal.css'
 
 /**
@@ -117,6 +119,38 @@ const TagihanWaliPage = () => {
         return new Date(jatuhTempo) < new Date()
     }
 
+    const handleDownloadExcel = () => {
+        const dataToExport = activeTab === 'belum' ? tagihanBelumLunas : tagihanLunas
+        const statusLabel = activeTab === 'belum' ? 'Belum_Lunas' : 'Lunas'
+        const columns = ['Kategori', 'Jumlah', 'Jatuh Tempo', 'Keterangan', 'Status']
+
+        const exportData = dataToExport.map(t => ({
+            Kategori: t.kategori?.nama || 'Tagihan',
+            Jumlah: parseFloat(t.jumlah),
+            'Jatuh Tempo': formatDate(t.jatuh_tempo),
+            Keterangan: t.keterangan || '-',
+            Status: activeTab === 'belum' && isOverdue(t.jatuh_tempo) ? 'Jatuh Tempo' : (activeTab === 'belum' ? 'Belum Lunas' : 'Lunas')
+        }))
+
+        exportToExcel(exportData, columns, `tagihan_${statusLabel}_${selectedSantri?.nama || 'santri'}`)
+    }
+
+    const handleDownloadCSV = () => {
+        const dataToExport = activeTab === 'belum' ? tagihanBelumLunas : tagihanLunas
+        const statusLabel = activeTab === 'belum' ? 'Belum_Lunas' : 'Lunas'
+        const columns = ['Kategori', 'Jumlah', 'Jatuh Tempo', 'Keterangan', 'Status']
+
+        const exportData = dataToExport.map(t => ({
+            Kategori: t.kategori?.nama || 'Tagihan',
+            Jumlah: parseFloat(t.jumlah),
+            'Jatuh Tempo': formatDate(t.jatuh_tempo),
+            Keterangan: t.keterangan || '-',
+            Status: activeTab === 'belum' && isOverdue(t.jatuh_tempo) ? 'Jatuh Tempo' : (activeTab === 'belum' ? 'Belum Lunas' : 'Lunas')
+        }))
+
+        exportToCSV(exportData, columns, `tagihan_${statusLabel}_${selectedSantri?.nama || 'santri'}`)
+    }
+
     if (loading) {
         return (
             <div className="wali-loading">
@@ -190,6 +224,14 @@ const TagihanWaliPage = () => {
 
             {/* Tagihan List */}
             <div className="wali-section" style={{ marginTop: 0 }}>
+                {(tagihanBelumLunas.length > 0 || tagihanLunas.length > 0) && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                        <DownloadButton
+                            onDownloadExcel={handleDownloadExcel}
+                            onDownloadCSV={handleDownloadCSV}
+                        />
+                    </div>
+                )}
                 {activeTab === 'belum' && (
                     <>
                         {tagihanBelumLunas.length > 0 ? (

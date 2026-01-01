@@ -63,6 +63,14 @@ const roleConfig = {
         bgColor: 'rgba(139, 92, 246, 0.1)',
         path: '/wali/beranda',
         description: 'Pantau perkembangan anak'
+    },
+    ota: {
+        label: 'Orang Tua Asuh',
+        icon: Users,
+        color: '#f97316',
+        bgColor: 'rgba(249, 115, 22, 0.1)',
+        path: '/dashboard/ota',
+        description: 'Pantau dana & santri'
     }
 }
 
