@@ -222,6 +222,120 @@ const pengurusMenuItems = [
     { path: '/pengurus/arsip', icon: Archive, label: 'Arsip' },
 ]
 
+// ============ MUSYRIF MENU - Full Akademik Access (Filtered by Halaqoh) ============
+// Musyrif = Pengajar Halaqoh dengan akses penuh ke data akademik santri halaqoh-nya
+const musyrifMenuItems = [
+    { path: '/dashboard/akademik', icon: LayoutDashboard, label: 'Dashboard' },
+
+    // Data Pondok
+    {
+        id: 'data-pondok',
+        icon: Database,
+        label: 'Data Pondok',
+        children: [
+            { path: '/santri', icon: Users, label: 'Data Santri' },
+            { path: '/guru', icon: GraduationCap, label: 'Data Guru' },
+            { path: '/kelas', icon: Home, label: 'Kelas' },
+            { path: '/mapel', icon: BookOpen, label: 'Mapel' },
+            { path: '/halaqoh', icon: Circle, label: 'Halaqoh' },
+        ]
+    },
+
+    // Akademik Menu - sama dengan guru
+    {
+        id: 'akademik',
+        icon: School,
+        label: 'Akademik',
+        children: [
+            // Input Nilai
+            {
+                id: 'input-nilai',
+                icon: PenLine,
+                label: 'Input Nilai',
+                children: [
+                    { path: '/akademik/nilai/tahfizh/syahri', icon: Calendar, label: 'Ujian Syahri' },
+                    {
+                        id: 'ujian-semester',
+                        icon: CalendarCheck,
+                        label: 'Ujian Semester',
+                        children: [
+                            {
+                                id: 'nilai-tahfizh',
+                                icon: BookMarked,
+                                label: "Qur'aniyah",
+                                children: [
+                                    { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester' },
+                                ]
+                            },
+                            {
+                                id: 'nilai-madros',
+                                icon: BookOpen,
+                                label: 'Madrasiyah',
+                                children: [
+                                    { path: '/akademik/nilai/madros/harian', icon: PenLine, label: 'Ujian Harian' },
+                                    { path: '/akademik/nilai/madros/uts', icon: FileText, label: 'UTS' },
+                                    { path: '/akademik/nilai/madros/uas', icon: ClipboardList, label: 'UAS' },
+                                ]
+                            },
+                        ]
+                    },
+                ]
+            },
+            // Hafalan Menu
+            {
+                id: 'hafalan-menu',
+                icon: BookMarked,
+                label: 'Hafalan',
+                children: [
+                    { path: '/hafalan', icon: PenLine, label: 'Input Hafalan' },
+                    { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan' },
+                ]
+            },
+            // Laporan Menu
+            {
+                id: 'laporan-akademik',
+                icon: Download,
+                label: 'Laporan',
+                children: [
+                    {
+                        id: 'laporan-nilai',
+                        icon: FileText,
+                        label: 'Laporan Nilai',
+                        children: [
+                            { path: '/laporan/ujian-syahri', icon: Calendar, label: 'Ujian Syahri' },
+                            { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester' },
+                        ]
+                    },
+                    {
+                        id: 'laporan-hafalan',
+                        icon: BookMarked,
+                        label: 'Laporan Hafalan',
+                        children: [
+                            { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian' },
+                            { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan' },
+                            { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan' },
+                            { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester' },
+                        ]
+                    },
+                    {
+                        id: 'laporan-akademik-santri',
+                        icon: Users,
+                        label: 'Laporan Akademik',
+                        children: [
+                            { path: '/laporan/akademik-santri', icon: Users, label: 'Raport' },
+                            { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan' },
+                        ]
+                    },
+                ]
+            },
+            // Presensi
+            { path: '/presensi', icon: CalendarCheck, label: 'Pembinaan Santri' },
+            // Semester
+            { path: '/semester', icon: Calendar, label: 'Semester' },
+        ]
+    },
+]
+
 // ============ OPERATOR MENU - Guru/Akademik ============
 const operatorMenuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['guru', 'bendahara', 'pengasuh'] },
@@ -267,7 +381,7 @@ const operatorMenuItems = [
                             {
                                 id: 'nilai-tahfizh',
                                 icon: BookMarked,
-                                label: 'Tahfiziyah',
+                                label: "Qur'aniyah",
                                 roles: ['admin', 'guru'],
                                 children: [
                                     { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
@@ -412,12 +526,13 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     const isRealAdmin = roles?.includes('admin')
 
     // Select menu based on active role
-    // Admin gets special controller menu, pengurus gets pembinaan menu, OTA gets donasi menu, others get operator menu
+    // Admin gets special controller menu, pengurus gets pembinaan menu, OTA gets donasi menu, musyrif gets read-only akademik menu, others get operator menu
     const baseMenuItems =
         activeRole === 'admin' ? adminMenuItems :
             activeRole === 'pengurus' ? pengurusMenuItems :
                 activeRole === 'ota' ? otaMenuItems :
-                    operatorMenuItems
+                    activeRole === 'musyrif' ? musyrifMenuItems :
+                        operatorMenuItems
 
     // Filter menu berdasarkan role user (for operator menu)
     const filteredMenuItems = baseMenuItems.filter(item => {

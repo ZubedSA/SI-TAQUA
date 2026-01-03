@@ -26,6 +26,7 @@ import {
     Clock
 } from 'lucide-react'
 import { useToast } from '../../context/ToastContext'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import './Pengaturan.css'
 
 const PengaturanPage = () => {
@@ -61,6 +62,27 @@ const PengaturanPage = () => {
 
     // Export states
     const [exporting, setExporting] = useState(false)
+
+    // Delete Confirmation State
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        type: null, // 'single', 'empty'
+        item: null
+    })
+
+    const openDeleteModal = (item) => {
+        setDeleteModal({ isOpen: true, type: 'single', item })
+    }
+
+    const openEmptyTrashModal = () => {
+        setDeleteModal({ isOpen: true, type: 'empty', item: null })
+    }
+
+    const handleConfirmDelete = () => {
+        if (deleteModal.type === 'single') handlePermanentDelete(deleteModal.item)
+        else if (deleteModal.type === 'empty') handleEmptyTrash()
+        setDeleteModal({ isOpen: false, type: null, item: null })
+    }
 
     const dataTypes = [
         { id: 'santri', label: 'Data Santri', icon: Users },
@@ -213,8 +235,7 @@ const PengaturanPage = () => {
     }
 
     const handlePermanentDelete = async (item) => {
-        if (!window.confirm(`Hapus permanen data ${item.table_name} ini? Data tidak dapat dikembalikan!`)) return
-
+        // Validation moved to Modal
         setDeletingId(item.id)
         try {
             const { error } = await supabase
@@ -234,8 +255,7 @@ const PengaturanPage = () => {
     }
 
     const handleEmptyTrash = async () => {
-        if (!window.confirm('Hapus semua data di sampah? Data tidak dapat dikembalikan!')) return
-
+        // Validation moved to Modal
         setLoadingTrash(true)
         try {
             // Get 30-day old items for auto-delete display
@@ -781,7 +801,7 @@ const PengaturanPage = () => {
                             <button className="btn btn-secondary" onClick={fetchTrashItems} disabled={loadingTrash}>
                                 <RefreshCw size={16} className={loadingTrash ? 'spin' : ''} /> Refresh
                             </button>
-                            <button className="btn btn-danger" onClick={handleEmptyTrash} disabled={loadingTrash || trashItems.length === 0}>
+                            <button className="btn btn-danger" onClick={openEmptyTrashModal} disabled={loadingTrash || trashItems.length === 0}>
                                 <X size={16} /> Hapus Data Lama
                             </button>
                         </div>
@@ -855,7 +875,7 @@ const PengaturanPage = () => {
                                                         </button>
                                                         <button
                                                             className="btn btn-sm btn-danger"
-                                                            onClick={() => handlePermanentDelete(item)}
+                                                            onClick={() => openDeleteModal(item)}
                                                             disabled={deletingId === item.id}
                                                             title="Hapus Permanen"
                                                         >
@@ -965,7 +985,19 @@ const PengaturanPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+
+            )
+}
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                onConfirm={handleConfirmDelete}
+                itemName={deleteModal.type === 'empty' ? 'semua data lama dari sampah' : (deleteModal.item ? `${deleteModal.item.table_name} - ${getItemDisplayName(deleteModal.item)}` : 'data ini')}
+                message={deleteModal.type === 'empty' ? 'Anda yakin ingin menghapus semua data lama? Tindakan ini tidak dapat dibatalkan.' : 'Apakah Anda yakin ingin menghapus permanen data ini? Tindakan ini tidak dapat dibatalkan.'}
+                title={deleteModal.type === 'empty' ? 'Hapus Semua Data Lama' : 'Hapus Permanen'}
+            />
+        </div >
     )
 }
 

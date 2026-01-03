@@ -4,6 +4,7 @@ import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
+import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import '../../../../../pages/laporan/Laporan.css'
 
 const bulanOptions = [
@@ -22,6 +23,17 @@ const bulanOptions = [
 ]
 
 const LaporanUjianSyahriPage = () => {
+    // AUTO-FILTER: Halaqoh berdasarkan akun
+    const {
+        halaqohIds,
+        halaqohNames,
+        halaqohList,
+        musyrifInfo,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin
+    } = useUserHalaqoh()
+
     const [loading, setLoading] = useState(false)
     const [semester, setSemester] = useState([])
     const [halaqoh, setHalaqoh] = useState([])
@@ -38,18 +50,36 @@ const LaporanUjianSyahriPage = () => {
         fetchOptions()
     }, [])
 
+    // Sync halaqoh data from hook (for non-admin)
+    useEffect(() => {
+        if (!isAdmin && hasHalaqoh && halaqohList.length > 0) {
+            setHalaqoh(halaqohList)
+            // Auto-select first halaqoh if not set
+            if (!filters.halaqoh_id && halaqohIds.length > 0) {
+                setFilters(prev => ({ ...prev, halaqoh_id: halaqohIds[0] }))
+            }
+        }
+    }, [isAdmin, hasHalaqoh, halaqohList, halaqohIds])
+
     const fetchOptions = async () => {
-        const [semRes, halRes, guruRes] = await Promise.all([
+        // Fetch semester & guru
+        const [semRes, guruRes] = await Promise.all([
             supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('halaqoh').select('id, nama').order('nama'),
             supabase.from('guru').select('id, nama')
         ])
+
+        // Only fetch all halaqohs if ADMIN
+        if (isAdmin) {
+            const { data: halRes } = await supabase.from('halaqoh').select('id, nama').order('nama')
+            if (halRes) setHalaqoh(halRes)
+        }
+
         if (semRes.data) {
             setSemester(semRes.data)
             const active = semRes.data.find(s => s.is_active)
             if (active) setFilters(prev => ({ ...prev, semester_id: active.id }))
         }
-        if (halRes.data) setHalaqoh(halRes.data)
+
         if (guruRes.data) {
             const map = {}
             guruRes.data.forEach(g => { map[g.id] = g.nama })
@@ -133,6 +163,7 @@ const LaporanUjianSyahriPage = () => {
                     pencapaian_juz: latestSetoran?.juz || '-',
                     pencapaian_surah: latestSetoran?.surah || '-',
                     jumlah_hafalan: nilai?.jumlah_hafalan || '-',
+                    jumlah_hafalan_halaman: nilai?.jumlah_hafalan_halaman || '-',
                     penguji: nilai?.penguji_id ? (guruMap[nilai.penguji_id] || '-') : '-'
                 }
             })
@@ -172,7 +203,7 @@ const LaporanUjianSyahriPage = () => {
                 { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
                 { label: 'Periode', value: `${bulanNama} ${filters.tahun}` }
             ],
-            columns: ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian', 'Jml Hfln', 'Penguji'],
+            columns: ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian', 'Jml Juz', 'Jml Hal', 'Penguji'],
             data: data.map(s => [
                 s.nis,
                 s.nama,
@@ -183,6 +214,7 @@ const LaporanUjianSyahriPage = () => {
                 s.predikat,
                 s.pencapaian_juz !== '-' ? `Juz ${s.pencapaian_juz} - ${s.pencapaian_surah}` : '-',
                 s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+                s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-',
                 s.penguji
             ]),
             filename: `Ujian_Syahri_${bulanNama}_${filters.tahun}`,
@@ -192,7 +224,7 @@ const LaporanUjianSyahriPage = () => {
     }
 
     const handleDownloadExcel = () => {
-        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian Terakhir', 'Jml Hafalan', 'Mukhtabir']
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian Terakhir', 'Jml Juz', 'Jml Hal', 'Mukhtabir']
         const exportData = data.map(s => ({
             NIS: s.nis,
             Nama: s.nama,
@@ -202,14 +234,15 @@ const LaporanUjianSyahriPage = () => {
             'Rata-rata': s.rata_rata,
             Predikat: s.predikat,
             'Pencapaian Terakhir': s.pencapaian_juz !== '-' ? `Juz ${s.pencapaian_juz} - ${s.pencapaian_surah}` : '-',
-            'Jml Hafalan': s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+            'Jml Juz': s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+            'Jml Hal': s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-',
             Mukhtabir: s.penguji
         }))
         exportToExcel(exportData, columns, 'laporan_ujian_syahri')
     }
 
     const handleDownloadCSV = () => {
-        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian Terakhir', 'Jml Hafalan', 'Mukhtabir']
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Tilawah', 'Rata-rata', 'Predikat', 'Pencapaian Terakhir', 'Jml Juz', 'Jml Hal', 'Mukhtabir']
         const exportData = data.map(s => ({
             NIS: s.nis,
             Nama: s.nama,
@@ -219,7 +252,8 @@ const LaporanUjianSyahriPage = () => {
             'Rata-rata': s.rata_rata,
             Predikat: s.predikat,
             'Pencapaian Terakhir': s.pencapaian_juz !== '-' ? `Juz ${s.pencapaian_juz} - ${s.pencapaian_surah}` : '-',
-            'Jml Hafalan': s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+            'Jml Juz': s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-',
+            'Jml Hal': s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-',
             Mukhtabir: s.penguji
         }))
         exportToCSV(exportData, columns, 'laporan_ujian_syahri')
@@ -266,16 +300,28 @@ const LaporanUjianSyahriPage = () => {
 
                 <div className="form-group">
                     <label className="form-label">Halaqoh *</label>
-                    <select
-                        className="form-control"
-                        value={filters.halaqoh_id}
-                        onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                    >
-                        <option value="">Pilih Halaqoh</option>
-                        {halaqoh.map(h => (
-                            <option key={h.id} value={h.id}>{h.nama}</option>
-                        ))}
-                    </select>
+                    {(!isAdmin && halaqohList.length === 1) ? (
+                        <input
+                            type="text"
+                            className="form-control"
+                            value={halaqohList[0]?.nama || ''}
+                            disabled
+                            readOnly
+                            style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                        />
+                    ) : (
+                        <select
+                            className="form-control"
+                            value={filters.halaqoh_id}
+                            onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
+                            disabled={loadingHalaqoh}
+                        >
+                            <option value="">{loadingHalaqoh ? 'Memuat...' : 'Pilih Halaqoh'}</option>
+                            {halaqoh.map(h => (
+                                <option key={h.id} value={h.id}>{h.nama}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 <div className="form-group">
@@ -326,7 +372,8 @@ const LaporanUjianSyahriPage = () => {
                                     <th style={{ textAlign: 'center' }}>Rata-rata</th>
                                     <th style={{ textAlign: 'center' }}>Predikat</th>
                                     <th style={{ textAlign: 'center' }}>Pencapaian Terakhir</th>
-                                    <th style={{ textAlign: 'center' }}>Jml Hafalan</th>
+                                    <th style={{ textAlign: 'center' }}>Jml Juz</th>
+                                    <th style={{ textAlign: 'center' }}>Jml Hal</th>
                                     <th style={{ textAlign: 'center' }}>Mukhtabir</th>
                                 </tr>
                             </thead>
@@ -350,6 +397,9 @@ const LaporanUjianSyahriPage = () => {
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
                                             {s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-'}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-'}
                                         </td>
                                         <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>{s.penguji}</td>
                                     </tr>

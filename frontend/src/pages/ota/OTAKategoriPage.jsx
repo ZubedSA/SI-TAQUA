@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Search, Edit2, Trash2, Tag, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
 
@@ -243,6 +244,10 @@ const OTAKategoriPage = () => {
     const [formData, setFormData] = useState({ nama: '', keterangan: '' })
     const [saving, setSaving] = useState(false)
 
+    // Delete Modal State
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [itemToDelete, setItemToDelete] = useState(null)
+
     useEffect(() => {
         fetchData()
     }, [])
@@ -307,16 +312,23 @@ const OTAKategoriPage = () => {
         }
     }
 
-    const handleDelete = async (item) => {
-        if (!window.confirm(`Hapus kategori "${item.nama}"?`)) return
+    const confirmDelete = (item) => {
+        setItemToDelete(item)
+        setShowDeleteModal(true)
+    }
+
+    const handleDelete = async () => {
+        if (!itemToDelete) return
 
         try {
             const { error } = await supabase
                 .from('ota_kategori')
                 .delete()
-                .eq('id', item.id)
+                .eq('id', itemToDelete.id)
             if (error) throw error
             showToast.success('Kategori berhasil dihapus')
+            setShowDeleteModal(false)
+            setItemToDelete(null)
             fetchData()
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
@@ -439,7 +451,7 @@ const OTAKategoriPage = () => {
                                                 </button>
                                                 <button
                                                     style={{ ...styles.actionBtn, background: '#fee2e2', color: '#dc2626' }}
-                                                    onClick={() => handleDelete(item)}
+                                                    onClick={() => confirmDelete(item)}
                                                     title="Hapus"
                                                     onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
                                                     onMouseLeave={e => e.target.style.transform = 'scale(1)'}
@@ -547,6 +559,13 @@ const OTAKategoriPage = () => {
                     </div>
                 </div>
             )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName={itemToDelete?.nama}
+                message={`Hapus kategori "${itemToDelete?.nama}"?`}
+            />
         </div>
     )
 }

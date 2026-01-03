@@ -13,6 +13,8 @@ import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { useKas, useKategoriPembayaran } from '../../hooks/useKeuangan'
 import { useKasPengeluaran } from '../../hooks/features/useKasPengeluaran'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Keuangan.css'
 
 const KasPengeluaranPage = () => {
@@ -100,8 +102,16 @@ const KasPengeluaranPage = () => {
         })
     }, [rawData, filters.search])
 
-    const handleSubmit = async (e) => {
+    // Modals State
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null })
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
         setSaving(true)
         try {
             const payload = {
@@ -136,6 +146,7 @@ const KasPengeluaranPage = () => {
                 showToast.success('Pengeluaran baru berhasil ditambahkan')
             }
 
+            setSaveModal({ isOpen: false })
             setShowModal(false)
             resetForm()
             await refetch()
@@ -147,26 +158,28 @@ const KasPengeluaranPage = () => {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Yakin hapus data ini?')) return
-        try {
-            const itemToDelete = filteredData.find(d => d.id === id)
+    const confirmDelete = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
 
-            const { error } = await supabase.from('kas_pengeluaran').delete().eq('id', id)
+    const handleDelete = async () => {
+        const itemToDelete = deleteModal.item
+        if (!itemToDelete) return
+
+        try {
+            const { error } = await supabase.from('kas_pengeluaran').delete().eq('id', itemToDelete.id)
             if (error) throw error
 
             // Audit Log - DELETE
-            if (itemToDelete) {
-                await logDelete(
-                    'kas_pengeluaran',
-                    itemToDelete.keperluan,
-                    `Hapus pengeluaran: ${itemToDelete.keperluan} - Rp ${Number(itemToDelete.jumlah).toLocaleString('id-ID')}`
-                )
-            }
-
+            await logDelete(
+                'kas_pengeluaran',
+                itemToDelete.keperluan,
+                `Hapus pengeluaran: ${itemToDelete.keperluan} - Rp ${Number(itemToDelete.jumlah).toLocaleString('id-ID')}`
+            )
 
             await refetch()
             showToast.success('Data berhasil dihapus')
+            setDeleteModal({ isOpen: false, item: null })
         } catch (err) {
             console.error('Delete error:', err)
             showToast.error('Gagal menghapus: ' + err.message)
@@ -361,7 +374,7 @@ const KasPengeluaranPage = () => {
                                             <MobileActionMenu
                                                 actions={[
                                                     { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                    { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => handleDelete(item.id), danger: true }
+                                                    { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
                                                 ]}
                                             >
                                                 <button
@@ -384,7 +397,7 @@ const KasPengeluaranPage = () => {
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(item.id)}
+                                                    onClick={() => confirmDelete(item)}
                                                     title="Hapus"
                                                     style={{
                                                         display: 'inline-flex',
@@ -418,7 +431,7 @@ const KasPengeluaranPage = () => {
                             <h3>{editItem ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label>Tanggal *</label>
@@ -456,7 +469,26 @@ const KasPengeluaranPage = () => {
                     </div>
                 </div>
             )}
-        </div>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item?.keperluan}
+                message={`Yakin ingin menghapus pengeluaran ini?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? "Simpan Perubahan" : "Simpan Data"}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan data pengeluaran ini?' : 'Apakah Anda yakin ingin menambahkan data pengeluaran baru ini?'}
+                confirmLabel={editItem ? "Simpan" : "Tambah"}
+                variant="success"
+                isLoading={saving}
+            />
+        </div >
     )
 }
 

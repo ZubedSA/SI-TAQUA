@@ -3,6 +3,8 @@ import { Search, Users, Plus, Trash2, Filter, CheckCircle, XCircle, ToggleLeft, 
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './OTASantriPage.css'
 
 const OTASantriPage = () => {
@@ -71,12 +73,18 @@ const OTASantriPage = () => {
         !data.some(d => d.santri_id === s.id)
     )
 
-    const handleAddPenerima = async () => {
+    // Save/Add Confirmation State
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const confirmAddPenerima = () => {
         if (!selectedSantri) {
             showToast.error('Pilih santri terlebih dahulu')
             return
         }
+        setSaveModal({ isOpen: true })
+    }
 
+    const executeAddPenerima = async () => {
         setSaving(true)
         try {
             const { error } = await supabase
@@ -92,6 +100,7 @@ const OTASantriPage = () => {
             setShowModal(false)
             setSelectedSantri('')
             fetchData()
+            setSaveModal({ isOpen: false })
         } catch (err) {
             showToast.error('Gagal menambahkan: ' + err.message)
         } finally {
@@ -123,8 +132,19 @@ const OTASantriPage = () => {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Yakin ingin menghapus santri dari daftar penerima?')) return
+    // Delete Confirmation State
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        id: null
+    })
+
+    const openDeleteModal = (id) => {
+        setDeleteModal({ isOpen: true, id })
+    }
+
+    const handleDelete = async () => {
+        const id = deleteModal.id
+        if (!id) return
 
         try {
             const { error } = await supabase
@@ -134,6 +154,7 @@ const OTASantriPage = () => {
             if (error) throw error
             showToast.success('Data berhasil dihapus')
             fetchData()
+            setDeleteModal({ isOpen: false, id: null })
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
         }
@@ -313,7 +334,7 @@ const OTASantriPage = () => {
                                                     </button>
                                                     <button
                                                         className="ota-action-btn ota-btn-delete"
-                                                        onClick={() => handleDelete(item.id)}
+                                                        onClick={() => openDeleteModal(item.id)}
                                                     >
                                                         <Trash2 size={18} />
                                                     </button>
@@ -354,7 +375,7 @@ const OTASantriPage = () => {
                                     <div className="ota-mobile-footer">
                                         <button
                                             className="ota-action-btn ota-btn-delete"
-                                            onClick={() => handleDelete(item.id)}
+                                            onClick={() => openDeleteModal(item.id)}
                                         >
                                             <Trash2 size={16} /> Hapus
                                         </button>
@@ -418,14 +439,34 @@ const OTASantriPage = () => {
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                             <button onClick={() => setShowModal(false)} style={{ padding: '12px 20px', borderRadius: '12px', border: 'none', background: '#f1f5f9', fontWeight: 600, cursor: 'pointer' }}>Batal</button>
-                            <button onClick={handleAddPenerima} disabled={saving} style={{ padding: '12px 20px', borderRadius: '12px', border: 'none', background: '#10b981', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
+                            <button onClick={confirmAddPenerima} disabled={saving} style={{ padding: '12px 20px', borderRadius: '12px', border: 'none', background: '#10b981', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
                                 {saving ? 'Menyimpan...' : 'Simpan'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, id: null })}
+                onConfirm={handleDelete}
+                itemName="Santri ini"
+                title="Hapus Penerima OTA"
+                message="Yakin ingin menghapus santri ini dari daftar penerima OTA? Data santri tidak akan terhapus dari sistem, hanya status penerimanya."
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeAddPenerima}
+                title="Konfirmasi Tambah"
+                message="Apakah Anda yakin ingin menambahkan santri ini sebagai penerima OTA?"
+                confirmLabel="Tambah Santri"
+                variant="success"
+                isLoading={saving}
+            />
+        </div >
     )
 }
 

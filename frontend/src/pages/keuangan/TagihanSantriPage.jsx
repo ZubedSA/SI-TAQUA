@@ -12,6 +12,8 @@ import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { useKategoriPembayaran } from '../../hooks/useKeuangan'
 import { useTagihanSantri } from '../../hooks/features/useTagihanSantri'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Keuangan.css'
 
 const TagihanSantriPage = () => {
@@ -106,8 +108,23 @@ const TagihanSantriPage = () => {
 
     // Manual fetchData removed for tagihan and kategori in favor of hooks
 
-    const handleSubmit = async (e) => {
+    // Modals State
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null })
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+    const [saving, setSaving] = useState(false)
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        // Validation for bulk mode
+        if (!editItem && !form.angkatan_id) {
+            alert('Pilih angkatan terlebih dahulu')
+            return
+        }
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
+        setSaving(true)
         try {
             // Calculate Due Date: 10th of the selected month
             const dueDate = `${form.jatuh_tempo_bulan}-10`
@@ -134,18 +151,14 @@ const TagihanSantriPage = () => {
                     { jumlah: editItem.jumlah, kategori: editItem.kategori?.nama },
                     { jumlah: basePayload.jumlah, kategori: kategori?.nama }
                 )
+                showToast.success('Tagihan berhasil diperbarui')
             } else {
                 // Bulk Insert by angkatan
-                if (!form.angkatan_id) {
-                    alert('Pilih angkatan terlebih dahulu')
-                    return
-                }
-
                 const targetSantris = santriList.filter(s => s.angkatan_id === form.angkatan_id)
                 const angkatan = angkatanList.find(a => a.id === form.angkatan_id)
 
                 if (targetSantris.length === 0) {
-                    alert('Tidak ada santri pada angkatan yang dipilih')
+                    showToast.error('Tidak ada santri pada angkatan yang dipilih')
                     return
                 }
 
@@ -165,37 +178,44 @@ const TagihanSantriPage = () => {
                     `Buat tagihan massal: ${targetSantris.length} santri - ${kategori?.nama} - Rp ${Number(basePayload.jumlah).toLocaleString('id-ID')}`
                 )
 
-                alert(`Berhasil membuat tagihan untuk ${targetSantris.length} santri`)
+                showToast.success(`Berhasil membuat tagihan untuk ${targetSantris.length} santri`)
             }
 
+            setSaveModal({ isOpen: false })
             setShowModal(false)
             resetForm()
             await refetch()
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
+        } finally {
+            setSaving(false)
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Yakin hapus tagihan ini?')) return
-        try {
-            const itemToDelete = data.find(d => d.id === id)
+    const confirmDelete = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
 
-            const { error } = await supabase.from('tagihan_santri').delete().eq('id', id)
+    const handleDelete = async () => {
+        const itemToDelete = deleteModal.item
+        if (!itemToDelete) return
+
+        try {
+            const { error } = await supabase.from('tagihan_santri').delete().eq('id', itemToDelete.id)
             if (error) throw error
 
             // Audit Log - DELETE
-            if (itemToDelete) {
-                await logDelete(
-                    'tagihan_santri',
-                    itemToDelete.santri?.nama || 'Unknown',
-                    `Hapus tagihan: ${itemToDelete.santri?.nama} - ${itemToDelete.kategori?.nama} - Rp ${Number(itemToDelete.jumlah).toLocaleString('id-ID')}`
-                )
-            }
+            await logDelete(
+                'tagihan_santri',
+                itemToDelete.santri?.nama || 'Unknown',
+                `Hapus tagihan: ${itemToDelete.santri?.nama} - ${itemToDelete.kategori?.nama} - Rp ${Number(itemToDelete.jumlah).toLocaleString('id-ID')}`
+            )
 
             await refetch()
+            showToast.success('Tagihan berhasil dihapus')
+            setDeleteModal({ isOpen: false, item: null })
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         }
     }
 
@@ -427,7 +447,7 @@ const TagihanSantriPage = () => {
                                             actions={[
                                                 { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => handleSendWhatsApp(item) },
                                                 ...(canUpdate('tagihan') ? [{ icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(item) }] : []),
-                                                ...(canDelete('tagihan') ? [{ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => handleDelete(item.id), danger: true }] : [])
+                                                ...(canDelete('tagihan') ? [{ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(item), danger: true }] : [])
                                             ]}
                                         >
                                             <button className="btn-icon-sm success" onClick={() => handleSendWhatsApp(item)} title="Kirim WhatsApp">
@@ -437,7 +457,7 @@ const TagihanSantriPage = () => {
                                                 <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
                                             )}
                                             {canDelete('tagihan') && (
-                                                <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)}><Trash2 size={16} /></button>
+                                                <button className="btn-icon-sm danger" onClick={() => confirmDelete(item)}><Trash2 size={16} /></button>
                                             )}
                                         </MobileActionMenu>
                                     </td>
@@ -455,7 +475,7 @@ const TagihanSantriPage = () => {
                             <h3>{editItem ? 'Edit Tagihan' : 'Buat Tagihan (Per Angkatan)'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 {!editItem && (
                                     <div className="form-group">
@@ -505,12 +525,33 @@ const TagihanSantriPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary">{editItem ? 'Simpan' : 'Buat Tagihan Massal'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Buat Tagihan Massal')}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item?.santri?.nama ? `${deleteModal.item.kategori?.nama} - ${deleteModal.item.santri.nama}` : 'Tagihan ini'}
+                message={`Yakin ingin menghapus tagihan ini?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? "Simpan Perubahan" : "Konfirmasi Buat Tagihan"}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan tagihan ini?' : `Apakah Anda yakin ingin membuat tagihan massal untuk angkatan terpilih?`}
+                confirmLabel={editItem ? "Simpan" : "Buat Tagihan"}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

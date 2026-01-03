@@ -113,6 +113,7 @@ const dashboardRoutes = {
   pengasuh: '/dashboard/keuangan',
   pengurus: '/dashboard/pengurus',
   ota: '/dashboard/ota',
+  musyrif: '/dashboard/akademik',
   wali: '/wali/beranda'
 }
 
@@ -174,9 +175,9 @@ function App() {
                       </ProtectedRoute>
                     } />
 
-                    {/* Akademik Dashboard - Teachers & Admin */}
+                    {/* Akademik Dashboard - Teachers, Admin & Musyrif */}
                     <Route path="/dashboard/akademik" element={
-                      <ProtectedRoute roles={['admin', 'guru']}>
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']}>
                         <AkademikDashboard />
                       </ProtectedRoute>
                     } />
@@ -242,7 +243,7 @@ function App() {
 
 
                     <Route path="/santri" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <SantriList />
                       </ProtectedRoute>
                     } />
@@ -252,7 +253,7 @@ function App() {
                       </ProtectedRoute>
                     } />
                     <Route path="/santri/:id" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <SantriForm />
                       </ProtectedRoute>
                     } />
@@ -264,7 +265,7 @@ function App() {
 
                     {/* Guru Management */}
                     <Route path="/guru" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <GuruList />
                       </ProtectedRoute>
                     } />
@@ -274,7 +275,7 @@ function App() {
                       </ProtectedRoute>
                     } />
                     <Route path="/guru/:id" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <GuruForm />
                       </ProtectedRoute>
                     } />
@@ -286,22 +287,22 @@ function App() {
 
                     {/* Master Data - Admin Only */}
                     <Route path="/kelas" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <KelasPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/mapel" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <MapelPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/halaqoh" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <HalaqohPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/semester" element={
-                      <ProtectedRoute roles={['admin', 'guru', 'bendahara']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'bendahara', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <SemesterPage />
                       </ProtectedRoute>
                     } />
@@ -406,34 +407,34 @@ function App() {
 
                     {/* Hafalan */}
                     <Route path="/hafalan" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <HafalanList />
                       </ProtectedRoute>
                     } />
                     <Route path="/hafalan/create" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <HafalanForm />
                       </ProtectedRoute>
                     } />
                     <Route path="/hafalan/:id/edit" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <HafalanForm />
                       </ProtectedRoute>
                     } />
 
                     {/* Pencapaian Hafalan */}
                     <Route path="/hafalan/pencapaian/mingguan" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <PencapaianMingguanPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/hafalan/pencapaian/bulanan" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <PencapaianBulananPage />
                       </ProtectedRoute>
                     } />
                     <Route path="/hafalan/pencapaian/semester" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <PencapaianSemesterPage />
                       </ProtectedRoute>
                     } />
@@ -464,31 +465,31 @@ function App() {
 
                     {/* Tahfizhiyah - Ujian Syahri */}
                     <Route path="/akademik/nilai/tahfizh/syahri" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <TahfizhSyahriPage />
                       </ProtectedRoute>
                     } />
                     {/* Tahfizhiyah - Ujian Semester */}
                     <Route path="/akademik/nilai/tahfizh/semester" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <TahfizhSemesterPage />
                       </ProtectedRoute>
                     } />
                     {/* Madrosiyah - Ujian Harian */}
                     <Route path="/akademik/nilai/madros/harian" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <MadrosHarianPage />
                       </ProtectedRoute>
                     } />
                     {/* Madrosiyah - UTS */}
                     <Route path="/akademik/nilai/madros/uts" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <MadrosUTSPage />
                       </ProtectedRoute>
                     } />
                     {/* Madrosiyah - UAS */}
                     <Route path="/akademik/nilai/madros/uas" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <MadrosUASPage />
                       </ProtectedRoute>
                     } />
@@ -497,19 +498,19 @@ function App() {
 
                     {/* Rekap Syahri */}
                     <Route path="/rekap-nilai/syahri" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <RekapSyahriPage />
                       </ProtectedRoute>
                     } />
                     {/* Rekap Semester */}
                     <Route path="/rekap-nilai/semester" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <RekapSemesterPage />
                       </ProtectedRoute>
                     } />
                     {/* Grafik Perkembangan */}
                     <Route path="/rekap-nilai/grafik" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <GrafikPerkembanganPage />
                       </ProtectedRoute>
                     } />
@@ -519,31 +520,31 @@ function App() {
 
                     {/* Laporan Hafalan Harian */}
                     <Route path="/laporan/hafalan-harian" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <LaporanHafalanHarianPage />
                       </ProtectedRoute>
                     } />
                     {/* Laporan Rekap Mingguan */}
                     <Route path="/laporan/rekap-mingguan" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <LaporanRekapMingguanPage />
                       </ProtectedRoute>
                     } />
                     {/* Laporan Ujian Syahri */}
                     <Route path="/laporan/ujian-syahri" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <LaporanUjianSyahriPage />
                       </ProtectedRoute>
                     } />
                     {/* Laporan Ujian Semester */}
                     <Route path="/laporan/ujian-semester" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <LaporanUjianSemesterPage />
                       </ProtectedRoute>
                     } />
                     {/* Laporan Akademik Santri */}
                     <Route path="/laporan/akademik-santri" element={
-                      <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
+                      <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                         <LaporanAkademikSantriPage />
                       </ProtectedRoute>
                     } />

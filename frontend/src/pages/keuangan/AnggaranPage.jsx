@@ -8,6 +8,8 @@ import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useToast } from '../../context/ToastContext'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Keuangan.css'
 
 const AnggaranPage = () => {
@@ -49,8 +51,18 @@ const AnggaranPage = () => {
         }
     }
 
-    const handleSubmit = async (e) => {
+    // Modals State
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null })
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+    const [saving, setSaving] = useState(false)
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
+        setSaving(true)
         try {
             const payload = {
                 nama_program: form.nama_program,
@@ -73,6 +85,7 @@ const AnggaranPage = () => {
                     { nama_program: editItem.nama_program, jumlah: editItem.jumlah_diajukan },
                     { nama_program: payload.nama_program, jumlah: payload.jumlah_diajukan }
                 )
+                showToast.success('Anggaran berhasil diperbarui')
             } else {
                 const { error } = await supabase.from('anggaran').insert([payload])
                 if (error) throw error
@@ -83,36 +96,44 @@ const AnggaranPage = () => {
                     payload.nama_program,
                     `Ajukan anggaran baru: ${payload.nama_program} - Rp ${Number(payload.jumlah_diajukan).toLocaleString('id-ID')}`
                 )
+                showToast.success('Anggaran berhasil diajukan')
             }
 
+            setSaveModal({ isOpen: false })
             setShowModal(false)
             resetForm()
             fetchData()
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
+        } finally {
+            setSaving(false)
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Yakin hapus anggaran ini?')) return
-        try {
-            const itemToDelete = data.find(d => d.id === id)
+    const confirmDelete = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
 
-            const { error } = await supabase.from('anggaran').delete().eq('id', id)
+    const handleDelete = async () => {
+        const itemToDelete = deleteModal.item
+        if (!itemToDelete) return
+
+        try {
+            const { error } = await supabase.from('anggaran').delete().eq('id', itemToDelete.id)
             if (error) throw error
 
             // Audit Log - DELETE
-            if (itemToDelete) {
-                await logDelete(
-                    'anggaran',
-                    itemToDelete.nama_program,
-                    `Hapus anggaran: ${itemToDelete.nama_program} - Rp ${Number(itemToDelete.jumlah_diajukan).toLocaleString('id-ID')}`
-                )
-            }
+            await logDelete(
+                'anggaran',
+                itemToDelete.nama_program,
+                `Hapus anggaran: ${itemToDelete.nama_program} - Rp ${Number(itemToDelete.jumlah_diajukan).toLocaleString('id-ID')}`
+            )
 
             fetchData()
+            setDeleteModal({ isOpen: false, item: null })
+            showToast.success('Anggaran berhasil dihapus')
         } catch (err) {
-            alert('Error: ' + err.message)
+            showToast.error('Error: ' + err.message)
         }
     }
 
@@ -292,7 +313,7 @@ const AnggaranPage = () => {
                                                 <MobileActionMenu
                                                     actions={[
                                                         { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                        { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => handleDelete(item.id), danger: true },
+                                                        { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true },
                                                         { label: 'Detail', icon: <Eye size={14} />, onClick: () => { } }
                                                     ]}
                                                 >
@@ -315,7 +336,7 @@ const AnggaranPage = () => {
                                                         <Edit2 size={16} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDelete(item.id)}
+                                                        onClick={() => confirmDelete(item)}
                                                         title="Hapus"
                                                         style={{
                                                             display: 'inline-flex',
@@ -367,7 +388,7 @@ const AnggaranPage = () => {
                             <h3>{editItem ? 'Edit Anggaran' : 'Ajukan Anggaran Baru'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label>Nama Program *</label>
@@ -411,12 +432,33 @@ const AnggaranPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary">{editItem ? 'Simpan' : 'Ajukan'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Ajukan')}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item?.nama_program}
+                message={`Yakin ingin menghapus anggaran ${deleteModal.item?.nama_program || 'ini'}?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? "Simpan Perubahan" : "Konfirmasi Pengajuan"}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan anggaran ini?' : `Apakah Anda yakin ingin mengajukan anggaran untuk program ${form.nama_program}?`}
+                confirmLabel={editItem ? "Simpan" : "Ajukan"}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

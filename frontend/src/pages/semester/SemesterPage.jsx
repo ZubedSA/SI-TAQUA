@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Calendar, CheckCircle, RefreshCw, Edit, Trash2, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import './Semester.css'
 
 const SemesterPage = () => {
@@ -274,27 +275,13 @@ const SemesterPage = () => {
             )}
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title">Konfirmasi Hapus</h3>
-                            <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="alert alert-warning">
-                                <AlertCircle size={20} />
-                                <span className="ml-2">Perhatian: Menghapus semester dapat mempengaruhi data nilai dan riwayat lainnya yang terkait.</span>
-                            </div>
-                            <p className="mt-3">Apakah Anda yakin ingin menghapus data semester ini?</p>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Batal</button>
-                            <button className="btn btn-danger" onClick={handleDelete}>Hapus</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                title="Hapus Semester"
+                message="Perhatian: Menghapus semester dapat mempengaruhi data nilai dan riwayat lainnya yang terkait. Apakah Anda yakin ingin menghapus data semester ini?"
+            />
         </div>
     )
 }

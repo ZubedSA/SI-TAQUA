@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { logUpdate } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import { useToast } from '../../context/ToastContext'
 import './Keuangan.css'
 
@@ -54,8 +55,17 @@ const PersetujuanDanaPage = () => {
         setShowModal(true)
     }
 
-    const handleSubmit = async (e) => {
+    // Modals State
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false })
+    const [processing, setProcessing] = useState(false)
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setConfirmModal({ isOpen: true })
+    }
+
+    const executeApproval = async () => {
+        setProcessing(true)
         try {
             const payload = {
                 status: action === 'approve' ? 'Disetujui' : 'Ditolak',
@@ -77,6 +87,7 @@ const PersetujuanDanaPage = () => {
                 { status: payload.status, jumlah_disetujui: payload.jumlah_disetujui }
             )
 
+            setConfirmModal({ isOpen: false })
             setShowModal(false)
             fetchData()
 
@@ -87,6 +98,8 @@ const PersetujuanDanaPage = () => {
             }
         } catch (err) {
             showToast.error('Error: ' + err.message)
+        } finally {
+            setProcessing(false)
         }
     }
 
@@ -234,7 +247,7 @@ const PersetujuanDanaPage = () => {
                             <h3>{action === 'approve' ? '✅ Setujui Anggaran' : '❌ Tolak Anggaran'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="info-box">
                                     <p><strong>Program:</strong> {selectedItem.nama_program}</p>
@@ -280,6 +293,20 @@ const PersetujuanDanaPage = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false })}
+                onConfirm={executeApproval}
+                title={action === 'approve' ? "Konfirmasi Persetujuan" : "Konfirmasi Penolakan"}
+                message={action === 'approve'
+                    ? `Apakah Anda yakin ingin menyetujui anggaran untuk program "${selectedItem?.nama_program}" sebesar Rp ${Number(form.jumlah_disetujui || 0).toLocaleString('id-ID')}?`
+                    : `Apakah Anda yakin ingin menolak pengajuan anggaran "${selectedItem?.nama_program}"?`
+                }
+                confirmLabel={action === 'approve' ? "Ya, Setujui" : "Ya, Tolak"}
+                variant={action === 'approve' ? 'success' : 'danger'}
+                isLoading={processing}
+            />
         </div>
     )
 }

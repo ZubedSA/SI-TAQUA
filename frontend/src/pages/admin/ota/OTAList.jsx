@@ -1,6 +1,10 @@
+
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Edit, Trash2, Eye, User, Phone, Mail, Tag, HeartHandshake, Users, ArrowUpRight } from 'lucide-react'
+import { exportToExcel, exportToCSV } from '../../../utils/exportUtils'
+import DeleteConfirmationModal from '../../../components/ui/DeleteConfirmationModal'
+import '../../ota/OTA.css'
 import { supabase } from '../../../lib/supabase'
 import { useToast } from '../../../context/ToastContext'
 import Spinner from '../../../components/ui/Spinner'
@@ -39,21 +43,31 @@ const OTAList = () => {
 
     // Manual fetch removed
 
-    const handleDelete = async (id, nama) => {
-        if (!window.confirm(`Yakin ingin menghapus OTA "${nama}"? Data akan dihapus permanen.`)) return
+    // Delete Modal State
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [otaToDelete, setOtaToDelete] = useState(null)
+
+    const handleDelete = (id, nama) => {
+        setOtaToDelete({ id, nama })
+        setShowDeleteModal(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!otaToDelete) return
 
         try {
             const { error } = await supabase
                 .from('orang_tua_asuh')
                 .delete()
-                .eq('id', id)
+                .eq('id', otaToDelete.id)
 
             if (error) throw error
             showToast.success('OTA berhasil dihapus')
-            if (error) throw error
-            showToast.success('OTA berhasil dihapus')
-            // Data refreshes automatically or we can manually invalidate query
-            window.location.reload() // Quick fix until full mutation logic
+            setShowDeleteModal(false)
+            setOtaToDelete(null)
+
+            // Manual refresh since we don't have react-query setup here fully
+            fetchData()
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
         }
@@ -212,7 +226,7 @@ const OTAList = () => {
                                                 </div>
                                                 <div>
                                                     <div
-                                                        onClick={() => navigate(`/admin/ota/${ota.id}`)}
+                                                        onClick={() => navigate(`/ admin / ota / ${ota.id} `)}
                                                         className="font-bold text-slate-700 hover:text-emerald-600 cursor-pointer transition-colors"
                                                     >
                                                         {ota.nama}
@@ -244,33 +258,33 @@ const OTAList = () => {
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border ${ota.ota_santri?.[0]?.count > 0 ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                            <span className={`inline - flex items - center gap - 1.5 px - 3 py - 1 rounded - lg text - xs font - semibold border ${ota.ota_santri?.[0]?.count > 0 ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-100'} `}>
                                                 <User size={12} />
                                                 {ota.ota_santri?.[0]?.count || 0} Santri
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${ota.status ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                                                <span className={`w-2 h-2 rounded-full ${ota.status ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                                            <div className={`inline - flex items - center gap - 2 px - 3 py - 1.5 rounded - full text - xs font - semibold border ${ota.status ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'} `}>
+                                                <span className={`w - 2 h - 2 rounded - full ${ota.status ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'} `}></span>
                                                 {ota.status ? 'Aktif' : 'Non-Aktif'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                                                 <button
-                                                    onClick={() => navigate(`/admin/ota/${ota.id}`)}
+                                                    onClick={() => navigate(`/ admin / ota / ${ota.id} `)}
                                                     className="w-9 h-9 flex items-center justify-center rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 hover:scale-105 transition-all"
                                                     title="Lihat Detail"
                                                 >
                                                     <Eye size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => navigate(`/admin/ota/${ota.id}/edit`)}
+                                                    onClick={() => navigate(`/ admin / ota / ${ota.id}/edit`)}
                                                     className="w-9 h-9 flex items-center justify-center rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 hover:scale-105 transition-all"
                                                     title="Edit"
                                                 >
                                                     <Edit size={16} />
-                                                </button>
+                                                </button >
                                                 <button
                                                     onClick={() => handleDelete(ota.id, ota.nama)}
                                                     className="w-9 h-9 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 hover:scale-105 transition-all"
@@ -278,9 +292,9 @@ const OTAList = () => {
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </div >
+                                        </td >
+                                    </tr >
                                 ))
                             ) : (
                                 <tr>
@@ -299,96 +313,108 @@ const OTAList = () => {
                                     </td>
                                 </tr>
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                        </tbody >
+                    </table >
+                </div >
 
                 {/* MOBILE CARD VIEW */}
-                <div className="md:hidden p-3 space-y-3 bg-slate-50/50">
-                    {filteredOtas.length > 0 ? (
-                        filteredOtas.map((ota) => (
-                            <div key={ota.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-4">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-emerald-100">
-                                            {ota.nama?.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <div
-                                                onClick={() => navigate(`/admin/ota/${ota.id}`)}
-                                                className="font-bold text-slate-800 text-sm hover:text-emerald-600 transition-colors"
-                                            >
-                                                {ota.nama}
+                < div className="md:hidden p-3 space-y-3 bg-slate-50/50" >
+                    {
+                        filteredOtas.length > 0 ? (
+                            filteredOtas.map((ota) => (
+                                <div key={ota.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-100 flex flex-col gap-4">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-emerald-100">
+                                                {ota.nama?.substring(0, 2).toUpperCase()}
                                             </div>
-                                            <div className="text-xs text-slate-400 font-mono">ID: {ota.id.slice(0, 8)}</div>
+                                            <div>
+                                                <div
+                                                    onClick={() => navigate(`/admin/ota/${ota.id}`)}
+                                                    className="font-bold text-slate-800 text-sm hover:text-emerald-600 transition-colors"
+                                                >
+                                                    {ota.nama}
+                                                </div>
+                                                <div className="text-xs text-slate-400 font-mono">ID: {ota.id.slice(0, 8)}</div>
+                                            </div>
+                                        </div>
+                                        <div className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${ota.status ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                                            {ota.status ? 'Aktif' : 'Non-Aktif'}
                                         </div>
                                     </div>
-                                    <div className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${ota.status ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
-                                        {ota.status ? 'Aktif' : 'Non-Aktif'}
-                                    </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 gap-2 text-sm">
-                                    <div className="flex items-center gap-2 text-slate-600 p-2 bg-slate-50 rounded-lg">
-                                        <Mail size={14} className="text-slate-400" />
-                                        <span className="truncate">{ota.email || '-'}</span>
+                                    <div className="grid grid-cols-1 gap-2 text-sm">
+                                        <div className="flex items-center gap-2 text-slate-600 p-2 bg-slate-50 rounded-lg">
+                                            <Mail size={14} className="text-slate-400" />
+                                            <span className="truncate">{ota.email || '-'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-slate-600 p-2 bg-slate-50 rounded-lg">
+                                            <Phone size={14} className="text-slate-400" />
+                                            <span>{ota.no_hp || '-'}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-slate-600 p-2 bg-slate-50 rounded-lg">
-                                        <Phone size={14} className="text-slate-400" />
-                                        <span>{ota.no_hp || '-'}</span>
-                                    </div>
-                                </div>
 
-                                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                                    <div className="flex gap-2">
-                                        {ota.kategori && (
-                                            <span className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium border border-emerald-100">
-                                                <Tag size={10} /> {ota.kategori.nama}
+                                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                                        <div className="flex gap-2">
+                                            {ota.kategori && (
+                                                <span className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs font-medium border border-emerald-100">
+                                                    <Tag size={10} /> {ota.kategori.nama}
+                                                </span>
+                                            )}
+                                            <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">
+                                                <User size={10} /> {ota.ota_santri?.[0]?.count || 0}
                                             </span>
-                                        )}
-                                        <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">
-                                            <User size={10} /> {ota.ota_santri?.[0]?.count || 0}
-                                        </span>
-                                    </div>
+                                        </div>
 
-                                    <div className="flex gap-1.5">
-                                        <button
-                                            onClick={() => navigate(`/admin/ota/${ota.id}`)}
-                                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-sky-50 text-sky-600 border border-sky-100"
-                                        >
-                                            <Eye size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => navigate(`/admin/ota/${ota.id}/edit`)}
-                                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100"
-                                        >
-                                            <Edit size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(ota.id, ota.nama)}
-                                            className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 border border-rose-100"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div className="flex gap-1.5">
+                                            <button
+                                                onClick={() => navigate(`/admin/ota/${ota.id}`)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-sky-50 text-sky-600 border border-sky-100"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(`/admin/ota/${ota.id}/edit`)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-100"
+                                            >
+                                                <Edit size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(ota.id, ota.nama)}
+                                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 border border-rose-100"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="py-12 text-center bg-white rounded-xl border border-slate-100 border-dashed">
+                                <Users size={32} className="text-slate-300 mx-auto mb-3" />
+                                <p className="text-sm text-slate-500">Tidak ada data</p>
                             </div>
-                        ))
-                    ) : (
-                        <div className="py-12 text-center bg-white rounded-xl border border-slate-100 border-dashed">
-                            <Users size={32} className="text-slate-300 mx-auto mb-3" />
-                            <p className="text-sm text-slate-500">Tidak ada data</p>
-                        </div>
-                    )}
-                </div>
+                        )
+                    }
+                </div >
 
                 {/* FOOTER */}
-                {filteredOtas.length > 0 && (
-                    <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 text-xs text-slate-500 font-medium">
-                        Menampilkan <span className="text-slate-700 font-bold">{filteredOtas.length}</span> dari <span className="text-slate-700 font-bold">{otas.length}</span> data
-                    </div>
-                )}
-            </div>
+                {
+                    filteredOtas.length > 0 && (
+                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 text-xs text-slate-500 font-medium">
+                            Menampilkan <span className="text-slate-700 font-bold">{filteredOtas.length}</span> dari <span className="text-slate-700 font-bold">{otas.length}</span> data
+                        </div>
+                    )
+                }
+            </div >
+
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={confirmDelete}
+                itemName={otaToDelete?.nama}
+                message={`Yakin ingin menghapus OTA ${otaToDelete?.nama}? Data akan dihapus permanen.`}
+            />
         </div>
     )
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Save, RefreshCw, Check, MessageCircle, Eye } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Check, MessageCircle, Eye, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate } from '../../lib/auditLog'
 import { useToast } from '../../context/ToastContext'
+import { useUserHalaqoh } from '../../hooks/features/useUserHalaqoh'
 import Spinner from '../../components/ui/Spinner'
 import './Hafalan.css'
 
@@ -21,8 +22,19 @@ const HafalanForm = () => {
     const [fetching, setFetching] = useState(isEdit)
     const [santriList, setSantriList] = useState([])
     const [guruList, setGuruList] = useState([])
-    const [halaqohList, setHalaqohList] = useState([])
-    const [selectedHalaqoh, setSelectedHalaqoh] = useState('')
+
+    // Gunakan hook untuk AUTO-FILTER halaqoh berdasarkan akun
+    // Halaqoh adalah ATRIBUT AKUN, bukan input user
+    const {
+        halaqohIds,
+        halaqohNames,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isRestricted,
+        isAdmin,
+        addHalaqohFilter
+    } = useUserHalaqoh()
+
     // State untuk menyimpan data hafalan yang baru diinput hari ini
     const [recentHafalan, setRecentHafalan] = useState([])
 
@@ -45,7 +57,6 @@ const HafalanForm = () => {
     })
 
     useEffect(() => {
-        fetchHalaqoh()
         fetchSantri()
         fetchGuru()
         fetchRecentHafalan()
@@ -53,6 +64,8 @@ const HafalanForm = () => {
             fetchHafalan()
         }
     }, [id])
+
+
 
     // Fetch hafalan yang baru diinput hari ini
     const fetchRecentHafalan = async () => {
@@ -75,28 +88,25 @@ const HafalanForm = () => {
         }
     }
 
-    // Fetch daftar halaqoh dengan musyrif
-    const fetchHalaqoh = async () => {
-        try {
-            const { data } = await supabase
-                .from('halaqoh')
-                .select('id, nama, musyrif_id, musyrif:guru!musyrif_id(id, nama)')
-                .order('nama')
-            setHalaqohList(data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
-            showToast.error('Gagal memuat data halaqoh')
-        }
-    }
-
-    // Fetch santri dengan halaqoh_id untuk filter
+    // Fetch santri - AUTO-FILTERED by account halaqoh
     const fetchSantri = async () => {
         try {
-            const { data } = await supabase
+            let query = supabase
                 .from('santri')
                 .select('id, nis, nama, nama_wali, no_telp_wali, halaqoh_id')
                 .eq('status', 'Aktif')
                 .order('nama')
+
+            // Auto-filter berdasarkan halaqoh akun (bukan ADMIN)
+            if (!isAdmin && halaqohIds.length > 0) {
+                query = query.in('halaqoh_id', halaqohIds)
+            } else if (!isAdmin && halaqohIds.length === 0) {
+                // User tanpa halaqoh - tidak bisa melihat santri
+                setSantriList([])
+                return
+            }
+
+            const { data } = await query
             setSantriList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
@@ -104,24 +114,15 @@ const HafalanForm = () => {
         }
     }
 
-    // Handle perubahan halaqoh - auto set musyrif dan reset santri
-    const handleHalaqohChange = (halaqohId) => {
-        setSelectedHalaqoh(halaqohId)
-        setFormData(prev => ({ ...prev, santri_id: '' })) // Reset santri selection
-
-        // Auto set musyrif berdasarkan halaqoh yang dipilih
-        if (halaqohId) {
-            const halaqoh = halaqohList.find(h => h.id === halaqohId)
-            if (halaqoh && halaqoh.musyrif_id) {
-                setFormData(prev => ({ ...prev, penguji_id: halaqoh.musyrif_id }))
-            }
+    // Re-fetch santri when halaqohIds change
+    useEffect(() => {
+        if (!loadingHalaqoh) {
+            fetchSantri()
         }
-    }
+    }, [halaqohIds, loadingHalaqoh])
 
-    // Filter santri berdasarkan halaqoh yang dipilih
-    const filteredSantriList = selectedHalaqoh
-        ? santriList.filter(s => s.halaqoh_id === selectedHalaqoh)
-        : santriList
+    // Santri sudah di-filter dari fetch - tidak perlu filter lagi
+    const filteredSantriList = santriList
 
 
     const fetchGuru = async () => {
@@ -325,20 +326,34 @@ _PTQA Batuan_`
                     <h3 className="form-section-title">Data Hafalan</h3>
                     <div className="form-grid">
                         <div className="form-group">
-                            <label className="form-label">Halaqoh *</label>
-                            <select className="form-control" value={selectedHalaqoh} onChange={(e) => handleHalaqohChange(e.target.value)} required>
-                                <option value="">Pilih Halaqoh</option>
-                                {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama} {h.musyrif?.nama ? `(${h.musyrif.nama})` : ''}</option>)}
-                            </select>
-                            <small className="form-hint">Pilih halaqoh terlebih dahulu untuk memfilter santri</small>
+                            <label className="form-label">Halaqoh</label>
+                            {loadingHalaqoh ? (
+                                <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f5f5f5' }}>
+                                    <RefreshCw size={16} className="spin" /> Memuat data...
+                                </div>
+                            ) : !hasHalaqoh ? (
+                                <div className="alert alert-warning" style={{ margin: 0 }}>
+                                    <AlertCircle size={16} />
+                                    <span>Akun Anda belum terhubung dengan halaqoh. Hubungi admin.</span>
+                                </div>
+                            ) : (
+                                <div className="form-control" style={{ backgroundColor: '#f0fdf4', border: '1px solid #22c55e', cursor: 'default' }}>
+                                    <strong>{isAdmin ? 'Semua Halaqoh (Admin)' : halaqohNames}</strong>
+                                </div>
+                            )}
+                            {hasHalaqoh && (
+                                <small className="form-hint" style={{ color: '#22c55e' }}>
+                                    ✓ Data santri otomatis difilter berdasarkan halaqoh akun Anda
+                                </small>
+                            )}
                         </div>
                         <div className="form-group">
                             <label className="form-label">Santri *</label>
-                            <select name="santri_id" className="form-control" value={formData.santri_id} onChange={handleChange} required disabled={!selectedHalaqoh}>
-                                <option value="">{selectedHalaqoh ? 'Pilih Santri' : 'Pilih halaqoh dulu'}</option>
+                            <select name="santri_id" className="form-control" value={formData.santri_id} onChange={handleChange} required disabled={!hasHalaqoh || loadingHalaqoh}>
+                                <option value="">Pilih Santri</option>
                                 {filteredSantriList.map(s => <option key={s.id} value={s.id}>{s.nama} ({s.nis})</option>)}
                             </select>
-                            {selectedHalaqoh && <small className="form-hint">{filteredSantriList.length} santri tersedia</small>}
+                            {hasHalaqoh && <small className="form-hint">{filteredSantriList.length} santri tersedia</small>}
                         </div>
                         <div className="form-group">
                             <label className="form-label">Jenis Setoran *</label>

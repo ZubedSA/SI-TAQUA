@@ -9,6 +9,9 @@ import EmptyState from '../../components/ui/EmptyState'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Kelas.css'
 
 const KelasPage = () => {
@@ -29,6 +32,8 @@ const KelasPage = () => {
     const [guruList, setGuruList] = useState([])
     const [saving, setSaving] = useState(false)
     const [selectedKelas, setSelectedKelas] = useState(null)
+    const [kelasToDelete, setKelasToDelete] = useState(null)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [santriList, setSantriList] = useState([])
     const [loadingSantri, setLoadingSantri] = useState(false)
     const [santriCounts, setSantriCounts] = useState({})
@@ -124,8 +129,20 @@ const KelasPage = () => {
         setSelectedSantriIds(prev => prev.includes(santriId) ? prev.filter(id => id !== santriId) : [...prev, santriId])
     }
 
-    const handleAddSantriToKelas = async () => {
+    // Confirmation States
+    const [saveModal, setSaveModal] = useState({ isOpen: false, type: 'save_kelas' })
+
+    const handleFormSubmit = (e) => {
+        e.preventDefault()
+        setSaveModal({ isOpen: true, type: 'save_kelas' })
+    }
+
+    const handleConfirmAddSantri = () => {
         if (selectedSantriIds.length === 0) return
+        setSaveModal({ isOpen: true, type: 'add_santri' })
+    }
+
+    const executeAddSantriToKelas = async () => {
         setSavingSantri(true)
         try {
             const { error } = await supabase.from('santri').update({ kelas_id: selectedKelas.id }).in('id', selectedSantriIds)
@@ -135,6 +152,7 @@ const KelasPage = () => {
             setShowAddSantriModal(false)
             setSelectedSantriIds([])
             showToast.success(`${selectedSantriIds.length} santri berhasil ditambahkan`)
+            setSaveModal({ isOpen: false, type: 'save_kelas' })
         } catch (err) {
             showToast.error('Gagal menambahkan santri: ' + err.message)
         } finally {
@@ -142,21 +160,33 @@ const KelasPage = () => {
         }
     }
 
-    const handleRemoveSantriFromKelas = async (santriId) => {
-        if (!confirm('Hapus santri ini dari kelas?')) return
+    // Delete Santri Confirmation State
+    const [removeSantriModal, setRemoveSantriModal] = useState({
+        isOpen: false,
+        santriId: null
+    })
+
+    const confirmRemoveSantri = (santriId) => {
+        setRemoveSantriModal({ isOpen: true, santriId })
+    }
+
+    const handleRemoveSantriFromKelas = async () => {
+        const santriId = removeSantriModal.santriId
+        if (!santriId) return
+
         try {
             const { error } = await supabase.from('santri').update({ kelas_id: null }).eq('id', santriId)
             if (error) throw error
             fetchKelas()
             fetchSantriByKelas(selectedKelas)
             showToast.success('Santri berhasil dihapus dari kelas')
+            setRemoveSantriModal({ isOpen: false, santriId: null })
         } catch (err) {
             showToast.error('Gagal menghapus santri: ' + err.message)
         }
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
+    const executeSave = async () => {
         setSaving(true)
         try {
             const payload = { nama: formData.nama, wali_kelas_id: formData.wali_kelas_id || null }
@@ -175,6 +205,7 @@ const KelasPage = () => {
             setShowModal(false)
             setEditData(null)
             setFormData({ nama: '', wali_kelas_id: '' })
+            setSaveModal({ isOpen: false, type: 'save_kelas' })
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
@@ -188,15 +219,21 @@ const KelasPage = () => {
         setShowModal(true)
     }
 
-    const handleDelete = async (id) => {
-        const kelas = kelasList.find(k => k.id === id)
-        if (!confirm('Yakin ingin menghapus kelas ini?')) return
+    const confirmDelete = (kelas) => {
+        setKelasToDelete(kelas)
+        setShowDeleteModal(true)
+    }
+
+    const handleDelete = async () => {
+        if (!kelasToDelete) return
         try {
-            const { error } = await supabase.from('kelas').delete().eq('id', id)
+            const { error } = await supabase.from('kelas').delete().eq('id', kelasToDelete.id)
             if (error) throw error
-            await logDelete('kelas', kelas?.nama || 'Kelas', `Hapus kelas: ${kelas?.nama}`)
-            setKelasList(kelasList.filter(k => k.id !== id))
+            await logDelete('kelas', kelasToDelete.nama, `Hapus kelas: ${kelasToDelete.nama}`)
+            setKelasList(kelasList.filter(k => k.id !== kelasToDelete.id))
             showToast.success('Kelas berhasil dihapus')
+            setShowDeleteModal(false)
+            setKelasToDelete(null)
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
         }
@@ -292,7 +329,7 @@ const KelasPage = () => {
                                 <div className="kelas-actions" onClick={e => e.stopPropagation()}>
                                     <button className="btn-icon btn-icon-success" title="Tambah Santri" onClick={() => openAddSantriModal(kelas)}><UserPlus size={16} /></button>
                                     <button className="btn-icon" onClick={() => handleEdit(kelas)}><Edit size={16} /></button>
-                                    <button className="btn-icon btn-icon-danger" onClick={() => handleDelete(kelas.id)}><Trash2 size={16} /></button>
+                                    <button className="btn-icon btn-icon-danger" onClick={() => confirmDelete(kelas)}><Trash2 size={16} /></button>
                                 </div>
                             )}
                         </div>
@@ -330,7 +367,7 @@ const KelasPage = () => {
                                                 <td><span className={`badge ${s.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{s.status}</span></td>
                                                 {canEdit && (
                                                     <td>
-                                                        <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari kelas" onClick={() => handleRemoveSantriFromKelas(s.id)}>
+                                                        <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari kelas" onClick={() => confirmRemoveSantri(s.id)}>
                                                             <X size={14} />
                                                         </button>
                                                     </td>
@@ -411,7 +448,7 @@ const KelasPage = () => {
                             <button className="btn btn-secondary" onClick={() => setShowAddSantriModal(false)}>Batal</button>
                             <button
                                 className="btn btn-primary"
-                                onClick={handleAddSantriToKelas}
+                                onClick={handleConfirmAddSantri}
                                 disabled={savingSantri || selectedSantriIds.length === 0}
                             >
                                 {savingSantri ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : `Tambahkan ${selectedSantriIds.length} Santri`}
@@ -429,7 +466,7 @@ const KelasPage = () => {
                             <h3 className="modal-title">{editData ? 'Edit Kelas' : 'Tambah Kelas'}</h3>
                             <button className="modal-close" onClick={() => { setShowModal(false); setEditData(null) }}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label className="form-label">Kelas *</label>
@@ -461,6 +498,37 @@ const KelasPage = () => {
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName={kelasToDelete?.nama}
+                message={`Apakah Anda yakin ingin menghapus kelas ${kelasToDelete?.nama}? Semua data santri dalam kelas ini akan kehilangan relasi kelas (tidak terhapus).`}
+            />
+
+            <ConfirmationModal
+                isOpen={removeSantriModal.isOpen}
+                onClose={() => setRemoveSantriModal({ isOpen: false, santriId: null })}
+                onConfirm={handleRemoveSantriFromKelas}
+                title="Hapus Santri dari Kelas"
+                message="Apakah Anda yakin ingin menghapus santri ini dari kelas?"
+                confirmLabel="Hapus"
+                variant="danger"
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ ...saveModal, isOpen: false })}
+                onConfirm={saveModal.type === 'add_santri' ? executeAddSantriToKelas : executeSave}
+                title={saveModal.type === 'add_santri' ? "Konfirmasi Tambah Santri" : (editData ? "Konfirmasi Edit" : "Konfirmasi Tambah")}
+                message={saveModal.type === 'add_santri'
+                    ? `Apakah Anda yakin ingin menambahkan ${selectedSantriIds.length} santri ke kelas ini?`
+                    : (editData ? 'Apakah Anda yakin ingin menyimpan perubahan data kelas ini?' : 'Apakah Anda yakin ingin menambahkan kelas baru ini?')}
+                confirmLabel={saveModal.type === 'add_santri' ? "Tambahkan" : (editData ? "Simpan Perubahan" : "Buat Kelas")}
+                variant="success"
+                isLoading={saving || savingSantri}
+            />
         </div>
     )
 }

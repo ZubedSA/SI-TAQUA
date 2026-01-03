@@ -8,6 +8,8 @@ import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useToast } from '../../context/ToastContext'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Keuangan.css'
 
 const RealisasiDanaPage = () => {
@@ -61,8 +63,18 @@ const RealisasiDanaPage = () => {
         }
     }
 
-    const handleSubmit = async (e) => {
+    // Modals State
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null })
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+    const [saving, setSaving] = useState(false)
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
+        setSaving(true)
         try {
             const anggaran = anggaranList.find(a => a.id === form.anggaran_id)
             const payload = {
@@ -70,7 +82,7 @@ const RealisasiDanaPage = () => {
                 jumlah_terpakai: parseFloat(form.jumlah_terpakai),
                 tanggal: form.tanggal,
                 keperluan: form.keperluan,
-                keterangan: form.keterangan,
+                keterangan: form.keterangan || '',
                 created_by: user?.id
             }
 
@@ -86,6 +98,7 @@ const RealisasiDanaPage = () => {
                     { jumlah: editItem.jumlah_terpakai, keperluan: editItem.keperluan },
                     { jumlah: payload.jumlah_terpakai, keperluan: payload.keperluan }
                 )
+                showToast.success('Realisasi dana berhasil diperbarui')
             } else {
                 const { error } = await supabase.from('realisasi_dana').insert([payload])
                 if (error) throw error
@@ -96,7 +109,7 @@ const RealisasiDanaPage = () => {
                     keperluan: `Realisasi: ${anggaran?.nama_program} - ${form.keperluan}`,
                     kategori: 'Kegiatan',
                     jumlah: parseFloat(form.jumlah_terpakai),
-                    keterangan: form.keterangan,
+                    keterangan: form.keterangan || '',
                     created_by: user?.id
                 }])
 
@@ -106,35 +119,41 @@ const RealisasiDanaPage = () => {
                     payload.keperluan || anggaran?.nama_program,
                     `Tambah realisasi dana: ${anggaran?.nama_program} - ${payload.keperluan} - Rp ${Number(payload.jumlah_terpakai).toLocaleString('id-ID')}`
                 )
+                showToast.success('Realisasi dana berhasil disimpan')
             }
 
+            setSaveModal({ isOpen: false })
             setShowModal(false)
             resetForm()
             fetchData()
-            showToast.success('Realisasi dana berhasil disimpan')
         } catch (err) {
             showToast.error('Error: ' + err.message)
+        } finally {
+            setSaving(false)
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Yakin hapus realisasi ini?')) return
-        try {
-            const itemToDelete = data.find(d => d.id === id)
+    const confirmDelete = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
 
-            const { error } = await supabase.from('realisasi_dana').delete().eq('id', id)
+    const handleDelete = async () => {
+        const itemToDelete = deleteModal.item
+        if (!itemToDelete) return
+
+        try {
+            const { error } = await supabase.from('realisasi_dana').delete().eq('id', itemToDelete.id)
             if (error) throw error
 
             // Audit Log - DELETE
-            if (itemToDelete) {
-                await logDelete(
-                    'realisasi_dana',
-                    itemToDelete.keperluan || itemToDelete.anggaran?.nama_program,
-                    `Hapus realisasi dana: ${itemToDelete.anggaran?.nama_program} - Rp ${Number(itemToDelete.jumlah_terpakai).toLocaleString('id-ID')}`
-                )
-            }
+            await logDelete(
+                'realisasi_dana',
+                itemToDelete.keperluan || itemToDelete.anggaran?.nama_program,
+                `Hapus realisasi dana: ${itemToDelete.anggaran?.nama_program} - Rp ${Number(itemToDelete.jumlah_terpakai).toLocaleString('id-ID')}`
+            )
 
             fetchData()
+            setDeleteModal({ isOpen: false, item: null })
             showToast.success('Realisasi dana berhasil dihapus')
         } catch (err) {
             showToast.error('Error: ' + err.message)
@@ -281,7 +300,7 @@ const RealisasiDanaPage = () => {
                                             <MobileActionMenu
                                                 actions={[
                                                     { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                    { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => handleDelete(item.id), danger: true }
+                                                    { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
                                                 ]}
                                             >
                                                 <button
@@ -304,7 +323,7 @@ const RealisasiDanaPage = () => {
                                                     <Edit2 size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(item.id)}
+                                                    onClick={() => confirmDelete(item)}
                                                     title="Hapus"
                                                     style={{
                                                         display: 'inline-flex',
@@ -338,7 +357,7 @@ const RealisasiDanaPage = () => {
                             <h3>{editItem ? 'Edit Realisasi' : 'Tambah Realisasi Dana'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label>Program Anggaran *</label>
@@ -396,12 +415,33 @@ const RealisasiDanaPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary">{editItem ? 'Simpan' : 'Tambah'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item?.keperluan || deleteModal.item?.anggaran?.nama_program}
+                message={`Yakin ingin menghapus realisasi dana ini?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? "Simpan Perubahan" : "Konfirmasi Realisasi"}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan realisasi ini?' : `Apakah Anda yakin ingin menyimpan realisasi dana sebesar Rp ${Number(form.jumlah_terpakai).toLocaleString('id-ID')}?`}
+                confirmLabel={editItem ? "Simpan" : "Simpan"}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

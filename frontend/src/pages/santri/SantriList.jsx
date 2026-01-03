@@ -11,6 +11,7 @@ import Spinner from '../../components/ui/Spinner'
 import * as XLSX from 'xlsx'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { useSantri } from '../../hooks/useAkademik'
 import { useSantriList } from '../../hooks/features/useSantriList'
@@ -484,7 +485,11 @@ const SantriList = () => {
                                                     <button
                                                         className="btn-icon btn-icon-danger"
                                                         title="Hapus"
-                                                        onClick={() => { setSelectedSantri(item); setShowDeleteModal(true) }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setSelectedSantri(item)
+                                                            setShowDeleteModal(true)
+                                                        }}
                                                         style={{
                                                             display: 'inline-flex',
                                                             alignItems: 'center',
@@ -617,24 +622,13 @@ const SantriList = () => {
             )}
 
             {/* Delete Modal */}
-            {showDeleteModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title">Konfirmasi Hapus</h3>
-                            <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <p>Apakah Anda yakin ingin menghapus santri <strong>{selectedSantri?.nama}</strong>?</p>
-                            <p className="text-muted mt-2">Tindakan ini tidak dapat dibatalkan.</p>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Batal</button>
-                            <button className="btn btn-danger" onClick={handleDelete}>Hapus</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName={selectedSantri?.nama}
+                message={`Apakah Anda yakin ingin menghapus santri ${selectedSantri?.nama}? Tindakan ini tidak dapat dibatalkan.`}
+            />
         </div>
     )
 }

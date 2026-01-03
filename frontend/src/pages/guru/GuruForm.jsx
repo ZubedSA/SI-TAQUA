@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { logCreate, logUpdate } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Guru.css'
 
 const GuruForm = () => {
@@ -79,10 +80,16 @@ const GuruForm = () => {
         setFormData(prev => ({ ...prev, [name]: value }))
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setLoading(true)
+    // Confirmation Modal
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
 
+    const handleFormSubmit = (e) => {
+        e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
+        setLoading(true)
         try {
             const payload = {
                 ...formData,
@@ -106,6 +113,7 @@ const GuruForm = () => {
                 showToast.success('Data guru berhasil disimpan!')
             }
 
+            setSaveModal({ isOpen: false })
             setTimeout(() => navigate('/guru'), 1500)
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
@@ -130,7 +138,7 @@ const GuruForm = () => {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="form-card">
+            <form onSubmit={handleFormSubmit} className="form-card">
                 {/* Data Pribadi */}
                 <div className="form-section">
                     <h3 className="form-section-title">Data Pribadi</h3>
@@ -228,6 +236,17 @@ const GuruForm = () => {
                     )}
                 </div>
             </form>
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={isEdit ? "Konfirmasi Edit" : "Konfirmasi Simpan"}
+                message={isEdit ? 'Apakah Anda yakin ingin menyimpan perubahan data guru ini?' : 'Apakah Anda yakin ingin menambahkan data guru baru ini?'}
+                confirmLabel={isEdit ? "Simpan Perubahan" : "Simpan Data"}
+                variant="success"
+                isLoading={loading}
+            />
         </div>
     )
 }

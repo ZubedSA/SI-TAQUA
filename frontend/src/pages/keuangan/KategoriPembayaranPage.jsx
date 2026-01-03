@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Plus, Search, Edit2, Trash2, Tag, RefreshCw, MoreVertical, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Keuangan.css'
 
 const KategoriPembayaranPage = () => {
@@ -60,13 +62,23 @@ const KategoriPembayaranPage = () => {
         }
     }
 
-    const handleSubmit = async (e) => {
+    // Modals State
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null })
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+    const [saving, setSaving] = useState(false)
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
+        setSaving(true)
         try {
             const payload = {
                 nama: form.nama,
                 tipe: form.tipe,
-                keterangan: form.keterangan,
+                keterangan: form.keterangan || '',
                 nominal_default: parseFloat(form.nominal_default) || 0,
                 is_active: form.is_active
             }
@@ -79,22 +91,32 @@ const KategoriPembayaranPage = () => {
                 if (error) throw error
             }
 
+            setSaveModal({ isOpen: false })
             setShowModal(false)
             resetForm()
             fetchData()
-            showToast.success('Anggaran berhasil disimpan')
+            showToast.success('Kategori berhasil disimpan')
         } catch (err) {
             showToast.error('Error: ' + err.message)
+        } finally {
+            setSaving(false)
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('Yakin hapus kategori ini?')) return
+    const confirmDelete = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
+
+    const handleDelete = async () => {
+        const itemToDelete = deleteModal.item
+        if (!itemToDelete) return
+
         try {
-            const { error } = await supabase.from('kategori_pembayaran').delete().eq('id', id)
+            const { error } = await supabase.from('kategori_pembayaran').delete().eq('id', itemToDelete.id)
             if (error) throw error
             fetchData()
             showToast.success('Kategori berhasil dihapus')
+            setDeleteModal({ isOpen: false, item: null })
         } catch (err) {
             showToast.error('Error: ' + err.message)
         }
@@ -211,7 +233,7 @@ const KategoriPembayaranPage = () => {
                                                 <button className="btn-icon-sm" onClick={() => openEdit(item)} title="Edit">
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button className="btn-icon-sm danger" onClick={() => handleDelete(item.id)} title="Hapus">
+                                                <button className="btn-icon-sm danger" onClick={() => confirmDelete(item)} title="Hapus">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -228,7 +250,7 @@ const KategoriPembayaranPage = () => {
                                                         <button onClick={() => openEdit(item)}>
                                                             <Edit2 size={14} /> Edit
                                                         </button>
-                                                        <button className="danger" onClick={() => { setActiveMenu(null); handleDelete(item.id); }}>
+                                                        <button className="danger" onClick={() => { setActiveMenu(null); confirmDelete(item); }}>
                                                             <Trash2 size={14} /> Hapus
                                                         </button>
                                                     </div>
@@ -250,7 +272,7 @@ const KategoriPembayaranPage = () => {
                             <h3>{editItem ? 'Edit Kategori' : 'Tambah Kategori'}</h3>
                             <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-row">
                                     <div className="form-group">
@@ -310,12 +332,33 @@ const KategoriPembayaranPage = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary">{editItem ? 'Simpan' : 'Tambah'}</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item?.nama}
+                message={`Yakin ingin menghapus kategori ini?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? "Simpan Perubahan" : "Simpan Data"}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan data kategori ini?' : 'Apakah Anda yakin ingin menambahkan data kategori baru ini?'}
+                confirmLabel={editItem ? "Simpan" : "Tambah"}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

@@ -1,34 +1,28 @@
 import { useState, useEffect } from 'react'
-import { Calendar, RefreshCw, Trophy, Users } from 'lucide-react'
+import { Calendar, RefreshCw, Trophy, Users, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useUserHalaqoh } from '../../hooks/features/useUserHalaqoh'
 import './Hafalan.css'
 
 const PencapaianBulananPage = () => {
     const [loading, setLoading] = useState(false)
-    const [halaqoh, setHalaqoh] = useState([])
     const [data, setData] = useState([])
+
+    // Gunakan hook untuk halaqoh yang difilter berdasarkan user
+    const { halaqohList, isLoading: loadingHalaqoh, hasHalaqoh, isSingleHalaqoh, selectedHalaqoh, setSelectedHalaqoh } = useUserHalaqoh()
+
     const [filters, setFilters] = useState({
-        halaqoh_id: '',
         bulan: new Date().getMonth() + 1,
         tahun: new Date().getFullYear()
     })
 
-    useEffect(() => {
-        fetchHalaqoh()
-    }, [])
-
-    const fetchHalaqoh = async () => {
-        const { data } = await supabase.from('halaqoh').select('*').order('nama_halaqoh')
-        if (data) setHalaqoh(data)
-    }
-
     const fetchData = async () => {
-        if (!filters.halaqoh_id) return
+        if (!selectedHalaqoh) return
         setLoading(true)
         const { data: santriData } = await supabase
             .from('santri')
             .select('id, nama, nis')
-            .eq('halaqoh_id', filters.halaqoh_id)
+            .eq('halaqoh_id', selectedHalaqoh)
             .eq('status', 'Aktif')
             .order('nama')
         if (santriData) setData(santriData)
@@ -36,8 +30,8 @@ const PencapaianBulananPage = () => {
     }
 
     useEffect(() => {
-        if (filters.halaqoh_id) fetchData()
-    }, [filters.halaqoh_id, filters.bulan])
+        if (selectedHalaqoh) fetchData()
+    }, [selectedHalaqoh, filters.bulan])
 
     return (
         <div className="hafalan-page">
@@ -51,15 +45,27 @@ const PencapaianBulananPage = () => {
             </div>
 
             <div className="filters-bar">
-                <select
-                    value={filters.halaqoh_id}
-                    onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                >
-                    <option value="">Pilih Halaqoh</option>
-                    {halaqoh.map(h => (
-                        <option key={h.id} value={h.id}>{h.nama_halaqoh}</option>
-                    ))}
-                </select>
+                {loadingHalaqoh ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <RefreshCw size={16} className="spin" /> Memuat halaqoh...
+                    </div>
+                ) : !hasHalaqoh ? (
+                    <div className="alert alert-warning">
+                        <AlertCircle size={16} />
+                        <span>Akun Anda belum terhubung dengan halaqoh. Hubungi admin.</span>
+                    </div>
+                ) : (
+                    <select
+                        value={selectedHalaqoh}
+                        onChange={e => setSelectedHalaqoh(e.target.value)}
+                        disabled={isSingleHalaqoh}
+                    >
+                        {!isSingleHalaqoh && <option value="">Pilih Halaqoh</option>}
+                        {halaqohList.map(h => (
+                            <option key={h.id} value={h.id}>{h.nama_halaqoh || h.nama}</option>
+                        ))}
+                    </select>
+                )}
 
                 <select
                     value={filters.bulan}

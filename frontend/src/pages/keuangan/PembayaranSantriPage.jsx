@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check, User, AlertCircle, CheckCircle, ChevronDown, X, Layers, List } from 'lucide-react'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -165,8 +166,15 @@ const PembayaranSantriPage = () => {
     }
 
     // Submit payment for selected tagihan
-    const handleSubmitPayment = async (e) => {
+    // Modals State
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executePayment = async () => {
         setSaving(true)
         try {
             const jumlahBayar = parseFloat(form.jumlah)
@@ -182,7 +190,7 @@ const PembayaranSantriPage = () => {
                     jumlah: amount,
                     tanggal: form.tanggal,
                     metode: form.metode,
-                    keterangan: form.keterangan,
+                    keterangan: form.keterangan || '',
                     created_by: user?.id
                 }])
 
@@ -205,6 +213,7 @@ const PembayaranSantriPage = () => {
                 items: selectedTagihan
             })
 
+            setSaveModal({ isOpen: false })
             setShowPaymentModal(false)
             setShowSuccessModal(true)
             fetchTagihanSantri(selectedSantri.id)
@@ -762,7 +771,7 @@ Jazakumullah khairan.
                             <h3>💳 Bayar {selectedTagihanIds.length} Tagihan</h3>
                             <button className="modal-close" onClick={() => setShowPaymentModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSubmitPayment}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="payment-info-card">
                                     <div className="payment-info-row">
@@ -842,6 +851,16 @@ Jazakumullah khairan.
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executePayment}
+                title="Konfirmasi Pembayaran"
+                message={`Apakah Anda yakin ingin memproses pembayaran sebesar Rp ${Number(form.jumlah).toLocaleString('id-ID')}?`}
+                confirmLabel="Bayar"
+                variant="success"
+            />
         </div>
     )
 }

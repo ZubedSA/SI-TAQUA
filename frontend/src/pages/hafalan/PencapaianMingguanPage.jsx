@@ -1,45 +1,56 @@
 import { useState, useEffect } from 'react'
-import { Calendar, RefreshCw, Trophy, Users } from 'lucide-react'
+import { Calendar, RefreshCw, Trophy, Users, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useUserHalaqoh } from '../../hooks/features/useUserHalaqoh'
 import '../hafalan/Hafalan.css'
 
 const PencapaianMingguanPage = () => {
     const [loading, setLoading] = useState(false)
-    const [halaqoh, setHalaqoh] = useState([])
     const [data, setData] = useState([])
+
+    // Gunakan hook untuk AUTO-FILTER halaqoh berdasarkan akun
+    // Halaqoh adalah ATRIBUT AKUN, bukan input user
+    const { halaqohIds, halaqohNames, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin } = useUserHalaqoh()
+
     const [filters, setFilters] = useState({
-        halaqoh_id: '',
         minggu: 1,
         bulan: new Date().getMonth() + 1,
         tahun: new Date().getFullYear()
     })
 
-    useEffect(() => {
-        fetchHalaqoh()
-    }, [])
-
-    const fetchHalaqoh = async () => {
-        const { data } = await supabase.from('halaqoh').select('*').order('nama_halaqoh')
-        if (data) setHalaqoh(data)
-    }
-
     const fetchData = async () => {
-        if (!filters.halaqoh_id) return
+        if (!hasHalaqoh) return
         setLoading(true)
-        // Fetch santri and their weekly hafalan progress
-        const { data: santriData } = await supabase
-            .from('santri')
-            .select('id, nama, nis')
-            .eq('halaqoh_id', filters.halaqoh_id)
-            .eq('status', 'Aktif')
-            .order('nama')
-        if (santriData) setData(santriData)
-        setLoading(false)
+
+        try {
+            // Build query dengan auto-filter
+            let query = supabase
+                .from('santri')
+                .select('id, nama, nis')
+                .eq('status', 'Aktif')
+                .order('nama')
+
+            // Auto-filter berdasarkan halaqoh akun (bukan ADMIN)
+            if (!isAdmin && halaqohIds.length > 0) {
+                query = query.in('halaqoh_id', halaqohIds)
+            } else if (!isAdmin && halaqohIds.length === 0) {
+                setData([])
+                setLoading(false)
+                return
+            }
+
+            const { data: santriData } = await query
+            setData(santriData || [])
+        } catch (err) {
+            console.error('Error:', err.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {
-        if (filters.halaqoh_id) fetchData()
-    }, [filters.halaqoh_id, filters.minggu, filters.bulan])
+        if (!loadingHalaqoh && hasHalaqoh) fetchData()
+    }, [halaqohIds, loadingHalaqoh, filters.minggu, filters.bulan])
 
     return (
         <div className="hafalan-page">
@@ -52,47 +63,56 @@ const PencapaianMingguanPage = () => {
                 </div>
             </div>
 
-            <div className="filters-bar">
-                <select
-                    value={filters.halaqoh_id}
-                    onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                >
-                    <option value="">Pilih Halaqoh</option>
-                    {halaqoh.map(h => (
-                        <option key={h.id} value={h.id}>{h.nama_halaqoh}</option>
-                    ))}
-                </select>
+            {/* Halaqoh Info - Read-only, no dropdown */}
+            {loadingHalaqoh ? (
+                <div className="filters-bar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <RefreshCw size={16} className="spin" /> Memuat data...
+                    </div>
+                </div>
+            ) : !hasHalaqoh ? (
+                <div className="alert alert-warning" style={{ marginBottom: '16px' }}>
+                    <AlertCircle size={16} />
+                    <span>Akun Anda belum terhubung dengan halaqoh. Hubungi admin.</span>
+                </div>
+            ) : (
+                <div className="filters-bar">
+                    {/* Halaqoh Info Display */}
+                    <div style={{ padding: '8px 16px', backgroundColor: '#f0fdf4', border: '1px solid #22c55e', borderRadius: '6px' }}>
+                        <strong>{isAdmin ? 'Semua Halaqoh (Admin)' : halaqohNames}</strong>
+                    </div>
 
-                <select
-                    value={filters.minggu}
-                    onChange={e => setFilters({ ...filters, minggu: parseInt(e.target.value) })}
-                >
-                    <option value={1}>Minggu 1</option>
-                    <option value={2}>Minggu 2</option>
-                    <option value={3}>Minggu 3</option>
-                    <option value={4}>Minggu 4</option>
-                </select>
+                    <select
+                        value={filters.minggu}
+                        onChange={e => setFilters({ ...filters, minggu: parseInt(e.target.value) })}
+                    >
+                        <option value={1}>Minggu 1</option>
+                        <option value={2}>Minggu 2</option>
+                        <option value={3}>Minggu 3</option>
+                        <option value={4}>Minggu 4</option>
+                    </select>
 
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: parseInt(e.target.value) })}
-                >
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                            {new Date(2024, i).toLocaleDateString('id-ID', { month: 'long' })}
-                        </option>
-                    ))}
-                </select>
+                    <select
+                        value={filters.bulan}
+                        onChange={e => setFilters({ ...filters, bulan: parseInt(e.target.value) })}
+                    >
+                        {[...Array(12)].map((_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                                {new Date(2024, i).toLocaleDateString('id-ID', { month: 'long' })}
+                            </option>
+                        ))}
+                    </select>
 
-                <input
-                    type="number"
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: parseInt(e.target.value) })}
-                    min="2020"
-                    max="2030"
-                    style={{ width: '100px' }}
-                />
-            </div>
+                    <input
+                        type="number"
+                        value={filters.tahun}
+                        onChange={e => setFilters({ ...filters, tahun: parseInt(e.target.value) })}
+                        min="2020"
+                        max="2030"
+                        style={{ width: '100px' }}
+                    />
+                </div>
+            )}
 
             <div className="card">
                 {loading ? (
@@ -103,7 +123,7 @@ const PencapaianMingguanPage = () => {
                 ) : data.length === 0 ? (
                     <div className="empty-state">
                         <Users size={48} />
-                        <p>Pilih halaqoh untuk melihat pencapaian santri</p>
+                        <p>{hasHalaqoh ? 'Tidak ada data santri' : 'Akun belum terhubung ke halaqoh'}</p>
                     </div>
                 ) : (
                     <div className="table-container">

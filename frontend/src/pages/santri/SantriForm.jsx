@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Santri.css'
 
 const SantriForm = () => {
@@ -115,10 +116,16 @@ const SantriForm = () => {
         setFormData(prev => ({ ...prev, [name]: value }))
     }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setLoading(true)
+    // Confirmation Modal
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
 
+    const handleFormSubmit = (e) => {
+        e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
+        setLoading(true)
         try {
             // Find or Create Angkatan by nama
             let angkatanId = null
@@ -180,6 +187,7 @@ const SantriForm = () => {
                 showToast.success('Data santri berhasil disimpan!')
             }
 
+            setSaveModal({ isOpen: false })
             setTimeout(() => navigate('/santri'), 1500)
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
@@ -204,7 +212,7 @@ const SantriForm = () => {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="form-card">
+            <form onSubmit={handleFormSubmit} className="form-card">
                 {/* Data Pribadi */}
                 <div className="form-section">
                     <h3 className="form-section-title">Data Pribadi</h3>
@@ -321,6 +329,17 @@ const SantriForm = () => {
                     )}
                 </div>
             </form>
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={isEdit ? "Konfirmasi Edit" : "Konfirmasi Simpan"}
+                message={isEdit ? 'Apakah Anda yakin ingin menyimpan perubahan data santri ini?' : 'Apakah Anda yakin ingin menambahkan data santri baru ini?'}
+                confirmLabel={isEdit ? "Simpan Perubahan" : "Simpan Data"}
+                variant="success"
+                isLoading={loading}
+            />
         </div>
     )
 }

@@ -1,12 +1,15 @@
+
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save, Printer, Download, MoreVertical, Send, Eye, EyeOff } from 'lucide-react'
+import DeleteConfirmationModal from '../../../../components/ui/DeleteConfirmationModal'
 import { supabase } from '../../../../lib/supabase'
 import { logDelete } from '../../../../lib/auditLog'
 import MobileActionMenu from '../../../../components/ui/MobileActionMenu'
 import DownloadButton from '../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../utils/exportUtils'
 import { generateLaporanPDF } from '../../../../utils/pdfGenerator'
+import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 
 import '../../../santri/Santri.css'
 
@@ -15,6 +18,16 @@ const HafalanList = () => {
     // Read initial tab from URL param
     const [searchParams] = useSearchParams()
     const initialTab = searchParams.get('tab') || 'list'
+
+    // AUTO-FILTER: Halaqoh berdasarkan akun
+    const {
+        halaqohIds,
+        halaqohNames,
+        musyrifInfo,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin
+    } = useUserHalaqoh()
 
     const [hafalan, setHafalan] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
@@ -27,7 +40,6 @@ const HafalanList = () => {
 
     // Date filter for Input Hafalan tab
     const [dateFilter, setDateFilter] = useState({ dari: '', sampai: '' })
-    const [filterHalaqoh, setFilterHalaqoh] = useState('') // Filter halaqoh untuk tab Input Hafalan
 
     // Rekap filters
     const [halaqohList, setHalaqohList] = useState([])
@@ -57,11 +69,11 @@ const HafalanList = () => {
     // Get current period key based on kategori and filter values
     const getCurrentPeriodKey = () => {
         if (pencapaianKategori === 'semester' && pencapaianSemester) {
-            return `semester_${pencapaianSemester}`
+            return `semester_${pencapaianSemester} `
         } else if (pencapaianKategori === 'bulanan' && pencapaianBulan) {
-            return `bulanan_${pencapaianBulan}`
+            return `bulanan_${pencapaianBulan} `
         } else if (pencapaianKategori === 'mingguan' && pencapaianTanggal.dari && pencapaianTanggal.sampai) {
-            return `mingguan_${pencapaianTanggal.dari}_${pencapaianTanggal.sampai}`
+            return `mingguan_${pencapaianTanggal.dari}_${pencapaianTanggal.sampai} `
         }
         return null
     }
@@ -283,9 +295,9 @@ const HafalanList = () => {
             const { data, error } = await supabase
                 .from('hafalan')
                 .select(`
-                    *,
-                    santri:santri_id(nama, nama_wali, no_telp_wali, kelas:kelas_id(nama), halaqoh:halaqoh_id(id, nama)),
-                    penguji:penguji_id(nama)
+    *,
+    santri: santri_id(nama, nama_wali, no_telp_wali, kelas: kelas_id(nama), halaqoh: halaqoh_id(id, nama, musyrif: musyrif_id(nama))),
+        penguji: penguji_id(nama)
                 `)
                 .order('tanggal', { ascending: false })
 
@@ -299,7 +311,8 @@ const HafalanList = () => {
                 kelas_nama: h.santri?.kelas?.nama || '-',
                 halaqoh_id: h.santri?.halaqoh?.id || null,
                 halaqoh_nama: h.santri?.halaqoh?.nama || '-',
-                penguji_nama: h.penguji?.nama || '-'
+                // Penguji: gunakan penguji jika ada, fallback ke musyrif halaqoh
+                penguji_nama: h.penguji?.nama || h.santri?.halaqoh?.musyrif?.nama || '-'
             }))
 
             setHafalan(mapped)
@@ -325,7 +338,7 @@ const HafalanList = () => {
         try {
             const { error } = await supabase.from('hafalan').delete().eq('id', selectedHafalan.id)
             if (error) throw error
-            await logDelete('hafalan', selectedHafalan.santri_nama, `Hapus hafalan: ${selectedHafalan.santri_nama} - ${selectedHafalan.surah_mulai || selectedHafalan.surah}`)
+            await logDelete('hafalan', selectedHafalan.santri_nama, `Hapus hafalan: ${selectedHafalan.santri_nama} - ${selectedHafalan.surah_mulai || selectedHafalan.surah} `)
             setHafalan(hafalan.filter(h => h.id !== selectedHafalan.id))
             setShowDeleteModal(false)
             setSelectedHafalan(null)
@@ -351,8 +364,11 @@ const HafalanList = () => {
             matchDate = matchDate && h.tanggal <= dateFilter.sampai
         }
 
-        // Halaqoh filter
-        const matchHalaqoh = !filterHalaqoh || h.halaqoh_id === filterHalaqoh
+        // Halaqoh filter - AUTO-FILTER berdasarkan akun (bukan manual dropdown)
+        let matchHalaqoh = true
+        if (!isAdmin && halaqohIds.length > 0) {
+            matchHalaqoh = halaqohIds.includes(h.halaqoh_id)
+        }
 
         return matchSearch && matchFilter && matchDate && matchHalaqoh
     })
@@ -370,7 +386,7 @@ const HafalanList = () => {
 
         // Jika tidak ada nomor, minta input manual
         if (!phone) {
-            phone = prompt(`Nomor telepon wali ${item.nama_wali || 'santri'} tidak tersedia.\n\nMasukkan nomor WhatsApp (contoh: 6281234567890):`)
+            phone = prompt(`Nomor telepon wali ${item.nama_wali || 'santri'} tidak tersedia.\n\nMasukkan nomor WhatsApp(contoh: 6281234567890): `)
             if (!phone) return
             phone = phone.replace(/\D/g, '')
             if (phone.startsWith('0')) {
@@ -378,32 +394,32 @@ const HafalanList = () => {
             }
         }
 
-        const juzDisplay = (item.juz_mulai || item.juz || '-') + ((item.juz_selesai && item.juz_selesai !== item.juz_mulai) ? ` - ${item.juz_selesai}` : '')
-        const surahDisplay = (item.surah_mulai || item.surah || '-') + ((item.surah_selesai && item.surah_selesai !== item.surah_mulai) ? ` s/d ${item.surah_selesai}` : '')
+        const juzDisplay = (item.juz_mulai || item.juz || '-') + ((item.juz_selesai && item.juz_selesai !== item.juz_mulai) ? ` - ${item.juz_selesai} ` : '')
+        const surahDisplay = (item.surah_mulai || item.surah || '-') + ((item.surah_selesai && item.surah_selesai !== item.surah_mulai) ? ` s / d ${item.surah_selesai} ` : '')
 
         const message = `Assalamu'alaikum Wr. Wb.
 
-*LAPORAN HAFALAN SANTRI*
+    * LAPORAN HAFALAN SANTRI *
 ━━━━━━━━━━━━━━━━━━━━
 
-Kepada Yth. Bapak/Ibu *${item.nama_wali || 'Wali Santri'}*
+Kepada Yth.Bapak / Ibu * ${item.nama_wali || 'Wali Santri'}*
 
-📌 *Nama Santri:* ${item.santri_nama}
-📅 *Tanggal:* ${item.tanggal}
-📖 *Jenis:* ${item.jenis || 'Setoran'}
+📌 * Nama Santri:* ${item.santri_nama}
+📅 * Tanggal:* ${item.tanggal}
+📖 * Jenis:* ${item.jenis || 'Setoran'}
 
-*Detail Hafalan:*
+* Detail Hafalan:*
 • Juz: ${juzDisplay}
 • Surah: ${surahDisplay}
 • Ayat: ${item.ayat_mulai || 1} - ${item.ayat_selesai || 1}
 • Kadar: ${item.kadar_setoran || '-'}
 
-*Status:* ${item.status}
-*Penguji:* ${item.penguji_nama || '-'}
+* Status:* ${item.status}
+* Penguji:* ${item.penguji_nama || '-'}
 
 ${item.catatan ? `*Catatan:* ${item.catatan}` : ''}
 
-Demikian laporan hafalan ananda. Jazakumullah khairan.
+Demikian laporan hafalan ananda.Jazakumullah khairan.
 
 _PTQA Batuan_`
 
@@ -695,20 +711,20 @@ _PTQA Batuan_`
                                 />
                             </div>
 
-                            {/* Halaqoh Filter */}
+                            {/* Halaqoh Filter - Auto untuk non-admin */}
                             <div className="filter-group">
-                                <select
+                                <input
+                                    type="text"
                                     className="form-control"
-                                    value={filterHalaqoh}
-                                    onChange={(e) => setFilterHalaqoh(e.target.value)}
-                                >
-                                    <option value="">Semua Halaqoh</option>
-                                    {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama}</option>)}
-                                </select>
+                                    value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
+                                    disabled
+                                    readOnly
+                                    style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed', minWidth: '180px' }}
+                                />
                             </div>
 
-                            {(dateFilter.dari || dateFilter.sampai || filterHalaqoh) && (
-                                <button className="btn btn-secondary btn-sm" onClick={() => { setDateFilter({ dari: '', sampai: '' }); setFilterHalaqoh('') }}>
+                            {(dateFilter.dari || dateFilter.sampai) && (
+                                <button className="btn btn-secondary btn-sm" onClick={() => { setDateFilter({ dari: '', sampai: '' }) }}>
                                     <RefreshCw size={14} /> Reset
                                 </button>
                             )}
@@ -1399,26 +1415,14 @@ _PTQA Batuan_`
                 )
             }
 
-            {/* Delete Modal - Outside all tabs so it works everywhere */}
-            {
-                showDeleteModal && (
-                    <div className="modal-overlay active">
-                        <div className="modal">
-                            <div className="modal-header">
-                                <h3 className="modal-title">Konfirmasi Hapus</h3>
-                                <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
-                            </div>
-                            <div className="modal-body">
-                                <p>Apakah Anda yakin ingin menghapus data hafalan ini?</p>
-                            </div>
-                            <div className="modal-footer">
-                                <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Batal</button>
-                                <button className="btn btn-danger" onClick={handleDelete}>Hapus</button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+            {/* Delete Modal */}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName="data hafalan ini"
+                message="Apakah Anda yakin ingin menghapus data hafalan ini?"
+            />
         </div >
     )
 }

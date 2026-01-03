@@ -10,6 +10,9 @@ import EmptyState from '../../components/ui/EmptyState'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './Mapel.css'
 
 const MapelPage = () => {
@@ -28,6 +31,8 @@ const MapelPage = () => {
     const [formData, setFormData] = useState({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' })
     const [saving, setSaving] = useState(false)
     const [activeKategori, setActiveKategori] = useState('Semua')
+    const [mapelToDelete, setMapelToDelete] = useState(null)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
 
     useEffect(() => {
         fetchMapel()
@@ -54,8 +59,15 @@ const MapelPage = () => {
         return matchSearch && matchKategori
     })
 
-    const handleSubmit = async (e) => {
+    // Save Confirmation State
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
         setSaving(true)
         try {
             if (editData) {
@@ -73,6 +85,7 @@ const MapelPage = () => {
             setShowModal(false)
             setEditData(null)
             setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' })
+            setSaveModal({ isOpen: false })
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
@@ -86,15 +99,21 @@ const MapelPage = () => {
         setShowModal(true)
     }
 
-    const handleDelete = async (id) => {
-        const mapel = mapelList.find(m => m.id === id)
-        if (!confirm('Yakin ingin menghapus mata pelajaran ini?')) return
+    const confirmDelete = (mapel) => {
+        setMapelToDelete(mapel)
+        setShowDeleteModal(true)
+    }
+
+    const handleDelete = async () => {
+        if (!mapelToDelete) return
         try {
-            const { error } = await supabase.from('mapel').delete().eq('id', id)
+            const { error } = await supabase.from('mapel').delete().eq('id', mapelToDelete.id)
             if (error) throw error
-            await logDelete('mapel', mapel?.nama || 'Mapel', `Hapus mapel: ${mapel?.nama} (${mapel?.kode})`)
-            setMapelList(mapelList.filter(m => m.id !== id))
+            await logDelete('mapel', mapelToDelete.nama, `Hapus mapel: ${mapelToDelete.nama} (${mapelToDelete.kode})`)
+            setMapelList(mapelList.filter(m => m.id !== mapelToDelete.id))
             showToast.success('Mapel berhasil dihapus')
+            setShowDeleteModal(false)
+            setMapelToDelete(null)
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
         }
@@ -234,7 +253,7 @@ const MapelPage = () => {
                                                 <MobileActionMenu
                                                     actions={[
                                                         { icon: <Edit size={16} />, label: 'Edit', onClick: () => handleEdit(mapel) },
-                                                        { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => handleDelete(mapel.id), danger: true }
+                                                        { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(mapel), danger: true }
                                                     ]}
                                                 >
                                                     <button
@@ -259,7 +278,7 @@ const MapelPage = () => {
                                                     </button>
                                                     <button
                                                         className="btn-icon btn-icon-danger"
-                                                        onClick={() => handleDelete(mapel.id)}
+                                                        onClick={() => confirmDelete(mapel)}
                                                         title="Hapus"
                                                         style={{
                                                             display: 'inline-flex',
@@ -294,7 +313,7 @@ const MapelPage = () => {
                             <h3 className="modal-title">{editData ? 'Edit Mapel' : 'Tambah Mapel'}</h3>
                             <button className="modal-close" onClick={() => { setShowModal(false); setEditData(null) }}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label className="form-label">Kode Mapel *</label>
@@ -326,6 +345,24 @@ const MapelPage = () => {
                     </div>
                 </div>
             )}
+
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName={`${mapelToDelete?.kode} - ${mapelToDelete?.nama}`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editData ? "Konfirmasi Edit" : "Konfirmasi Tambah"}
+                message={editData ? 'Apakah Anda yakin ingin menyimpan perubahan data mapel ini?' : 'Apakah Anda yakin ingin menambahkan mapel baru ini?'}
+                confirmLabel={editData ? "Simpan Perubahan" : "Tambah Mapel"}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

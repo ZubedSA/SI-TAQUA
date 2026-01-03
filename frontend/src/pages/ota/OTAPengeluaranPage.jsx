@@ -10,6 +10,8 @@ import EmptyState from '../../components/ui/EmptyState'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './OTA.css'
 
 /**
@@ -130,7 +132,10 @@ const OTAPengeluaranPage = () => {
         setEditItem(null)
     }
 
-    const handleSubmit = async (e) => {
+    // Save Confirmation State
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
 
         if (!formData.keperluan.trim()) {
@@ -152,8 +157,14 @@ const OTAPengeluaranPage = () => {
             return
         }
 
+        setSaveModal({ isOpen: false }) // Close first to reset? No, set open
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
         setSaving(true)
         try {
+            const nominal = Number(formData.jumlah)
             const payload = {
                 tanggal: formData.tanggal,
                 keperluan: formData.keperluan.trim(),
@@ -180,6 +191,7 @@ const OTAPengeluaranPage = () => {
 
             closeModal()
             fetchData()
+            setSaveModal({ isOpen: false })
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
@@ -187,8 +199,19 @@ const OTAPengeluaranPage = () => {
         }
     }
 
-    const handleDelete = async (item) => {
-        if (!confirm(`Hapus pengeluaran "${item.keperluan}" sebesar ${formatRupiah(item.jumlah)}?`)) return
+    // Delete Confirmation State
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        item: null
+    })
+
+    const openDeleteModal = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
+
+    const handleDelete = async () => {
+        const item = deleteModal.item
+        if (!item) return
 
         try {
             const { error } = await supabase
@@ -199,6 +222,7 @@ const OTAPengeluaranPage = () => {
             if (error) throw error
             showToast.success('Pengeluaran berhasil dihapus')
             fetchData()
+            setDeleteModal({ isOpen: false, item: null })
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
         }
@@ -452,13 +476,13 @@ const OTAPengeluaranPage = () => {
                                                 <button className="ota-action-btn edit" onClick={() => openEdit(item)} title="Edit">
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button className="ota-action-btn delete" onClick={() => handleDelete(item)} title="Hapus">
+                                                <button className="ota-action-btn delete" onClick={() => openDeleteModal(item)} title="Hapus">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
                                             <MobileActionMenu
                                                 onEdit={() => openEdit(item)}
-                                                onDelete={() => handleDelete(item)}
+                                                onDelete={() => openDeleteModal(item)}
                                             />
                                         </td>
                                     </tr>
@@ -493,7 +517,7 @@ const OTAPengeluaranPage = () => {
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="ota-modal-body">
                                 {/* Balance info */}
                                 <div style={{
@@ -569,6 +593,24 @@ const OTAPengeluaranPage = () => {
                     </div>
                 </div>
             )}
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item ? `${deleteModal.item.keperluan} (${formatRupiah(deleteModal.item.jumlah)})` : ''}
+                message={`Yakin ingin menghapus data pengeluaran ini?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? 'Konfirmasi Edit' : 'Konfirmasi Tambah'}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan data ini?' : 'Apakah Anda yakin ingin menambahkan data pengeluaran ini?'}
+                confirmLabel={editItem ? 'Simpan Perubahan' : 'Tambah Data'}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

@@ -1,43 +1,70 @@
 import { useState, useEffect } from 'react'
-import { Calendar, RefreshCw, Trophy, Users } from 'lucide-react'
+import { Calendar, RefreshCw, Trophy, Users, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
+import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import '../input-hafalan/Hafalan.css'
 
 const PencapaianBulananPage = () => {
     const [loading, setLoading] = useState(false)
-    const [halaqoh, setHalaqoh] = useState([])
     const [data, setData] = useState([])
+
+    // AUTO-FILTER: Halaqoh adalah ATRIBUT AKUN, bukan input user
+    const { halaqohIds, halaqohNames, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin } = useUserHalaqoh()
+
     const [filters, setFilters] = useState({
-        halaqoh_id: '',
         bulan: new Date().getMonth() + 1,
         tahun: new Date().getFullYear()
     })
 
-    useEffect(() => {
-        fetchHalaqoh()
-    }, [])
-
-    const fetchHalaqoh = async () => {
-        const { data } = await supabase.from('halaqoh').select('id, nama').order('nama')
-        if (data) setHalaqoh(data)
-    }
-
     const fetchData = async () => {
-        if (!filters.halaqoh_id) return
+        if (!hasHalaqoh) return
         setLoading(true)
-        const { data: santriData } = await supabase
-            .from('santri')
-            .select('id, nama, nis')
-            .eq('halaqoh_id', filters.halaqoh_id)
-            .eq('status', 'Aktif')
-            .order('nama')
-        if (santriData) setData(santriData)
-        setLoading(false)
+
+        try {
+            let query = supabase
+                .from('santri')
+                .select('id, nama, nis')
+                .eq('status', 'Aktif')
+                .order('nama')
+
+            if (!isAdmin && halaqohIds.length > 0) {
+                query = query.in('halaqoh_id', halaqohIds)
+            } else if (!isAdmin && halaqohIds.length === 0) {
+                setData([])
+                setLoading(false)
+                return
+            }
+
+            const { data: santriData } = await query
+            setData(santriData || [])
+        } catch (err) {
+            console.error('Error:', err.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {
-        if (filters.halaqoh_id) fetchData()
-    }, [filters.halaqoh_id, filters.bulan])
+        if (!loadingHalaqoh && hasHalaqoh) fetchData()
+    }, [halaqohIds, loadingHalaqoh, filters.bulan])
+
+    if (loadingHalaqoh) {
+        return <div className="loading-state"><RefreshCw className="spin" size={24} /> Memuat data...</div>
+    }
+
+    if (!hasHalaqoh) {
+        return (
+            <div className="hafalan-page">
+                <div className="alert alert-warning" style={{ maxWidth: '600px', margin: '40px auto' }}>
+                    <AlertCircle size={24} />
+                    <div>
+                        <strong>Akses Dibatasi</strong>
+                        <p>Akun Anda belum terhubung dengan halaqoh. Hubungi admin.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="hafalan-page">
@@ -51,15 +78,14 @@ const PencapaianBulananPage = () => {
             </div>
 
             <div className="filters-bar">
-                <select
-                    value={filters.halaqoh_id}
-                    onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                >
-                    <option value="">Pilih Halaqoh</option>
-                    {halaqoh.map(h => (
-                        <option key={h.id} value={h.id}>{h.nama}</option>
-                    ))}
-                </select>
+                {/* HALAQOH INFO - Read-only */}
+                <input
+                    type="text"
+                    value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
+                    disabled
+                    readOnly
+                    style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed', padding: '8px 16px', borderRadius: '6px' }}
+                />
 
                 <select
                     value={filters.bulan}
@@ -91,7 +117,7 @@ const PencapaianBulananPage = () => {
                 ) : data.length === 0 ? (
                     <div className="empty-state">
                         <Users size={48} />
-                        <p>Pilih halaqoh untuk melihat pencapaian santri</p>
+                        <p>Tidak ada data santri</p>
                     </div>
                 ) : (
                     <div className="table-container">

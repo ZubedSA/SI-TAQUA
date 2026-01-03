@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Save, RefreshCw, Check, MessageCircle, Eye } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, Check, MessageCircle, Eye, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { logCreate, logUpdate } from '../../../../lib/auditLog'
+import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import ConfirmationModal from '../../../../components/ui/ConfirmationModal'
 import './Hafalan.css'
 
 const HafalanForm = () => {
@@ -12,26 +14,32 @@ const HafalanForm = () => {
     const isEdit = Boolean(id)
 
     // Ambil jenis dari URL query param (jika ada)
-    const jenisFromUrl = searchParams.get('jenis') || 'Setoran'
+    const jenisFromUrl = searchParams.get('jenis') || 'Hafalan Baru'
 
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(isEdit)
     const [santriList, setSantriList] = useState([])
     const [guruList, setGuruList] = useState([])
-    const [halaqohList, setHalaqohList] = useState([])
-    const [selectedHalaqoh, setSelectedHalaqoh] = useState('')
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
-    // State untuk menyimpan data hafalan yang baru diinput hari ini
     const [recentHafalan, setRecentHafalan] = useState([])
+
+    // AUTO-FILTER: Halaqoh adalah ATRIBUT AKUN, bukan input user
+    const {
+        halaqohIds,
+        halaqohNames,
+        halaqohList,
+        musyrifInfo,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin
+    } = useUserHalaqoh()
 
     const [formData, setFormData] = useState({
         santri_id: '',
-        // Input Mulai (Juz-Surah-Ayat)
         juz_mulai: 30,
         surah_mulai: '',
         ayat_mulai: 1,
-        // Input Selesai (Juz-Surah-Ayat)
         juz_selesai: 30,
         surah_selesai: '',
         ayat_selesai: 1,
@@ -43,93 +51,65 @@ const HafalanForm = () => {
         catatan: ''
     })
 
-    useEffect(() => {
-        fetchHalaqoh()
-        fetchSantri()
-        fetchGuru()
-        fetchRecentHafalan()
-        if (isEdit) {
-            fetchHafalan()
-        }
-    }, [id])
-
-    // Fetch hafalan yang baru diinput hari ini
-    const fetchRecentHafalan = async () => {
-        try {
-            const today = new Date().toISOString().split('T')[0]
-            const { data } = await supabase
-                .from('hafalan')
-                .select(`
-                    id, tanggal, juz_mulai, surah_mulai, ayat_mulai, 
-                    juz_selesai, surah_selesai, ayat_selesai, jenis, status, catatan,
-                    santri:santri_id (id, nama, nis, no_telp_wali, nama_wali),
-                    penguji:penguji_id (id, nama)
-                `)
-                .eq('tanggal', today)
-                .order('created_at', { ascending: false })
-                .limit(20)
-            setRecentHafalan(data || [])
-        } catch (err) {
-            console.error('Error fetching recent hafalan:', err.message)
-        }
-    }
-
-    // Fetch daftar halaqoh dengan musyrif
-    const fetchHalaqoh = async () => {
-        try {
-            const { data } = await supabase
-                .from('halaqoh')
-                .select('id, nama, musyrif_id, musyrif:musyrif_id(id, nama)')
-                .order('nama')
-            setHalaqohList(data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
-        }
-    }
-
-    // Fetch santri dengan halaqoh_id untuk filter
+    // Fetch santri - AUTO-FILTERED berdasarkan halaqoh akun
     const fetchSantri = async () => {
         try {
-            const { data } = await supabase
+            let query = supabase
                 .from('santri')
                 .select('id, nis, nama, nama_wali, no_telp_wali, halaqoh_id')
                 .eq('status', 'Aktif')
                 .order('nama')
+
+            // Auto-filter berdasarkan halaqoh akun (bukan ADMIN)
+            if (!isAdmin && halaqohIds.length > 0) {
+                query = query.in('halaqoh_id', halaqohIds)
+            } else if (!isAdmin && halaqohIds.length === 0) {
+                setSantriList([])
+                return
+            }
+
+            const { data } = await query
             setSantriList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
         }
     }
 
-    // Handle perubahan halaqoh - auto set musyrif dan reset santri
-    const handleHalaqohChange = (halaqohId) => {
-        setSelectedHalaqoh(halaqohId)
-        setFormData(prev => ({ ...prev, santri_id: '' })) // Reset santri selection
-
-        // Auto set musyrif berdasarkan halaqoh yang dipilih
-        if (halaqohId) {
-            const halaqoh = halaqohList.find(h => h.id === halaqohId)
-            if (halaqoh && halaqoh.musyrif_id) {
-                setFormData(prev => ({ ...prev, penguji_id: halaqoh.musyrif_id }))
-            }
-        }
-    }
-
-    // Filter santri berdasarkan halaqoh yang dipilih
-    const filteredSantriList = selectedHalaqoh
-        ? santriList.filter(s => s.halaqoh_id === selectedHalaqoh)
-        : santriList
-
-
     const fetchGuru = async () => {
         try {
-            const { data } = await supabase
-                .from('guru')
-                .select('id, nama')
-                .order('nama')
+            const { data } = await supabase.from('guru').select('id, nama').order('nama')
             setGuruList(data || [])
         } catch (err) {
             console.error('Error:', err.message)
+        }
+    }
+
+    const fetchRecentHafalan = async () => {
+        try {
+            const today = new Date().toISOString().split('T')[0]
+            let query = supabase
+                .from('hafalan')
+                .select(`
+                    id, tanggal, juz_mulai, surah_mulai, ayat_mulai, 
+                    juz_selesai, surah_selesai, ayat_selesai, jenis, status, catatan,
+                    santri:santri_id (id, nama, nis, no_telp_wali, nama_wali, halaqoh_id),
+                    penguji:penguji_id (id, nama)
+                `)
+                .eq('tanggal', today)
+                .order('created_at', { ascending: false })
+                .limit(20)
+
+            const { data } = await query
+
+            // Filter by halaqoh for non-admin
+            let filtered = data || []
+            if (!isAdmin && halaqohIds.length > 0) {
+                filtered = filtered.filter(h => halaqohIds.includes(h.santri?.halaqoh_id))
+            }
+
+            setRecentHafalan(filtered)
+        } catch (err) {
+            console.error('Error fetching recent hafalan:', err.message)
         }
     }
 
@@ -165,9 +145,74 @@ const HafalanForm = () => {
         }
     }
 
+    // Re-fetch data when halaqohIds change
+    useEffect(() => {
+        if (!loadingHalaqoh) {
+            fetchSantri()
+            fetchGuru()
+            fetchRecentHafalan()
+            if (isEdit) {
+                fetchHafalan()
+            }
+        }
+    }, [halaqohIds, loadingHalaqoh, id])
+
     const handleChange = (e) => {
         const { name, value } = e.target
         setFormData(prev => ({ ...prev, [name]: value }))
+    }
+
+    // WA Confirmation State
+    const [waModal, setWaModal] = useState({ isOpen: false, santri: null, data: null })
+
+    const handleCloseWaModal = () => {
+        setWaModal({ isOpen: false, santri: null, data: null })
+        resetForm()
+    }
+
+    const resetForm = () => {
+        setFormData(prev => ({
+            santri_id: '',
+            juz_mulai: prev.juz_mulai,
+            surah_mulai: '',
+            ayat_mulai: 1,
+            juz_selesai: prev.juz_selesai,
+            surah_selesai: '',
+            ayat_selesai: 1,
+            jenis: prev.jenis,
+            status: 'Lancar',
+            kadar_setoran: '1 Halaman',
+            tanggal: new Date().toISOString().split('T')[0],
+            penguji_id: prev.penguji_id,
+            catatan: ''
+        }))
+        setTimeout(() => setSuccess(''), 3000)
+    }
+
+    const handleSendWA = () => {
+        const { santri, data } = waModal
+        try {
+            if (santri) {
+                let phone = santri.no_telp_wali || ''
+                phone = phone.replace(/\D/g, '')
+                if (phone.startsWith('0')) phone = '62' + phone.substring(1)
+
+                if (!phone) {
+                    showToast.error('Nomor WhatsApp wali tidak tersedia. Mohon update data santri.')
+                    handleCloseWaModal()
+                    return
+                }
+
+                if (phone) {
+                    const message = `Assalamu'alaikum Wr. Wb.\n\n*LAPORAN HAFALAN SANTRI*\n━━━━━━━━━━━━━━━━━━━━\n\nKepada Yth. *${santri.nama_wali || 'Wali Santri'}*\n\n📌 *Nama:* ${santri.nama}\n📅 *Tanggal:* ${data.tanggal}\n📖 *Jenis:* ${data.jenis}\n📊 *Kadar:* ${data.kadar_setoran}\n👤 *Musyrif:* ${musyrifInfo?.nama || '-'}\n\n*Detail:*\n• Mulai: Juz ${data.juz_mulai}, ${data.surah_mulai} ayat ${data.ayat_mulai}\n• Selesai: Juz ${data.juz_selesai}, ${data.surah_selesai} ayat ${data.ayat_selesai}\n\n*Status:* ${data.status}\n${data.catatan ? `*Catatan:* ${data.catatan}` : ''}\n\nJazakumullah khairan.\n_PTQA Batuan_`
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                    showToast.success('WhatsApp terbuka!')
+                }
+            }
+        } catch (waError) {
+            console.error('WhatsApp error:', waError)
+        }
+        handleCloseWaModal()
     }
 
     const handleSubmit = async (e) => {
@@ -179,29 +224,27 @@ const HafalanForm = () => {
         try {
             const payload = {
                 santri_id: formData.santri_id,
-                // Kolom baru (Mulai-Selesai)
                 juz_mulai: parseInt(formData.juz_mulai),
                 surah_mulai: formData.surah_mulai,
                 ayat_mulai: parseInt(formData.ayat_mulai),
                 juz_selesai: parseInt(formData.juz_selesai),
                 surah_selesai: formData.surah_selesai,
                 ayat_selesai: parseInt(formData.ayat_selesai),
-                // Kolom lama (backward compatibility) - pakai nilai dari Mulai
                 juz: parseInt(formData.juz_mulai),
                 surah: formData.surah_mulai,
-                // Kolom lainnya
                 jenis: formData.jenis,
                 status: formData.status,
                 tanggal: formData.tanggal,
                 penguji_id: formData.penguji_id || null,
-                catatan: formData.catatan
+                catatan: formData.catatan,
+                kadar_setoran: formData.kadar_setoran // Ensure this is included for WA
             }
 
             if (isEdit) {
                 const { error } = await supabase.from('hafalan').update(payload).eq('id', id)
                 if (error) throw error
                 const santri = santriList.find(s => s.id === formData.santri_id)
-                await logUpdate('hafalan', santri?.nama || 'Santri', `Edit hafalan: ${santri?.nama || 'Santri'} - ${formData.surah_mulai}`)
+                await logUpdate('hafalan', santri?.nama || 'Santri', `Edit hafalan: ${santri?.nama} - ${formData.surah_mulai}`)
                 setSuccess('Data hafalan berhasil diupdate!')
                 setTimeout(() => navigate('/hafalan'), 1500)
             } else {
@@ -209,94 +252,18 @@ const HafalanForm = () => {
                 if (error) throw error
 
                 const santriForLog = santriList.find(s => s.id === formData.santri_id)
-                await logCreate('hafalan', santriForLog?.nama || 'Santri', `Tambah hafalan: ${santriForLog?.nama || 'Santri'} - ${formData.surah_mulai}`)
+                await logCreate('hafalan', santriForLog?.nama || 'Santri', `Tambah hafalan: ${santriForLog?.nama} - ${formData.surah_mulai}`)
 
-                // Data berhasil disimpan - tampilkan sukses
-                setSuccess('✅ Data hafalan berhasil disimpan!')
-
-                // Refresh daftar hafalan yang baru diinput
                 await fetchRecentHafalan()
 
-                // Konfirmasi kirim WhatsApp dengan try-catch
-                try {
-                    const santri = santriList.find(s => s.id === formData.santri_id)
-                    const halaqoh = halaqohList.find(h => h.id === selectedHalaqoh)
-                    const musyrif = halaqoh?.musyrif?.nama || '-'
-
-                    const sendWA = window.confirm('✅ Data hafalan berhasil disimpan!\n\nKirim laporan ke WhatsApp wali santri?')
-
-                    if (sendWA && santri) {
-                        // Gunakan nomor dari database
-                        let phone = santri?.no_telp_wali || ''
-                        phone = phone.replace(/\D/g, '')
-                        if (phone.startsWith('0')) {
-                            phone = '62' + phone.substring(1)
-                        }
-
-                        // Jika tidak ada, minta input manual
-                        if (!phone) {
-                            phone = window.prompt(`Nomor telepon wali ${santri?.nama_wali || 'santri'} tidak tersedia.\n\nMasukkan nomor WhatsApp (contoh: 6281234567890):`)
-                            if (phone) {
-                                phone = phone.replace(/\D/g, '')
-                                if (phone.startsWith('0')) {
-                                    phone = '62' + phone.substring(1)
-                                }
-                            }
-                        }
-
-                        if (phone) {
-                            const message = `Assalamu'alaikum Wr. Wb.
-
-*LAPORAN HAFALAN SANTRI*
-━━━━━━━━━━━━━━━━━━━━
-
-Kepada Yth. Bapak/Ibu *${santri?.nama_wali || 'Wali Santri'}*
-
-📌 *Nama Santri:* ${santri?.nama || '-'}
-📅 *Tanggal:* ${formData.tanggal}
-📖 *Jenis Hafalan:* ${formData.jenis}
-
-*Detail Hafalan:*
-• Mulai: Juz ${formData.juz_mulai}, ${formData.surah_mulai} ayat ${formData.ayat_mulai}
-• Selesai: Juz ${formData.juz_selesai}, ${formData.surah_selesai} ayat ${formData.ayat_selesai}
-
-*Status:* ${formData.status}
-*Musyrif:* ${musyrif}
-
-${formData.catatan ? `*Catatan:* ${formData.catatan}` : ''}
-
-Demikian laporan hafalan ananda. Jazakumullah khairan.
-
-_PTQA Batuan_`
-
-                            const encoded = encodeURIComponent(message)
-                            window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank')
-                        }
-                    }
-                } catch (waError) {
-                    console.error('WhatsApp error:', waError)
-                    // Tidak throw error, data sudah tersimpan
-                }
-
-                // Reset form untuk input baru, tapi pertahankan halaqoh yang dipilih
-                setFormData({
-                    santri_id: '',
-                    juz_mulai: formData.juz_mulai,
-                    surah_mulai: '',
-                    ayat_mulai: 1,
-                    juz_selesai: formData.juz_selesai,
-                    surah_selesai: '',
-                    ayat_selesai: 1,
-                    jenis: formData.jenis,
-                    status: 'Lancar',
-                    kadar_setoran: '1 Halaman',
-                    tanggal: new Date().toISOString().split('T')[0],
-                    penguji_id: formData.penguji_id,
-                    catatan: ''
+                // Trigger WA Modal instead of window.confirm
+                setWaModal({
+                    isOpen: true,
+                    santri: santriForLog,
+                    data: payload
                 })
 
-                // Clear success setelah 3 detik
-                setTimeout(() => setSuccess(''), 3000)
+                // Note: resetForm is called in handleCloseWaModal
                 return
             }
         } catch (err) {
@@ -306,8 +273,23 @@ _PTQA Batuan_`
         }
     }
 
-    if (fetching) {
+    if (fetching || loadingHalaqoh) {
         return <div className="text-center py-4"><RefreshCw size={24} className="spin" /> Loading...</div>
+    }
+
+    // Block access if no halaqoh linked
+    if (!hasHalaqoh) {
+        return (
+            <div className="hafalan-form-page">
+                <div className="alert alert-warning" style={{ maxWidth: '600px', margin: '40px auto' }}>
+                    <AlertCircle size={24} />
+                    <div>
+                        <strong>Akses Dibatasi</strong>
+                        <p>Akun Anda belum terhubung dengan halaqoh. Hubungi admin untuk menghubungkan akun dengan halaqoh.</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -317,7 +299,7 @@ _PTQA Batuan_`
                     <button className="btn btn-secondary btn-sm mb-2" onClick={() => navigate('/hafalan')}>
                         <ArrowLeft size={16} /> Kembali
                     </button>
-                    <h1 className="page-title">{isEdit ? 'Edit Hafalan' : 'Input Setoran/Muroja\'ah'}</h1>
+                    <h1 className="page-title">{isEdit ? 'Edit Hafalan' : "Input Setoran/Muroja'ah"}</h1>
                     <p className="page-subtitle">{isEdit ? 'Update data hafalan' : 'Catat progress hafalan santri'}</p>
                 </div>
             </div>
@@ -329,27 +311,49 @@ _PTQA Batuan_`
                 <div className="form-section">
                     <h3 className="form-section-title">Data Hafalan</h3>
                     <div className="form-grid">
+                        {/* HALAQOH INFO - Read-only, no dropdown */}
                         <div className="form-group">
-                            <label className="form-label">Halaqoh *</label>
-                            <select className="form-control" value={selectedHalaqoh} onChange={(e) => handleHalaqohChange(e.target.value)} required>
-                                <option value="">Pilih Halaqoh</option>
-                                {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama} {h.musyrif?.nama ? `(${h.musyrif.nama})` : ''}</option>)}
-                            </select>
-                            <small className="form-hint">Pilih halaqoh terlebih dahulu untuk memfilter santri</small>
+                            <label className="form-label">Halaqoh</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
+                                disabled
+                                readOnly
+                                style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                            />
                         </div>
+
+                        {/* MUSYRIF/PENGUJI - Auto-filled dari data halaqoh */}
+                        <div className="form-group">
+                            <label className="form-label">Musyrif/Penguji</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={isAdmin ? '-' : (musyrifInfo?.nama || 'Memuat...')}
+                                disabled
+                                readOnly
+                                style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                            />
+                            <small className="form-hint">
+                                Otomatis dari data halaqoh
+                            </small>
+                        </div>
+
                         <div className="form-group">
                             <label className="form-label">Santri *</label>
-                            <select name="santri_id" className="form-control" value={formData.santri_id} onChange={handleChange} required disabled={!selectedHalaqoh}>
-                                <option value="">{selectedHalaqoh ? 'Pilih Santri' : 'Pilih halaqoh dulu'}</option>
-                                {filteredSantriList.map(s => <option key={s.id} value={s.id}>{s.nama} ({s.nis})</option>)}
+                            <select name="santri_id" className="form-control" value={formData.santri_id} onChange={handleChange} required>
+                                <option value="">Pilih Santri</option>
+                                {santriList.map(s => <option key={s.id} value={s.id}>{s.nama} ({s.nis})</option>)}
                             </select>
-                            {selectedHalaqoh && <small className="form-hint">{filteredSantriList.length} santri tersedia</small>}
+                            <small className="form-hint">{santriList.length} santri tersedia</small>
                         </div>
+
                         <div className="form-group">
                             <label className="form-label">Jenis Setoran *</label>
                             <select name="jenis" className="form-control" value={formData.jenis} onChange={handleChange}>
-                                <option value="Setoran">Setoran (Hafalan Baru)</option>
-                                <option value="Muroja'ah">Muroja'ah (Mengulang)</option>
+                                <option value="Hafalan Baru">Hafalan Baru</option>
+                                <option value="Murojaah">Murojaah</option>
                                 <option value="Ziyadah Ulang">Ziyadah Ulang</option>
                             </select>
                         </div>
@@ -359,7 +363,6 @@ _PTQA Batuan_`
                         </div>
                     </div>
 
-                    {/* Input Mulai */}
                     <h4 className="form-subsection-title">📖 Mulai</h4>
                     <div className="form-grid">
                         <div className="form-group">
@@ -378,7 +381,6 @@ _PTQA Batuan_`
                         </div>
                     </div>
 
-                    {/* Input Selesai */}
                     <h4 className="form-subsection-title">✅ Selesai</h4>
                     <div className="form-grid">
                         <div className="form-group">
@@ -397,7 +399,6 @@ _PTQA Batuan_`
                         </div>
                     </div>
 
-                    {/* Status dan Musyrif */}
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">Status *</label>
@@ -409,7 +410,7 @@ _PTQA Batuan_`
                             </select>
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Kadar Setoran *</label>
+                            <label className="form-label">Kadar Setoran</label>
                             <select name="kadar_setoran" className="form-control" value={formData.kadar_setoran} onChange={handleChange}>
                                 <option value="Setengah Halaman">½ Halaman</option>
                                 <option value="1 Halaman">1 Halaman</option>
@@ -417,20 +418,7 @@ _PTQA Batuan_`
                                 <option value="3 Halaman">3 Halaman</option>
                                 <option value="4 Halaman">4 Halaman</option>
                                 <option value="5 Halaman">5 Halaman</option>
-                                <option value="10 Halaman">10 Halaman (½ Juz)</option>
-                                <option value="20 Halaman">20 Halaman (1 Juz)</option>
                             </select>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Musyrif Halaqoh</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                value={selectedHalaqoh ? (halaqohList.find(h => h.id === selectedHalaqoh)?.musyrif?.nama || 'Tidak ada musyrif') : 'Pilih halaqoh'}
-                                disabled
-                                style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                            />
-                            <small className="form-hint">Otomatis dari halaqoh yang dipilih</small>
                         </div>
                     </div>
                     <div className="form-group">
@@ -447,7 +435,7 @@ _PTQA Batuan_`
                 </div>
             </form>
 
-            {/* Tabel hafalan yang baru diinput hari ini */}
+            {/* Recent hafalan today */}
             {!isEdit && recentHafalan.length > 0 && (
                 <div className="recent-hafalan-section" style={{ marginTop: '32px' }}>
                     <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -471,45 +459,12 @@ _PTQA Batuan_`
                                         <tr key={item.id}>
                                             <td>{index + 1}</td>
                                             <td>{item.santri?.nama || '-'}</td>
-                                            <td>
-                                                Juz {item.juz_mulai} - {item.surah_mulai} : {item.ayat_mulai}
-                                                {item.surah_selesai && ` → ${item.surah_selesai} : ${item.ayat_selesai}`}
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${item.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>
-                                                    {item.jenis}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${item.status === 'Lancar' ? 'badge-success' : item.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>
-                                                    {item.status}
-                                                </span>
-                                            </td>
+                                            <td>Juz {item.juz_mulai} - {item.surah_mulai}</td>
+                                            <td><span className={`badge ${item.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>{item.jenis}</span></td>
+                                            <td><span className={`badge ${item.status === 'Lancar' ? 'badge-success' : item.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{item.status}</span></td>
                                             <td>
                                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <button
-                                                        className="btn btn-sm btn-success"
-                                                        onClick={() => {
-                                                            const santri = item.santri
-                                                            if (!santri?.no_telp_wali) {
-                                                                alert('Nomor WA wali tidak tersedia')
-                                                                return
-                                                            }
-                                                            let phone = santri.no_telp_wali.replace(/\D/g, '')
-                                                            if (phone.startsWith('0')) phone = '62' + phone.substring(1)
-                                                            const halaqoh = halaqohList.find(h => h.id === selectedHalaqoh)
-                                                            const message = `Assalamu'alaikum Wr. Wb.\n\n*LAPORAN HAFALAN SANTRI*\n━━━━━━━━━━━━━━━━━━━━\n\nKepada Yth. ${santri?.nama_wali || 'Wali Santri'}\n\n📌 *Nama:* ${santri.nama}\n📅 *Tanggal:* ${item.tanggal}\n📖 *Jenis:* ${item.jenis}\n📝 *Detail:* Juz ${item.juz_mulai}, ${item.surah_mulai} (${item.ayat_mulai}-${item.ayat_selesai})\n✅ *Status:* ${item.status}\n\nJazakumullah khairan.\n_PTQA Batuan_`
-                                                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                                                        }}
-                                                        title="Kirim via WhatsApp"
-                                                    >
-                                                        <MessageCircle size={14} />
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-outline"
-                                                        onClick={() => navigate(`/hafalan/edit/${item.id}`)}
-                                                        title="Edit"
-                                                    >
+                                                    <button className="btn btn-sm btn-outline" onClick={() => navigate(`/hafalan/edit/${item.id}`)} title="Edit">
                                                         <Eye size={14} />
                                                     </button>
                                                 </div>
@@ -522,6 +477,18 @@ _PTQA Batuan_`
                     </div>
                 </div>
             )}
+            {/* Recent hafalan today logic is above */}
+
+            <ConfirmationModal
+                isOpen={waModal.isOpen}
+                onClose={handleCloseWaModal}
+                onConfirm={handleSendWA}
+                title="Kirim WhatsApp?"
+                message="Data hafalan berhasil disimpan! Kirim laporan ke WhatsApp wali santri?"
+                confirmLabel="Kirim WhatsApp"
+                variant="success"
+                cancelLabel="Tutup"
+            />
         </div>
     )
 }

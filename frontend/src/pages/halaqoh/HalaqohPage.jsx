@@ -7,10 +7,13 @@ import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import { useHalaqoh } from '../../hooks/useAkademik'
+import { Link } from 'react-router-dom'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import '../santri/Santri.css'
 
 const HalaqohPage = () => {
-    const { isAdmin } = useAuth()
+    const { isAdmin, isMusyrif } = useAuth()
     const showToast = useToast()
 
     const [guruList, setGuruList] = useState([])
@@ -91,13 +94,19 @@ const HalaqohPage = () => {
         setFormData({ nama: '', musyrif_id: '' })
     }
 
-    const handleSubmit = async (e) => {
+    // Save Confirmation State
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
         if (!formData.nama.trim()) {
             showToast.error('Nama halaqoh wajib diisi')
             return
         }
+        setSaveModal({ isOpen: true })
+    }
 
+    const executeSave = async () => {
         setSaving(true)
         try {
             const payload = {
@@ -122,6 +131,7 @@ const HalaqohPage = () => {
 
             closeModal()
             fetchHalaqoh()
+            setSaveModal({ isOpen: false })
         } catch (err) {
             console.error('Error saving:', err)
             showToast.error('Gagal menyimpan: ' + err.message)
@@ -210,17 +220,31 @@ const HalaqohPage = () => {
         }
     }
 
-    const handleAddMember = async () => {
+    // Member Confirmation States
+    const [memberModal, setMemberModal] = useState({
+        isOpen: false,
+        type: null, // 'add' or 'remove'
+        santriId: null
+    })
+
+    const confirmAddMember = () => {
         if (!selectedSantriToAdd || !selectedHalaqoh) {
             showToast.error('Silakan pilih santri terlebih dahulu')
             return
         }
+        setMemberModal({ isOpen: true, type: 'add', santriId: selectedSantriToAdd })
+    }
 
+    const confirmRemoveMember = (santriId) => {
+        setMemberModal({ isOpen: true, type: 'remove', santriId })
+    }
+
+    const executeAddMember = async () => {
         try {
             const { error } = await supabase
                 .from('santri')
                 .update({ halaqoh_id: selectedHalaqoh.id })
-                .eq('id', selectedSantriToAdd)
+                .eq('id', memberModal.santriId)
 
             if (error) throw error
 
@@ -229,26 +253,25 @@ const HalaqohPage = () => {
             setSearchSantriTerm('')
             setAvailableSantri([])
             fetchMembers(selectedHalaqoh.id)
-            // Optional: Update main list count if we display it
+            setMemberModal({ isOpen: false, type: null, santriId: null })
         } catch (err) {
             console.error('Error adding member:', err)
             showToast.error('Gagal menambah anggota: ' + err.message)
         }
     }
 
-    const handleRemoveMember = async (santriId) => {
-        if (!confirm('Apakah Anda yakin ingin mengeluarkan santri ini dari halaqoh?')) return
-
+    const executeRemoveMember = async () => {
         try {
             const { error } = await supabase
                 .from('santri')
                 .update({ halaqoh_id: null })
-                .eq('id', santriId)
+                .eq('id', memberModal.santriId)
 
             if (error) throw error
 
             showToast.success('Santri berhasil dikeluarkan dari halaqoh')
             fetchMembers(selectedHalaqoh.id)
+            setMemberModal({ isOpen: false, type: null, santriId: null })
         } catch (err) {
             console.error('Error removing member:', err)
             showToast.error('Gagal mengeluarkan anggota: ' + err.message)
@@ -370,20 +393,29 @@ const HalaqohPage = () => {
                                                 <button className="btn-icon btn-icon-primary" onClick={() => openDetail(item)} title="Detail Anggota">
                                                     <Users size={16} />
                                                 </button>
-                                                <button className="btn-icon edit" onClick={() => openEdit(item)} title="Edit">
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button className="btn-icon delete" onClick={() => openDelete(item)} title="Hapus">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                                {isAdmin() && (
+                                                    <>
+                                                        <button className="btn-icon edit" onClick={() => openEdit(item)} title="Edit">
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button className="btn-icon btn-icon-danger" onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            openDelete(item)
+                                                        }} title="Hapus">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                             {/* Mobile Actions */}
                                             <div className="mobile-menu">
                                                 <MobileActionMenu
                                                     actions={[
                                                         { label: 'Anggota', icon: <Users size={16} />, onClick: () => openDetail(item) },
-                                                        { label: 'Edit', icon: <Edit2 size={16} />, onClick: () => openEdit(item) },
-                                                        { label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => openDelete(item), danger: true }
+                                                        ...(isAdmin() ? [
+                                                            { label: 'Edit', icon: <Edit2 size={16} />, onClick: () => openEdit(item) },
+                                                            { label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => openDelete(item), danger: true }
+                                                        ] : [])
                                                     ]}
                                                 />
                                             </div>
@@ -410,7 +442,7 @@ const HalaqohPage = () => {
                             <h3>{editItem ? 'Edit Halaqoh' : 'Tambah Halaqoh'}</h3>
                             <button className="modal-close" onClick={closeModal}>×</button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label>Nama Halaqoh <span className="required">*</span></label>
@@ -449,28 +481,12 @@ const HalaqohPage = () => {
             )}
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="modal-overlay active">
-                    <div className="modal modal-sm">
-                        <div className="modal-header">
-                            <h3>Konfirmasi Hapus</h3>
-                            <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <p>Yakin ingin menghapus halaqoh <strong>{deleteItem?.nama}</strong>?</p>
-                            <p className="text-muted">Aksi ini tidak dapat dibatalkan.</p>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>
-                                Batal
-                            </button>
-                            <button className="btn btn-danger" onClick={handleDelete}>
-                                Hapus
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName={deleteItem?.nama}
+            />
 
             {/* Detail Members Modal */}
             {showDetailModal && selectedHalaqoh && (
@@ -515,7 +531,6 @@ const HalaqohPage = () => {
                                                 {availableSantri.length > 0 ? (
                                                     availableSantri.map(s => (
                                                         <div
-                                                            key={s.id}
                                                             className="search-result-item"
                                                             onClick={() => {
                                                                 setSelectedSantriToAdd(s.id)
@@ -537,7 +552,7 @@ const HalaqohPage = () => {
                                     </div>
                                     <button
                                         className="btn btn-primary"
-                                        onClick={handleAddMember}
+                                        onClick={confirmAddMember}
                                         style={{ height: 'auto', minWidth: '100px' }}
                                     >
                                         <Plus size={16} /> Tambah
@@ -580,7 +595,7 @@ const HalaqohPage = () => {
                                                             <button
                                                                 className="btn-icon delete"
                                                                 title="Keluarkan dari halaqoh"
-                                                                onClick={() => handleRemoveMember(m.id)}
+                                                                onClick={() => confirmRemoveMember(m.id)}
                                                             >
                                                                 <Trash2 size={16} />
                                                             </button>
@@ -596,6 +611,27 @@ const HalaqohPage = () => {
                     </div>
                 </div>
             )}
+            {/* Confirmation Modals */}
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? "Konfirmasi Edit" : "Konfirmasi Tambah"}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan data halaqoh ini?' : 'Apakah Anda yakin ingin menambahkan halaqoh baru ini?'}
+                confirmLabel={editItem ? "Simpan Perubahan" : "Tambah Halaqoh"}
+                variant="success"
+                isLoading={saving}
+            />
+
+            <ConfirmationModal
+                isOpen={memberModal.isOpen}
+                onClose={() => setMemberModal({ ...memberModal, isOpen: false })}
+                onConfirm={memberModal.type === 'add' ? executeAddMember : executeRemoveMember}
+                title={memberModal.type === 'add' ? "Konfirmasi Tambah Anggota" : "Konfirmasi Hapus Anggota"}
+                message={memberModal.type === 'add' ? "Apakah Anda yakin ingin menambahkan santri ini ke halaqoh?" : "Apakah Anda yakin ingin mengeluarkan santri ini dari halaqoh?"}
+                confirmLabel={memberModal.type === 'add' ? "Tambah" : "Keluarkan"}
+                variant={memberModal.type === 'add' ? "success" : "danger"}
+            />
         </div>
     )
 }

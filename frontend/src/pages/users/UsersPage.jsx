@@ -24,6 +24,8 @@ import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './UsersPage.css'
 
 /**
@@ -62,9 +64,15 @@ const UsersPage = () => {
     const [selectedSantriIds, setSelectedSantriIds] = useState([])
     const [loadingSantri, setLoadingSantri] = useState(false)
 
+    // Halaqoh data for musyrif role
+    const [halaqohList, setHalaqohList] = useState([])
+    const [selectedHalaqohIds, setSelectedHalaqohIds] = useState([])
+    const [loadingHalaqoh, setLoadingHalaqoh] = useState(false)
+
     useEffect(() => {
         fetchUsers()
         fetchSantri()
+        fetchHalaqoh()
     }, [])
 
     // Fetch all santri for wali selection
@@ -85,6 +93,24 @@ const UsersPage = () => {
         }
     }
 
+    // Fetch all halaqoh for musyrif selection
+    const fetchHalaqoh = async () => {
+        setLoadingHalaqoh(true)
+        try {
+            const { data, error } = await supabase
+                .from('halaqoh')
+                .select('id, nama, guru:guru!musyrif_id(nama)')
+                .order('nama', { ascending: true })
+
+            if (error) throw error
+            setHalaqohList(data || [])
+        } catch (error) {
+            console.error('Error fetching halaqoh:', error.message)
+        } finally {
+            setLoadingHalaqoh(false)
+        }
+    }
+
     // Reset form when modal opens/closes
     useEffect(() => {
         if (showAddModal) {
@@ -99,6 +125,7 @@ const UsersPage = () => {
             setFormErrors({})
             setShowPassword(false)
             setSelectedSantriIds([]) // Reset santri selection
+            setSelectedHalaqohIds([]) // Reset halaqoh selection
         }
     }, [showAddModal])
 
@@ -130,6 +157,13 @@ const UsersPage = () => {
             } else {
                 setSelectedSantriIds([])
             }
+
+            // Fetch linked halaqoh if editing musyrif user
+            if (userRoles.includes('musyrif') && editingUser.user_id) {
+                fetchLinkedHalaqoh(editingUser.user_id)
+            } else {
+                setSelectedHalaqohIds([])
+            }
         }
     }, [editingUser])
 
@@ -146,6 +180,22 @@ const UsersPage = () => {
         } catch (error) {
             console.error('Error fetching linked santri:', error.message)
             setSelectedSantriIds([])
+        }
+    }
+
+    // Fetch halaqoh linked to a musyrif user
+    const fetchLinkedHalaqoh = async (musyrifUserId) => {
+        try {
+            const { data, error } = await supabase
+                .from('musyrif_halaqoh')
+                .select('halaqoh_id')
+                .eq('user_id', musyrifUserId)
+
+            if (error) throw error
+            setSelectedHalaqohIds(data?.map(h => h.halaqoh_id) || [])
+        } catch (error) {
+            console.error('Error fetching linked halaqoh:', error.message)
+            setSelectedHalaqohIds([])
         }
     }
 
@@ -186,7 +236,8 @@ const UsersPage = () => {
             pengasuh: 'badge-teal',
             pengurus: 'badge-orange',
             ota: 'badge-orange',
-            wali: 'badge-purple'
+            wali: 'badge-purple',
+            musyrif: 'badge-emerald'
         }
         return colors[role] || 'badge-gray'
     }
@@ -200,7 +251,8 @@ const UsersPage = () => {
             pengasuh: 'Pengasuh',
             pengurus: 'Pengurus',
             ota: 'Orang Tua Asuh',
-            wali: 'Wali'
+            wali: 'Wali',
+            musyrif: 'Musyrif'
         }
         return labels[role] || role
     }
@@ -247,6 +299,11 @@ const UsersPage = () => {
             errors.password = 'Password minimal 6 karakter'
         }
 
+        // Musyrif must have at least one halaqoh selected
+        if (formData.roles.includes('musyrif') && selectedHalaqohIds.length === 0) {
+            errors.halaqoh = 'Musyrif harus memiliki minimal 1 halaqoh'
+        }
+
         setFormErrors(errors)
         return Object.keys(errors).length === 0
     }
@@ -276,12 +333,15 @@ const UsersPage = () => {
         }
     }
 
-    const handleResetPassword = async () => {
+    const handleResetPasswordClick = () => {
         if (!newPasswordReset || newPasswordReset.length < 6) {
             showToast?.error('Password minimal 6 karakter')
             return
         }
+        setActionModal({ isOpen: true, type: 'reset_password' })
+    }
 
+    const executeResetPassword = async () => {
         try {
             setSaving(true)
             const { data, error } = await supabase.rpc('admin_reset_password', {
@@ -296,6 +356,7 @@ const UsersPage = () => {
             setResetPasswordOpen(false)
             setNewPasswordReset('')
             setPasswordResetUser(null)
+            setActionModal({ ...actionModal, isOpen: false })
         } catch (err) {
             console.error('Reset Password Error:', err)
             if (showToast?.error) showToast.error('Gagal reset password: ' + err.message)
@@ -305,20 +366,20 @@ const UsersPage = () => {
         }
     }
 
-    // V2 Function to bypass cache key issues
-    const handleSaveUserV2 = async () => {
-        console.log('🚀 handleSaveUser V2 - START', new Date().toISOString())
-        console.log('📝 FormData Check:', formData)
+    // Confirmation Modal States
+    const [actionModal, setActionModal] = useState({
+        isOpen: false,
+        type: null, // 'save_user', 'reset_password'
+    })
 
+    const handleSaveUserClick = () => {
         const isValid = validateForm()
-        console.log('🔍 Validation Result:', isValid, 'Errors:', formErrors) // Note: formErrors might show previous state, relying on return value
+        if (!isValid) return
+        setActionModal({ isOpen: true, type: 'save_user' })
+    }
 
-        if (!isValid) {
-            console.error('❌ VALIDATION FAILED - STOPPING')
-            return
-        }
-
-        console.log('✅ Validation OK - Proceeding to Save')
+    const executeSaveUser = async () => {
+        console.log('🚀 executeSaveUser V2 - START', new Date().toISOString())
         setSaving(true)
 
         // Determine primary role for legacy compatibility
@@ -384,6 +445,32 @@ const UsersPage = () => {
                     }
                 }
 
+                // Link halaqoh if musyrif role
+                if (formData.roles.includes('musyrif')) {
+                    console.log('🔗 Linking Halaqoh for Musyrif:', editingUser.user_id, 'Selected:', selectedHalaqohIds)
+
+                    // 1. Reset old links (Hapus semua halaqoh lama)
+                    const { error: resetHalaqohError } = await supabase
+                        .from('musyrif_halaqoh')
+                        .delete()
+                        .eq('user_id', editingUser.user_id)
+
+                    if (resetHalaqohError) console.error('❌ Error resetting halaqoh links:', resetHalaqohError)
+
+                    // 2. Insert new links
+                    if (selectedHalaqohIds.length > 0) {
+                        const halaqohLinks = selectedHalaqohIds.map(hid => ({
+                            user_id: editingUser.user_id,
+                            halaqoh_id: hid
+                        }))
+                        const { error: linkHalaqohError } = await supabase
+                            .from('musyrif_halaqoh')
+                            .insert(halaqohLinks)
+
+                        if (linkHalaqohError) console.error('❌ Error linking halaqoh:', linkHalaqohError)
+                    }
+                }
+
                 // Update local state
                 setUsers(prev => prev.map(u => u.user_id === editingUser.user_id ? { ...u, nama: formData.nama, username: formData.username, roles: formData.roles, role: primaryRole, active_role: resolvedActiveRole, phone: formData.phone || null } : u))
 
@@ -430,6 +517,15 @@ const UsersPage = () => {
                 // Link santri if wali role
                 if (formData.roles.includes('wali') && selectedSantriIds.length > 0) {
                     await supabase.from('santri').update({ wali_id: newUser.id }).in('id', selectedSantriIds)
+                }
+
+                // Link halaqoh if musyrif role
+                if (formData.roles.includes('musyrif') && selectedHalaqohIds.length > 0) {
+                    const halaqohLinks = selectedHalaqohIds.map(hid => ({
+                        user_id: newUser.id,
+                        halaqoh_id: hid
+                    }))
+                    await supabase.from('musyrif_halaqoh').insert(halaqohLinks)
                 }
 
                 if (showToast?.success) {
@@ -514,8 +610,27 @@ const UsersPage = () => {
         )
     }
 
-    const handleDeleteUser = async (userId) => {
-        if (!confirm('Yakin ingin menghapus user ini? Action ini akan menghapus login user juga.')) return
+    // Toggle halaqoh selection for musyrif
+    const toggleHalaqohSelection = (halaqohId) => {
+        setSelectedHalaqohIds(prev =>
+            prev.includes(halaqohId)
+                ? prev.filter(id => id !== halaqohId)
+                : [...prev, halaqohId]
+        )
+        // Clear halaqoh error when selecting
+        if (formErrors.halaqoh) {
+            setFormErrors(prev => ({ ...prev, halaqoh: null }))
+        }
+    }
+
+    const openDeleteUser = (user) => {
+        setUserToDelete(user)
+        setDeleteModalOpen(true)
+    }
+
+    const handleDeleteUser = async () => {
+        if (!userToDelete) return
+        const userId = userToDelete.user_id
 
         try {
             // Use RPC to delete from auth.users AND public.user_profiles
@@ -532,6 +647,8 @@ const UsersPage = () => {
             // Remove from local state
             setUsers(users.filter(u => u.user_id !== userId))
             showToast?.success('User berhasil dihapus sepenuhnya.')
+            setDeleteModalOpen(false)
+            setUserToDelete(null)
         } catch (error) {
             console.error('Delete error:', error)
 
@@ -547,6 +664,8 @@ const UsersPage = () => {
                 } else {
                     setUsers(users.filter(u => u.user_id !== userId))
                     showToast?.success('User profile dihapus (Auth login mungkin masih ada).')
+                    setDeleteModalOpen(false)
+                    setUserToDelete(null)
                 }
             } else {
                 showToast?.error('Gagal menghapus user: ' + error.message)
@@ -773,7 +892,7 @@ const UsersPage = () => {
                                                     icon: <Trash2 size={16} />,
                                                     label: 'Hapus',
                                                     danger: true,
-                                                    onClick: () => handleDeleteUser(user.user_id)
+                                                    onClick: () => openDeleteUser(user)
                                                 }
                                             ]}
                                         >
@@ -798,7 +917,7 @@ const UsersPage = () => {
                                             <button
                                                 className="btn-action delete"
                                                 title="Hapus"
-                                                onClick={() => handleDeleteUser(user.user_id)}
+                                                onClick={() => openDeleteUser(user)}
                                             >
                                                 <Trash2 size={16} />
                                             </button>
@@ -836,7 +955,7 @@ const UsersPage = () => {
                         </div>
                         <div className="modal-footer">
                             <button className="btn-secondary" onClick={() => setResetPasswordOpen(false)}>Batal</button>
-                            <button className="btn-primary btn-warning" onClick={handleResetPassword} disabled={saving}>
+                            <button className="btn-primary btn-warning" onClick={handleResetPasswordClick} disabled={saving}>
                                 {saving ? 'Memproses...' : 'Reset Password'}
                             </button>
                         </div>
@@ -925,7 +1044,7 @@ const UsersPage = () => {
                             <div className="form-group">
                                 <label>Roles (Hak Akses) *</label>
                                 <div className="roles-checkbox-group">
-                                    {['admin', 'guru', 'bendahara', 'pengurus', 'pengasuh', 'wali', 'ota'].map(role => (
+                                    {['admin', 'guru', 'bendahara', 'pengurus', 'pengasuh', 'wali', 'ota', 'musyrif'].map(role => (
                                         <label key={role} className={`role-checkbox ${formData.roles.includes(role) ? 'checked' : ''}`}>
                                             <input
                                                 type="checkbox"
@@ -985,6 +1104,42 @@ const UsersPage = () => {
                                     )}
                                 </div>
                             )}
+
+                            {/* Halaqoh Selection for Musyrif role */}
+                            {formData.roles.includes('musyrif') && (
+                                <div className="form-group santri-selection">
+                                    <label>Pilih Halaqoh (Akses Musyrif) *</label>
+                                    <div className="santri-list">
+                                        {loadingHalaqoh ? (
+                                            <p className="loading-text">Memuat data halaqoh...</p>
+                                        ) : halaqohList.length === 0 ? (
+                                            <p className="empty-text">Tidak ada data halaqoh</p>
+                                        ) : (
+                                            halaqohList.map(halaqoh => (
+                                                <label key={halaqoh.id} className="santri-checkbox-item">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedHalaqohIds.includes(halaqoh.id)}
+                                                        onChange={() => toggleHalaqohSelection(halaqoh.id)}
+                                                    />
+                                                    <div className="santri-checkbox-info">
+                                                        <span className="santri-nama">{halaqoh.nama}</span>
+                                                        <span className="santri-detail">
+                                                            {halaqoh.guru?.nama ? `Pengajar: ${halaqoh.guru.nama}` : 'Belum ada pengajar'}
+                                                        </span>
+                                                    </div>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
+                                    {selectedHalaqohIds.length > 0 && (
+                                        <p className="selection-info">
+                                            {selectedHalaqohIds.length} halaqoh dipilih
+                                        </p>
+                                    )}
+                                    {formErrors.halaqoh && <span className="error-text">{formErrors.halaqoh}</span>}
+                                </div>
+                            )}
                         </div>
 
                         <div className="modal-footer">
@@ -994,7 +1149,7 @@ const UsersPage = () => {
                             <button
                                 type="button"
                                 className="btn-primary"
-                                onClick={handleSaveUserV2}
+                                onClick={handleSaveUserClick}
                                 disabled={saving}
                             >
                                 {saving ? (
@@ -1009,6 +1164,27 @@ const UsersPage = () => {
             )}
 
             {/* Legacy Password Modal Removed */}
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={handleDeleteUser}
+                itemName={userToDelete?.nama}
+                message={`Yakin ingin menghapus user ${userToDelete?.nama}? Action ini akan menghapus login user juga dan tidak dapat dibatalkan.`}
+            />
+
+            <ConfirmationModal
+                isOpen={actionModal.isOpen}
+                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
+                onConfirm={actionModal.type === 'save_user' ? executeSaveUser : executeResetPassword}
+                title={actionModal.type === 'save_user' ? (editingUser ? "Konfirmasi Edit User" : "Konfirmasi User Baru") : "Konfirmasi Reset Password"}
+                message={actionModal.type === 'save_user'
+                    ? (editingUser ? 'Apakah Anda yakin ingin menyimpan perubahan data user ini?' : 'Apakah Anda yakin ingin membuat user baru ini?')
+                    : `Apakah Anda yakin ingin mereset password untuk user ${passwordResetUser?.nama}?`}
+                confirmLabel={actionModal.type === 'save_user' ? (editingUser ? "Simpan Perubahan" : "Buat User") : "Reset Password"}
+                variant={actionModal.type === 'save_user' ? "success" : "warning"}
+                isLoading={saving}
+            />
         </div>
     )
 }

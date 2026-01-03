@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { BookMarked, RefreshCw, MessageCircle, Users, Send, Download, Printer } from 'lucide-react'
+import { BookMarked, RefreshCw, MessageCircle, Users, Send, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
+import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
@@ -8,33 +9,35 @@ import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanHafalanHarianPage = () => {
     const [loading, setLoading] = useState(false)
-    const [halaqoh, setHalaqoh] = useState([])
     const [data, setData] = useState([])
+
+    // AUTO-FILTER: Halaqoh adalah ATRIBUT AKUN, bukan input user
+    const { halaqohIds, halaqohNames, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin } = useUserHalaqoh()
+
     const [filters, setFilters] = useState({
-        halaqoh_id: '',
         tanggal: new Date().toISOString().split('T')[0]
     })
 
-    useEffect(() => {
-        fetchHalaqoh()
-    }, [])
-
-    const fetchHalaqoh = async () => {
-        const { data } = await supabase.from('halaqoh').select('id, nama').order('nama')
-        if (data) setHalaqoh(data)
-    }
-
     const fetchData = async () => {
-        if (!filters.halaqoh_id) return
+        if (!hasHalaqoh) return
         setLoading(true)
 
         try {
-            // First get santri in this halaqoh
-            const { data: santriData } = await supabase
+            // Get santri based on halaqoh
+            let santriQuery = supabase
                 .from('santri')
                 .select('id')
-                .eq('halaqoh_id', filters.halaqoh_id)
                 .eq('status', 'Aktif')
+
+            if (!isAdmin && halaqohIds.length > 0) {
+                santriQuery = santriQuery.in('halaqoh_id', halaqohIds)
+            } else if (!isAdmin && halaqohIds.length === 0) {
+                setData([])
+                setLoading(false)
+                return
+            }
+
+            const { data: santriData } = await santriQuery
 
             if (!santriData || santriData.length === 0) {
                 setData([])
@@ -44,7 +47,7 @@ const LaporanHafalanHarianPage = () => {
 
             const santriIds = santriData.map(s => s.id)
 
-            // Fetch hafalan data for this date and these santri
+            // Fetch hafalan data
             const { data: hafalanData } = await supabase
                 .from('hafalan')
                 .select(`
@@ -65,8 +68,8 @@ const LaporanHafalanHarianPage = () => {
     }
 
     useEffect(() => {
-        if (filters.halaqoh_id) fetchData()
-    }, [filters.halaqoh_id, filters.tanggal])
+        if (!loadingHalaqoh && hasHalaqoh) fetchData()
+    }, [halaqohIds, loadingHalaqoh, filters.tanggal])
 
     const sendWhatsApp = (item) => {
         const santri = item.santri
@@ -83,12 +86,12 @@ const LaporanHafalanHarianPage = () => {
 *LAPORAN HAFALAN HARIAN*
 ━━━━━━━━━━━━━━━━━━━━
 
-Kepada Yth. Bapak/Ibu *${santri.nama_wali || 'Wali Santri'}*
+Kepada Yth. *${santri.nama_wali || 'Wali Santri'}*
 
-📌 *Nama Santri:* ${santri.nama}
+📌 *Nama:* ${santri.nama}
 📅 *Tanggal:* ${new Date(item.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 
-📖 *Detail Hafalan:*
+📖 *Detail:*
 • Juz: ${item.juz_mulai || item.juz}
 • Surah: ${item.surah_mulai || item.surah}
 • Ayat: ${item.ayat_mulai} - ${item.ayat_selesai}
@@ -96,9 +99,8 @@ Kepada Yth. Bapak/Ibu *${santri.nama_wali || 'Wali Santri'}*
 • Status: ${item.status}
 ${item.catatan ? `• Catatan: ${item.catatan}` : ''}
 
-Demikian laporan hafalan ananda. Jazakumullah khairan.
-
-_PTQA Batuan - Si-Taqua_`
+Jazakumullah khairan.
+_PTQA Batuan_`
 
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
     }
@@ -106,7 +108,6 @@ _PTQA Batuan - Si-Taqua_`
     const sendAllWhatsApp = () => {
         if (data.length === 0) return
         if (!window.confirm(`Kirim laporan ke ${data.length} wali santri?`)) return
-
         data.forEach((item, index) => {
             setTimeout(() => sendWhatsApp(item), index * 2000)
         })
@@ -114,15 +115,13 @@ _PTQA Batuan - Si-Taqua_`
 
     const generatePDF = async () => {
         if (data.length === 0) return
-
-        const selectedHalaqoh = halaqoh.find(h => h.id === filters.halaqoh_id)
         const tanggalFormatted = new Date(filters.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
         await generateLaporanPDF({
             title: 'LAPORAN HAFALAN HARIAN',
             subtitle: 'Laporan Hafalan Santri Harian',
             additionalInfo: [
-                { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
+                { label: 'Halaqoh', value: isAdmin ? 'Semua Halaqoh' : halaqohNames },
                 { label: 'Tanggal', value: tanggalFormatted }
             ],
             columns: ['Santri', 'Juz/Surah', 'Ayat', 'Jenis', 'Status'],
@@ -137,7 +136,6 @@ _PTQA Batuan - Si-Taqua_`
             totalLabel: 'Total Santri',
             totalValue: `${data.length} Santri`
         })
-
     }
 
     const handleDownloadExcel = () => {
@@ -162,6 +160,24 @@ _PTQA Batuan - Si-Taqua_`
             Status: item.status
         }))
         exportToCSV(exportData, columns, 'hafalan_harian')
+    }
+
+    if (loadingHalaqoh) {
+        return <div className="loading-state"><RefreshCw className="spin" size={24} /> Memuat data...</div>
+    }
+
+    if (!hasHalaqoh) {
+        return (
+            <div className="laporan-page">
+                <div className="alert alert-warning" style={{ maxWidth: '600px', margin: '40px auto' }}>
+                    <AlertCircle size={24} />
+                    <div>
+                        <strong>Akses Dibatasi</strong>
+                        <p>Akun Anda belum terhubung dengan halaqoh. Hubungi admin.</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -190,24 +206,21 @@ _PTQA Batuan - Si-Taqua_`
             </div>
 
             <div className="filter-section">
+                {/* HALAQOH INFO - Read-only */}
                 <div className="form-group">
-                    <label className="form-label">Halaqoh *</label>
-                    <select
+                    <label className="form-label">Halaqoh</label>
+                    <input
+                        type="text"
                         className="form-control"
-                        value={filters.halaqoh_id}
-                        onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                    >
-                        <option value="">Pilih Halaqoh</option>
-                        {halaqoh.map(h => (
-                            <option key={h.id} value={h.id}>{h.nama}</option>
-                        ))}
-                    </select>
-
-
+                        value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
+                        disabled
+                        readOnly
+                        style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                    />
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Tanggal Filter *</label>
+                    <label className="form-label">Tanggal *</label>
                     <input
                         type="date"
                         className="form-control"
@@ -217,7 +230,7 @@ _PTQA Batuan - Si-Taqua_`
                 </div>
 
                 <div className="form-group" style={{ alignSelf: 'flex-end' }}>
-                    <button className="btn btn-outline" onClick={fetchData} disabled={!filters.halaqoh_id}>
+                    <button className="btn btn-outline" onClick={fetchData}>
                         <RefreshCw size={18} /> Refresh
                     </button>
                 </div>
@@ -232,11 +245,7 @@ _PTQA Batuan - Si-Taqua_`
                 ) : data.length === 0 ? (
                     <div className="empty-state">
                         <Users size={48} />
-                        <p>
-                            {filters.halaqoh_id
-                                ? 'Tidak ada data hafalan untuk tanggal ini'
-                                : 'Pilih halaqoh dan tanggal untuk melihat laporan'}
-                        </p>
+                        <p>Tidak ada data hafalan untuk tanggal ini</p>
                     </div>
                 ) : (
                     <div className="table-container">
@@ -265,7 +274,7 @@ _PTQA Batuan - Si-Taqua_`
                                             <button
                                                 className="btn btn-sm btn-success"
                                                 onClick={() => sendWhatsApp(item)}
-                                                title="Kirim ke WhatsApp Wali"
+                                                title="Kirim ke WhatsApp"
                                             >
                                                 <MessageCircle size={16} />
                                             </button>
@@ -277,7 +286,7 @@ _PTQA Batuan - Si-Taqua_`
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     )
 }
 

@@ -1,21 +1,40 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, BookMarked } from 'lucide-react'
+import { Save, RefreshCw, BookMarked, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
+import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import '../../../../pages/nilai/Nilai.css'
 
 const TahfizhSyahriPage = () => {
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [semester, setSemester] = useState([])
-    const [halaqoh, setHalaqoh] = useState([])
     const [guruList, setGuruList] = useState([])
     const [santri, setSantri] = useState([])
     const [nilai, setNilai] = useState({})
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
+
+    // Gunakan hook untuk halaqoh yang difilter berdasarkan user
+    const {
+        halaqohList,
+        halaqohIds,
+        musyrifInfo,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin: isUserAdmin
+    } = useUserHalaqoh()
+
+    const [selectedHalaqoh, setSelectedHalaqoh] = useState('')
+
+    // Auto-select halaqoh jika hanya satu (non-admin)
+    useEffect(() => {
+        if (!isUserAdmin && halaqohList.length === 1 && !selectedHalaqoh) {
+            setSelectedHalaqoh(halaqohList[0].id)
+        }
+    }, [isUserAdmin, halaqohList, selectedHalaqoh])
+
     const [filters, setFilters] = useState({
         semester_id: '',
-        halaqoh_id: '',
         bulan: new Date().getMonth() + 1,
         tahun: new Date().getFullYear()
     })
@@ -25,9 +44,8 @@ const TahfizhSyahriPage = () => {
     }, [])
 
     const fetchOptions = async () => {
-        const [semRes, halRes, guruRes] = await Promise.all([
+        const [semRes, guruRes] = await Promise.all([
             supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('halaqoh').select('id, nama, musyrif_id').order('nama'),
             supabase.from('guru').select('id, nama').order('nama')
         ])
         if (semRes.data) {
@@ -35,12 +53,11 @@ const TahfizhSyahriPage = () => {
             const active = semRes.data.find(s => s.is_active)
             if (active) setFilters(prev => ({ ...prev, semester_id: active.id }))
         }
-        if (halRes.data) setHalaqoh(halRes.data)
         if (guruRes.data) setGuruList(guruRes.data)
     }
 
     const fetchSantriAndNilai = async () => {
-        if (!filters.halaqoh_id || !filters.semester_id) return
+        if (!selectedHalaqoh || !filters.semester_id) return
         setLoading(true)
         setError('')
 
@@ -49,7 +66,7 @@ const TahfizhSyahriPage = () => {
             const { data: santriData, error: santriError } = await supabase
                 .from('santri')
                 .select('id, nama, nis')
-                .eq('halaqoh_id', filters.halaqoh_id)
+                .eq('halaqoh_id', selectedHalaqoh)
                 .eq('status', 'Aktif')
                 .order('nama')
 
@@ -70,8 +87,9 @@ const TahfizhSyahriPage = () => {
                 if (nilaiError) throw nilaiError
 
                 // Get default penguji from halaqoh musyrif
-                const selectedHalaqoh = halaqoh.find(h => h.id === filters.halaqoh_id)
-                const defaultPenguji = selectedHalaqoh?.musyrif_id || ''
+                const currentHalaqoh = halaqohList.find(h => h.id === selectedHalaqoh)
+                // Use musyrifInfo if available (from hook), otherwise from halaqoh list if joined, otherwise empty
+                const defaultPenguji = musyrifInfo?.id || currentHalaqoh?.musyrif_id || ''
 
                 // Map nilai ke state
                 const nilaiMap = {}
@@ -83,6 +101,7 @@ const TahfizhSyahriPage = () => {
                         tajwid: existingNilai?.nilai_tajwid || '',
                         tilawah: existingNilai?.nilai_kelancaran || '',
                         jumlah_hafalan: existingNilai?.jumlah_hafalan || '',
+                        jumlah_hafalan_halaman: existingNilai?.jumlah_hafalan_halaman || '',
                         penguji_id: existingNilai?.penguji_id || defaultPenguji
                     }
                 })
@@ -96,10 +115,10 @@ const TahfizhSyahriPage = () => {
     }
 
     useEffect(() => {
-        if (filters.halaqoh_id && filters.semester_id) {
+        if (selectedHalaqoh && filters.semester_id) {
             fetchSantriAndNilai()
         }
-    }, [filters.halaqoh_id, filters.semester_id, filters.bulan, filters.tahun])
+    }, [selectedHalaqoh, filters.semester_id, filters.bulan, filters.tahun])
 
     const handleNilaiChange = (santriId, field, value) => {
         setNilai(prev => ({
@@ -143,6 +162,7 @@ const TahfizhSyahriPage = () => {
                     nilai_kelancaran: parseFloat(data.tilawah) || 0,
                     nilai_akhir: ((parseFloat(data.hafalan) || 0) + (parseFloat(data.tajwid) || 0) + (parseFloat(data.tilawah) || 0)) / 3,
                     jumlah_hafalan: parseInt(data.jumlah_hafalan) || 0,
+                    jumlah_hafalan_halaman: parseInt(data.jumlah_hafalan_halaman) || 0,
                     penguji_id: data.penguji_id || null
                 }
 
@@ -209,16 +229,36 @@ const TahfizhSyahriPage = () => {
 
                 <div className="form-group">
                     <label className="form-label">Halaqoh *</label>
-                    <select
-                        className="form-control"
-                        value={filters.halaqoh_id}
-                        onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                    >
-                        <option value="">Pilih Halaqoh</option>
-                        {halaqoh.map(h => (
-                            <option key={h.id} value={h.id}>{h.nama}</option>
-                        ))}
-                    </select>
+                    {loadingHalaqoh ? (
+                        <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <RefreshCw size={16} className="spin" /> Memuat halaqoh...
+                        </div>
+                    ) : !hasHalaqoh && !isUserAdmin ? (
+                        <div className="alert alert-warning" style={{ margin: 0 }}>
+                            <AlertCircle size={16} />
+                            <span>Akun Anda belum terhubung dengan halaqoh. Hubungi admin.</span>
+                        </div>
+                    ) : (!isUserAdmin && halaqohList.length === 1) ? (
+                        <input
+                            type="text"
+                            className="form-control"
+                            value={halaqohList[0]?.nama || (halaqohList[0]?.nama_halaqoh || '')}
+                            disabled
+                            readOnly
+                            style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                        />
+                    ) : (
+                        <select
+                            className="form-control"
+                            value={selectedHalaqoh}
+                            onChange={e => setSelectedHalaqoh(e.target.value)}
+                        >
+                            <option value="">Pilih Halaqoh</option>
+                            {halaqohList.map(h => (
+                                <option key={h.id} value={h.id}>{h.nama || h.nama_halaqoh}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 <div className="form-group">
@@ -247,7 +287,7 @@ const TahfizhSyahriPage = () => {
                 </div>
             </div>
 
-            {filters.halaqoh_id && filters.semester_id && (
+            {selectedHalaqoh && filters.semester_id && (
                 <div className="table-container">
                     <div className="table-header">
                         <h3 className="table-title">Daftar Santri ({santri.length})</h3>
@@ -272,14 +312,15 @@ const TahfizhSyahriPage = () => {
                                     <th style={{ textAlign: 'center' }}>Tilawah</th>
                                     <th style={{ textAlign: 'center' }}>Rata-rata</th>
                                     <th style={{ textAlign: 'center' }}>Jml Hafalan (Juz)</th>
+                                    <th style={{ textAlign: 'center' }}>Jml Hafalan (Halaman)</th>
                                     <th style={{ textAlign: 'center', minWidth: '150px' }}>Penguji</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="9" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                    <tr><td colSpan="10" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
                                 ) : santri.length === 0 ? (
-                                    <tr><td colSpan="9" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
+                                    <tr><td colSpan="10" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
                                 ) : (
                                     santri.map((s, i) => (
                                         <tr key={s.id}>
@@ -331,6 +372,17 @@ const TahfizhSyahriPage = () => {
                                                     placeholder="Juz"
                                                     value={nilai[s.id]?.jumlah_hafalan ?? ''}
                                                     onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    className="nilai-input"
+                                                    min="0"
+                                                    max="20"
+                                                    placeholder="Hal"
+                                                    value={nilai[s.id]?.jumlah_hafalan_halaman ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan_halaman', e.target.value)}
                                                 />
                                             </td>
                                             <td style={{ textAlign: 'center' }}>

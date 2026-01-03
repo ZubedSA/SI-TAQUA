@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useToast } from '../../context/ToastContext'
+import { useUserHalaqoh } from '../../hooks/features/useUserHalaqoh'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import DownloadButton from '../../components/ui/DownloadButton'
@@ -33,8 +34,10 @@ const HafalanList = () => {
     const [dateFilter, setDateFilter] = useState({ dari: '', sampai: '' })
     const [filterHalaqoh, setFilterHalaqoh] = useState('') // Filter halaqoh untuk tab Input Hafalan
 
+    // Gunakan hook untuk halaqoh yang difilter berdasarkan user
+    const { halaqohList, isLoading: loadingHalaqoh, hasHalaqoh, isSingleHalaqoh, selectedHalaqoh: hookSelectedHalaqoh, setSelectedHalaqoh: setHookSelectedHalaqoh } = useUserHalaqoh()
+
     // Rekap filters
-    const [halaqohList, setHalaqohList] = useState([])
     const [rekapFilters, setRekapFilters] = useState({
         tanggalMulai: '',
         tanggalSelesai: '',
@@ -92,7 +95,6 @@ const HafalanList = () => {
 
     useEffect(() => {
         fetchHafalan()
-        fetchHalaqoh()
         fetchSemester()
         fetchSantriList()
     }, [])
@@ -272,14 +274,7 @@ const HafalanList = () => {
         }
     }
 
-    const fetchHalaqoh = async () => {
-        try {
-            const { data } = await supabase.from('halaqoh').select('id, nama').order('nama')
-            setHalaqohList(data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
-        }
-    }
+
 
     const fetchHafalan = async () => {
         setLoading(true)

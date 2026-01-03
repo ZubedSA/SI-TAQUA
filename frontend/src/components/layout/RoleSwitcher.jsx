@@ -8,7 +8,8 @@ import {
     Users,
     ChevronDown,
     Check,
-    RefreshCw
+    RefreshCw,
+    BookMarked
 } from 'lucide-react'
 import './RoleSwitcher.css'
 
@@ -71,6 +72,14 @@ const roleConfig = {
         bgColor: 'rgba(249, 115, 22, 0.1)',
         path: '/dashboard/ota',
         description: 'Pantau dana & santri'
+    },
+    musyrif: {
+        label: 'Musyrif',
+        icon: BookMarked,
+        color: '#059669',
+        bgColor: 'rgba(5, 150, 105, 0.1)',
+        path: '/dashboard/akademik',
+        description: 'Pantau halaqoh & hafalan'
     }
 }
 

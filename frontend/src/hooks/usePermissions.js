@@ -12,15 +12,15 @@ export const usePermissions = () => {
     // Permission definitions
     const permissions = {
         // Module access
-        canAccessDashboard: ['admin', 'guru', 'wali', 'bendahara'].includes(role),
-        canAccessSantri: ['admin', 'guru'].includes(role),
+        canAccessDashboard: ['admin', 'guru', 'wali', 'bendahara', 'musyrif'].includes(role),
+        canAccessSantri: ['admin', 'guru', 'musyrif'].includes(role),
         canAccessGuru: ['admin'].includes(role),
         canAccessKelas: ['admin'].includes(role),
-        canAccessHalaqoh: ['admin'].includes(role),
-        canAccessHafalan: ['admin', 'guru'].includes(role),
+        canAccessHalaqoh: ['admin', 'musyrif'].includes(role),
+        canAccessHafalan: ['admin', 'guru', 'musyrif'].includes(role),
         canAccessPresensi: ['admin', 'guru'].includes(role),
-        canAccessNilai: ['admin', 'guru'].includes(role),
-        canAccessLaporan: ['admin', 'guru'].includes(role),
+        canAccessNilai: ['admin', 'guru', 'musyrif'].includes(role),
+        canAccessLaporan: ['admin', 'guru', 'musyrif'].includes(role),
         canAccessSettings: ['admin'].includes(role),
         canAccessAuditLog: ['admin'].includes(role),
         canAccessWaliPortal: ['wali', 'admin'].includes(role),
@@ -41,9 +41,9 @@ export const usePermissions = () => {
             guru: ['admin'].includes(role),
             kelas: ['admin'].includes(role),
             halaqoh: ['admin'].includes(role),
-            hafalan: ['admin', 'guru'].includes(role),
-            presensi: ['admin', 'guru'].includes(role),
-            nilai: ['admin', 'guru'].includes(role),
+            hafalan: ['admin', 'guru', 'musyrif'].includes(role),
+            presensi: ['admin', 'guru', 'musyrif'].includes(role),
+            nilai: ['admin', 'guru', 'musyrif'].includes(role),
             mapel: ['admin'].includes(role),
             // Keuangan
             kas: ['admin', 'bendahara'].includes(role),
@@ -54,13 +54,13 @@ export const usePermissions = () => {
             realisasi: ['admin', 'bendahara'].includes(role),
         },
         canUpdate: {
-            santri: ['admin', 'guru'].includes(role),
+            santri: ['admin', 'guru', 'musyrif'].includes(role),
             guru: ['admin'].includes(role),
             kelas: ['admin'].includes(role),
             halaqoh: ['admin'].includes(role),
-            hafalan: ['admin', 'guru'].includes(role),
-            presensi: ['admin', 'guru'].includes(role),
-            nilai: ['admin', 'guru'].includes(role),
+            hafalan: ['admin', 'guru', 'musyrif'].includes(role),
+            presensi: ['admin', 'guru', 'musyrif'].includes(role),
+            nilai: ['admin', 'guru', 'musyrif'].includes(role),
             mapel: ['admin'].includes(role),
             // Keuangan
             kas: ['admin', 'bendahara'].includes(role),
@@ -75,9 +75,9 @@ export const usePermissions = () => {
             guru: ['admin'].includes(role),
             kelas: ['admin'].includes(role),
             halaqoh: ['admin'].includes(role),
-            hafalan: ['admin'].includes(role),
-            presensi: ['admin'].includes(role),
-            nilai: ['admin'].includes(role),
+            hafalan: ['admin', 'musyrif'].includes(role),
+            presensi: ['admin', 'musyrif'].includes(role),
+            nilai: ['admin', 'musyrif'].includes(role),
             mapel: ['admin'].includes(role),
             // Keuangan
             kas: ['admin', 'bendahara'].includes(role),
@@ -89,14 +89,14 @@ export const usePermissions = () => {
         },
         canRead: {
             // Wali hanya bisa read data santri yang terhubung (enforced by RLS)
-            santri: ['admin', 'guru', 'wali'].includes(role),
-            guru: ['admin', 'guru', 'wali'].includes(role),
-            kelas: ['admin', 'guru', 'wali'].includes(role),
-            halaqoh: ['admin', 'guru', 'wali'].includes(role),
-            hafalan: ['admin', 'guru', 'wali'].includes(role),
-            presensi: ['admin', 'guru', 'wali'].includes(role),
-            nilai: ['admin', 'guru', 'wali'].includes(role),
-            mapel: ['admin', 'guru', 'wali'].includes(role),
+            santri: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            guru: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            kelas: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            halaqoh: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            hafalan: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            presensi: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            nilai: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
+            mapel: ['admin', 'guru', 'wali', 'musyrif'].includes(role),
             // Keuangan - Pengasuh can read all
             kas: ['admin', 'bendahara', 'pengasuh'].includes(role),
             pembayaran: ['admin', 'bendahara', 'pengasuh'].includes(role),
@@ -122,6 +122,7 @@ export const usePermissions = () => {
     const isAdmin = () => role === 'admin'
     const isGuru = () => role === 'guru'
     const isWali = () => role === 'wali'
+    const isMusyrif = () => role === 'musyrif'
     const isAuthenticated = () => !!user
 
     // Check if user has any of the specified roles
@@ -153,6 +154,7 @@ export const usePermissions = () => {
         isAdmin,
         isGuru,
         isWali,
+        isMusyrif,
         isAuthenticated,
         hasRole,
     }

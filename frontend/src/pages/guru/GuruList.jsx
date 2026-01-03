@@ -11,6 +11,7 @@ import Spinner from '../../components/ui/Spinner'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import './Guru.css'
 
 const GuruList = () => {
@@ -283,7 +284,8 @@ const GuruList = () => {
                                                     <button
                                                         className="btn-icon btn-icon-danger"
                                                         title="Hapus"
-                                                        onClick={() => {
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
                                                             setSelectedGuru(item)
                                                             setShowDeleteModal(true)
                                                         }}
@@ -321,27 +323,12 @@ const GuruList = () => {
             </div>
 
             {/* Delete Modal */}
-            {showDeleteModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title">Konfirmasi Hapus</h3>
-                            <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <p>Apakah Anda yakin ingin menghapus guru <strong>{selectedGuru?.nama}</strong>?</p>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>
-                                Batal
-                            </button>
-                            <button className="btn btn-danger" onClick={handleDelete}>
-                                Hapus
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteConfirmationModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDelete}
+                itemName={selectedGuru?.nama}
+            />
         </div>
     )
 }

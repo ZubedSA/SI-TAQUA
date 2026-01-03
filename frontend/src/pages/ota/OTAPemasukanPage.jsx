@@ -11,6 +11,8 @@ import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { useOTAPemasukan, useOrangTuaAsuh } from '../../hooks/useOTA'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
+import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import './OTA.css'
 
 /**
@@ -158,7 +160,10 @@ _PTQ Al-Usymuni Batuan_`
         window.open(waUrl, '_blank')
     }
 
-    const handleSubmit = async (e) => {
+    // Save Confirmation State
+    const [saveModal, setSaveModal] = useState({ isOpen: false })
+
+    const handleFormSubmit = (e) => {
         e.preventDefault()
 
         if (!formData.ota_id) {
@@ -170,6 +175,10 @@ _PTQ Al-Usymuni Batuan_`
             return
         }
 
+        setSaveModal({ isOpen: true })
+    }
+
+    const executeSave = async () => {
         setSaving(true)
         try {
             const payload = {
@@ -199,14 +208,18 @@ _PTQ Al-Usymuni Batuan_`
                 // Send WhatsApp confirmation for NEW entries
                 const selectedOta = otaList.find(o => o.id === formData.ota_id)
                 if (selectedOta?.no_hp) {
-                    if (confirm('Kirim konfirmasi WhatsApp ke OTA?')) {
-                        sendWhatsAppConfirmation(selectedOta, payload.jumlah, payload.tanggal)
-                    }
+                    // Use a small timeout to allow toast to show first
+                    setTimeout(() => {
+                        if (confirm('Kirim konfirmasi WhatsApp ke OTA?')) {
+                            sendWhatsAppConfirmation(selectedOta, payload.jumlah, payload.tanggal)
+                        }
+                    }, 500)
                 }
             }
 
             closeModal()
             fetchData()
+            setSaveModal({ isOpen: false })
         } catch (err) {
             showToast.error('Gagal menyimpan: ' + err.message)
         } finally {
@@ -214,8 +227,19 @@ _PTQ Al-Usymuni Batuan_`
         }
     }
 
-    const handleDelete = async (item) => {
-        if (!confirm(`Hapus pemasukan dari "${item.ota?.nama}" sebesar ${formatRupiah(item.jumlah)}?`)) return
+    // Delete Confirmation State
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        item: null
+    })
+
+    const openDeleteModal = (item) => {
+        setDeleteModal({ isOpen: true, item })
+    }
+
+    const handleDelete = async () => {
+        const item = deleteModal.item
+        if (!item) return
 
         try {
             const { error } = await supabase
@@ -226,6 +250,7 @@ _PTQ Al-Usymuni Batuan_`
             if (error) throw error
             showToast.success('Pemasukan berhasil dihapus')
             fetchData()
+            setDeleteModal({ isOpen: false, item: null })
         } catch (err) {
             showToast.error('Gagal menghapus: ' + err.message)
         }
@@ -472,14 +497,14 @@ _PTQ Al-Usymuni Batuan_`
                                                 <button className="ota-action-btn edit" onClick={() => openEdit(item)} title="Edit">
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button className="ota-action-btn delete" onClick={() => handleDelete(item)} title="Hapus">
+                                                <button className="ota-action-btn delete" onClick={() => openDeleteModal(item)} title="Hapus">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
                                             <MobileActionMenu
                                                 item={item}
                                                 onEdit={() => openEdit(item)}
-                                                onDelete={() => handleDelete(item)}
+                                                onDelete={() => openDeleteModal(item)}
                                                 onWhatsApp={item.ota?.no_hp ? () => sendWhatsAppConfirmation(item.ota, item.jumlah, item.tanggal) : null}
                                             />
                                         </td>
@@ -515,7 +540,7 @@ _PTQ Al-Usymuni Batuan_`
                                 <X size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleFormSubmit}>
                             <div className="ota-modal-body">
                                 <div className="ota-form-row">
                                     <div className="ota-form-group">
@@ -603,6 +628,24 @@ _PTQ Al-Usymuni Batuan_`
                     </div>
                 </div>
             )}
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item ? `${deleteModal.item.ota?.nama} (${formatRupiah(deleteModal.item.jumlah)})` : ''}
+                message={`Yakin ingin menghapus data pemasukan ini?`}
+            />
+
+            <ConfirmationModal
+                isOpen={saveModal.isOpen}
+                onClose={() => setSaveModal({ isOpen: false })}
+                onConfirm={executeSave}
+                title={editItem ? 'Konfirmasi Edit' : 'Konfirmasi Tambah'}
+                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan data ini?' : 'Apakah Anda yakin ingin menambahkan data pembayaran ini?'}
+                confirmLabel={editItem ? 'Simpan Perubahan' : 'Tambah Data'}
+                variant="success"
+                isLoading={saving}
+            />
         </div>
     )
 }

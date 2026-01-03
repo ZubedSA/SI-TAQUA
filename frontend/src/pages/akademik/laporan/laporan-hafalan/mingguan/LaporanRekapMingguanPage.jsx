@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Calendar, RefreshCw, Download, Printer, Users, Search } from 'lucide-react'
+import { Calendar, RefreshCw, Download, Printer, Users, Search, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
+import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanRekapMingguanPage = () => {
@@ -11,7 +12,6 @@ const LaporanRekapMingguanPage = () => {
     // STATE
     // =============================================
     const [loading, setLoading] = useState(false)
-    const [halaqohList, setHalaqohList] = useState([])
     const [reportData, setReportData] = useState([])
 
     // Filter dengan rentang tanggal fleksibel
@@ -19,30 +19,27 @@ const LaporanRekapMingguanPage = () => {
     const weekAgo = new Date(today)
     weekAgo.setDate(today.getDate() - 6)
 
+    // Hook Data Halaqoh (Auto Filter)
+    const {
+        halaqohList,
+        halaqohIds,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin
+    } = useUserHalaqoh()
+
     const [filters, setFilters] = useState({
         halaqoh_id: '',
         tanggal_mulai: weekAgo.toISOString().split('T')[0],
         tanggal_akhir: today.toISOString().split('T')[0]
     })
 
-    // =============================================
-    // LOAD HALAQOH OPTIONS
-    // =============================================
+    // Auto-select halaqoh when loaded
     useEffect(() => {
-        const loadHalaqoh = async () => {
-            const { data, error } = await supabase
-                .from('halaqoh')
-                .select('id, nama')
-                .order('nama')
-
-            if (error) {
-                console.error('Error loading halaqoh:', error)
-                return
-            }
-            setHalaqohList(data || [])
+        if (!loadingHalaqoh && halaqohIds.length > 0 && !filters.halaqoh_id) {
+            setFilters(prev => ({ ...prev, halaqoh_id: halaqohIds[0] }))
         }
-        loadHalaqoh()
-    }, [])
+    }, [loadingHalaqoh, halaqohIds, filters.halaqoh_id])
 
     // =============================================
     // FETCH REPORT DATA
@@ -108,7 +105,7 @@ const LaporanRekapMingguanPage = () => {
                     const jenis = (h.jenis || '').toLowerCase().trim()
                     const jumlahAyat = Math.max(0, (h.ayat_selesai || 0) - (h.ayat_mulai || 0) + 1)
 
-                    if (jenis === 'setoran' || jenis === '') {
+                    if (jenis === 'setoran' || jenis === 'hafalan baru' || jenis === '') {
                         setoranCount++
                         setoranAyat += jumlahAyat
                     } else if (jenis.includes('muroja') || jenis.includes('muraja')) {
@@ -200,12 +197,12 @@ const LaporanRekapMingguanPage = () => {
         await generateLaporanPDF({
             title: 'LAPORAN REKAP HAFALAN MINGGUAN',
             subtitle: 'Rekapitulasi Hafalan Mingguan Santri',
-            orientation: 'landscape', // Landscape for wide tables
+            orientation: 'landscape',
             additionalInfo: [
-                { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
+                { label: 'Halaqoh', value: selectedHalaqoh?.nama || (selectedHalaqoh?.nama_halaqoh || '-') },
                 { label: 'Periode', value: periodeStr }
             ],
-            columns: ['NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status'],
+            columns: ['NIS', 'Nama Santri', 'Setoran Baru', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status'],
             data: reportData.map(row => [
                 row.nis,
                 row.nama,
@@ -223,11 +220,11 @@ const LaporanRekapMingguanPage = () => {
     }
 
     const handleDownloadExcel = () => {
-        const columns = ['NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']
+        const columns = ['NIS', 'Nama Santri', 'Setoran Baru', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']
         const exportData = reportData.map(row => ({
             NIS: row.nis,
             'Nama Santri': row.nama,
-            Setoran: `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
+            'Setoran Baru': `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
             'Muroja\'ah': `${row.murajaah_count}x (${row.murajaah_ayat} ayat)`,
             'Ziyadah Ulang': `${row.ziyadah_count}x (${row.ziyadah_ayat} ayat)`,
             'Total Ayat': row.total_ayat,
@@ -238,11 +235,11 @@ const LaporanRekapMingguanPage = () => {
     }
 
     const handleDownloadCSV = () => {
-        const columns = ['NIS', 'Nama Santri', 'Setoran', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']
+        const columns = ['NIS', 'Nama Santri', 'Setoran Baru', 'Muroja\'ah', 'Ziyadah Ulang', 'Total Ayat', 'Kehadiran', 'Status']
         const exportData = reportData.map(row => ({
             NIS: row.nis,
             'Nama Santri': row.nama,
-            Setoran: `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
+            'Setoran Baru': `${row.setoran_count}x (${row.setoran_ayat} ayat)`,
             'Muroja\'ah': `${row.murajaah_count}x (${row.murajaah_ayat} ayat)`,
             'Ziyadah Ulang': `${row.ziyadah_count}x (${row.ziyadah_ayat} ayat)`,
             'Total Ayat': row.total_ayat,
@@ -286,16 +283,35 @@ const LaporanRekapMingguanPage = () => {
             <div className="filter-section">
                 <div className="form-group">
                     <label className="form-label">Halaqoh *</label>
-                    <select
-                        className="form-control"
-                        value={filters.halaqoh_id}
-                        onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
-                    >
-                        <option value="">Pilih Halaqoh</option>
-                        {halaqohList.map(h => (
-                            <option key={h.id} value={h.id}>{h.nama}</option>
-                        ))}
-                    </select>
+                    {loadingHalaqoh ? (
+                        <div className="form-control" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <RefreshCw size={16} className="spin" /> Memuat...
+                        </div>
+                    ) : !hasHalaqoh && !isAdmin ? (
+                        <div className="alert alert-warning" style={{ margin: 0 }}>
+                            <AlertCircle size={16} /> Belum ada halaqoh
+                        </div>
+                    ) : (!isAdmin && halaqohList.length === 1) ? (
+                        <input
+                            type="text"
+                            className="form-control"
+                            value={halaqohList[0]?.nama || (halaqohList[0]?.nama_halaqoh || '')}
+                            disabled
+                            readOnly
+                            style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                        />
+                    ) : (
+                        <select
+                            className="form-control"
+                            value={filters.halaqoh_id}
+                            onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
+                        >
+                            <option value="">Pilih Halaqoh</option>
+                            {halaqohList.map(h => (
+                                <option key={h.id} value={h.id}>{h.nama || h.nama_halaqoh}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
 
                 <div className="form-group">
@@ -380,7 +396,7 @@ const LaporanRekapMingguanPage = () => {
                                     <th>No</th>
                                     <th>NIS</th>
                                     <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Setoran</th>
+                                    <th style={{ textAlign: 'center' }}>Setoran Baru</th>
                                     <th style={{ textAlign: 'center' }}>Muroja'ah</th>
                                     <th style={{ textAlign: 'center' }}>Ziyadah Ulang</th>
                                     <th style={{ textAlign: 'center' }}>Total Ayat</th>
