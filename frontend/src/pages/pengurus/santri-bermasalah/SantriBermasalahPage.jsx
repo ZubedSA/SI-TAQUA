@@ -130,7 +130,7 @@ const SantriBermasalahPage = () => {
             <style>{`
                 .santri-bermasalah-page {
                     padding: 1.5rem;
-                    max-width: 1400px;
+                    width: 100%;
                     margin: 0 auto;
                 }
                 .page-header {

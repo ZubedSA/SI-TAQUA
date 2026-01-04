@@ -64,6 +64,26 @@
     gap: 20px;
 }
 
+@media screen and (max-width: 768px) {
+    .keuangan-page .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        /* Full width children */
+        gap: 16px;
+    }
+
+    .keuangan-page .header-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .keuangan-page .header-actions .btn {
+        flex: 1;
+        /* Make buttons full width/equal width */
+        justify-content: center;
+    }
+}
+
 .keuangan-page .page-title {
     display: flex;
     align-items: center;

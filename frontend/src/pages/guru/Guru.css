@@ -5,6 +5,29 @@
     margin-bottom: 28px;
 }
 
+@media screen and (max-width: 768px) {
+    .guru-page .page-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .header-actions .btn {
+        flex: 1 0 auto;
+        justify-content: center;
+    }
+
+    .table-search {
+        width: 100%;
+    }
+}
+
 /* Force Full Width for Tables */
 .guru-page .table-container {
     margin-left: -32px;

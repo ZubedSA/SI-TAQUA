@@ -10,6 +10,27 @@
     border: 1px solid var(--border-color);
 }
 
+@media screen and (max-width: 768px) {
+
+    .nilai-page .page-header,
+    .rekap-nilai-page .page-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .header-actions .btn {
+        flex: 1 0 auto;
+        justify-content: center;
+    }
+}
+
 /* Force Full Width for Tables */
 .nilai-page .table-container,
 .rekap-nilai-page .table-container {

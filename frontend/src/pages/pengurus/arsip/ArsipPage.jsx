@@ -82,7 +82,7 @@ const ArsipPage = () => {
     ]
 
     return (
-        <div style={{ padding: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ padding: '1.5rem', width: '100%', margin: '0 auto' }}>
             <div style={{ marginBottom: '1.5rem' }}>
                 <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.5rem', margin: 0 }}>
                     <Archive size={28} /> Arsip
