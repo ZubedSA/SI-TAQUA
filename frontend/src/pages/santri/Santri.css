@@ -96,6 +96,18 @@
         gap: 12px;
     }
 
+    .header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .header-actions .btn {
+        flex: 1 0 auto;
+        justify-content: center;
+    }
+
     .table-search {
         width: 100%;
     }

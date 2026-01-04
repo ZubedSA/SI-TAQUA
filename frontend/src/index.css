@@ -632,6 +632,12 @@ select option:hover {
   padding: 32px;
 }
 
+@media screen and (max-width: 768px) {
+  .content {
+    padding: 16px;
+  }
+}
+
 .page-header {
   margin-bottom: 28px;
 }
