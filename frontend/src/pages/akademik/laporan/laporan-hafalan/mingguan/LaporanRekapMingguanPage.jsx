@@ -25,27 +25,24 @@ const LaporanRekapMingguanPage = () => {
         halaqohIds,
         isLoading: loadingHalaqoh,
         hasHalaqoh,
-        isAdmin
+        isAdmin,
+        selectedHalaqohId,
+        setSelectedHalaqohId
     } = useUserHalaqoh()
 
     const [filters, setFilters] = useState({
-        halaqoh_id: '',
+        // halaqoh_id removed, using selectedHalaqohId
         tanggal_mulai: weekAgo.toISOString().split('T')[0],
         tanggal_akhir: today.toISOString().split('T')[0]
     })
 
-    // Auto-select halaqoh when loaded
-    useEffect(() => {
-        if (!loadingHalaqoh && halaqohIds.length > 0 && !filters.halaqoh_id) {
-            setFilters(prev => ({ ...prev, halaqoh_id: halaqohIds[0] }))
-        }
-    }, [loadingHalaqoh, halaqohIds, filters.halaqoh_id])
+    // Auto-select handled by hook now. Removed useEffect.
 
     // =============================================
     // FETCH REPORT DATA
     // =============================================
     const fetchReportData = async () => {
-        if (!filters.halaqoh_id) return
+        if (!selectedHalaqohId) return
         if (!filters.tanggal_mulai || !filters.tanggal_akhir) return
 
         setLoading(true)
@@ -55,7 +52,7 @@ const LaporanRekapMingguanPage = () => {
             const { data: santriList, error: santriError } = await supabase
                 .from('santri')
                 .select('id, nama, nis')
-                .eq('halaqoh_id', filters.halaqoh_id)
+                .eq('halaqoh_id', selectedHalaqohId)
                 .eq('status', 'Aktif')
                 .order('nama')
 
@@ -167,10 +164,10 @@ const LaporanRekapMingguanPage = () => {
     // TRIGGER FETCH ON FILTER CHANGE (REAL-TIME)
     // =============================================
     useEffect(() => {
-        if (filters.halaqoh_id && filters.tanggal_mulai && filters.tanggal_akhir) {
+        if (selectedHalaqohId && filters.tanggal_mulai && filters.tanggal_akhir) {
             fetchReportData()
         }
-    }, [filters.halaqoh_id, filters.tanggal_mulai, filters.tanggal_akhir])
+    }, [selectedHalaqohId, filters.tanggal_mulai, filters.tanggal_akhir])
 
     // =============================================
     // STATUS BADGE STYLING
@@ -191,7 +188,7 @@ const LaporanRekapMingguanPage = () => {
     const generatePDF = async () => {
         if (reportData.length === 0) return
 
-        const selectedHalaqoh = halaqohList.find(h => h.id === filters.halaqoh_id)
+        const selectedHalaqoh = halaqohList.find(h => h.id === selectedHalaqohId)
         const periodeStr = `${new Date(filters.tanggal_mulai).toLocaleDateString('id-ID')} s/d ${new Date(filters.tanggal_akhir).toLocaleDateString('id-ID')}`
 
         await generateLaporanPDF({
@@ -303,10 +300,10 @@ const LaporanRekapMingguanPage = () => {
                     ) : (
                         <select
                             className="form-control"
-                            value={filters.halaqoh_id}
-                            onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
+                            value={selectedHalaqohId}
+                            onChange={e => setSelectedHalaqohId(e.target.value)}
                         >
-                            <option value="">Pilih Halaqoh</option>
+                            {isAdmin && <option value="">Pilih Halaqoh</option>}
                             {halaqohList.map(h => (
                                 <option key={h.id} value={h.id}>{h.nama || h.nama_halaqoh}</option>
                             ))}

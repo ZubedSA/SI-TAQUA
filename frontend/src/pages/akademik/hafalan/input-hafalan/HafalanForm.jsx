@@ -32,7 +32,9 @@ const HafalanForm = () => {
         musyrifInfo,
         isLoading: loadingHalaqoh,
         hasHalaqoh,
-        isAdmin
+        isAdmin,
+        selectedHalaqohId,
+        setSelectedHalaqohId
     } = useUserHalaqoh()
 
     const [formData, setFormData] = useState({
@@ -51,21 +53,26 @@ const HafalanForm = () => {
         catatan: ''
     })
 
-    // Fetch santri - AUTO-FILTERED berdasarkan halaqoh akun
+    // Fetch santri - Filtered based on SELECTED halaqoh
     const fetchSantri = async () => {
         try {
+            if (!hasHalaqoh && !isAdmin) {
+                setSantriList([])
+                return
+            }
+
             let query = supabase
                 .from('santri')
                 .select('id, nis, nama, nama_wali, no_telp_wali, halaqoh_id')
                 .eq('status', 'Aktif')
                 .order('nama')
 
-            // Auto-filter berdasarkan halaqoh akun (bukan ADMIN)
-            if (!isAdmin && halaqohIds.length > 0) {
+            // FILTER: Gunakan selectedHalaqohId jika ada
+            if (selectedHalaqohId) {
+                query = query.eq('halaqoh_id', selectedHalaqohId)
+            } else if (!isAdmin && halaqohIds.length > 0) {
+                // Fallback if no selection but restricted (shouldn't happen with new logic)
                 query = query.in('halaqoh_id', halaqohIds)
-            } else if (!isAdmin && halaqohIds.length === 0) {
-                setSantriList([])
-                return
             }
 
             const { data } = await query
@@ -99,11 +106,21 @@ const HafalanForm = () => {
                 .order('created_at', { ascending: false })
                 .limit(20)
 
+            // Filter by SELECTED halaqoh
+            if (selectedHalaqohId) {
+                query = query.eq('santri.halaqoh_id', selectedHalaqohId)
+                // Note: filtering deep relation inside 'select' is tricky in supabase-js depending on version.
+                // It's safer to filter client-side or use complex filter syntax.
+                // Let's stick to client-side filtering for reliability as per existing pattern
+            }
+
             const { data } = await query
 
-            // Filter by halaqoh for non-admin
+            // Client-side Filter
             let filtered = data || []
-            if (!isAdmin && halaqohIds.length > 0) {
+            if (selectedHalaqohId) {
+                filtered = filtered.filter(h => h.santri?.halaqoh_id === selectedHalaqohId)
+            } else if (!isAdmin && halaqohIds.length > 0) {
                 filtered = filtered.filter(h => halaqohIds.includes(h.santri?.halaqoh_id))
             }
 
@@ -145,17 +162,21 @@ const HafalanForm = () => {
         }
     }
 
-    // Re-fetch data when halaqohIds change
+    // Re-fetch data when selectedHalaqohId changes
     useEffect(() => {
         if (!loadingHalaqoh) {
             fetchSantri()
             fetchGuru()
             fetchRecentHafalan()
-            if (isEdit) {
-                fetchHafalan()
-            }
+            // if (isEdit) fetchHafalan() // fetchHafalan params usually fixed, but santri filtering affects form? No, edit mode loads specific ID.
         }
-    }, [halaqohIds, loadingHalaqoh, id])
+    }, [selectedHalaqohId, loadingHalaqoh, id])
+
+    // Initial load for edit
+    useEffect(() => {
+        if (isEdit) fetchHafalan()
+    }, [isEdit])
+
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -278,7 +299,7 @@ const HafalanForm = () => {
     }
 
     // Block access if no halaqoh linked
-    if (!hasHalaqoh) {
+    if (!hasHalaqoh && !isAdmin) {
         return (
             <div className="hafalan-form-page">
                 <div className="alert alert-warning" style={{ maxWidth: '600px', margin: '40px auto' }}>
@@ -311,18 +332,35 @@ const HafalanForm = () => {
                 <div className="form-section">
                     <h3 className="form-section-title">Data Hafalan</h3>
                     <div className="form-grid">
-                        {/* HALAQOH INFO - Read-only, no dropdown */}
-                        <div className="form-group">
-                            <label className="form-label">Halaqoh</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
-                                disabled
-                                readOnly
-                                style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
-                            />
-                        </div>
+                        {/* HALAQOH FILTER */}
+                        {halaqohList.length > 1 || isAdmin ? (
+                            <div className="form-group">
+                                <label className="form-label">Halaqoh (Filter)</label>
+                                <select
+                                    className="form-control"
+                                    value={selectedHalaqohId}
+                                    onChange={(e) => setSelectedHalaqohId(e.target.value)}
+                                >
+                                    {halaqohList.map(h => (
+                                        <option key={h.id} value={h.id}>
+                                            {h.nama}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="form-group">
+                                <label className="form-label">Halaqoh</label>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    value={halaqohNames || 'Memuat...'}
+                                    disabled
+                                    readOnly
+                                    style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
+                                />
+                            </div>
+                        )}
 
                         {/* MUSYRIF/PENGUJI - Auto-filled dari data halaqoh */}
                         <div className="form-group">

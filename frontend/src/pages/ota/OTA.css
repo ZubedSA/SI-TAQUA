@@ -5,9 +5,29 @@
 
 /* Base Container */
 .ota-container {
-    padding: 1.5rem;
+    padding: 0;
     min-height: 100vh;
     background: var(--bg-secondary, #f8fafc);
+}
+
+/* Force Full Width for Tables - Desktop (Counteract .content padding: 32px) */
+.ota-container .ota-table-container,
+.ota-list-page .table-container {
+    margin-left: -32px;
+    margin-right: -32px;
+    width: calc(100% + 64px);
+    border-radius: 0;
+}
+
+@media screen and (max-width: 992px) {
+
+    /* Tablet (Counteract .content padding: 20px) */
+    .ota-container .ota-table-container,
+    .ota-list-page .table-container {
+        margin-left: -20px;
+        margin-right: -20px;
+        width: calc(100% + 40px);
+    }
 }
 
 /* Header Section */
@@ -680,7 +700,16 @@
 /* Responsive */
 @media (max-width: 768px) {
     .ota-container {
-        padding: 1rem;
+        padding: 0;
+    }
+
+    /* Mobile (Counteract .content padding: 16px) */
+    .ota-container .ota-table-container,
+    .ota-list-page .table-container {
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
+        overflow-x: auto;
     }
 
     .ota-header-top {

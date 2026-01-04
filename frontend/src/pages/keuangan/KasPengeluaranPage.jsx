@@ -336,7 +336,7 @@ const KasPengeluaranPage = () => {
                 <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <Spinner className="py-8" label="Memuat data pengeluaran..." />
                 ) : filteredData.length === 0 ? (
@@ -348,79 +348,81 @@ const KasPengeluaranPage = () => {
                         onAction={canEditKas ? () => { resetForm(); setShowModal(true) } : null}
                     />
                 ) : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Tanggal</th>
-                                <th>Keperluan</th>
-                                <th>Kategori</th>
-                                <th>Jumlah</th>
-                                <th>Keterangan</th>
-                                {canEditKas && <th>Aksi</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredData.map((item, i) => (
-                                <tr key={item.id}>
-                                    <td>{i + 1}</td>
-                                    <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                    <td>{item.keperluan}</td>
-                                    <td><span className="badge red">{item.kategori || '-'}</span></td>
-                                    <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                    <td>{item.keterangan || '-'}</td>
-                                    {canEditKas && (
-                                        <td>
-                                            <MobileActionMenu
-                                                actions={[
-                                                    { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                    { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
-                                                ]}
-                                            >
-                                                <button
-                                                    onClick={() => openEdit(item)}
-                                                    title="Edit"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        background: '#fef3c7',
-                                                        color: '#d97706',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        marginRight: '4px'
-                                                    }}
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => confirmDelete(item)}
-                                                    title="Hapus"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        background: '#fee2e2',
-                                                        color: '#dc2626',
-                                                        border: 'none',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </MobileActionMenu>
-                                        </td>
-                                    )}
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>Keperluan</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah</th>
+                                    <th>Keterangan</th>
+                                    {canEditKas && <th>Aksi</th>}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredData.map((item, i) => (
+                                    <tr key={item.id}>
+                                        <td>{i + 1}</td>
+                                        <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                        <td>{item.keperluan}</td>
+                                        <td><span className="badge red">{item.kategori || '-'}</span></td>
+                                        <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
+                                        <td>{item.keterangan || '-'}</td>
+                                        {canEditKas && (
+                                            <td>
+                                                <MobileActionMenu
+                                                    actions={[
+                                                        { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
+                                                        { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
+                                                    ]}
+                                                >
+                                                    <button
+                                                        onClick={() => openEdit(item)}
+                                                        title="Edit"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#fef3c7',
+                                                            color: '#d97706',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            marginRight: '4px'
+                                                        }}
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => confirmDelete(item)}
+                                                        title="Hapus"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#fee2e2',
+                                                            color: '#dc2626',
+                                                            border: 'none',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </MobileActionMenu>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 

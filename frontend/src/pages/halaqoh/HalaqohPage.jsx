@@ -348,87 +348,97 @@ const HalaqohPage = () => {
 
                 <div className="table-container">
                     {filteredData.length > 0 ? (
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Nama Halaqoh</th>
-                                    <th>Guru Pengajar</th>
-                                    <th className="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td>{idx + 1}</td>
-                                        <td>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div style={{
-                                                    width: '36px',
-                                                    height: '36px',
-                                                    borderRadius: '50%',
-                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: 'white',
-                                                    fontWeight: 600,
-                                                    fontSize: '0.875rem'
-                                                }}>
-                                                    {item.nama?.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <span style={{ fontWeight: 500 }}>{item.nama}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {item.guru?.nama ? (
-                                                <span className="badge badge-info">{item.guru.nama}</span>
-                                            ) : (
-                                                <span className="badge badge-warning">Belum ditentukan</span>
-                                            )}
-                                        </td>
-                                        <td className="text-center">
-                                            {/* Desktop Actions */}
-                                            <div className="action-buttons desktop">
-                                                <button className="btn-icon btn-icon-primary" onClick={() => openDetail(item)} title="Detail Anggota">
-                                                    <Users size={16} />
-                                                </button>
-                                                {isAdmin() && (
-                                                    <>
-                                                        <button className="btn-icon edit" onClick={() => openEdit(item)} title="Edit">
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button className="btn-icon btn-icon-danger" onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            openDelete(item)
-                                                        }} title="Hapus">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                            {/* Mobile Actions */}
-                                            <div className="mobile-menu">
-                                                <MobileActionMenu
-                                                    actions={[
-                                                        { label: 'Anggota', icon: <Users size={16} />, onClick: () => openDetail(item) },
-                                                        ...(isAdmin() ? [
-                                                            { label: 'Edit', icon: <Edit2 size={16} />, onClick: () => openEdit(item) },
-                                                            { label: 'Hapus', icon: <Trash2 size={16} />, onClick: () => openDelete(item), danger: true }
-                                                        ] : [])
-                                                    ]}
-                                                />
-                                            </div>
-                                        </td>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Halaqoh</th>
+                                        <th>Guru Pengajar</th>
+                                        <th className="text-center">Aksi</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredData.map((item, idx) => (
+                                        <tr key={item.id}>
+                                            <td>{idx + 1}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <div style={{
+                                                        width: '36px',
+                                                        height: '36px',
+                                                        borderRadius: '50%',
+                                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'white',
+                                                        fontWeight: 600,
+                                                        fontSize: '0.875rem'
+                                                    }}>
+                                                        {item.nama?.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <span style={{ fontWeight: 500 }}>{item.nama}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {item.guru?.nama ? (
+                                                    <span className="badge badge-info">{item.guru.nama}</span>
+                                                ) : (
+                                                    <span className="badge badge-warning">Belum ditentukan</span>
+                                                )}
+                                            </td>
+                                            <td className="text-center">
+                                                {/* Desktop Actions */}
+                                                <div className="action-buttons desktop">
+                                                    <button className="btn-icon btn-icon-primary" onClick={() => openDetail(item)} title="Detail Anggota">
+                                                        <Users size={16} />
+                                                    </button>
+                                                    {isAdmin() && (
+                                                        <>
+                                                            <button className="btn-icon edit" onClick={() => openEdit(item)} title="Edit">
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button className="btn-icon delete" onClick={() => openDelete(item)} title="Hapus">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                {/* Mobile Actions */}
+                                                <div className="action-buttons mobile">
+                                                    <MobileActionMenu
+                                                        actions={[
+                                                            {
+                                                                icon: <Users size={16} />,
+                                                                label: 'Anggota',
+                                                                onClick: () => openDetail(item)
+                                                            },
+                                                            isAdmin() && {
+                                                                icon: <Edit2 size={16} />,
+                                                                label: 'Edit',
+                                                                onClick: () => openEdit(item)
+                                                            },
+                                                            isAdmin() && {
+                                                                icon: <Trash2 size={16} />,
+                                                                label: 'Hapus',
+                                                                danger: true,
+                                                                onClick: () => openDelete(item)
+                                                            }
+                                                        ].filter(Boolean)}
+                                                    />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     ) : (
                         <EmptyState
-                            icon={<Circle size={48} />}
-                            title="Tidak ada data halaqoh"
-                            description={searchTerm ? 'Coba ubah kata kunci pencarian' : 'Belum ada data halaqoh yang ditambahkan'}
+                            icon={Circle}
+                            title="Tidak ada halaqoh"
+                            description="Belum ada data halaqoh yang ditambahkan"
                         />
                     )}
                 </div>

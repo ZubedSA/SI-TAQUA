@@ -211,82 +211,84 @@ const TahfizhSemesterPage = () => {
                         </button>
                     </div>
 
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>NIS</th>
-                                <th>Nama Santri</th>
-                                <th style={{ textAlign: 'center' }}>Hafalan Baru</th>
-                                <th style={{ textAlign: 'center' }}>Murajaah</th>
-                                <th style={{ textAlign: 'center' }}>Tajwid</th>
-                                <th style={{ textAlign: 'center' }}>Kelancaran</th>
-                                <th style={{ textAlign: 'center' }}>Rata-rata</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan="8" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                            ) : santri.length === 0 ? (
-                                <tr><td colSpan="8" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
-                            ) : (
-                                santri.map((s, i) => (
-                                    <tr key={s.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{s.nis}</td>
-                                        <td className="name-cell">{s.nama}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input
-                                                type="number"
-                                                className="nilai-input"
-                                                min="0"
-                                                max="100"
-                                                placeholder="0-100"
-                                                value={nilai[s.id]?.hafalan_baru ?? ''}
-                                                onChange={e => handleNilaiChange(s.id, 'hafalan_baru', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input
-                                                type="number"
-                                                className="nilai-input"
-                                                min="0"
-                                                max="100"
-                                                placeholder="0-100"
-                                                value={nilai[s.id]?.murajaah ?? ''}
-                                                onChange={e => handleNilaiChange(s.id, 'murajaah', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input
-                                                type="number"
-                                                className="nilai-input"
-                                                min="0"
-                                                max="100"
-                                                placeholder="0-100"
-                                                value={nilai[s.id]?.tajwid ?? ''}
-                                                onChange={e => handleNilaiChange(s.id, 'tajwid', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input
-                                                type="number"
-                                                className="nilai-input"
-                                                min="0"
-                                                max="100"
-                                                placeholder="0-100"
-                                                value={nilai[s.id]?.kelancaran ?? ''}
-                                                onChange={e => handleNilaiChange(s.id, 'kelancaran', e.target.value)}
-                                            />
-                                        </td>
-                                        <td style={{ textAlign: 'center', fontWeight: '600' }}>
-                                            {calculateRataRata(s.id)}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>NIS</th>
+                                    <th>Nama Santri</th>
+                                    <th style={{ textAlign: 'center' }}>Hafalan Baru</th>
+                                    <th style={{ textAlign: 'center' }}>Murajaah</th>
+                                    <th style={{ textAlign: 'center' }}>Tajwid</th>
+                                    <th style={{ textAlign: 'center' }}>Kelancaran</th>
+                                    <th style={{ textAlign: 'center' }}>Rata-rata</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan="8" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                ) : santri.length === 0 ? (
+                                    <tr><td colSpan="8" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
+                                ) : (
+                                    santri.map((s, i) => (
+                                        <tr key={s.id}>
+                                            <td>{i + 1}</td>
+                                            <td>{s.nis}</td>
+                                            <td className="name-cell">{s.nama}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    className="nilai-input"
+                                                    min="0"
+                                                    max="100"
+                                                    placeholder="0-100"
+                                                    value={nilai[s.id]?.hafalan_baru ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'hafalan_baru', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    className="nilai-input"
+                                                    min="0"
+                                                    max="100"
+                                                    placeholder="0-100"
+                                                    value={nilai[s.id]?.murajaah ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'murajaah', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    className="nilai-input"
+                                                    min="0"
+                                                    max="100"
+                                                    placeholder="0-100"
+                                                    value={nilai[s.id]?.tajwid ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'tajwid', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    className="nilai-input"
+                                                    min="0"
+                                                    max="100"
+                                                    placeholder="0-100"
+                                                    value={nilai[s.id]?.kelancaran ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'kelancaran', e.target.value)}
+                                                />
+                                            </td>
+                                            <td style={{ textAlign: 'center', fontWeight: '600' }}>
+                                                {calculateRataRata(s.id)}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>

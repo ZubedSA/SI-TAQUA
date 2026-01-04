@@ -799,7 +799,8 @@ const UsersPage = () => {
             </div>
 
             {/* Users Table */}
-            <div className="users-table-container">
+            {/* Users Table */}
+            <div className="table-container">
                 {/* Error State */}
                 {fetchError && (
                     <div className="alert alert-error mb-4">
@@ -821,112 +822,121 @@ const UsersPage = () => {
                         <p>Coba ubah filter atau kata kunci pencarian</p>
                     </div>
                 ) : (
-                    <table className="users-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Username</th>
-                                <th>Roles</th>
-                                <th>Status</th>
-                                <th>Dibuat</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.map(user => (
-                                <tr key={user.user_id || user.id}>
-                                    <td>
-                                        <div className="user-cell">
-                                            <div className="user-avatar">
-                                                {user.nama?.charAt(0).toUpperCase() || 'U'}
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Username</th>
+                                    <th>Roles</th>
+                                    <th>Status</th>
+                                    <th>Dibuat</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.map(user => (
+                                    <tr key={user.user_id || user.id}>
+                                        <td>
+                                            <div className="user-cell" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div className="user-avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-green)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                                    {user.nama?.charAt(0).toUpperCase() || 'U'}
+                                                </div>
+                                                <div className="user-info" style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span className="user-name" style={{ fontWeight: '600', color: 'var(--text-dark)' }}>{user.nama || '-'}</span>
+                                                    <span className="user-email" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.email}</span>
+                                                </div>
                                             </div>
-                                            <div className="user-info">
-                                                <span className="user-name">{user.nama || '-'}</span>
-                                                <span className="user-email">{user.email}</span>
+                                        </td>
+                                        <td>
+                                            <span className="username" style={{ fontFamily: 'monospace', color: 'var(--primary-green)' }}>@{user.username || '-'}</span>
+                                        </td>
+                                        <td>
+                                            <div className="roles-cell" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                {(user.roles || [user.role]).map((r, idx) => (
+                                                    <span key={idx} className={`role-badge ${getRoleBadgeColor(r)}`}>
+                                                        {getRoleLabel(r)}
+                                                    </span>
+                                                ))}
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className="username">@{user.username || '-'}</span>
-                                    </td>
-                                    <td>
-                                        <div className="roles-cell">
-                                            {(user.roles || [user.role]).map((r, idx) => (
-                                                <span key={idx} className={`role-badge ${getRoleBadgeColor(r)}`}>
-                                                    {getRoleLabel(r)}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`status-badge ${user.is_active !== false ? 'active' : 'inactive'}`}>
-                                            {user.is_active !== false ? (
-                                                <><CheckCircle size={12} /> Aktif</>
-                                            ) : (
-                                                <><XCircle size={12} /> Nonaktif</>
-                                            )}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className="date-text">
-                                            {user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <MobileActionMenu
-                                            actions={[
-                                                {
-                                                    icon: <Edit size={16} />,
-                                                    label: 'Edit',
-                                                    onClick: () => setEditingUser(user)
-                                                },
-                                                {
-                                                    icon: <Lock size={16} />,
-                                                    label: 'Reset Password',
-                                                    onClick: () => {
+                                        </td>
+                                        <td>
+                                            <span className={`status-badge ${user.is_active !== false ? 'active' : 'inactive'}`} style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                padding: '4px 8px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '500',
+                                                background: user.is_active !== false ? 'var(--success-light)' : 'var(--error-light)',
+                                                color: user.is_active !== false ? 'var(--success)' : 'var(--error)'
+                                            }}>
+                                                {user.is_active !== false ? (
+                                                    <><CheckCircle size={12} /> Aktif</>
+                                                ) : (
+                                                    <><XCircle size={12} /> Nonaktif</>
+                                                )}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="date-text" style={{ fontSize: '0.85rem', color: 'var(--text-body)' }}>
+                                                {user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <MobileActionMenu
+                                                actions={[
+                                                    {
+                                                        icon: <Edit size={16} />,
+                                                        label: 'Edit',
+                                                        onClick: () => setEditingUser(user)
+                                                    },
+                                                    {
+                                                        icon: <Lock size={16} />,
+                                                        label: 'Reset Password',
+                                                        onClick: () => {
+                                                            setPasswordResetUser(user)
+                                                            setResetPasswordOpen(true)
+                                                        }
+                                                    },
+                                                    {
+                                                        icon: <Trash2 size={16} />,
+                                                        label: 'Hapus',
+                                                        danger: true,
+                                                        onClick: () => openDeleteUser(user)
+                                                    }
+                                                ]}
+                                            >
+                                                {/* Desktop buttons */}
+                                                <button
+                                                    className="btn-icon"
+                                                    title="Edit"
+                                                    onClick={() => setEditingUser(user)}
+                                                    style={{ marginRight: '4px' }}
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    className="btn-icon btn-icon-warning"
+                                                    title="Reset Password"
+                                                    onClick={() => {
                                                         setPasswordResetUser(user)
                                                         setResetPasswordOpen(true)
-                                                    }
-                                                },
-                                                {
-                                                    icon: <Trash2 size={16} />,
-                                                    label: 'Hapus',
-                                                    danger: true,
-                                                    onClick: () => openDeleteUser(user)
-                                                }
-                                            ]}
-                                        >
-                                            {/* Desktop buttons */}
-                                            <button
-                                                className="btn-action edit"
-                                                title="Edit"
-                                                onClick={() => setEditingUser(user)}
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button
-                                                className="btn-action warning"
-                                                title="Reset Password"
-                                                onClick={() => {
-                                                    setPasswordResetUser(user)
-                                                    setResetPasswordOpen(true)
-                                                }}
-                                            >
-                                                <Lock size={16} />
-                                            </button>
-                                            <button
-                                                className="btn-action delete"
-                                                title="Hapus"
-                                                onClick={() => openDeleteUser(user)}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </MobileActionMenu>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                                    }}
+                                                    style={{ marginRight: '4px' }}
+                                                >
+                                                    <Lock size={16} />
+                                                </button>
+                                                <button
+                                                    className="btn-icon btn-icon-danger"
+                                                    title="Hapus"
+                                                    onClick={() => openDeleteUser(user)}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </MobileActionMenu>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 

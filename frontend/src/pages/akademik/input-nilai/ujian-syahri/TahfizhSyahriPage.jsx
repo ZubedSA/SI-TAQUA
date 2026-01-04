@@ -300,7 +300,7 @@ const TahfizhSyahriPage = () => {
                         </button>
                     </div>
 
-                    <div style={{ overflowX: 'auto' }}>
+                    <div className="table-wrapper">
                         <table className="table">
                             <thead>
                                 <tr>

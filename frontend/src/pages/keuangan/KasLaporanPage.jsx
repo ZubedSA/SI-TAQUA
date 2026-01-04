@@ -215,40 +215,44 @@ const KasLaporanPage = () => {
                 <div className="data-card"><div className="loading-state">Memuat data...</div></div>
             ) : (
                 <div className="report-grid">
-                    <div className="data-card">
+                    <div className="table-container">
                         <h3 className="card-title green"><ArrowUpCircle size={20} /> Pemasukan ({pemasukan.length})</h3>
-                        <table className="data-table">
-                            <thead>
-                                <tr><th>Tanggal</th><th>Sumber</th><th>Jumlah</th></tr>
-                            </thead>
-                            <tbody>
-                                {pemasukan.slice(0, 10).map(item => (
-                                    <tr key={item.id}>
-                                        <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                        <td>{item.sumber}</td>
-                                        <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr><th>Tanggal</th><th>Sumber</th><th>Jumlah</th></tr>
+                                </thead>
+                                <tbody>
+                                    {pemasukan.slice(0, 10).map(item => (
+                                        <tr key={item.id}>
+                                            <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                            <td>{item.sumber}</td>
+                                            <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <div className="data-card">
+                    <div className="table-container">
                         <h3 className="card-title red"><ArrowDownCircle size={20} /> Pengeluaran ({pengeluaran.length})</h3>
-                        <table className="data-table">
-                            <thead>
-                                <tr><th>Tanggal</th><th>Keperluan</th><th>Jumlah</th></tr>
-                            </thead>
-                            <tbody>
-                                {pengeluaran.slice(0, 10).map(item => (
-                                    <tr key={item.id}>
-                                        <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                        <td>{item.keperluan}</td>
-                                        <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr><th>Tanggal</th><th>Keperluan</th><th>Jumlah</th></tr>
+                                </thead>
+                                <tbody>
+                                    {pengeluaran.slice(0, 10).map(item => (
+                                        <tr key={item.id}>
+                                            <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                            <td>{item.keperluan}</td>
+                                            <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

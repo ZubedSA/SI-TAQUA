@@ -9,7 +9,16 @@ const PencapaianMingguanPage = () => {
     const [data, setData] = useState([])
 
     // AUTO-FILTER: Halaqoh adalah ATRIBUT AKUN, bukan input user
-    const { halaqohIds, halaqohNames, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin } = useUserHalaqoh()
+    const {
+        halaqohIds,
+        halaqohNames,
+        halaqohList,
+        isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin,
+        selectedHalaqohId,
+        setSelectedHalaqohId
+    } = useUserHalaqoh()
 
     const [filters, setFilters] = useState({
         minggu: 1,
@@ -18,7 +27,7 @@ const PencapaianMingguanPage = () => {
     })
 
     const fetchData = async () => {
-        if (!hasHalaqoh) return
+        if (!hasHalaqoh && !isAdmin) return
         setLoading(true)
 
         try {
@@ -28,10 +37,14 @@ const PencapaianMingguanPage = () => {
                 .eq('status', 'Aktif')
                 .order('nama')
 
-            // Auto-filter berdasarkan halaqoh akun
-            if (!isAdmin && halaqohIds.length > 0) {
+            // Filter: Gunakan selectedHalaqohId jika ada
+            if (selectedHalaqohId) {
+                query = query.eq('halaqoh_id', selectedHalaqohId)
+            } else if (!isAdmin && halaqohIds.length > 0) {
+                // Fallback
                 query = query.in('halaqoh_id', halaqohIds)
             } else if (!isAdmin && halaqohIds.length === 0) {
+                // No access
                 setData([])
                 setLoading(false)
                 return
@@ -47,14 +60,14 @@ const PencapaianMingguanPage = () => {
     }
 
     useEffect(() => {
-        if (!loadingHalaqoh && hasHalaqoh) fetchData()
-    }, [halaqohIds, loadingHalaqoh, filters.minggu, filters.bulan])
+        if (!loadingHalaqoh) fetchData()
+    }, [selectedHalaqohId, halaqohIds, loadingHalaqoh, filters.minggu, filters.bulan])
 
     if (loadingHalaqoh) {
         return <div className="loading-state"><RefreshCw className="spin" size={24} /> Memuat data...</div>
     }
 
-    if (!hasHalaqoh) {
+    if (!hasHalaqoh && !isAdmin) {
         return (
             <div className="hafalan-page">
                 <div className="alert alert-warning" style={{ maxWidth: '600px', margin: '40px auto' }}>
@@ -80,14 +93,32 @@ const PencapaianMingguanPage = () => {
             </div>
 
             <div className="filters-bar">
-                {/* HALAQOH INFO - Read-only, no dropdown */}
-                <input
-                    type="text"
-                    value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
-                    disabled
-                    readOnly
-                    style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed', padding: '8px 16px', borderRadius: '6px' }}
-                />
+                {/* HALAQOH FILTER */}
+                {halaqohList.length > 1 || isAdmin ? (
+                    <select
+                        value={selectedHalaqohId}
+                        onChange={(e) => setSelectedHalaqohId(e.target.value)}
+                        style={{ padding: '8px 16px', borderRadius: '6px', minWidth: '200px' }}
+                    >
+                        {/* Default option handled by hook or generic "Semua" for Admin? 
+                             Let's enforce selection for simplicity unless Admin specifically wants "All". 
+                             Hook defaults to first. If logic allows "All" (null ID), we add option here.
+                             Existing fetch logic supports specific ID only if selectedHalaqohId is set. 
+                             Let's stick to simple selection for now. */}
+                        {isAdmin && <option value="">Semua Halaqoh</option>}
+                        {halaqohList.map(h => (
+                            <option key={h.id} value={h.id}>{h.nama}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <input
+                        type="text"
+                        value={halaqohNames || 'Memuat...'}
+                        disabled
+                        readOnly
+                        style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed', padding: '8px 16px', borderRadius: '6px' }}
+                    />
+                )}
 
                 <select
                     value={filters.minggu}
@@ -133,32 +164,34 @@ const PencapaianMingguanPage = () => {
                     </div>
                 ) : (
                     <div className="table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th>Target (Ayat)</th>
-                                    <th>Tercapai</th>
-                                    <th>Persentase</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((s, i) => (
-                                    <tr key={s.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{s.nis}</td>
-                                        <td>{s.nama}</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td><span className="badge badge-pending">Belum Ada Data</span></td>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>NIS</th>
+                                        <th>Nama Santri</th>
+                                        <th>Target (Ayat)</th>
+                                        <th>Tercapai</th>
+                                        <th>Persentase</th>
+                                        <th>Status</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {data.map((s, i) => (
+                                        <tr key={s.id}>
+                                            <td>{i + 1}</td>
+                                            <td>{s.nis}</td>
+                                            <td>{s.nama}</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td><span className="badge badge-pending">Belum Ada Data</span></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

@@ -477,69 +477,71 @@ const OTAPenyaluranPage = () => {
                     </div>
                 </div>
 
-                <div className="ota-table-container">
-                    {filteredData.length > 0 ? (
-                        <table className="ota-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>Santri</th>
-                                    <th className="text-right">Nominal</th>
-                                    <th>Keterangan</th>
-                                    <th className="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td>{idx + 1}</td>
-                                        <td>{formatDate(item.tanggal)}</td>
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{item.santri?.nama || '-'}</div>
-                                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                                                {item.santri?.nis || '-'}
-                                            </div>
-                                        </td>
-                                        <td className="text-right" style={{ color: '#10b981', fontWeight: 600 }}>
-                                            {formatRupiah(item.nominal)}
-                                        </td>
-                                        <td style={{ color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {item.keterangan || '-'}
-                                        </td>
-                                        <td>
-                                            <div className="ota-action-buttons desktop">
-                                                <button className="ota-action-btn edit" onClick={() => openEdit(item)} title="Edit">
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button className="ota-action-btn delete" onClick={() => openDeleteModal(item)} title="Hapus">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                            <MobileActionMenu
-                                                onEdit={() => openEdit(item)}
-                                                onDelete={() => openDeleteModal(item)}
-                                            />
-                                        </td>
+                <div className="table-container">
+                    <div className="table-wrapper">
+                        {filteredData.length > 0 ? (
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Tanggal</th>
+                                        <th>Santri</th>
+                                        <th className="text-right">Nominal</th>
+                                        <th>Keterangan</th>
+                                        <th className="text-center">Aksi</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr style={{ background: '#f8fafc', fontWeight: 600 }}>
-                                    <td colSpan={3}>Total Periode Ini</td>
-                                    <td className="text-right" style={{ color: '#10b981' }}>{formatRupiah(filteredTotal)}</td>
-                                    <td colSpan={2}></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    ) : (
-                        <div className="ota-empty">
-                            <EmptyState
-                                icon={Send}
-                                message="Belum ada data penyaluran"
-                            />
-                        </div>
-                    )}
+                                </thead>
+                                <tbody>
+                                    {filteredData.map((item, idx) => (
+                                        <tr key={item.id}>
+                                            <td>{idx + 1}</td>
+                                            <td>{formatDate(item.tanggal)}</td>
+                                            <td>
+                                                <div style={{ fontWeight: 500 }}>{item.santri?.nama || '-'}</div>
+                                                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                    {item.santri?.nis || '-'}
+                                                </div>
+                                            </td>
+                                            <td className="text-right" style={{ color: '#10b981', fontWeight: 600 }}>
+                                                {formatRupiah(item.nominal)}
+                                            </td>
+                                            <td style={{ color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {item.keterangan || '-'}
+                                            </td>
+                                            <td>
+                                                <div className="ota-action-buttons desktop">
+                                                    <button className="ota-action-btn edit" onClick={() => openEdit(item)} title="Edit">
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button className="ota-action-btn delete" onClick={() => openDeleteModal(item)} title="Hapus">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                                <MobileActionMenu
+                                                    onEdit={() => openEdit(item)}
+                                                    onDelete={() => openDeleteModal(item)}
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr style={{ background: '#f8fafc', fontWeight: 600 }}>
+                                        <td colSpan={3}>Total Periode Ini</td>
+                                        <td className="text-right" style={{ color: '#10b981' }}>{formatRupiah(filteredTotal)}</td>
+                                        <td colSpan={2}></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        ) : (
+                            <div className="ota-empty">
+                                <EmptyState
+                                    icon={Send}
+                                    message="Belum ada data penyaluran"
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

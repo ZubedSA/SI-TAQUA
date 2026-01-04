@@ -405,66 +405,68 @@ const TagihanSantriPage = () => {
                 <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : filteredData.length === 0 ? (
                     <div className="empty-state">Belum ada tagihan</div>
                 ) : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Santri</th>
-                                <th>Kategori</th>
-                                <th>Jumlah</th>
-                                <th>Periode</th>
-                                <th>Status</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredData.map((item, i) => (
-                                <tr key={item.id} className={isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' ? 'row-overdue' : ''}>
-                                    <td>{i + 1}</td>
-                                    <td>
-                                        <div className="cell-santri">
-                                            <strong>{item.santri?.nama}</strong>
-                                            <small>{item.santri?.nis} • {item.santri?.kelas?.nama || '-'}</small>
-                                        </div>
-                                    </td>
-                                    <td><span className="badge blue">{item.kategori?.nama || '-'}</span></td>
-                                    <td className="amount">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                    <td>
-                                        {new Date(item.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                                        {isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' && (
-                                            <span className="overdue-badge">Terlambat</span>
-                                        )}
-                                    </td>
-                                    <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
-                                    <td>
-                                        <MobileActionMenu
-                                            actions={[
-                                                { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => handleSendWhatsApp(item) },
-                                                ...(canUpdate('tagihan') ? [{ icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(item) }] : []),
-                                                ...(canDelete('tagihan') ? [{ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(item), danger: true }] : [])
-                                            ]}
-                                        >
-                                            <button className="btn-icon-sm success" onClick={() => handleSendWhatsApp(item)} title="Kirim WhatsApp">
-                                                <MessageCircle size={16} />
-                                            </button>
-                                            {canUpdate('tagihan') && (
-                                                <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
-                                            )}
-                                            {canDelete('tagihan') && (
-                                                <button className="btn-icon-sm danger" onClick={() => confirmDelete(item)}><Trash2 size={16} /></button>
-                                            )}
-                                        </MobileActionMenu>
-                                    </td>
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Santri</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah</th>
+                                    <th>Periode</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredData.map((item, i) => (
+                                    <tr key={item.id} className={isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' ? 'row-overdue' : ''}>
+                                        <td>{i + 1}</td>
+                                        <td>
+                                            <div className="cell-santri">
+                                                <strong>{item.santri?.nama}</strong>
+                                                <small>{item.santri?.nis} • {item.santri?.kelas?.nama || '-'}</small>
+                                            </div>
+                                        </td>
+                                        <td><span className="badge blue">{item.kategori?.nama || '-'}</span></td>
+                                        <td className="amount">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
+                                        <td>
+                                            {new Date(item.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+                                            {isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' && (
+                                                <span className="overdue-badge">Terlambat</span>
+                                            )}
+                                        </td>
+                                        <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
+                                        <td>
+                                            <MobileActionMenu
+                                                actions={[
+                                                    { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => handleSendWhatsApp(item) },
+                                                    ...(canUpdate('tagihan') ? [{ icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(item) }] : []),
+                                                    ...(canDelete('tagihan') ? [{ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(item), danger: true }] : [])
+                                                ]}
+                                            >
+                                                <button className="btn-icon-sm success" onClick={() => handleSendWhatsApp(item)} title="Kirim WhatsApp">
+                                                    <MessageCircle size={16} />
+                                                </button>
+                                                {canUpdate('tagihan') && (
+                                                    <button className="btn-icon-sm" onClick={() => openEdit(item)}><Edit2 size={16} /></button>
+                                                )}
+                                                {canDelete('tagihan') && (
+                                                    <button className="btn-icon-sm danger" onClick={() => confirmDelete(item)}><Trash2 size={16} /></button>
+                                                )}
+                                            </MobileActionMenu>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 

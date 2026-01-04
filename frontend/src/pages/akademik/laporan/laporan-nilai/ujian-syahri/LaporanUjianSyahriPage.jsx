@@ -359,53 +359,55 @@ const LaporanUjianSyahriPage = () => {
                         <p>Pilih semester dan halaqoh untuk melihat laporan</p>
                     </div>
                 ) : (
-                    <div className="table-container" style={{ overflowX: 'auto' }}>
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Hafalan</th>
-                                    <th style={{ textAlign: 'center' }}>Tajwid</th>
-                                    <th style={{ textAlign: 'center' }}>Tilawah</th>
-                                    <th style={{ textAlign: 'center' }}>Rata-rata</th>
-                                    <th style={{ textAlign: 'center' }}>Predikat</th>
-                                    <th style={{ textAlign: 'center' }}>Pencapaian Terakhir</th>
-                                    <th style={{ textAlign: 'center' }}>Jml Juz</th>
-                                    <th style={{ textAlign: 'center' }}>Jml Hal</th>
-                                    <th style={{ textAlign: 'center' }}>Mukhtabir</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((s, i) => (
-                                    <tr key={s.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{s.nis}</td>
-                                        <td>{s.nama}</td>
-                                        <td style={{ textAlign: 'center' }}>{s.hafalan}</td>
-                                        <td style={{ textAlign: 'center' }}>{s.tajwid}</td>
-                                        <td style={{ textAlign: 'center' }}>{s.tilawah}</td>
-                                        <td style={{ textAlign: 'center', fontWeight: '600' }}>{s.rata_rata}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <span className={`badge ${getPredikatBadgeClass(s.predikat)}`}>{s.predikat}</span>
-                                        </td>
-                                        <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>
-                                            {s.pencapaian_juz !== '-' ? (
-                                                <span>Juz {s.pencapaian_juz}<br /><small style={{ color: '#64748b' }}>{s.pencapaian_surah}</small></span>
-                                            ) : '-'}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-'}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-'}
-                                        </td>
-                                        <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>{s.penguji}</td>
+                    <div className="table-container">
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>NIS</th>
+                                        <th>Nama Santri</th>
+                                        <th style={{ textAlign: 'center' }}>Hafalan</th>
+                                        <th style={{ textAlign: 'center' }}>Tajwid</th>
+                                        <th style={{ textAlign: 'center' }}>Tilawah</th>
+                                        <th style={{ textAlign: 'center' }}>Rata-rata</th>
+                                        <th style={{ textAlign: 'center' }}>Predikat</th>
+                                        <th style={{ textAlign: 'center' }}>Pencapaian Terakhir</th>
+                                        <th style={{ textAlign: 'center' }}>Jml Juz</th>
+                                        <th style={{ textAlign: 'center' }}>Jml Hal</th>
+                                        <th style={{ textAlign: 'center' }}>Mukhtabir</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {data.map((s, i) => (
+                                        <tr key={s.id}>
+                                            <td>{i + 1}</td>
+                                            <td>{s.nis}</td>
+                                            <td className="name-cell">{s.nama}</td>
+                                            <td style={{ textAlign: 'center' }}>{s.hafalan}</td>
+                                            <td style={{ textAlign: 'center' }}>{s.tajwid}</td>
+                                            <td style={{ textAlign: 'center' }}>{s.tilawah}</td>
+                                            <td style={{ textAlign: 'center', fontWeight: '600' }}>{s.rata_rata}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <span className={`badge ${getPredikatBadgeClass(s.predikat)}`}>{s.predikat}</span>
+                                            </td>
+                                            <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>
+                                                {s.pencapaian_juz !== '-' ? (
+                                                    <span>Juz {s.pencapaian_juz}<br /><small style={{ color: '#64748b' }}>{s.pencapaian_surah}</small></span>
+                                                ) : '-'}
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                {s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-'}
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                {s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-'}
+                                            </td>
+                                            <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>{s.penguji}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

@@ -90,7 +90,7 @@ const SuspiciousAccountsPage = () => {
                 </button>
             </div>
 
-            <div className="suspicious-table-container">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">
                         <div className="spinner"></div>
@@ -103,71 +103,73 @@ const SuspiciousAccountsPage = () => {
                         <p>Tidak ada akun yang terdeteksi mencurigakan saat ini.</p>
                     </div>
                 ) : (
-                    <table className="suspicious-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Risk Score</th>
-                                <th>Status</th>
-                                <th>Alasan Deteksi</th>
-                                <th>Terakhir Aktif</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredAccounts.map(account => (
-                                <tr key={account.id}>
-                                    <td>
-                                        <div className="user-info-cell">
-                                            <span className="user-email">
-                                                {account.user_profiles?.email || 'Email Unknown'}
-                                            </span>
-                                            <span className="user-id">{account.user_profiles?.nama || 'No Name'}</span>
-                                            <span className="user-role-badge">{account.user_profiles?.role}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span className={`risk-badge ${account.risk_score >= 50 ? 'risk-high' :
-                                                account.risk_score >= 20 ? 'risk-medium' : 'risk-low'
-                                            }`}>
-                                            {account.risk_score}%
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className="status-text">{account.status}</span>
-                                    </td>
-                                    <td>
-                                        <div className="reasons-list">
-                                            {account.reasons?.map((r, idx) => (
-                                                <span key={idx} className="reason-item">{r}</span>
-                                            ))}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {new Date(account.last_activity).toLocaleString('id-ID')}
-                                    </td>
-                                    <td>
-                                        <div className="action-buttons">
-                                            <button
-                                                className="btn-icon"
-                                                title="Reset Status (Mark as Safe)"
-                                                onClick={() => handleResetStatus(account.id)}
-                                            >
-                                                <CheckCircle size={18} className="text-green-600" />
-                                            </button>
-                                            <button
-                                                className="btn-icon danger"
-                                                title="Suspend Account (Not Impl)"
-                                                onClick={() => alert('Fitur Suspend manual akan segera hadir.')}
-                                            >
-                                                <Slash size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Risk Score</th>
+                                    <th>Status</th>
+                                    <th>Alasan Deteksi</th>
+                                    <th>Terakhir Aktif</th>
+                                    <th>Aksi</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {filteredAccounts.map(account => (
+                                    <tr key={account.id}>
+                                        <td>
+                                            <div className="user-info-cell">
+                                                <span className="user-email">
+                                                    {account.user_profiles?.email || 'Email Unknown'}
+                                                </span>
+                                                <span className="user-id">{account.user_profiles?.nama || 'No Name'}</span>
+                                                <span className="user-role-badge">{account.user_profiles?.role}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className={`risk-badge ${account.risk_score >= 50 ? 'risk-high' :
+                                                account.risk_score >= 20 ? 'risk-medium' : 'risk-low'
+                                                }`}>
+                                                {account.risk_score}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="status-text">{account.status}</span>
+                                        </td>
+                                        <td>
+                                            <div className="reasons-list">
+                                                {account.reasons?.map((r, idx) => (
+                                                    <span key={idx} className="reason-item">{r}</span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {new Date(account.last_activity).toLocaleString('id-ID')}
+                                        </td>
+                                        <td>
+                                            <div className="action-buttons">
+                                                <button
+                                                    className="btn-icon"
+                                                    title="Reset Status (Mark as Safe)"
+                                                    onClick={() => handleResetStatus(account.id)}
+                                                >
+                                                    <CheckCircle size={18} className="text-green-600" />
+                                                </button>
+                                                <button
+                                                    className="btn-icon danger"
+                                                    title="Suspend Account (Not Impl)"
+                                                    onClick={() => alert('Fitur Suspend manual akan segera hadir.')}
+                                                >
+                                                    <Slash size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>

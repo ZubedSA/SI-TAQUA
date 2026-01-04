@@ -322,7 +322,7 @@ const WaliSantriPage = () => {
                             </div>
 
                             <div className="table-wrapper">
-                                <table className="wali-data-table">
+                                <table className="table">
                                     <thead>
                                         <tr>
                                             <th>No</th>
@@ -403,7 +403,7 @@ const WaliSantriPage = () => {
                             </div>
 
                             <div className="table-wrapper">
-                                <table className="wali-data-table">
+                                <table className="table">
                                     <thead>
                                         <tr>
                                             <th>No</th>
@@ -493,7 +493,7 @@ const WaliSantriPage = () => {
                             </div>
 
                             <div className="table-wrapper">
-                                <table className="wali-data-table">
+                                <table className="table">
                                     <thead>
                                         <tr>
                                             <th>No</th>
@@ -583,7 +583,7 @@ const WaliSantriPage = () => {
                             {/* Nilai */}
                             <h4 style={{ marginBottom: '12px', color: 'var(--text-dark)' }}>📚 Nilai Akademik</h4>
                             <div className="table-wrapper mb-4">
-                                <table className="wali-data-table">
+                                <table className="table">
                                     <thead>
                                         <tr>
                                             <th>No</th>

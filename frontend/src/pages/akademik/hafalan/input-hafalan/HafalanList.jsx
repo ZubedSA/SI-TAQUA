@@ -23,10 +23,13 @@ const HafalanList = () => {
     const {
         halaqohIds,
         halaqohNames,
+        halaqohList,
         musyrifInfo,
         isLoading: loadingHalaqoh,
         hasHalaqoh,
-        isAdmin
+        isAdmin,
+        selectedHalaqohId,
+        setSelectedHalaqohId
     } = useUserHalaqoh()
 
     const [hafalan, setHafalan] = useState([])
@@ -42,7 +45,7 @@ const HafalanList = () => {
     const [dateFilter, setDateFilter] = useState({ dari: '', sampai: '' })
 
     // Rekap filters
-    const [halaqohList, setHalaqohList] = useState([])
+    // halaqohList is now from hook
     const [rekapFilters, setRekapFilters] = useState({
         tanggalMulai: '',
         tanggalSelesai: '',
@@ -100,7 +103,7 @@ const HafalanList = () => {
 
     useEffect(() => {
         fetchHafalan()
-        fetchHalaqoh()
+        // fetchHalaqoh() // Handled by hook
         fetchSemester()
         fetchSantriList()
     }, [])
@@ -150,7 +153,7 @@ const HafalanList = () => {
                 .from('kelas')
                 .select('id, nama')
 
-            // Fetch halaqoh with musyrif
+            // Fetch halaqoh with musyrif (handled by hook for main filter, but we need raw map for santri details)
             const { data: halaqohData } = await supabase
                 .from('halaqoh')
                 .select('id, nama, musyrif_id')
@@ -280,15 +283,6 @@ const HafalanList = () => {
         }
     }
 
-    const fetchHalaqoh = async () => {
-        try {
-            const { data } = await supabase.from('halaqoh').select('id, nama').order('nama')
-            setHalaqohList(data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
-        }
-    }
-
     const fetchHafalan = async () => {
         setLoading(true)
         try {
@@ -364,9 +358,13 @@ const HafalanList = () => {
             matchDate = matchDate && h.tanggal <= dateFilter.sampai
         }
 
-        // Halaqoh filter - AUTO-FILTER berdasarkan akun (bukan manual dropdown)
+        // Halaqoh filter - Updated for RBAC Dropdown
         let matchHalaqoh = true
-        if (!isAdmin && halaqohIds.length > 0) {
+        if (selectedHalaqohId) {
+            matchHalaqoh = h.halaqoh_id === selectedHalaqohId
+            // Check deep relation fallback if halaqoh_id is null on root but exists in santri object? 
+            // usage of h.halaqoh_id comes from fetchHafalan mapping: halaqoh_id: h.santri?.halaqoh?.id
+        } else if (!isAdmin && halaqohIds.length > 0) {
             matchHalaqoh = halaqohIds.includes(h.halaqoh_id)
         }
 

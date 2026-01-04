@@ -4,10 +4,55 @@
 
 /* Page Container */
 .keuangan-page {
-    padding: 28px;
-    max-width: 1400px;
+    /* Padding removed to avoid double padding with .content */
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
 }
+
+/* Force Full Width for Tables - Desktop (Counteract .content padding: 32px) */
+.keuangan-page .table-container {
+    margin-left: -32px;
+    margin-right: -32px;
+    width: calc(100% + 64px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+}
+
+@media screen and (max-width: 992px) {
+
+    /* Tablet (Counteract .content padding: 20px) */
+    .keuangan-page .table-container {
+        margin-left: -20px;
+        margin-right: -20px;
+        width: calc(100% + 40px);
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .keuangan-page {
+        /* Padding removed */
+        padding: 0;
+    }
+
+    /* Full bleed for tables on mobile */
+    .keuangan-page .table-container,
+    .keuangan-page .data-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .keuangan-page .table-wrapper {
+        padding: 0;
+    }
+}
+
 
 /* Page Header */
 .keuangan-page .page-header {

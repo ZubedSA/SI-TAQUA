@@ -191,14 +191,14 @@ const KategoriPembayaranPage = () => {
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : filteredData.length === 0 ? (
                     <div className="empty-state">Belum ada kategori</div>
                 ) : (
-                    <div className="table-responsive">
-                        <table className="data-table">
+                    <div className="table-wrapper">
+                        <table className="table">
                             <thead>
                                 <tr>
                                     <th>No</th>
@@ -265,81 +265,83 @@ const KategoriPembayaranPage = () => {
                 )}
             </div>
 
-            {showModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3>{editItem ? 'Edit Kategori' : 'Tambah Kategori'}</h3>
-                            <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+            {
+                showModal && (
+                    <div className="modal-overlay active">
+                        <div className="modal">
+                            <div className="modal-header">
+                                <h3>{editItem ? 'Edit Kategori' : 'Tambah Kategori'}</h3>
+                                <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+                            </div>
+                            <form onSubmit={handleFormSubmit}>
+                                <div className="modal-body">
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Nama *</label>
+                                            <input
+                                                type="text"
+                                                value={form.nama}
+                                                onChange={e => setForm({ ...form, nama: e.target.value })}
+                                                placeholder="Contoh: SPP Bulanan"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Tipe Kategori *</label>
+                                            <select
+                                                value={form.tipe}
+                                                onChange={e => setForm({ ...form, tipe: e.target.value })}
+                                                required
+                                            >
+                                                {tipeOptions.map(t => (
+                                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Keterangan</label>
+                                        <textarea
+                                            value={form.keterangan}
+                                            onChange={e => setForm({ ...form, keterangan: e.target.value })}
+                                            placeholder="Deskripsi kategori..."
+                                            rows={2}
+                                        />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Nominal Default (Rp)</label>
+                                            <input
+                                                type="number"
+                                                value={form.nominal_default}
+                                                onChange={e => setForm({ ...form, nominal_default: e.target.value })}
+                                                placeholder="0"
+                                                min="0"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Status</label>
+                                            <select
+                                                value={form.is_active}
+                                                onChange={e => setForm({ ...form, is_active: e.target.value === 'true' })}
+                                            >
+                                                <option value="true">Aktif</option>
+                                                <option value="false">Nonaktif</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
+                                    <button type="submit" className="btn btn-primary" disabled={saving}>
+                                        {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleFormSubmit}>
-                            <div className="modal-body">
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Nama *</label>
-                                        <input
-                                            type="text"
-                                            value={form.nama}
-                                            onChange={e => setForm({ ...form, nama: e.target.value })}
-                                            placeholder="Contoh: SPP Bulanan"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Tipe Kategori *</label>
-                                        <select
-                                            value={form.tipe}
-                                            onChange={e => setForm({ ...form, tipe: e.target.value })}
-                                            required
-                                        >
-                                            {tipeOptions.map(t => (
-                                                <option key={t.value} value={t.value}>{t.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Keterangan</label>
-                                    <textarea
-                                        value={form.keterangan}
-                                        onChange={e => setForm({ ...form, keterangan: e.target.value })}
-                                        placeholder="Deskripsi kategori..."
-                                        rows={2}
-                                    />
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Nominal Default (Rp)</label>
-                                        <input
-                                            type="number"
-                                            value={form.nominal_default}
-                                            onChange={e => setForm({ ...form, nominal_default: e.target.value })}
-                                            placeholder="0"
-                                            min="0"
-                                        />
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Status</label>
-                                        <select
-                                            value={form.is_active}
-                                            onChange={e => setForm({ ...form, is_active: e.target.value === 'true' })}
-                                        >
-                                            <option value="true">Aktif</option>
-                                            <option value="false">Nonaktif</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>
-                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
-                                </button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <DeleteConfirmationModal
                 isOpen={deleteModal.isOpen}
@@ -359,7 +361,7 @@ const KategoriPembayaranPage = () => {
                 variant="success"
                 isLoading={saving}
             />
-        </div>
+        </div >
     )
 }
 

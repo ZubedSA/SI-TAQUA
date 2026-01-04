@@ -142,6 +142,22 @@ body {
   cursor: default;
 }
 
+/* Global Responsive Table Styles (Full Bleed on Mobile) */
+@media screen and (max-width: 768px) {
+  .table-container {
+    margin-left: -16px;
+    margin-right: -16px;
+    border-radius: 0 !important;
+    border-left: none;
+    border-right: none;
+    width: calc(100% + 32px);
+  }
+
+  .table-wrapper {
+    border-radius: 0;
+  }
+}
+
 a {
   text-decoration: none;
   color: inherit;
@@ -959,32 +975,49 @@ select option:hover {
 /* ================================
    Table Styles
    ================================ */
+/* ================================
+   Table Styles - Premium Full Width
+   ================================ */
 .table-container {
   background: var(--bg-white);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
+  width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Smooth scrolling on iOS */
 }
 
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 28px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--border-color);
-  background: var(--bg-light);
+  background: var(--bg-white);
 }
 
 .table-title {
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-dark);
 }
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  /* Allows border-radius on rows if needed */
+  border-spacing: 0;
+  min-width: 800px;
+  /* Forces horizontal scroll on smaller screens */
 }
 
 .table th {
@@ -994,24 +1027,53 @@ select option:hover {
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  background: var(--bg-light);
-  border-bottom: 2px solid var(--border-color);
+  letter-spacing: 0.05em;
+  background: #f8fafc;
+  /* Lighter gray for header */
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+/* Sticky Header - Optional but premium feature */
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .table td {
-  padding: 18px 24px;
+  padding: 16px 24px;
   font-size: 0.9rem;
   color: var(--text-body);
   border-bottom: 1px solid var(--border-light);
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  transition: all var(--transition-fast);
+}
+
+.table tbody tr:hover {
+  background-color: #f8fafc;
+  /* Subtle hover effect */
 }
 
 .table tr:last-child td {
   border-bottom: none;
 }
 
-.table tr:hover td {
-  background: linear-gradient(90deg, rgba(26, 92, 56, 0.02) 0%, transparent 100%);
+/* Name cell styling for extra emphasis */
+.table td.name-cell {
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+/* Secondary text inside cells */
+.table td .sub-text {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 /* ================================

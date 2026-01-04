@@ -108,9 +108,9 @@ const AuditLogPage = () => {
                 </select>
             </div>
 
-            <div className="admin-table-container">
-                <div className="admin-table-wrapper">
-                    <table className="admin-table">
+            <div className="table-container">
+                <div className="table-wrapper">
+                    <table className="table">
                         <thead>
                             <tr>
                                 <th>Waktu</th>

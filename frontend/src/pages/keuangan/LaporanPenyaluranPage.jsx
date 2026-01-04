@@ -146,56 +146,58 @@ const LaporanPenyaluranPage = () => {
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : anggaran.length === 0 ? (
                     <div className="empty-state">Belum ada data anggaran</div>
                 ) : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Program</th>
-                                <th>Diajukan</th>
-                                <th>Disetujui</th>
-                                <th>Terealisasi</th>
-                                <th>Sisa</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {anggaran.map((item, i) => {
-                                const realisasiProgram = realisasi
-                                    .filter(r => r.anggaran_id === item.id)
-                                    .reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0)
-                                const sisa = (Number(item.jumlah_disetujui) || 0) - realisasiProgram
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Program</th>
+                                    <th>Diajukan</th>
+                                    <th>Disetujui</th>
+                                    <th>Terealisasi</th>
+                                    <th>Sisa</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {anggaran.map((item, i) => {
+                                    const realisasiProgram = realisasi
+                                        .filter(r => r.anggaran_id === item.id)
+                                        .reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0)
+                                    const sisa = (Number(item.jumlah_disetujui) || 0) - realisasiProgram
 
-                                return (
-                                    <tr key={item.id}>
-                                        <td>{i + 1}</td>
-                                        <td>
-                                            <div className="cell-santri">
-                                                <strong>{item.nama_program}</strong>
-                                                <small>{item.deskripsi?.substring(0, 40) || '-'}</small>
-                                            </div>
-                                        </td>
-                                        <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
-                                        <td className="amount blue">
-                                            {item.jumlah_disetujui ? `Rp ${Number(item.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
-                                        </td>
-                                        <td className="amount green">Rp {realisasiProgram.toLocaleString('id-ID')}</td>
-                                        <td className={`amount ${sisa >= 0 ? '' : 'red'}`}>Rp {sisa.toLocaleString('id-ID')}</td>
-                                        <td>
-                                            <span className={`status-badge ${item.status === 'Disetujui' ? 'disetujui' : item.status === 'Ditolak' ? 'ditolak' : 'pending'}`}>
-                                                {item.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
+                                    return (
+                                        <tr key={item.id}>
+                                            <td>{i + 1}</td>
+                                            <td>
+                                                <div className="cell-santri">
+                                                    <strong>{item.nama_program}</strong>
+                                                    <small>{item.deskripsi?.substring(0, 40) || '-'}</small>
+                                                </div>
+                                            </td>
+                                            <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
+                                            <td className="amount blue">
+                                                {item.jumlah_disetujui ? `Rp ${Number(item.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
+                                            </td>
+                                            <td className="amount green">Rp {realisasiProgram.toLocaleString('id-ID')}</td>
+                                            <td className={`amount ${sisa >= 0 ? '' : 'red'}`}>Rp {sisa.toLocaleString('id-ID')}</td>
+                                            <td>
+                                                <span className={`status-badge ${item.status === 'Disetujui' ? 'disetujui' : item.status === 'Ditolak' ? 'ditolak' : 'pending'}`}>
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>

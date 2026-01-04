@@ -3,8 +3,9 @@
    ===================================================== */
 
 .pengumuman-page {
-    padding: 1.5rem;
-    max-width: 1400px;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
 }
 
@@ -231,6 +232,7 @@
     line-height: 1.5;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

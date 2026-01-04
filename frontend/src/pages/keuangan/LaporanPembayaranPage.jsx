@@ -197,41 +197,43 @@ const LaporanPembayaranPage = () => {
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : pembayaran.length === 0 ? (
                     <div className="empty-state">Belum ada pembayaran</div>
                 ) : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Tanggal</th>
-                                <th>Santri</th>
-                                <th>Kategori</th>
-                                <th>Jumlah</th>
-                                <th>Metode</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pembayaran.map((item, i) => (
-                                <tr key={item.id}>
-                                    <td>{i + 1}</td>
-                                    <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                    <td>
-                                        <div className="cell-santri">
-                                            <strong>{item.santri?.nama}</strong>
-                                            <small>{item.santri?.nis}</small>
-                                        </div>
-                                    </td>
-                                    <td><span className="badge green">{item.tagihan?.kategori?.nama || '-'}</span></td>
-                                    <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                    <td>{item.metode}</td>
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>Santri</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah</th>
+                                    <th>Metode</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {pembayaran.map((item, i) => (
+                                    <tr key={item.id}>
+                                        <td>{i + 1}</td>
+                                        <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                        <td>
+                                            <div className="cell-santri">
+                                                <strong>{item.santri?.nama}</strong>
+                                                <small>{item.santri?.nis}</small>
+                                            </div>
+                                        </td>
+                                        <td><span className="badge green">{item.tagihan?.kategori?.nama || '-'}</span></td>
+                                        <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
+                                        <td>{item.metode}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
         </div>

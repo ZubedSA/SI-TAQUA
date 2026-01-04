@@ -273,111 +273,113 @@ const AnggaranPage = () => {
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : filteredData.length === 0 ? (
                     <div className="empty-state">Belum ada pengajuan anggaran</div>
                 ) : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Program</th>
-                                <th>Jumlah Diajukan</th>
-                                <th>Disetujui</th>
-                                <th>Tanggal</th>
-                                <th>Status</th>
-                                {canEditKas && <th>Aksi</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredData.map((item, i) => (
-                                <tr key={item.id}>
-                                    <td>{i + 1}</td>
-                                    <td>
-                                        <div className="cell-santri">
-                                            <strong>{item.nama_program}</strong>
-                                            <small>{item.deskripsi?.substring(0, 50) || '-'}</small>
-                                        </div>
-                                    </td>
-                                    <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
-                                    <td className="amount green">
-                                        {item.jumlah_disetujui ? `Rp ${Number(item.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
-                                    </td>
-                                    <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
-                                    <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
-                                    {canEditKas && (
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Program</th>
+                                    <th>Jumlah Diajukan</th>
+                                    <th>Disetujui</th>
+                                    <th>Tanggal</th>
+                                    <th>Status</th>
+                                    {canEditKas && <th>Aksi</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredData.map((item, i) => (
+                                    <tr key={item.id}>
+                                        <td>{i + 1}</td>
                                         <td>
-                                            <div className="action-buttons" style={{ display: 'flex', gap: '4px' }}>
-                                                <MobileActionMenu
-                                                    actions={[
-                                                        { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                        { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true },
-                                                        { label: 'Detail', icon: <Eye size={14} />, onClick: () => { } }
-                                                    ]}
-                                                >
-                                                    <button
-                                                        onClick={() => openEdit(item)}
-                                                        title="Edit"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fef3c7',
-                                                            color: '#d97706',
-                                                            border: 'none',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => confirmDelete(item)}
-                                                        title="Hapus"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fee2e2',
-                                                            color: '#dc2626',
-                                                            border: 'none',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        title="Detail"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#dbeafe',
-                                                            color: '#2563eb',
-                                                            border: 'none',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <Eye size={16} />
-                                                    </button>
-                                                </MobileActionMenu>
+                                            <div className="cell-santri">
+                                                <strong>{item.nama_program}</strong>
+                                                <small>{item.deskripsi?.substring(0, 50) || '-'}</small>
                                             </div>
                                         </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
+                                        <td className="amount green">
+                                            {item.jumlah_disetujui ? `Rp ${Number(item.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
+                                        </td>
+                                        <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
+                                        <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
+                                        {canEditKas && (
+                                            <td>
+                                                <div className="action-buttons" style={{ display: 'flex', gap: '4px' }}>
+                                                    <MobileActionMenu
+                                                        actions={[
+                                                            { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
+                                                            { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true },
+                                                            { label: 'Detail', icon: <Eye size={14} />, onClick: () => { } }
+                                                        ]}
+                                                    >
+                                                        <button
+                                                            onClick={() => openEdit(item)}
+                                                            title="Edit"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '6px',
+                                                                background: '#fef3c7',
+                                                                color: '#d97706',
+                                                                border: 'none',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => confirmDelete(item)}
+                                                            title="Hapus"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '6px',
+                                                                background: '#fee2e2',
+                                                                color: '#dc2626',
+                                                                border: 'none',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            title="Detail"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '6px',
+                                                                background: '#dbeafe',
+                                                                color: '#2563eb',
+                                                                border: 'none',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <Eye size={16} />
+                                                        </button>
+                                                    </MobileActionMenu>
+                                                </div>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 

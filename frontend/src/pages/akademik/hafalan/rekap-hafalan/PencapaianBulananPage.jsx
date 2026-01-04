@@ -121,32 +121,34 @@ const PencapaianBulananPage = () => {
                     </div>
                 ) : (
                     <div className="table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th>Target Bulanan</th>
-                                    <th>Tercapai</th>
-                                    <th>Persentase</th>
-                                    <th>Trend</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((s, i) => (
-                                    <tr key={s.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{s.nis}</td>
-                                        <td>{s.nama}</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>-</td>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>NIS</th>
+                                        <th>Nama Santri</th>
+                                        <th>Target Bulanan</th>
+                                        <th>Tercapai</th>
+                                        <th>Persentase</th>
+                                        <th>Trend</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {data.map((s, i) => (
+                                        <tr key={s.id}>
+                                            <td>{i + 1}</td>
+                                            <td>{s.nis}</td>
+                                            <td>{s.nama}</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                            <td>-</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>

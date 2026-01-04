@@ -10,6 +10,37 @@
     border: 1px solid var(--border-color);
 }
 
+/* Force Full Width for Tables */
+.nilai-page .table-container,
+.rekap-nilai-page .table-container {
+    margin-left: -32px;
+    margin-right: -32px;
+    width: calc(100% + 64px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+}
+
+@media screen and (max-width: 992px) {
+
+    .nilai-page .table-container,
+    .rekap-nilai-page .table-container {
+        margin-left: -20px;
+        margin-right: -20px;
+        width: calc(100% + 40px);
+    }
+}
+
+@media screen and (max-width: 768px) {
+
+    .nilai-page .table-container,
+    .rekap-nilai-page .table-container {
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
+    }
+}
+
 .nilai-input {
     width: 80px;
     padding: 8px 12px;

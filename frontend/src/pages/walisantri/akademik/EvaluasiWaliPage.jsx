@@ -198,8 +198,8 @@ const EvaluasiWaliPage = () => {
                         </h3>
 
                         {nilaiData.length > 0 ? (
-                            <div className="wali-table-container">
-                                <table className="wali-table">
+                            <div className="table-wrapper">
+                                <table className="table">
                                     <thead>
                                         <tr>
                                             <th>Mata Pelajaran</th>

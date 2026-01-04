@@ -354,28 +354,30 @@ const KelasPage = () => {
                                     {canEdit && <button className="btn btn-sm btn-primary mt-2" onClick={() => openAddSantriModal(selectedKelas)}>Tambah Santri</button>}
                                 </div>
                             ) : (
-                                <table className="table">
-                                    <thead>
-                                        <tr><th>NIS</th><th>Nama</th><th>L/P</th><th>Status</th>{canEdit && <th>Aksi</th>}</tr>
-                                    </thead>
-                                    <tbody>
-                                        {santriList.map(s => (
-                                            <tr key={s.id}>
-                                                <td>{s.nis || '-'}</td>
-                                                <td>{s.nama}</td>
-                                                <td>{s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</td>
-                                                <td><span className={`badge ${s.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{s.status}</span></td>
-                                                {canEdit && (
-                                                    <td>
-                                                        <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari kelas" onClick={() => confirmRemoveSantri(s.id)}>
-                                                            <X size={14} />
-                                                        </button>
-                                                    </td>
-                                                )}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <div className="table-wrapper">
+                                    <table className="table">
+                                        <thead>
+                                            <tr><th>NIS</th><th>Nama</th><th>L/P</th><th>Status</th>{canEdit && <th>Aksi</th>}</tr>
+                                        </thead>
+                                        <tbody>
+                                            {santriList.map(s => (
+                                                <tr key={s.id}>
+                                                    <td>{s.nis || '-'}</td>
+                                                    <td>{s.nama}</td>
+                                                    <td>{s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</td>
+                                                    <td><span className={`badge ${s.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{s.status}</span></td>
+                                                    {canEdit && (
+                                                        <td>
+                                                            <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari kelas" onClick={() => confirmRemoveSantri(s.id)}>
+                                                                <X size={14} />
+                                                            </button>
+                                                        </td>
+                                                    )}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </div>
                         <div className="modal-footer">
@@ -412,36 +414,38 @@ const KelasPage = () => {
                             )}
 
                             <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                <table className="table">
-                                    <thead>
-                                        <tr><th style={{ width: '40px' }}></th><th>NIS</th><th>Nama</th><th>Kelas Saat Ini</th></tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredAvailableSantri.length === 0 ? (
-                                            <tr><td colSpan="4" className="text-center text-muted">Tidak ada santri ditemukan</td></tr>
-                                        ) : (
-                                            filteredAvailableSantri.map(s => {
-                                                const currentKelas = kelasList.find(k => k.id === s.kelas_id)
-                                                const isSelected = selectedSantriIds.includes(s.id)
-                                                return (
-                                                    <tr key={s.id} onClick={() => toggleSantriSelection(s.id)} style={{ cursor: 'pointer', backgroundColor: isSelected ? 'rgba(46, 204, 113, 0.1)' : 'transparent' }}>
-                                                        <td>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isSelected}
-                                                                onChange={() => { }}
-                                                                style={{ cursor: 'pointer' }}
-                                                            />
-                                                        </td>
-                                                        <td>{s.nis || '-'}</td>
-                                                        <td>{s.nama}</td>
-                                                        <td>{currentKelas?.nama || <span className="text-muted">Belum ada</span>}</td>
-                                                    </tr>
-                                                )
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
+                                <div className="table-wrapper">
+                                    <table className="table">
+                                        <thead>
+                                            <tr><th style={{ width: '40px' }}></th><th>NIS</th><th>Nama</th><th>Kelas Saat Ini</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredAvailableSantri.length === 0 ? (
+                                                <tr><td colSpan="4" className="text-center text-muted">Tidak ada santri ditemukan</td></tr>
+                                            ) : (
+                                                filteredAvailableSantri.map(s => {
+                                                    const currentKelas = kelasList.find(k => k.id === s.kelas_id)
+                                                    const isSelected = selectedSantriIds.includes(s.id)
+                                                    return (
+                                                        <tr key={s.id} onClick={() => toggleSantriSelection(s.id)} style={{ cursor: 'pointer', backgroundColor: isSelected ? 'rgba(46, 204, 113, 0.1)' : 'transparent' }}>
+                                                            <td>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => { }}
+                                                                    style={{ cursor: 'pointer' }}
+                                                                />
+                                                            </td>
+                                                            <td>{s.nis || '-'}</td>
+                                                            <td>{s.nama}</td>
+                                                            <td>{currentKelas?.nama || <span className="text-muted">Belum ada</span>}</td>
+                                                        </tr>
+                                                    )
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                         <div className="modal-footer">

@@ -230,53 +230,55 @@ const MadrosHarianPage = () => {
                         </button>
                     </div>
 
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>NIS</th>
-                                <th>Nama Santri</th>
-                                <th style={{ textAlign: 'center' }}>Nilai</th>
-                                <th>Keterangan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr><td colSpan="5" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                            ) : santri.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center">Tidak ada santri di kelas ini</td></tr>
-                            ) : (
-                                santri.map((s, i) => (
-                                    <tr key={s.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{s.nis}</td>
-                                        <td className="name-cell">{s.nama}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input
-                                                type="number"
-                                                className="nilai-input"
-                                                min="0"
-                                                max="100"
-                                                placeholder="0-100"
-                                                value={nilai[s.id]?.nilai ?? ''}
-                                                onChange={e => handleNilaiChange(s.id, 'nilai', e.target.value)}
-                                            />
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Keterangan..."
-                                                value={nilai[s.id]?.catatan ?? ''}
-                                                onChange={e => handleNilaiChange(s.id, 'catatan', e.target.value)}
-                                                style={{ minWidth: '150px' }}
-                                            />
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>NIS</th>
+                                    <th>Nama Santri</th>
+                                    <th style={{ textAlign: 'center' }}>Nilai</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr><td colSpan="5" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                ) : santri.length === 0 ? (
+                                    <tr><td colSpan="5" className="text-center">Tidak ada santri di kelas ini</td></tr>
+                                ) : (
+                                    santri.map((s, i) => (
+                                        <tr key={s.id}>
+                                            <td>{i + 1}</td>
+                                            <td>{s.nis}</td>
+                                            <td className="name-cell">{s.nama}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <input
+                                                    type="number"
+                                                    className="nilai-input"
+                                                    min="0"
+                                                    max="100"
+                                                    placeholder="0-100"
+                                                    value={nilai[s.id]?.nilai ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'nilai', e.target.value)}
+                                                />
+                                            </td>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    placeholder="Keterangan..."
+                                                    value={nilai[s.id]?.catatan ?? ''}
+                                                    onChange={e => handleNilaiChange(s.id, 'catatan', e.target.value)}
+                                                    style={{ minWidth: '150px' }}
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>

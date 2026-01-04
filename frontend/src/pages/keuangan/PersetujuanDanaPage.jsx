@@ -155,88 +155,90 @@ const PersetujuanDanaPage = () => {
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
             </div>
 
-            <div className="data-card">
+            <div className="table-container">
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : data.length === 0 ? (
                     <div className="empty-state">Belum ada pengajuan</div>
                 ) : (
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>No</th>
-                                <th>Program</th>
-                                <th>Jumlah Diajukan</th>
-                                <th>Tanggal</th>
-                                <th>Status</th>
-                                {canApprove && <th>Aksi</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((item, i) => (
-                                <tr key={item.id}>
-                                    <td>{i + 1}</td>
-                                    <td>
-                                        <div className="cell-santri">
-                                            <strong>{item.nama_program}</strong>
-                                            <small>{item.deskripsi?.substring(0, 50) || '-'}</small>
-                                        </div>
-                                    </td>
-                                    <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
-                                    <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
-                                    <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
-                                    {canApprove && (
-                                        <td>
-                                            <MobileActionMenu
-                                                actions={[
-                                                    { label: 'Setujui', icon: <CheckCircle size={14} />, onClick: () => openApproval(item, 'approve') },
-                                                    { label: 'Tolak', icon: <XCircle size={14} />, onClick: () => openApproval(item, 'reject'), danger: true }
-                                                ]}
-                                            >
-                                                <button
-                                                    onClick={() => openApproval(item, 'approve')}
-                                                    title="Setujui"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        background: '#dcfce7',
-                                                        color: '#16a34a',
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        marginRight: '4px'
-                                                    }}
-                                                >
-                                                    <CheckCircle size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => openApproval(item, 'reject')}
-                                                    title="Tolak"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '32px',
-                                                        height: '32px',
-                                                        borderRadius: '6px',
-                                                        background: '#fee2e2',
-                                                        color: '#dc2626',
-                                                        border: 'none',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    <XCircle size={16} />
-                                                </button>
-                                            </MobileActionMenu>
-                                        </td>
-                                    )}
+                    <div className="table-wrapper">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Program</th>
+                                    <th>Jumlah Diajukan</th>
+                                    <th>Tanggal</th>
+                                    <th>Status</th>
+                                    {canApprove && <th>Aksi</th>}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {data.map((item, i) => (
+                                    <tr key={item.id}>
+                                        <td>{i + 1}</td>
+                                        <td>
+                                            <div className="cell-santri">
+                                                <strong>{item.nama_program}</strong>
+                                                <small>{item.deskripsi?.substring(0, 50) || '-'}</small>
+                                            </div>
+                                        </td>
+                                        <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
+                                        <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
+                                        <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
+                                        {canApprove && (
+                                            <td>
+                                                <MobileActionMenu
+                                                    actions={[
+                                                        { label: 'Setujui', icon: <CheckCircle size={14} />, onClick: () => openApproval(item, 'approve') },
+                                                        { label: 'Tolak', icon: <XCircle size={14} />, onClick: () => openApproval(item, 'reject'), danger: true }
+                                                    ]}
+                                                >
+                                                    <button
+                                                        onClick={() => openApproval(item, 'approve')}
+                                                        title="Setujui"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#dcfce7',
+                                                            color: '#16a34a',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            marginRight: '4px'
+                                                        }}
+                                                    >
+                                                        <CheckCircle size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => openApproval(item, 'reject')}
+                                                        title="Tolak"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            borderRadius: '6px',
+                                                            background: '#fee2e2',
+                                                            color: '#dc2626',
+                                                            border: 'none',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <XCircle size={16} />
+                                                    </button>
+                                                </MobileActionMenu>
+                                            </td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 

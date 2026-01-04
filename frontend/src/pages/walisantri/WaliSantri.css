@@ -206,10 +206,26 @@
     margin-top: 4px;
 }
 
-/* Data Table */
 .wali-data-table {
     width: 100%;
     border-collapse: collapse;
+}
+
+/* Breakout Table for Report Section */
+.wali-report-section .table-wrapper {
+    margin-left: -24px;
+    margin-right: -24px;
+    width: calc(100% + 48px);
+    border-radius: 0;
+}
+
+@media (max-width: 768px) {
+    .wali-report-section .table-wrapper {
+        margin-left: -16px;
+        /* Mobile padding is usually 16px */
+        margin-right: -16px;
+        width: calc(100% + 32px);
+    }
 }
 
 .wali-data-table th,

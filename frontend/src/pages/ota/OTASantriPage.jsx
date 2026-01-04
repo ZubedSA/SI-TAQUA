@@ -283,67 +283,69 @@ const OTASantriPage = () => {
                 ) : filteredData.length > 0 ? (
                     <>
                         {/* Table View (Desktop) */}
-                        <div className="ota-table-container">
-                            <table className="ota-table">
-                                <thead>
-                                    <tr>
-                                        <th className="ota-th">Santri</th>
-                                        <th className="ota-th">Status</th>
-                                        <th className="ota-th">Tanggal Mulai</th>
-                                        <th className="ota-th">Tanggal Selesai</th>
-                                        <th className="ota-th" style={{ textAlign: 'center' }}>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredData.map((item) => (
-                                        <tr key={item.id} className="ota-tr">
-                                            <td className="ota-td">
-                                                <div className="ota-user-cell">
-                                                    <div className="ota-avatar" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
-                                                        {item.santri?.nama?.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div className="ota-user-info">
-                                                        <div>{item.santri?.nama}</div>
-                                                        <div className="ota-user-details">
-                                                            <span>NIS: {item.santri?.nis}</span>
-                                                            {item.santri?.kelas?.nama && <span>• {item.santri.kelas.nama}</span>}
+                        <div className="table-container">
+                            <div className="table-wrapper">
+                                <table className="table">
+                                    <thead>
+                                        <tr>
+                                            <th className="ota-th">Santri</th>
+                                            <th className="ota-th">Status</th>
+                                            <th className="ota-th">Tanggal Mulai</th>
+                                            <th className="ota-th">Tanggal Selesai</th>
+                                            <th className="ota-th" style={{ textAlign: 'center' }}>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredData.map((item) => (
+                                            <tr key={item.id} className="ota-tr">
+                                                <td className="ota-td">
+                                                    <div className="ota-user-cell">
+                                                        <div className="ota-avatar" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                                                            {item.santri?.nama?.substring(0, 2).toUpperCase()}
+                                                        </div>
+                                                        <div className="ota-user-info">
+                                                            <div>{item.santri?.nama}</div>
+                                                            <div className="ota-user-details">
+                                                                <span>NIS: {item.santri?.nis}</span>
+                                                                {item.santri?.kelas?.nama && <span>• {item.santri.kelas.nama}</span>}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="ota-td">
-                                                <span className={`ota-status-badge ${item.status === 'aktif' ? 'ota-status-active' : 'ota-status-inactive'}`}>
-                                                    {item.status === 'aktif' ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                                                    {item.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
-                                                </span>
-                                            </td>
-                                            <td className="ota-td">
-                                                {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                                            </td>
-                                            <td className="ota-td">
-                                                {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                                            </td>
-                                            <td className="ota-td" style={{ textAlign: 'center' }}>
-                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                    <button
-                                                        className={`ota-action-btn ota-btn-toggle ${item.status === 'aktif' ? 'active' : 'inactive'}`}
-                                                        onClick={() => handleToggleStatus(item)}
-                                                        title={item.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                                                    >
-                                                        {item.status === 'aktif' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                                                    </button>
-                                                    <button
-                                                        className="ota-action-btn ota-btn-delete"
-                                                        onClick={() => openDeleteModal(item.id)}
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                                </td>
+                                                <td className="ota-td">
+                                                    <span className={`ota-status-badge ${item.status === 'aktif' ? 'ota-status-active' : 'ota-status-inactive'}`}>
+                                                        {item.status === 'aktif' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                                                        {item.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
+                                                    </span>
+                                                </td>
+                                                <td className="ota-td">
+                                                    {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                                </td>
+                                                <td className="ota-td">
+                                                    {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
+                                                </td>
+                                                <td className="ota-td" style={{ textAlign: 'center' }}>
+                                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                                                        <button
+                                                            className={`ota-action-btn ota-btn-toggle ${item.status === 'aktif' ? 'active' : 'inactive'}`}
+                                                            onClick={() => handleToggleStatus(item)}
+                                                            title={item.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                                                        >
+                                                            {item.status === 'aktif' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                                                        </button>
+                                                        <button
+                                                            className="ota-action-btn ota-btn-delete"
+                                                            onClick={() => openDeleteModal(item.id)}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         {/* Mobile List View (Hidden on Desktop) */}

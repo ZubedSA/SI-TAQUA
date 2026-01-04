@@ -269,6 +269,21 @@
     box-shadow: var(--shadow-sm);
     overflow: hidden;
     margin-bottom: 24px;
+    /* Force Full Width - Breakout of Content */
+    margin-left: -32px;
+    margin-right: -32px;
+    width: calc(100% + 64px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+}
+
+@media screen and (max-width: 992px) {
+    .table-container {
+        margin-left: -20px;
+        margin-right: -20px;
+        width: calc(100% + 40px);
+    }
 }
 
 .table-header {
@@ -299,6 +314,9 @@
         border-radius: 0;
         border-left: none;
         border-right: none;
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
     }
 
     .table-header {

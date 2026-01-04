@@ -3,8 +3,9 @@
    ===================================================== */
 
 .pelanggaran-page {
-    padding: 1.5rem;
-    max-width: 1400px;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
 }
 
@@ -119,6 +120,33 @@
     border: 1px solid var(--border-color);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+    /* Force Full Width - Breakout of Content */
+    margin-left: -32px;
+    margin-right: -32px;
+    width: calc(100% + 64px);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+}
+
+@media screen and (max-width: 992px) {
+    .table-container {
+        margin-left: -20px;
+        margin-right: -20px;
+        width: calc(100% + 40px);
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .pelanggaran-page {
+        padding: 0;
+    }
+
+    .table-container {
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
+    }
 }
 
 .data-table {
