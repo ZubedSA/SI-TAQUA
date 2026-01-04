@@ -181,34 +181,36 @@ const MapelPage = () => {
                 </div>
             </div>
 
-            {/* Kategori Filter Buttons */}
-            <div className="kategori-filter mb-3">
-                <button
-                    className={`btn ${activeKategori === 'Semua' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setActiveKategori('Semua')}
-                >
-                    Semua ({mapelList.length})
-                </button>
-                <button
-                    className={`btn ${activeKategori === 'Tahfizhiyah' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setActiveKategori('Tahfizhiyah')}
-                >
-                    <BookMarked size={16} /> Tahfizhiyah ({countByKategori('Tahfizhiyah')})
-                </button>
-                <button
-                    className={`btn ${activeKategori === 'Madrosiyah' ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setActiveKategori('Madrosiyah')}
-                >
-                    <GraduationCap size={16} /> Madrosiyah ({countByKategori('Madrosiyah')})
-                </button>
-            </div>
+
 
             <div className="table-container">
                 <div className="table-header">
                     <h3 className="table-title">Daftar Mapel ({filteredMapel.length})</h3>
-                    <div className="table-search">
-                        <Search size={18} className="search-icon" />
-                        <input type="text" placeholder="Cari mapel..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input" />
+                    <div className="table-controls">
+                        <button
+                            className={`btn btn-sm ${activeKategori === 'Semua' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveKategori('Semua')}
+                        >
+                            Semua
+                        </button>
+                        <button
+                            className={`btn btn-sm ${activeKategori === 'Tahfizhiyah' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveKategori('Tahfizhiyah')}
+                            title="Tahfizhiyah"
+                        >
+                            <BookMarked size={16} /> <span className="hide-mobile">Tahfizhiyah</span>
+                        </button>
+                        <button
+                            className={`btn btn-sm ${activeKategori === 'Madrosiyah' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => setActiveKategori('Madrosiyah')}
+                            title="Madrosiyah"
+                        >
+                            <GraduationCap size={16} /> <span className="hide-mobile">Madrosiyah</span>
+                        </button>
+                        <div className="table-search">
+                            <Search size={18} className="search-icon" />
+                            <input type="text" placeholder="Cari mapel..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input" />
+                        </div>
                     </div>
                 </div>
                 <div className="table-wrapper">

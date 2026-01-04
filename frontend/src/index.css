@@ -144,17 +144,30 @@ body {
 
 /* Global Responsive Table Styles (Full Bleed on Mobile) */
 @media screen and (max-width: 768px) {
-  .table-container {
+
+  /* Universal Full Bleed Containers */
+  .table-container,
+  .card,
+  .stat-card,
+  .chart-card,
+  .info-card,
+  .form-card,
+  .detail-card,
+  .santri-card,
+  .guru-card {
     margin-left: -16px;
     margin-right: -16px;
+    width: calc(100% + 32px);
     border-radius: 0 !important;
     border-left: none;
     border-right: none;
-    width: calc(100% + 32px);
   }
 
+  /* Ensure wrappers inside don't double padding if not needed, 
+     but allow scrolling for tables */
   .table-wrapper {
     border-radius: 0;
+    border: none;
   }
 }
 

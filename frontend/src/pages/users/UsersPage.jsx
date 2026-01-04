@@ -734,37 +734,7 @@ const UsersPage = () => {
                 </button>
             </div>
 
-            {/* Filters */}
-            <div className="filters-bar">
-                <div className="search-box">
-                    <Search size={18} />
-                    <input
-                        type="text"
-                        placeholder="Cari nama, email, atau username..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="filter-group">
-                    <Filter size={18} />
-                    <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-                        <option value="">Semua Role</option>
-                        <option value="admin">Administrator</option>
-                        <option value="guru">Guru</option>
-                        <option value="bendahara">Bendahara</option>
-                        <option value="pengurus">Pengurus</option>
-                        <option value="ota">Orang Tua Asuh</option>
-                        <option value="wali">Wali Santri</option>
-                    </select>
-                </div>
-                <button className="btn-icon" onClick={fetchUsers} title="Refresh">
-                    <RefreshCw size={18} />
-                </button>
-                <DownloadButton
-                    onDownloadExcel={handleDownloadExcel}
-                    onDownloadCSV={handleDownloadCSV}
-                />
-            </div>
+
 
             {/* Stats */}
             <div className="stats-row">
@@ -800,7 +770,41 @@ const UsersPage = () => {
 
             {/* Users Table */}
             {/* Users Table */}
+            {/* Users Table */}
             <div className="table-container">
+                <div className="table-header">
+                    <h3 className="table-title">Daftar User ({filteredUsers.length})</h3>
+                    <div className="table-controls">
+                        <div className="search-box">
+                            <Search size={18} />
+                            <input
+                                type="text"
+                                placeholder="Cari user..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="filter-group">
+                            <Filter size={18} />
+                            <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+                                <option value="">Semua Role</option>
+                                <option value="admin">Admin</option>
+                                <option value="guru">Guru</option>
+                                <option value="bendahara">Bendahara</option>
+                                <option value="pengurus">Pengurus</option>
+                                <option value="ota">OTA</option>
+                                <option value="wali">Wali</option>
+                            </select>
+                        </div>
+                        <button className="btn-icon" onClick={fetchUsers} title="Refresh">
+                            <RefreshCw size={18} />
+                        </button>
+                        <DownloadButton
+                            onDownloadExcel={handleDownloadExcel}
+                            onDownloadCSV={handleDownloadCSV}
+                        />
+                    </div>
+                </div>
                 {/* Error State */}
                 {fetchError && (
                     <div className="alert alert-error mb-4">

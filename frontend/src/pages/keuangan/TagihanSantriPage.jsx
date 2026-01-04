@@ -382,30 +382,32 @@ const TagihanSantriPage = () => {
                 </div>
             </div>
 
-            <div className="filters-bar">
-                <div className="search-box">
-                    <Search size={18} />
-                    <input
-                        type="text"
-                        placeholder="Cari santri..."
-                        value={filters.search}
-                        onChange={e => setFilters({ ...filters, search: e.target.value })}
-                    />
-                </div>
-                <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
-                    <option value="">Semua Status</option>
-                    <option value="Belum Lunas">Belum Lunas</option>
-                    <option value="Sebagian">Sebagian</option>
-                    <option value="Lunas">Lunas</option>
-                </select>
-                <select value={filters.kategori} onChange={e => setFilters({ ...filters, kategori: e.target.value })}>
-                    <option value="">Semua Kategori</option>
-                    {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                </select>
-                <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
-            </div>
-
             <div className="table-container">
+                <div className="table-header">
+                    <h3 className="table-title">Daftar Tagihan ({filteredData.length})</h3>
+                    <div className="table-controls">
+                        <div className="search-box">
+                            <Search size={18} />
+                            <input
+                                type="text"
+                                placeholder="Cari santri..."
+                                value={filters.search}
+                                onChange={e => setFilters({ ...filters, search: e.target.value })}
+                            />
+                        </div>
+                        <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
+                            <option value="">Semua Status</option>
+                            <option value="Belum Lunas">Belum Lunas</option>
+                            <option value="Sebagian">Sebagian</option>
+                            <option value="Lunas">Lunas</option>
+                        </select>
+                        <select value={filters.kategori} onChange={e => setFilters({ ...filters, kategori: e.target.value })}>
+                            <option value="">Semua Kategori</option>
+                            {kategoriList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                        </select>
+                        <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
+                    </div>
+                </div>
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : filteredData.length === 0 ? (

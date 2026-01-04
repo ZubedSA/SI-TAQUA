@@ -161,43 +161,47 @@ const LaporanPembayaranPage = () => {
                 </div>
             </div>
 
-            <div className="filters-bar">
-                <div className="date-range-filter">
-                    <input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Dari Tanggal"
-                    />
-                    <span>-</span>
-                    <input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Sampai Tanggal"
-                    />
-                </div>
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    <option value="">Semua Bulan</option>
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
-                    ))}
-                </select>
-                <select
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-                <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
-            </div>
+
 
             <div className="table-container">
+                <div className="table-header">
+                    <h3 className="table-title">Riwayat Pembayaran ({pembayaran.length})</h3>
+                    <div className="table-controls">
+                        <div className="date-range-filter">
+                            <input
+                                type="date"
+                                value={filters.dateFrom}
+                                onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                                title="Dari Tanggal"
+                            />
+                            <span>-</span>
+                            <input
+                                type="date"
+                                value={filters.dateTo}
+                                onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                                title="Sampai Tanggal"
+                            />
+                        </div>
+                        <select
+                            value={filters.bulan}
+                            onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
+                            disabled={filters.dateFrom || filters.dateTo}
+                        >
+                            <option value="">Semua Bulan</option>
+                            {[...Array(12)].map((_, i) => (
+                                <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={filters.tahun}
+                            onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
+                            disabled={filters.dateFrom || filters.dateTo}
+                        >
+                            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                        <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
+                    </div>
+                </div>
                 {loading ? (
                     <div className="loading-state">Memuat data...</div>
                 ) : pembayaran.length === 0 ? (

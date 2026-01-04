@@ -155,6 +155,53 @@
     color: var(--text-secondary, #6b7280);
 }
 
+/* ========== TABLE HEADER & CONTROLS (Guru Layout) ========== */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    flex-wrap: wrap;
+    gap: 16px;
+    background: var(--bg-secondary, white);
+}
+
+.table-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1f2937);
+    margin: 0;
+}
+
+.table-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+@media screen and (max-width: 768px) {
+    .table-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .table-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .table-controls .search-box,
+    .table-controls .filter-group,
+    .table-controls>div {
+        width: 100%;
+    }
+}
+
 /* Table Container */
 .users-table-container {
     background: var(--bg-secondary, white);
