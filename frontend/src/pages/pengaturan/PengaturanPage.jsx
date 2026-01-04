@@ -986,8 +986,7 @@ const PengaturanPage = () => {
                 </div>
             )}
 
-            )
-}
+
 
             <DeleteConfirmationModal
                 isOpen={deleteModal.isOpen}

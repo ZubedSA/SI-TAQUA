@@ -212,113 +212,113 @@
 }
 
 /* Breakout Table for Report Section */
+/* Breakout Table for Report Section */
 .wali-report-section .table-wrapper {
+    margin: 0;
+    width: 100%;
+    border-radius: 0;
+}
+
+@media (max-width: 768px) {
     .wali-report-section .table-wrapper {
         margin: 0;
         width: 100%;
-        border-radius: 0;
+    }
+}
+
+.wali-data-table th,
+.wali-data-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.wali-data-table th {
+    background: var(--bg-light);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.wali-data-table td {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+}
+
+.wali-data-table tbody tr:hover {
+    background: var(--bg-light);
+}
+
+/* Status Badges */
+.wali-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.wali-badge.hadir {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.wali-badge.izin {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.wali-badge.sakit {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.wali-badge.alpha {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+/* Empty State */
+.wali-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-muted);
+}
+
+.wali-empty-state svg {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.wali-empty-state p {
+    font-size: 0.95rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wali-menu-grid {
+        grid-template-columns: 1fr;
     }
 
-    @media (max-width: 768px) {
-        .wali-report-section .table-wrapper {
-            margin: 0;
-            width: 100%;
-        }
+    .wali-filter-bar {
+        flex-direction: column;
+    }
+
+    .wali-filter-group select,
+    .wali-filter-group input {
+        min-width: 100%;
+    }
+
+    .wali-summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .wali-data-table {
+        font-size: 0.85rem;
     }
 
     .wali-data-table th,
     .wali-data-table td {
-        padding: 12px 16px;
-        text-align: left;
-        border-bottom: 1px solid var(--border-color);
+        padding: 10px 12px;
     }
-
-    .wali-data-table th {
-        background: var(--bg-light);
-        font-weight: 600;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-    }
-
-    .wali-data-table td {
-        font-size: 0.9rem;
-        color: var(--text-dark);
-    }
-
-    .wali-data-table tbody tr:hover {
-        background: var(--bg-light);
-    }
-
-    /* Status Badges */
-    .wali-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-
-    .wali-badge.hadir {
-        background: rgba(16, 185, 129, 0.1);
-        color: #059669;
-    }
-
-    .wali-badge.izin {
-        background: rgba(59, 130, 246, 0.1);
-        color: #2563eb;
-    }
-
-    .wali-badge.sakit {
-        background: rgba(245, 158, 11, 0.1);
-        color: #d97706;
-    }
-
-    .wali-badge.alpha {
-        background: rgba(239, 68, 68, 0.1);
-        color: #dc2626;
-    }
-
-    /* Empty State */
-    .wali-empty-state {
-        text-align: center;
-        padding: 48px 24px;
-        color: var(--text-muted);
-    }
-
-    .wali-empty-state svg {
-        margin-bottom: 16px;
-        opacity: 0.5;
-    }
-
-    .wali-empty-state p {
-        font-size: 0.95rem;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .wali-menu-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .wali-filter-bar {
-            flex-direction: column;
-        }
-
-        .wali-filter-group select,
-        .wali-filter-group input {
-            min-width: 100%;
-        }
-
-        .wali-summary-cards {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .wali-data-table {
-            font-size: 0.85rem;
-        }
-
-        .wali-data-table th,
-        .wali-data-table td {
-            padding: 10px 12px;
-        }
-    }
+}

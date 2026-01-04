@@ -377,7 +377,7 @@ export const AuthProvider = ({ children }) => {
         isGuru,
         isBendahara,
         isWali,
-        isWali,
+
         isPengurus,
         isOTA,
         isMusyrif,

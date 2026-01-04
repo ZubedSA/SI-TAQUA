@@ -233,7 +233,7 @@ const UsersPage = () => {
             guru: 'badge-blue',
             bendahara: 'badge-green',
             pengasuh: 'badge-teal',
-            pengasuh: 'badge-teal',
+
             pengurus: 'badge-orange',
             ota: 'badge-orange',
             wali: 'badge-purple',
@@ -248,7 +248,7 @@ const UsersPage = () => {
             guru: 'Guru',
             bendahara: 'Bendahara',
             pengasuh: 'Pengasuh',
-            pengasuh: 'Pengasuh',
+
             pengurus: 'Pengurus',
             ota: 'Orang Tua Asuh',
             wali: 'Wali',
