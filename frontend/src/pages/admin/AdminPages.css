@@ -9,25 +9,14 @@
 }
 
 /* Force Full Width for Tables - Desktop (Counteract .content padding: 32px) */
+/* Force Full Width for Tables - Desktop */
 .admin-page .table-container,
 .admin-page .admin-table-container {
-    margin-left: -32px;
-    margin-right: -32px;
-    width: calc(100% + 64px);
+    margin: 0;
+    width: 100%;
     border-radius: 0;
     border-left: none;
     border-right: none;
-}
-
-@media screen and (max-width: 992px) {
-
-    /* Tablet (Counteract .content padding: 20px) */
-    .admin-page .table-container,
-    .admin-page .admin-table-container {
-        margin-left: -20px;
-        margin-right: -20px;
-        width: calc(100% + 40px);
-    }
 }
 
 @media screen and (max-width: 768px) {
@@ -36,12 +25,11 @@
         padding: 0;
     }
 
-    /* Mobile (Counteract .content padding: 16px) */
+    /* Mobile (Counteract .content padding: 16px) - REMOVED */
     .admin-page .table-container,
     .admin-page .admin-table-container {
-        margin-left: -16px;
-        margin-right: -16px;
-        width: calc(100% + 32px);
+        margin: 0;
+        width: 100%;
         border-radius: 0 !important;
         border-left: none;
         border-right: none;

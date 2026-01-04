@@ -584,16 +584,16 @@
 /* ==================== TABLE ==================== */
 .wali-table-container {
     overflow-x: auto;
-    /* Counteract .wali-main padding (24px Desktop, 16px Mobile) */
-    margin: 0 -24px;
+    /* Counteract .wali-main padding (24px Desktop, 16px Mobile) - REMOVED */
+    margin: 0;
     padding: 0;
-    width: calc(100% + 48px);
+    width: 100%;
 }
 
 @media (max-width: 768px) {
     .wali-table-container {
-        margin: 0 -16px;
-        width: calc(100% + 32px);
+        margin: 0;
+        width: 100%;
     }
 }
 

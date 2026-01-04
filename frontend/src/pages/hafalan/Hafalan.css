@@ -7,29 +7,13 @@
 }
 
 /* Force Full Width for Tables */
+/* Force Full Width for Tables */
 .hafalan-page .table-container {
-    margin-left: -32px;
-    margin-right: -32px;
-    width: calc(100% + 64px);
+    margin: 0;
+    width: 100%;
     border-radius: 0;
     border-left: none;
     border-right: none;
-}
-
-@media screen and (max-width: 992px) {
-    .hafalan-page .table-container {
-        margin-left: -20px;
-        margin-right: -20px;
-        width: calc(100% + 40px);
-    }
-}
-
-@media screen and (max-width: 768px) {
-    .hafalan-page .table-container {
-        margin-left: -16px;
-        margin-right: -16px;
-        width: calc(100% + 32px);
-    }
 }
 
 /* Top Tabs - Input Hafalan & Rekap */

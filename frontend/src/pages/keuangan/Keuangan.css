@@ -12,37 +12,25 @@
 }
 
 /* Force Full Width for Tables - Desktop (Counteract .content padding: 32px) */
+/* Force Full Width for Tables - Desktop */
 .keuangan-page .table-container {
-    margin-left: -32px;
-    margin-right: -32px;
-    width: calc(100% + 64px);
+    margin: 0;
+    width: 100%;
     border-radius: 0;
     border-left: none;
     border-right: none;
 }
 
-@media screen and (max-width: 992px) {
-
-    /* Tablet (Counteract .content padding: 20px) */
-    .keuangan-page .table-container {
-        margin-left: -20px;
-        margin-right: -20px;
-        width: calc(100% + 40px);
-    }
-}
-
 @media screen and (max-width: 768px) {
     .keuangan-page {
-        /* Padding removed */
         padding: 0;
     }
 
     /* Full bleed for tables on mobile */
     .keuangan-page .table-container,
     .keuangan-page .data-card {
-        margin-left: -16px;
-        margin-right: -16px;
-        width: calc(100% + 32px);
+        margin: 0;
+        width: 100%;
         border-radius: 0;
         border-left: none;
         border-right: none;

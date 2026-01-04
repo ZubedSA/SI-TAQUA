@@ -63,9 +63,9 @@ const Layout = () => {
 
             <Sidebar mobileOpen={sidebarOpen} onClose={closeSidebar} />
 
-            <main className="main-content">
+            <main className="main-content w-full min-h-screen m-0 p-0 overflow-x-hidden">
                 <Header onMenuClick={toggleSidebar} />
-                <div className="content">
+                <div className="content w-full p-0 m-0">
                     <Outlet />
                 </div>
             </main>
