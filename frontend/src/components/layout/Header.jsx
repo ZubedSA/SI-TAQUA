@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useCalendar } from '../../context/CalendarContext'
 import { Bell, User, Menu, ChevronDown, Settings, LogOut, UserCircle, Clock, Search } from 'lucide-react'
 import GlobalSearch from '../common/GlobalSearch'
 import NotificationDropdown from './NotificationDropdown'
@@ -60,8 +61,10 @@ const Header = ({ onMenuClick }) => {
         return () => document.removeEventListener('keydown', handleKeyDown)
     }, [])
 
+    const { formatDate: globalFormatDate } = useCalendar()
+
     const formatTime = () => currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-    const formatDate = () => currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
+    const formatDate = () => globalFormatDate(currentTime, { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
 
     const getUserName = () => {
         if (userProfile?.nama) return userProfile.nama

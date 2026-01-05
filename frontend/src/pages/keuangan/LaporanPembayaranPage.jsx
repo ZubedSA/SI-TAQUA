@@ -121,7 +121,8 @@ const LaporanPembayaranPage = () => {
             filename: 'laporan_pembayaran_santri',
             showTotal: true,
             totalLabel: 'Total Pembayaran',
-            totalValue: totalPembayaran
+            totalValue: totalPembayaran,
+            printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         })
         showToast.success('Laporan berhasil didownload')
     }

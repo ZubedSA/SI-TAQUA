@@ -20,24 +20,74 @@ const AuditLogPage = () => {
         user: ''
     });
 
+    const [metadata, setMetadata] = useState({
+        actions: [],
+        modules: [],
+        tables: []
+    });
+
     useEffect(() => {
         fetchLogs();
-    }, []);
+        fetchMetadata();
+    }, [filters]); // Re-fetch logs when filters change
+
+    const fetchMetadata = async () => {
+        try {
+            // Try RPC first (best performance)
+            const { data, error } = await supabase.rpc('get_audit_metadata');
+
+            if (!error && data && data.length > 0) {
+                setMetadata({
+                    actions: data[0].actions || [],
+                    modules: data[0].modules || [],
+                    tables: data[0].tables || []
+                });
+            } else {
+                // Fallback: manual extraction (if RPC not yet applied)
+                // Note: limit to 1000 to avoid heavy query
+                const { data: rawData } = await supabase
+                    .from('audit_logs')
+                    .select('action, module, target_table')
+                    .order('timestamp', { ascending: false })
+                    .limit(500);
+
+                if (rawData) {
+                    const actions = [...new Set(rawData.map(i => i.action))].filter(Boolean).sort();
+                    const modules = [...new Set(rawData.map(i => i.module))].filter(Boolean).sort();
+                    const tables = [...new Set(rawData.map(i => i.target_table))].filter(Boolean).sort();
+                    setMetadata({ actions, modules, tables });
+                }
+            }
+        } catch (e) {
+            console.error('Metadata fetch error', e);
+        }
+    };
 
     const fetchLogs = async () => {
         setLoading(true);
         try {
             let query = supabase
-                .from('audit_log')
+                .from('audit_logs') // New table
                 .select(`
                     *,
-                    user:user_id(username, full_name)
+                    user:user_id(username, full_name, role)
                 `)
-                .order('created_at', { ascending: false })
+                .order('timestamp', { ascending: false }) // timestamp column
                 .limit(100);
 
             if (filters.table) {
-                query = query.eq('table_name', filters.table);
+                query = query.eq('target_table', filters.table);
+            }
+            if (filters.action) {
+                query = query.eq('action', filters.action);
+            }
+            if (filters.module) {
+                query = query.eq('module', filters.module);
+            }
+            if (filters.search) {
+                // Search is handled client-side in this version or could be OR logic here
+                // Keeping existing client-side filtering logic for complex text search,
+                // but db filtering is better. For now adhering to existing pattern.
             }
 
             const { data, error } = await query;
@@ -56,61 +106,109 @@ const AuditLogPage = () => {
 
     const filteredLogs = logs.filter(log => {
         const searchTerm = filters.search.toLowerCase();
+        if (!searchTerm) return true;
         return (
             log.action?.toLowerCase().includes(searchTerm) ||
-            log.table_name?.toLowerCase().includes(searchTerm) ||
-            log.description?.toLowerCase().includes(searchTerm) ||
-            log.user?.username?.toLowerCase().includes(searchTerm)
+            log.module?.toLowerCase().includes(searchTerm) ||
+            log.target_table?.toLowerCase().includes(searchTerm) ||
+            log.user?.username?.toLowerCase().includes(searchTerm) ||
+            JSON.stringify(log.meta_data || {}).toLowerCase().includes(searchTerm)
         );
     });
 
     const getActionBadge = (action) => {
-        switch (action) {
-            case 'INSERT': return <Badge variant="success">INSERT</Badge>;
-            case 'UPDATE': return <Badge variant="info">UPDATE</Badge>;
-            case 'DELETE': return <Badge variant="danger">DELETE</Badge>;
-            case 'LOGIN': return <Badge variant="primary">LOGIN</Badge>;
-            default: return <Badge variant="neutral">{action}</Badge>;
-        }
+        // Normalize action
+        const act = action?.toUpperCase() || 'UNKNOWN';
+        if (act.includes('CREATE') || act.includes('INSERT')) return <Badge variant="success">{act}</Badge>;
+        if (act.includes('UPDATE')) return <Badge variant="warning">{act}</Badge>;
+        if (act === 'DELETE') return <Badge variant="danger">{act}</Badge>;
+        if (act === 'LOGIN') return <Badge variant="primary">{act}</Badge>;
+        if (act === 'LOGOUT') return <Badge variant="neutral">{act}</Badge>;
+        if (act.includes('ERROR') || act.includes('FAIL')) return <Badge variant="danger" className="bg-red-900 text-white">{act}</Badge>;
+        if (act === 'PAGE_VIEW') return <Badge variant="neutral" className="bg-gray-100 text-gray-600">VIEW</Badge>;
+        if (act === 'ROLE_SWITCH') return <Badge variant="info">ROLE</Badge>;
+        return <Badge variant="neutral">{act}</Badge>;
     };
 
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Audit Log"
-                description="Rekam jejak aktivitas dan perubahan data dalam sistem."
+                title="Audit Log System"
+                description="Monitor keamanan dan aktivitas user secara real-time."
                 icon={ClipboardList}
                 actions={
-                    <Button variant="secondary" onClick={fetchLogs}>
+                    <Button variant="secondary" onClick={() => { fetchLogs(); fetchMetadata(); }}>
                         <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Refresh
                     </Button>
                 }
             />
 
-            <Card className="border-gray-200">
-                <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="relative w-full md:w-80">
+            <Card className="border-gray-200 shadow-sm">
+                <div className="p-4 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-gray-50/50">
+                    {/* Search Bar */}
+                    <div className="relative w-full xl:w-72">
                         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Cari aktivitas, tabel, atau user..."
+                            placeholder="Search logs..."
                             value={filters.search}
                             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                         />
                     </div>
 
-                    <select
-                        className="w-full md:w-48 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                        value={filters.table}
-                        onChange={(e) => setFilters({ ...filters, table: e.target.value })}
-                    >
-                        <option value="">Semua Tabel</option>
-                        <option value="santri">Santri</option>
-                        <option value="kas_pemasukan">Kas Pemasukan</option>
-                        <option value="kas_pengeluaran">Kas Pengeluaran</option>
-                        <option value="tagihan_santri">Tagihan</option>
-                    </select>
+                    {/* Dynamic Filters */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto overflow-x-auto pb-2 sm:pb-0">
+
+                        {/* 1. Action Filter (Dynamic) */}
+                        <div className="relative group w-full sm:w-40">
+                            <select
+                                className="w-full appearance-none px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all cursor-pointer font-medium text-gray-700"
+                                value={filters.action || ''}
+                                onChange={(e) => setFilters({ ...filters, action: e.target.value })}
+                            >
+                                <option value="">Semua Aktivitas</option>
+                                {metadata.actions.map(act => (
+                                    <option key={act} value={act}>{act}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <Activity size={14} />
+                            </div>
+                        </div>
+
+                        {/* 2. Module Filter (Dynamic) */}
+                        <div className="relative w-full sm:w-40">
+                            <select
+                                className="w-full appearance-none px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all cursor-pointer text-gray-600"
+                                value={filters.module || ''}
+                                onChange={(e) => setFilters({ ...filters, module: e.target.value })}
+                            >
+                                <option value="">Semua Modul</option>
+                                {metadata.modules.map(mod => (
+                                    <option key={mod} value={mod}>{mod}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* 3. Table Filter (Dynamic) */}
+                        <div className="relative w-full sm:w-44">
+                            <select
+                                className="w-full appearance-none px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all cursor-pointer text-gray-600"
+                                value={filters.table || ''}
+                                onChange={(e) => setFilters({ ...filters, table: e.target.value })}
+                            >
+                                <option value="">Semua Tabel</option>
+                                {metadata.tables.map(tbl => (
+                                    <option key={tbl} value={tbl}>{tbl}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <Database size={12} />
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -129,8 +227,8 @@ const AuditLogPage = () => {
                                     <th className="px-6 py-4">Waktu</th>
                                     <th className="px-6 py-4">User</th>
                                     <th className="px-6 py-4">Aksi</th>
-                                    <th className="px-6 py-4">Tabel</th>
-                                    <th className="px-6 py-4">Keterangan</th>
+                                    <th className="px-6 py-4">Context (Module/Table)</th>
+                                    <th className="px-6 py-4">Metadata</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -139,21 +237,21 @@ const AuditLogPage = () => {
                                         <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                                             <div className="flex flex-col">
                                                 <span className="font-medium text-gray-900">
-                                                    {new Date(log.created_at).toLocaleDateString('id-ID')}
+                                                    {new Date(log.timestamp).toLocaleDateString('id-ID')}
                                                 </span>
                                                 <span className="text-xs">
-                                                    {new Date(log.created_at).toLocaleTimeString('id-ID')}
+                                                    {new Date(log.timestamp).toLocaleTimeString('id-ID')}
                                                 </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center font-bold text-xs">
-                                                    {(log.user?.username || 'U')[0].toUpperCase()}
+                                                    {(log.user?.username || 'S')[0].toUpperCase()}
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="font-medium text-gray-900">{log.user?.username || 'System'}</span>
-                                                    <span className="text-xs text-gray-500">{log.user?.full_name || '-'}</span>
+                                                    <span className="text-xs text-gray-500">{log.user?.role || '-'}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -161,13 +259,28 @@ const AuditLogPage = () => {
                                             {getActionBadge(log.action)}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1.5 text-gray-600 font-mono text-xs bg-gray-100 px-2 py-1 rounded w-fit">
-                                                <Database size={12} />
-                                                {log.table_name || '-'}
+                                            <div className="flex flex-col gap-1">
+                                                {log.module && (
+                                                    <span className="text-xs font-bold text-gray-500 tracking-wider">
+                                                        {log.module}
+                                                    </span>
+                                                )}
+                                                {log.target_table && (
+                                                    <div className="flex items-center gap-1.5 text-gray-600 font-mono text-xs bg-gray-100 px-2 py-1 rounded w-fit">
+                                                        <Database size={10} />
+                                                        {log.target_table}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-600 max-w-md truncate" title={log.description}>
-                                            {log.description || '-'}
+                                        <td className="px-6 py-4 text-gray-600 text-xs font-mono">
+                                            {log.meta_data ? (
+                                                <div className="max-w-xs truncate" title={JSON.stringify(log.meta_data, null, 2)}>
+                                                    {JSON.stringify(log.meta_data)}
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

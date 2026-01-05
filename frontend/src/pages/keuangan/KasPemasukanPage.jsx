@@ -272,7 +272,7 @@ const KasPemasukanPage = () => {
                 : `Tahun ${filters.tahun}`,
             columns: ['Tanggal', 'Sumber', 'Kategori', 'Jumlah', 'Keterangan'],
             data: filteredData.map(d => [
-                new Date(d.tanggal).toLocaleDateString('id-ID'),
+                formatDate(d.tanggal),
                 d.sumber,
                 d.kategori || '-',
                 `Rp ${Number(d.jumlah).toLocaleString('id-ID')}`,
@@ -281,21 +281,16 @@ const KasPemasukanPage = () => {
             filename: 'laporan_pemasukan_kas',
             showTotal: true,
             totalLabel: 'Total Pemasukan',
-            totalValue: filteredData.reduce((sum, d) => sum + Number(d.jumlah), 0)
+            totalValue: filteredData.reduce((sum, d) => sum + Number(d.jumlah), 0),
+            printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         })
         showToast.success('Laporan berhasil didownload')
     }
 
     const totalPemasukan = filteredData.reduce((sum, d) => sum + Number(d.jumlah), 0)
 
-    // filteredData already defined above or we need to rename this one if it's a second filter pass
-    // Actually, looking at the code flow, we should rely on the one defined earlier or consolidate.
-    // In this file, filteredData seems to be used for render.
-    // Let's remove this one and ensure the first one is used correctly. 
-    // Wait, let's see where the first one is. Use view_file first to be sure.
-
     return (
-        <div className="keuangan-page">
+        <div className="keuangan-page" >
             <div className="page-header">
                 <div>
                     <h1 className="page-title">

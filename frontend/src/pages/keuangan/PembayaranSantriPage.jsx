@@ -288,8 +288,9 @@ Jazakumullah khairan atas pembayarannya.
     // Print receipt
     const handlePrintKwitansi = () => {
         // Get periode from payment date
-        const paymentDate = new Date(lastPayment.tanggal)
-        const periodeStr = paymentDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+        // Use formatDate to respect mode for Month representation if desired, 
+        // or just standard Hijri/Masehi string
+        const periodeStr = formatDate(lastPayment.tanggal, { month: 'long', year: 'numeric' })
 
         generateKwitansiPDF({
             nomorKwitansi: `KW-${Date.now().toString().slice(-8)}`,
@@ -375,7 +376,9 @@ Jazakumullah khairan.
             filename: `rekap_lunas_${selectedSantri?.nis}`,
             showTotal: true,
             totalLabel: 'Total Lunas',
-            totalValue: sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0)
+            totalLabel: 'Total Lunas',
+            totalValue: sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0),
+            printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         })
         showToast.success('Laporan lunas berhasil didownload')
     }
@@ -475,7 +478,9 @@ Jazakumullah khairan.
             filename: `riwayat_pembayaran_${selectedSantri?.nis}`,
             showTotal: true,
             totalLabel: 'Total Pembayaran',
-            totalValue: pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0)
+            totalLabel: 'Total Pembayaran',
+            totalValue: pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0),
+            printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         })
         showToast.success('Laporan riwayat berhasil didownload')
     }
@@ -483,8 +488,7 @@ Jazakumullah khairan.
     // Print kwitansi for single history
     const handlePrintHistorySingle = (pembayaran) => {
         // Get periode from payment date
-        const periodeDate = new Date(pembayaran.tanggal)
-        const periodeStr = periodeDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+        const periodeStr = formatDate(pembayaran.tanggal, { month: 'long', year: 'numeric' })
 
         generateKwitansiPDF({
             nomorKwitansi: `KW-${pembayaran.id.slice(-8)}`,

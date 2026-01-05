@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
+import { useCalendar } from '../../../context/CalendarContext'
 import SantriCard from '../components/SantriCard'
 import DownloadButton from '../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../utils/exportUtils'
@@ -112,13 +113,7 @@ const TagihanWaliPage = () => {
         }).format(amount)
     }
 
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-        })
-    }
+    const { formatDate } = useCalendar()
 
     const isOverdue = (jatuhTempo) => {
         return new Date(jatuhTempo) < new Date()

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
+import { useCalendar } from '../../../context/CalendarContext'
 import SantriCard from '../components/SantriCard'
 import PageHeader from '../../../components/layout/PageHeader'
 import Card from '../../../components/ui/Card'
@@ -86,14 +87,7 @@ const HafalanWaliPage = () => {
         }
     }, [selectedSantri, filterJenis])
 
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('id-ID', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-        })
-    }
+    const { formatDate } = useCalendar()
 
     const getStatusIcon = (status) => {
         switch (status) {

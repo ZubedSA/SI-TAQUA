@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
+import { useCalendar } from '../../../context/CalendarContext'
 import PageHeader from '../../../components/layout/PageHeader'
 import Card from '../../../components/ui/Card'
 import Button from '../../../components/ui/Button'
@@ -55,21 +56,9 @@ const InboxPesanPage = () => {
         }
     }, [user, filterStatus])
 
-    const formatDate = (date) => {
-        const d = new Date(date)
-        const now = new Date()
-        const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24))
-
-        if (diffDays === 0) {
-            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-        } else if (diffDays === 1) {
-            return 'Kemarin'
-        } else if (diffDays < 7) {
-            return d.toLocaleDateString('id-ID', { weekday: 'long' })
-        } else {
-            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-        }
-    }
+    const { formatDate } = useCalendar()
+    // Using standard formatDate for consistency. 
+    // Relative time logic removed to ensure standardized Hijri/Masehi display per user request.
 
     const getStatusVariant = (status) => {
         switch (status) {
@@ -196,7 +185,7 @@ const InboxPesanPage = () => {
                                 <div className="flex-1">
                                     <h3 className="text-lg font-bold text-gray-900 leading-tight">{selectedPesan.judul}</h3>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        {new Date(selectedPesan.created_at).toLocaleDateString('id-ID', {
+                                        {formatDate(selectedPesan.created_at, {
                                             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                                             hour: '2-digit', minute: '2-digit'
                                         })}
@@ -228,7 +217,7 @@ const InboxPesanPage = () => {
                                                 <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{selectedPesan.balasan}</p>
                                             </div>
                                             <p className="text-[10px] text-gray-400">
-                                                {selectedPesan.dibalas_pada && new Date(selectedPesan.dibalas_pada).toLocaleDateString('id-ID', {
+                                                {selectedPesan.dibalas_pada && formatDate(selectedPesan.dibalas_pada, {
                                                     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                                 })}
                                             </p>

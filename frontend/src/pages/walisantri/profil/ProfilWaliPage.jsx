@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
+import { useCalendar } from '../../../context/CalendarContext'
 import { useToast } from '../../../context/ToastContext'
 import PageHeader from '../../../components/layout/PageHeader'
 import Card from '../../../components/ui/Card'
@@ -117,6 +118,8 @@ const ProfilWaliPage = () => {
             </div>
         )
     }
+
+    const { formatDate } = useCalendar()
 
     return (
         <div className="space-y-6">
@@ -261,7 +264,7 @@ const ProfilWaliPage = () => {
                                                     <div>
                                                         <p className="text-xs text-gray-500 mb-1">TTL</p>
                                                         <p className="text-sm font-medium text-gray-900">
-                                                            {santri.tempat_lahir}, {santri.tanggal_lahir ? new Date(santri.tanggal_lahir).toLocaleDateString('id-ID') : '-'}
+                                                            {santri.tempat_lahir}, {santri.tanggal_lahir ? formatDate(santri.tanggal_lahir) : '-'}
                                                         </p>
                                                     </div>
                                                 </div>

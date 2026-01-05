@@ -221,7 +221,7 @@ const KasPengeluaranPage = () => {
     const handleDownloadExcel = () => {
         const columns = ['Tanggal', 'Keperluan', 'Kategori', 'Jumlah', 'Keterangan']
         const exportData = filteredData.map(d => ({
-            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Tanggal: formatDate(d.tanggal),
             Keperluan: d.keperluan,
             Kategori: d.kategori || '-',
             Jumlah: Number(d.jumlah),
@@ -234,7 +234,7 @@ const KasPengeluaranPage = () => {
     const handleDownloadCSV = () => {
         const columns = ['Tanggal', 'Keperluan', 'Kategori', 'Jumlah', 'Keterangan']
         const exportData = filteredData.map(d => ({
-            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Tanggal: formatDate(d.tanggal),
             Keperluan: d.keperluan,
             Kategori: d.kategori || '-',
             Jumlah: Number(d.jumlah),
@@ -250,7 +250,7 @@ const KasPengeluaranPage = () => {
             subtitle: filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,
             columns: ['Tanggal', 'Keperluan', 'Kategori', 'Jumlah', 'Keterangan'],
             data: filteredData.map(d => [
-                new Date(d.tanggal).toLocaleDateString('id-ID'),
+                formatDate(d.tanggal),
                 d.keperluan,
                 d.kategori || '-',
                 `Rp ${Number(d.jumlah).toLocaleString('id-ID')}`,
@@ -259,7 +259,8 @@ const KasPengeluaranPage = () => {
             filename: 'laporan_pengeluaran_kas',
             showTotal: true,
             totalLabel: 'Total Pengeluaran',
-            totalValue: filteredData.reduce((sum, d) => sum + Number(d.jumlah), 0)
+            totalValue: filteredData.reduce((sum, d) => sum + Number(d.jumlah), 0),
+            printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         })
         showToast.success('Laporan berhasil didownload')
     }
@@ -361,7 +362,7 @@ const KasPengeluaranPage = () => {
                                 {filteredData.map((item, i) => (
                                     <tr key={item.id}>
                                         <td>{i + 1}</td>
-                                        <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                        <td>{formatDate(item.tanggal)}</td>
                                         <td>{item.keperluan}</td>
                                         <td><span className="badge red">{item.kategori || '-'}</span></td>
                                         <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>

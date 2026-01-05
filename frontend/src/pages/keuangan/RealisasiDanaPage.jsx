@@ -78,7 +78,7 @@ const RealisasiDanaPage = () => {
 
     const executeSave = async () => {
         setSaving(true)
-        console.log('[RealisasiDana] Saving realization:', form)
+        // console.log('[RealisasiDana] Saving realization:', form)
         console.log('[RealisasiDana] Mode:', mode)
         try {
             const anggaran = anggaranList.find(a => a.id === form.anggaran_id)
@@ -217,7 +217,7 @@ const RealisasiDanaPage = () => {
             title: 'Laporan Realisasi Dana',
             columns: ['Tanggal', 'Program', 'Keperluan', 'Jumlah'],
             data: data.map(d => [
-                new Date(d.tanggal).toLocaleDateString('id-ID'),
+                formatDate(d.tanggal), // Use standardized formatter
                 d.anggaran?.nama_program || '-',
                 d.keperluan || '-',
                 `Rp ${Number(d.jumlah_terpakai).toLocaleString('id-ID')}`
@@ -225,7 +225,8 @@ const RealisasiDanaPage = () => {
             filename: 'laporan_realisasi_dana',
             showTotal: true,
             totalLabel: 'Total Realisasi',
-            totalValue: data.reduce((sum, d) => sum + Number(d.jumlah_terpakai), 0)
+            totalValue: data.reduce((sum, d) => sum + Number(d.jumlah_terpakai), 0),
+            printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) // Pass formatted print date
         })
     }
 

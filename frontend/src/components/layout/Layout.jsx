@@ -4,8 +4,12 @@ import { useAuth } from '../../context/AuthContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import { Loader2 } from 'lucide-react'
+import { useAutoAudit } from '../../hooks/useAutoAudit'
 
 const Layout = () => {
+    // Auto-log navigation events
+    useAutoAudit()
+
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const { loading, isAuthenticated } = useAuth()
 

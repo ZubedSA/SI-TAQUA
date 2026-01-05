@@ -4,6 +4,7 @@ import {
     ChevronLeft, Bell, Calendar, Tag, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
+import { useCalendar } from '../../../context/CalendarContext'
 import PageHeader from '../../../components/layout/PageHeader'
 import Card from '../../../components/ui/Card'
 import EmptyState from '../../../components/ui/EmptyState'
@@ -50,14 +51,7 @@ const PengumumanPage = () => {
         fetchPengumuman()
     }, [filterKategori])
 
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('id-ID', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        })
-    }
+    const { formatDate } = useCalendar()
 
     const getKategoriColor = (kategori) => {
         const colors = {

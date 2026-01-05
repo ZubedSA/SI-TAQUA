@@ -46,8 +46,8 @@ export const CalendarProvider = ({ children }) => {
         }
 
         if (mode === 'hijriyah') {
-            // Use Islamic Umalqura calendar for Hijri
-            return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', defaultOptions).format(date) + ' H'
+            const h = toHijri(date)
+            return `${h.day} ${h.monthName} ${h.year} H`
         } else {
             // Standard Gregorian calendar
             return new Intl.DateTimeFormat('id-ID', defaultOptions).format(date)

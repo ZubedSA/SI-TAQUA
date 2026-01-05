@@ -43,10 +43,24 @@ export const AuthProvider = ({ children }) => {
         }
     }, [user])
 
+    // Helper to log auth events securely
+    const logAuthEvent = async (action, details = {}) => {
+        try {
+            await supabase.rpc('log_frontend_activity', {
+                p_action: action,
+                p_module: 'AUTH',
+                p_details: details
+            })
+        } catch (e) {
+            console.warn('[AuthAudit] Failed to log:', e)
+        }
+    }
+
     // Handle auto logout
     const handleAutoLogout = async () => {
         try {
             await supabase.auth.signOut()
+            logAuthEvent('LOGOUT', { reason: 'IDLE_TIMEOUT' })
             setUser(null)
             setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
             alert('Sesi Anda telah berakhir karena tidak ada aktivitas selama 20 menit. Silakan login kembali.')
@@ -226,8 +240,10 @@ export const AuthProvider = ({ children }) => {
                 await supabase
                     .from('user_profiles')
                     .update({ active_role: newRole })
+                    .update({ active_role: newRole })
                     .eq('user_id', user.id)
             }
+            logAuthEvent('ROLE_SWITCH', { old_role: userProfile.activeRole, new_role: newRole })
         } catch (dbError) {
             // Ignore database errors - local state is already updated
             console.log('DB update skipped (RLS), using local state only')
@@ -245,7 +261,7 @@ export const AuthProvider = ({ children }) => {
         // Input yang tidak mengandung @ dianggap sebagai USERNAME
         // Kita lookup email dari database via RPC
         if (!authEmail.includes('@')) {
-            console.log('🔍 Looking up username:', authEmail)
+            // console.log('🔍 Looking up username:', authEmail)
 
             try {
                 const { data: foundEmail, error: rpcError } = await supabase
@@ -265,7 +281,7 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 authEmail = foundEmail
-                console.log('✅ Username found, using email:', authEmail)
+                // console.log('✅ Username found, using email:', authEmail)
             } catch (err) {
                 // Re-throw jika sudah Error object
                 if (err instanceof Error) throw err
@@ -313,7 +329,8 @@ export const AuthProvider = ({ children }) => {
             role: activeRole
         })
 
-        console.log('✅ Login successful. Role:', activeRole)
+        // console.log('✅ Login successful. Role:', activeRole)
+        logAuthEvent('LOGIN', { email: authEmail, role: activeRole })
         return { ...data, roles, activeRole, role: activeRole }
     }
 
@@ -332,6 +349,7 @@ export const AuthProvider = ({ children }) => {
     const signOut = async () => {
         const { error } = await supabase.auth.signOut()
         if (error) throw error
+        logAuthEvent('LOGOUT', { reason: 'USER_ACTION' })
         setUser(null)
         setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
     }
