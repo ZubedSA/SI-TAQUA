@@ -1844,22 +1844,35 @@ select option:hover {
 
 @media (max-width: 768px) {
 
-  /* Page layout - add horizontal padding for text content */
+  /* Page layout */
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
-    padding: 0 16px;
-    /* Horizontal padding for titles/buttons */
   }
 
   .page-title {
     font-size: 1.25rem;
   }
 
-  /* Content padding - VERTICAL ONLY for full-width */
+  /* Content padding - Symmetric padding for centered content */
   .content {
-    padding: 16px 0;
+    padding: 16px;
+  }
+
+  /* Tables and cards break out of content padding for edge-to-edge */
+  .content .table-container,
+  .content .card,
+  .content .stat-card,
+  .content .chart-card,
+  .content .data-card,
+  .content .hafalan-stat-card {
+    margin-left: -16px;
+    margin-right: -16px;
+    width: calc(100% + 32px);
+    border-radius: 0 !important;
+    border-left: none;
+    border-right: none;
   }
 
   /* Stats */
