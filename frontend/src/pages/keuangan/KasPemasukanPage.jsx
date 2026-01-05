@@ -25,7 +25,7 @@ const KasPemasukanPage = () => {
     // Multiple checks - admin dan bendahara    // Multiple checks
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
-    const canEditKas = adminCheck || bendaharaChecks
+    const canEditKas = adminCheck || bendaharaCheck
 
     // Filters State for hooks
     const [filters, setFilters] = useState({
