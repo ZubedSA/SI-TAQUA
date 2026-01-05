@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react'
 import { Calendar, RefreshCw, Trophy, Users, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../../../context/CalendarContext'
 import '../input-hafalan/Hafalan.css'
 
 const PencapaianMingguanPage = () => {
+    const { mode } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState([])
 
@@ -27,6 +30,8 @@ const PencapaianMingguanPage = () => {
     })
 
     const fetchData = async () => {
+        console.log('[PencapaianMingguan] Fetch triggered:', filters)
+        console.log('[PencapaianMingguan] Calendar Mode:', mode)
         if (!hasHalaqoh && !isAdmin) return
         setLoading(true)
 
@@ -130,24 +135,12 @@ const PencapaianMingguanPage = () => {
                     <option value={4}>Minggu 4</option>
                 </select>
 
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: parseInt(e.target.value) })}
-                >
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                            {new Date(2024, i).toLocaleDateString('id-ID', { month: 'long' })}
-                        </option>
-                    ))}
-                </select>
-
-                <input
-                    type="number"
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: parseInt(e.target.value) })}
-                    min="2020"
-                    max="2030"
-                    style={{ width: '100px' }}
+                <SmartMonthYearFilter
+                    filters={filters}
+                    onFilterChange={(newFilters) => {
+                        console.log('[PencapaianMingguan] Filter changed:', newFilters)
+                        setFilters(newFilters)
+                    }}
                 />
             </div>
 

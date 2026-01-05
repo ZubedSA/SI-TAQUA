@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Save, RefreshCw, BookMarked, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../../../context/CalendarContext'
 import '../../../../pages/nilai/Nilai.css'
 
 const TahfizhSyahriPage = () => {
@@ -39,6 +41,12 @@ const TahfizhSyahriPage = () => {
         tahun: new Date().getFullYear()
     })
 
+    const { mode } = useCalendar()
+
+    useEffect(() => {
+        console.log('[TahfizhSyahri] Mode changed:', mode)
+    }, [mode])
+
     useEffect(() => {
         fetchOptions()
     }, [])
@@ -57,6 +65,7 @@ const TahfizhSyahriPage = () => {
     }
 
     const fetchSantriAndNilai = async () => {
+        console.log('[TahfizhSyahri] Fetch triggered:', filters)
         if (!selectedHalaqoh || !filters.semester_id) return
         setLoading(true)
         setError('')
@@ -187,15 +196,6 @@ const TahfizhSyahriPage = () => {
         }
     }
 
-    const bulanOptions = [
-        { value: 1, label: 'Januari' }, { value: 2, label: 'Februari' },
-        { value: 3, label: 'Maret' }, { value: 4, label: 'April' },
-        { value: 5, label: 'Mei' }, { value: 6, label: 'Juni' },
-        { value: 7, label: 'Juli' }, { value: 8, label: 'Agustus' },
-        { value: 9, label: 'September' }, { value: 10, label: 'Oktober' },
-        { value: 11, label: 'November' }, { value: 12, label: 'Desember' }
-    ]
-
     return (
         <div className="nilai-page">
             <div className="page-header">
@@ -261,152 +261,134 @@ const TahfizhSyahriPage = () => {
                     )}
                 </div>
 
-                <div className="form-group">
-                    <label className="form-label">Bulan *</label>
-                    <select
-                        className="form-control"
-                        value={filters.bulan}
-                        onChange={e => setFilters({ ...filters, bulan: parseInt(e.target.value) })}
-                    >
-                        {bulanOptions.map(b => (
-                            <option key={b.value} value={b.value}>{b.label}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label">Tahun *</label>
-                    <input
-                        type="number"
-                        className="form-control"
-                        value={filters.tahun}
-                        onChange={e => setFilters({ ...filters, tahun: parseInt(e.target.value) })}
-                        min="2020"
-                        max="2030"
-                    />
-                </div>
+                <SmartMonthYearFilter
+                    filters={filters}
+                    onFilterChange={setFilters}
+                />
             </div>
 
-            {selectedHalaqoh && filters.semester_id && (
-                <div className="table-container">
-                    <div className="table-header">
-                        <h3 className="table-title">Daftar Santri ({santri.length})</h3>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleSave}
-                            disabled={saving || santri.length === 0}
-                        >
-                            {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Nilai</>}
-                        </button>
-                    </div>
+            {
+                selectedHalaqoh && filters.semester_id && (
+                    <div className="table-container">
+                        <div className="table-header">
+                            <h3 className="table-title">Daftar Santri ({santri.length})</h3>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSave}
+                                disabled={saving || santri.length === 0}
+                            >
+                                {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Nilai</>}
+                            </button>
+                        </div>
 
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Hafalan</th>
-                                    <th style={{ textAlign: 'center' }}>Tajwid</th>
-                                    <th style={{ textAlign: 'center' }}>Tilawah</th>
-                                    <th style={{ textAlign: 'center' }}>Rata-rata</th>
-                                    <th style={{ textAlign: 'center' }}>Jml Hafalan (Juz)</th>
-                                    <th style={{ textAlign: 'center' }}>Jml Hafalan (Halaman)</th>
-                                    <th style={{ textAlign: 'center', minWidth: '150px' }}>Penguji</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="10" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                                ) : santri.length === 0 ? (
-                                    <tr><td colSpan="10" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
-                                ) : (
-                                    santri.map((s, i) => (
-                                        <tr key={s.id}>
-                                            <td>{i + 1}</td>
-                                            <td>{s.nis}</td>
-                                            <td className="name-cell">{s.nama}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="100"
-                                                    placeholder="0-100"
-                                                    value={nilai[s.id]?.hafalan ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'hafalan', e.target.value)}
-                                                />
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="100"
-                                                    placeholder="0-100"
-                                                    value={nilai[s.id]?.tajwid ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'tajwid', e.target.value)}
-                                                />
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="100"
-                                                    placeholder="0-100"
-                                                    value={nilai[s.id]?.tilawah ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'tilawah', e.target.value)}
-                                                />
-                                            </td>
-                                            <td style={{ textAlign: 'center', fontWeight: '600' }}>
-                                                {calculateRataRata(s.id)}
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="30"
-                                                    placeholder="Juz"
-                                                    value={nilai[s.id]?.jumlah_hafalan ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan', e.target.value)}
-                                                />
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="20"
-                                                    placeholder="Hal"
-                                                    value={nilai[s.id]?.jumlah_hafalan_halaman ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan_halaman', e.target.value)}
-                                                />
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <select
-                                                    className="form-control"
-                                                    style={{ minWidth: '140px', padding: '6px 8px', fontSize: '0.85rem' }}
-                                                    value={nilai[s.id]?.penguji_id ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'penguji_id', e.target.value)}
-                                                >
-                                                    <option value="">Pilih Penguji</option>
-                                                    {guruList.map(g => (
-                                                        <option key={g.id} value={g.id}>{g.nama}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                        <div className="table-wrapper">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>NIS</th>
+                                        <th>Nama Santri</th>
+                                        <th style={{ textAlign: 'center' }}>Hafalan</th>
+                                        <th style={{ textAlign: 'center' }}>Tajwid</th>
+                                        <th style={{ textAlign: 'center' }}>Tilawah</th>
+                                        <th style={{ textAlign: 'center' }}>Rata-rata</th>
+                                        <th style={{ textAlign: 'center' }}>Jml Hafalan (Juz)</th>
+                                        <th style={{ textAlign: 'center' }}>Jml Hafalan (Halaman)</th>
+                                        <th style={{ textAlign: 'center', minWidth: '150px' }}>Penguji</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {loading ? (
+                                        <tr><td colSpan="10" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                    ) : santri.length === 0 ? (
+                                        <tr><td colSpan="10" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
+                                    ) : (
+                                        santri.map((s, i) => (
+                                            <tr key={s.id}>
+                                                <td>{i + 1}</td>
+                                                <td>{s.nis}</td>
+                                                <td className="name-cell">{s.nama}</td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="nilai-input"
+                                                        min="0"
+                                                        max="100"
+                                                        placeholder="0-100"
+                                                        value={nilai[s.id]?.hafalan ?? ''}
+                                                        onChange={e => handleNilaiChange(s.id, 'hafalan', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="nilai-input"
+                                                        min="0"
+                                                        max="100"
+                                                        placeholder="0-100"
+                                                        value={nilai[s.id]?.tajwid ?? ''}
+                                                        onChange={e => handleNilaiChange(s.id, 'tajwid', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="nilai-input"
+                                                        min="0"
+                                                        max="100"
+                                                        placeholder="0-100"
+                                                        value={nilai[s.id]?.tilawah ?? ''}
+                                                        onChange={e => handleNilaiChange(s.id, 'tilawah', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td style={{ textAlign: 'center', fontWeight: '600' }}>
+                                                    {calculateRataRata(s.id)}
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="nilai-input"
+                                                        min="0"
+                                                        max="30"
+                                                        placeholder="Juz"
+                                                        value={nilai[s.id]?.jumlah_hafalan ?? ''}
+                                                        onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <input
+                                                        type="number"
+                                                        className="nilai-input"
+                                                        min="0"
+                                                        max="20"
+                                                        placeholder="Hal"
+                                                        value={nilai[s.id]?.jumlah_hafalan_halaman ?? ''}
+                                                        onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan_halaman', e.target.value)}
+                                                    />
+                                                </td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <select
+                                                        className="form-control"
+                                                        style={{ minWidth: '140px', padding: '6px 8px', fontSize: '0.85rem' }}
+                                                        value={nilai[s.id]?.penguji_id ?? ''}
+                                                        onChange={e => handleNilaiChange(s.id, 'penguji_id', e.target.value)}
+                                                    >
+                                                        <option value="">Pilih Penguji</option>
+                                                        {guruList.map(g => (
+                                                            <option key={g.id} value={g.id}>{g.nama}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }
 

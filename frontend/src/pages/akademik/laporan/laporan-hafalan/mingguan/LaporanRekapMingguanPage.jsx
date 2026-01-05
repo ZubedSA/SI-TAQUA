@@ -5,14 +5,22 @@ import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
+import DateRangePicker from '../../../../../components/ui/DateRangePicker'
+import { useCalendar } from '../../../../../context/CalendarContext'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanRekapMingguanPage = () => {
     // =============================================
     // STATE
     // =============================================
+    const { formatDate, mode } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [reportData, setReportData] = useState([])
+
+    useEffect(() => {
+        console.log('[LaporanRekapMingguan] Mode changed:', mode)
+    }, [mode])
+
 
     // Filter dengan rentang tanggal fleksibel
     const today = new Date()
@@ -42,6 +50,7 @@ const LaporanRekapMingguanPage = () => {
     // FETCH REPORT DATA
     // =============================================
     const fetchReportData = async () => {
+        console.log('[LaporanRekapMingguan] Fetch triggered:', filters)
         if (!selectedHalaqohId) return
         if (!filters.tanggal_mulai || !filters.tanggal_akhir) return
 
@@ -189,7 +198,7 @@ const LaporanRekapMingguanPage = () => {
         if (reportData.length === 0) return
 
         const selectedHalaqoh = halaqohList.find(h => h.id === selectedHalaqohId)
-        const periodeStr = `${new Date(filters.tanggal_mulai).toLocaleDateString('id-ID')} s/d ${new Date(filters.tanggal_akhir).toLocaleDateString('id-ID')}`
+        const periodeStr = `${formatDate(filters.tanggal_mulai)} s/d ${formatDate(filters.tanggal_akhir)}`
 
         await generateLaporanPDF({
             title: 'LAPORAN REKAP HAFALAN MINGGUAN',
@@ -312,22 +321,15 @@ const LaporanRekapMingguanPage = () => {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Tanggal Mulai</label>
-                    <input
-                        type="date"
-                        className="form-control"
-                        value={filters.tanggal_mulai}
-                        onChange={e => setFilters({ ...filters, tanggal_mulai: e.target.value })}
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label">Tanggal Akhir</label>
-                    <input
-                        type="date"
-                        className="form-control"
-                        value={filters.tanggal_akhir}
-                        onChange={e => setFilters({ ...filters, tanggal_akhir: e.target.value })}
+                    <label className="form-label">Periode</label>
+                    <DateRangePicker
+                        startDate={filters.tanggal_mulai}
+                        endDate={filters.tanggal_akhir}
+                        onChange={(start, end) => setFilters({
+                            ...filters,
+                            tanggal_mulai: start,
+                            tanggal_akhir: end
+                        })}
                     />
                 </div>
 
@@ -357,13 +359,9 @@ const LaporanRekapMingguanPage = () => {
                     <Calendar size={18} style={{ color: '#059669' }} />
                     <strong>Periode:</strong>
                     <span style={{ color: '#166534' }}>
-                        {new Date(filters.tanggal_mulai).toLocaleDateString('id-ID', {
-                            weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                        })}
+                        {formatDate(filters.tanggal_mulai)}
                         {' s/d '}
-                        {new Date(filters.tanggal_akhir).toLocaleDateString('id-ID', {
-                            weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                        })}
+                        {formatDate(filters.tanggal_akhir)}
                     </span>
                 </div>
             )}

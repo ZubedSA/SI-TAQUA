@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react'
 import { Calendar, RefreshCw, Trophy, Users, AlertCircle } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../../../context/CalendarContext'
 import '../input-hafalan/Hafalan.css'
 
 const PencapaianBulananPage = () => {
+    const { mode } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState([])
 
@@ -17,6 +20,9 @@ const PencapaianBulananPage = () => {
     })
 
     const fetchData = async () => {
+        console.log('[PencapaianBulanan] Fetch triggered with filters:', filters)
+        console.log('[PencapaianBulanan] Current Calendar Mode:', mode)
+
         if (!hasHalaqoh) return
         setLoading(true)
 
@@ -87,24 +93,12 @@ const PencapaianBulananPage = () => {
                     style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed', padding: '8px 16px', borderRadius: '6px' }}
                 />
 
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: parseInt(e.target.value) })}
-                >
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                            {new Date(2024, i).toLocaleDateString('id-ID', { month: 'long' })}
-                        </option>
-                    ))}
-                </select>
-
-                <input
-                    type="number"
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: parseInt(e.target.value) })}
-                    min="2020"
-                    max="2030"
-                    style={{ width: '100px' }}
+                <SmartMonthYearFilter
+                    filters={filters}
+                    onFilterChange={(newFilters) => {
+                        console.log('[PencapaianBulanan] Filter changed:', newFilters)
+                        setFilters(newFilters)
+                    }}
                 />
             </div>
 

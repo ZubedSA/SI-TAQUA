@@ -5,9 +5,12 @@ import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
+import DateRangePicker from '../../../../../components/ui/DateRangePicker'
+import { useCalendar } from '../../../../../context/CalendarContext'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanHafalanHarianPage = () => {
+    const { formatDate, mode } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState([])
 
@@ -15,10 +18,13 @@ const LaporanHafalanHarianPage = () => {
     const { halaqohIds, halaqohNames, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin } = useUserHalaqoh()
 
     const [filters, setFilters] = useState({
-        tanggal: new Date().toISOString().split('T')[0]
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date().toISOString().split('T')[0]
     })
 
     const fetchData = async () => {
+        console.log('[LaporanHafalanHarian] Fetch triggered:', filters)
+        console.log('[LaporanHafalanHarian] Mode:', mode)
         if (!hasHalaqoh) return
         setLoading(true)
 
@@ -56,7 +62,9 @@ const LaporanHafalanHarianPage = () => {
                     santri:santri_id (id, nama, nis, no_telp_wali, nama_wali)
                 `)
                 .in('santri_id', santriIds)
-                .eq('tanggal', filters.tanggal)
+                .in('santri_id', santriIds)
+                .gte('tanggal', filters.startDate)
+                .lte('tanggal', filters.endDate)
                 .order('created_at', { ascending: false })
 
             setData(hafalanData || [])
@@ -69,7 +77,7 @@ const LaporanHafalanHarianPage = () => {
 
     useEffect(() => {
         if (!loadingHalaqoh && hasHalaqoh) fetchData()
-    }, [halaqohIds, loadingHalaqoh, filters.tanggal])
+    }, [halaqohIds, loadingHalaqoh, filters.startDate, filters.endDate])
 
     const sendWhatsApp = (item) => {
         const santri = item.santri
@@ -89,7 +97,7 @@ const LaporanHafalanHarianPage = () => {
 Kepada Yth. *${santri.nama_wali || 'Wali Santri'}*
 
 📌 *Nama:* ${santri.nama}
-📅 *Tanggal:* ${new Date(item.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+📅 *Tanggal:* ${formatDate(item.tanggal, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 
 📖 *Detail:*
 • Juz: ${item.juz_mulai || item.juz}
@@ -115,7 +123,7 @@ _PTQA Batuan_`
 
     const generatePDF = async () => {
         if (data.length === 0) return
-        const tanggalFormatted = new Date(filters.tanggal).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+        const tanggalFormatted = `${formatDate(filters.startDate)} - ${formatDate(filters.endDate)}`
 
         await generateLaporanPDF({
             title: 'LAPORAN HAFALAN HARIAN',
@@ -132,7 +140,7 @@ _PTQA Batuan_`
                 item.jenis,
                 item.status
             ]),
-            filename: `Hafalan_Harian_${filters.tanggal}`,
+            filename: `Hafalan_Harian_${filters.startDate}_${filters.endDate}`,
             totalLabel: 'Total Santri',
             totalValue: `${data.length} Santri`
         })
@@ -220,12 +228,11 @@ _PTQA Batuan_`
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Tanggal *</label>
-                    <input
-                        type="date"
-                        className="form-control"
-                        value={filters.tanggal}
-                        onChange={e => setFilters({ ...filters, tanggal: e.target.value })}
+                    <label className="form-label">Periode</label>
+                    <DateRangePicker
+                        startDate={filters.startDate}
+                        endDate={filters.endDate}
+                        onChange={(start, end) => setFilters({ ...filters, startDate: start, endDate: end })}
                     />
                 </div>
 

@@ -5,6 +5,7 @@ import { supabase } from '../../../../lib/supabase'
 import { logCreate, logUpdate } from '../../../../lib/auditLog'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import ConfirmationModal from '../../../../components/ui/ConfirmationModal'
+import DateRangePicker from '../../../../components/ui/DateRangePicker'
 import './Hafalan.css'
 
 const HafalanForm = () => {
@@ -397,7 +398,11 @@ const HafalanForm = () => {
                         </div>
                         <div className="form-group">
                             <label className="form-label">Tanggal *</label>
-                            <input type="date" name="tanggal" className="form-control" value={formData.tanggal} onChange={handleChange} required />
+                            <DateRangePicker
+                                startDate={formData.tanggal}
+                                onChange={(date) => setFormData(prev => ({ ...prev, tanggal: date }))}
+                                singleDate={true}
+                            />
                         </div>
                     </div>
 

@@ -19,10 +19,12 @@ import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import FormInput from '../../components/ui/FormInput'
+import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 const TagihanSantriPage = () => {
     const { user } = useAuth()
+    const { formatDate } = useCalendar()
     const { canCreate, canUpdate, canDelete } = usePermissions()
     const showToast = useToast()
     const [santriList, setSantriList] = useState([])
@@ -279,7 +281,11 @@ const TagihanSantriPage = () => {
             namaSantri: item.santri?.nama,
             kategori: item.kategori?.nama,
             jumlah: item.jumlah,
-            jatuhTempo: item.jatuh_tempo
+            namaSantri: item.santri?.nama,
+            kategori: item.kategori?.nama,
+            jumlah: item.jumlah,
+            jatuhTempo: item.jatuh_tempo,
+            formattedJatuhTempo: formatDate(item.jatuh_tempo)
         })
 
         sendWhatsApp(phone, message)
@@ -300,7 +306,7 @@ const TagihanSantriPage = () => {
             NIS: d.santri?.nis || '-',
             Kategori: d.kategori?.nama || '-',
             Jumlah: Number(d.jumlah),
-            Periode: new Date(d.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+            Periode: formatDate(d.jatuh_tempo, { month: 'long', year: 'numeric' }),
             Status: d.status
         }))
         exportToExcel(exportData, columns, 'laporan_tagihan_santri')
@@ -313,7 +319,7 @@ const TagihanSantriPage = () => {
             NIS: d.santri?.nis || '-',
             Kategori: d.kategori?.nama || '-',
             Jumlah: Number(d.jumlah),
-            Periode: new Date(d.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+            Periode: formatDate(d.jatuh_tempo, { month: 'long', year: 'numeric' }),
             Status: d.status
         }))
         exportToCSV(exportData, columns, 'laporan_tagihan_santri')
@@ -328,7 +334,7 @@ const TagihanSantriPage = () => {
                 d.santri?.nis || '-',
                 d.kategori?.nama || '-',
                 `Rp ${Number(d.jumlah).toLocaleString('id-ID')}`,
-                new Date(d.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }),
+                formatDate(d.jatuh_tempo, { month: 'long', year: 'numeric' }),
                 d.status
             ]),
             filename: 'laporan_tagihan_santri',
@@ -512,7 +518,7 @@ const TagihanSantriPage = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-gray-700">{new Date(item.jatuh_tempo).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</span>
+                                                <span className="text-gray-700">{formatDate(item.jatuh_tempo, { month: 'long', year: 'numeric' })}</span>
                                                 {isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' && (
                                                     <span className="text-[10px] text-red-600 font-bold">Terlambat</span>
                                                 )}

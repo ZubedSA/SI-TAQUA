@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, BookOpen, Calendar } from 'lucide-react'
+import { Save, RefreshCw, BookOpen, Calendar as CalendarIcon } from 'lucide-react'
+import DateRangePicker from '../../../../../components/ui/DateRangePicker'
 import { supabase } from '../../../../../lib/supabase'
 import { logCreate, logUpdate } from '../../../../../lib/auditLog'
+import { useCalendar } from '../../../../../context/CalendarContext'
 import '../../../../../pages/nilai/Nilai.css'
 
 const MadrosHarianPage = () => {
+    const { mode } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [semester, setSemester] = useState([])
@@ -41,6 +44,8 @@ const MadrosHarianPage = () => {
     }
 
     const fetchSantriAndNilai = async () => {
+        console.log('[MadrosHarian] Fetch triggered:', filters)
+        console.log('[MadrosHarian] Mode:', mode)
         if (!filters.kelas_id || !filters.mapel_id || !filters.semester_id) return
         setLoading(true)
         setError('')
@@ -207,11 +212,10 @@ const MadrosHarianPage = () => {
 
                 <div className="form-group">
                     <label className="form-label">Tanggal *</label>
-                    <input
-                        type="date"
-                        className="form-control"
-                        value={filters.tanggal}
-                        onChange={e => setFilters({ ...filters, tanggal: e.target.value })}
+                    <DateRangePicker
+                        startDate={filters.tanggal}
+                        onChange={(date) => setFilters({ ...filters, tanggal: date })}
+                        singleDate={true}
                     />
 
                 </div>

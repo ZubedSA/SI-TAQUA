@@ -5,10 +5,15 @@ import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { useToast } from '../../context/ToastContext'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import { useCalendar } from '../../context/CalendarContext'
+import DateDisplay from '../../components/common/DateDisplay'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
 import './Keuangan.css'
 
 const KasLaporanPage = () => {
     const showToast = useToast()
+    const { formatDate, mode } = useCalendar()
     const [pemasukan, setPemasukan] = useState([])
     const [pengeluaran, setPengeluaran] = useState([])
     const [loading, setLoading] = useState(true)
@@ -21,6 +26,8 @@ const KasLaporanPage = () => {
 
     const fetchData = async () => {
         setLoading(true)
+        console.log('[KasLaporan] Filters:', filters)
+        console.log('[KasLaporan] Mode:', mode)
         try {
             let queryPemasukan = supabase.from('kas_pemasukan').select('*').order('tanggal', { ascending: false })
             let queryPengeluaran = supabase.from('kas_pengeluaran').select('*').order('tanggal', { ascending: false })
@@ -74,7 +81,7 @@ const KasLaporanPage = () => {
         ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 
         const exportData = allData.map(d => ({
-            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Tanggal: formatDate(d.tanggal),
             Jenis: d.type,
             Keterangan: d.sumber || d.keperluan,
             Masuk: d.type === 'Pemasukan' ? Number(d.jumlah) : 0,
@@ -93,7 +100,7 @@ const KasLaporanPage = () => {
         ].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
 
         const exportData = allData.map(d => ({
-            Tanggal: new Date(d.tanggal).toLocaleDateString('id-ID'),
+            Tanggal: formatDate(d.tanggal),
             Jenis: d.type,
             Keterangan: d.sumber || d.keperluan,
             Masuk: d.type === 'Pemasukan' ? Number(d.jumlah) : 0,
@@ -113,11 +120,11 @@ const KasLaporanPage = () => {
         generateLaporanPDF({
             title: 'Laporan Arus Kas',
             subtitle: filters.dateFrom && filters.dateTo
-                ? `Periode ${new Date(filters.dateFrom).toLocaleDateString('id-ID')} - ${new Date(filters.dateTo).toLocaleDateString('id-ID')}`
+                ? `Periode ${formatDate(filters.dateFrom)} - ${formatDate(filters.dateTo)}`
                 : filters.bulan ? `Bulan ${filters.bulan}/${filters.tahun}` : `Tahun ${filters.tahun}`,
             columns: ['Tanggal', 'Jenis', 'Keterangan', 'Masuk', 'Keluar'],
             data: allData.map(d => [
-                new Date(d.tanggal).toLocaleDateString('id-ID'),
+                formatDate(d.tanggal),
                 d.type,
                 d.sumber || d.keperluan,
                 d.type === 'Pemasukan' ? `Rp ${Number(d.jumlah).toLocaleString('id-ID')}` : '-',
@@ -176,38 +183,23 @@ const KasLaporanPage = () => {
             </div>
 
             <div className="filters-bar">
-                <div className="date-range-filter">
-                    <input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Dari Tanggal"
-                    />
-                    <span>-</span>
-                    <input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Sampai Tanggal"
+                <DateRangePicker
+                    startDate={filters.dateFrom}
+                    endDate={filters.dateTo}
+                    onChange={(start, end) => setFilters({
+                        ...filters,
+                        dateFrom: start,
+                        dateTo: end,
+                        bulan: '',
+                        tahun: new Date().getFullYear()
+                    })}
+                />
+                <div style={{ opacity: (filters.dateFrom || filters.dateTo) ? 0.5 : 1, pointerEvents: (filters.dateFrom || filters.dateTo) ? 'none' : 'auto', display: 'flex', gap: '10px' }}>
+                    <SmartMonthYearFilter
+                        filters={filters}
+                        onFilterChange={setFilters}
                     />
                 </div>
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    <option value="">Semua Bulan</option>
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
-                    ))}
-                </select>
-                <select
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
                 <button className="btn btn-icon" onClick={fetchData}><RefreshCw size={18} /></button>
             </div>
 
@@ -225,7 +217,7 @@ const KasLaporanPage = () => {
                                 <tbody>
                                     {pemasukan.slice(0, 10).map(item => (
                                         <tr key={item.id}>
-                                            <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                            <td><DateDisplay date={item.tanggal} /></td>
                                             <td>{item.sumber}</td>
                                             <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
                                         </tr>
@@ -245,7 +237,7 @@ const KasLaporanPage = () => {
                                 <tbody>
                                     {pengeluaran.slice(0, 10).map(item => (
                                         <tr key={item.id}>
-                                            <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                                            <td><DateDisplay date={item.tanggal} /></td>
                                             <td>{item.keperluan}</td>
                                             <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
                                         </tr>

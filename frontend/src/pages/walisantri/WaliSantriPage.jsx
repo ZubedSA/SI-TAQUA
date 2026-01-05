@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react'
 import { Book, Award, Calendar, FileText, ArrowLeft, RefreshCw, Eye, CheckCircle, Clock, AlertCircle, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
+import { useCalendar } from '../../context/CalendarContext'
 import PageHeader from '../../components/layout/PageHeader'
+import DateDisplay from '../../components/common/DateDisplay'
 import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
+import DateRangePicker from '../../components/ui/DateRangePicker'
 
 const WaliSantriPage = () => {
     const showToast = useToast()
+    const { formatDate } = useCalendar()
     const [activeMenu, setActiveMenu] = useState(null)
     const [loading, setLoading] = useState(false)
 
@@ -296,12 +300,13 @@ const WaliSantriPage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className={labelClass}>Dari Tanggal</label>
-                                <input type="date" className={inputClass} value={dateRange.dari} onChange={(e) => setDateRange({ ...dateRange, dari: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Sampai Tanggal</label>
-                                <input type="date" className={inputClass} value={dateRange.sampai} onChange={(e) => setDateRange({ ...dateRange, sampai: e.target.value })} />
+                                <label className={labelClass}>Periode</label>
+                                <DateRangePicker
+                                    startDate={dateRange.dari}
+                                    endDate={dateRange.sampai}
+                                    onChange={(start, end) => setDateRange({ ...dateRange, dari: start, sampai: end })}
+                                    className="w-full"
+                                />
                             </div>
                             <Button onClick={fetchHafalan} disabled={loading} isLoading={loading}>
                                 <RefreshCw size={16} /> Tampilkan
@@ -348,7 +353,7 @@ const WaliSantriPage = () => {
                                             {hafalanData.map((h, i) => (
                                                 <tr key={h.id} className="hover:bg-gray-50">
                                                     <td className="px-6 py-4 text-center">{i + 1}</td>
-                                                    <td className="px-6 py-4">{new Date(h.tanggal).toLocaleDateString('id-ID')}</td>
+                                                    <td className="px-6 py-4"><DateDisplay date={h.tanggal} /></td>
                                                     <td className="px-6 py-4">Juz {h.juz_mulai || h.juz || '-'}{(h.juz_selesai && h.juz_selesai !== h.juz_mulai) ? ` - ${h.juz_selesai}` : ''}</td>
                                                     <td className="px-6 py-4">{h.surah_mulai || h.surah || '-'}{(h.surah_selesai && h.surah_selesai !== h.surah_mulai) ? ` s/d ${h.surah_selesai}` : ''}</td>
                                                     <td className="px-6 py-4">{h.ayat_mulai || 1} - {h.ayat_selesai || 1}</td>
@@ -473,12 +478,13 @@ const WaliSantriPage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className={labelClass}>Dari Tanggal</label>
-                                <input type="date" className={inputClass} value={dateRange.dari} onChange={(e) => setDateRange({ ...dateRange, dari: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Sampai Tanggal</label>
-                                <input type="date" className={inputClass} value={dateRange.sampai} onChange={(e) => setDateRange({ ...dateRange, sampai: e.target.value })} />
+                                <label className={labelClass}>Periode</label>
+                                <DateRangePicker
+                                    startDate={dateRange.dari}
+                                    endDate={dateRange.sampai}
+                                    onChange={(start, end) => setDateRange({ ...dateRange, dari: start, sampai: end })}
+                                    className="w-full"
+                                />
                             </div>
                             <Button onClick={fetchPresensi} disabled={loading} isLoading={loading}>
                                 <RefreshCw size={16} /> Tampilkan
@@ -525,7 +531,7 @@ const WaliSantriPage = () => {
                                                 return (
                                                     <tr key={p.id} className="hover:bg-gray-50">
                                                         <td className="px-6 py-4 text-center">{i + 1}</td>
-                                                        <td className="px-6 py-4">{date.toLocaleDateString('id-ID')}</td>
+                                                        <td className="px-6 py-4"><DateDisplay date={p.tanggal} /></td>
                                                         <td className="px-6 py-4">{hari}</td>
                                                         <td className="px-6 py-4">{getStatusBadge(p.status)}</td>
                                                     </tr>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check, User, AlertCircle, CheckCircle, ChevronDown, X, Layers, List } from 'lucide-react'
+import DateRangePicker from '../../components/ui/DateRangePicker'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import { supabase } from '../../lib/supabase'
@@ -10,10 +11,12 @@ import { sendWhatsApp, templateKonfirmasiPembayaran, templateTagihanSantri } fro
 import { logCreate } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
+import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 const PembayaranSantriPage = () => {
     const { user } = useAuth()
+    const { formatDate, mode } = useCalendar()
     const showToast = useToast()
     const [santriList, setSantriList] = useState([])
     const [selectedSantri, setSelectedSantri] = useState(null)
@@ -176,6 +179,8 @@ const PembayaranSantriPage = () => {
 
     const executePayment = async () => {
         setSaving(true)
+        console.log('[PembayaranSantri] Processing payment:', form)
+        console.log('[PembayaranSantri] Mode:', mode)
         try {
             const jumlahBayar = parseFloat(form.jumlah)
 
@@ -234,7 +239,7 @@ const PembayaranSantriPage = () => {
         }
 
         const items = belumLunas.map(t =>
-            `• ${t.kategori?.nama}: Rp ${Number(t.jumlah).toLocaleString('id-ID')} (jatuh tempo: ${new Date(t.jatuh_tempo).toLocaleDateString('id-ID')})`
+            `• ${t.kategori?.nama}: Rp ${Number(t.jumlah).toLocaleString('id-ID')} (jatuh tempo: ${formatDate(t.jatuh_tempo)})`
         ).join('\n')
 
         const message = `Assalamu'alaikum,
@@ -270,7 +275,7 @@ ${items}
 
 *Total: Rp ${Number(lastPayment.jumlah).toLocaleString('id-ID')}*
 Metode: ${lastPayment.metode}
-Tanggal: ${new Date(lastPayment.tanggal).toLocaleDateString('id-ID')}
+Tanggal: ${formatDate(lastPayment.tanggal)}
 
 Jazakumullah khairan atas pembayarannya.
 
@@ -295,6 +300,7 @@ Jazakumullah khairan atas pembayarannya.
             periode: periodeStr,
             jumlah: lastPayment.jumlah,
             metode: lastPayment.metode,
+            formattedTanggal: formatDate(lastPayment.tanggal),
             kasir: 'Bendahara PTQA'
         })
         showToast.success('Kwitansi berhasil dicetak')
@@ -377,8 +383,13 @@ Jazakumullah khairan.
     // Print kwitansi for single lunas
     const handlePrintLunasSingle = (tagihan) => {
         // Get periode from jatuh_tempo
-        const periodeDate = new Date(tagihan.jatuh_tempo)
-        const periodeStr = periodeDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+        const periodeStr = formatDate(tagihan.jatuh_tempo, { month: 'long', year: 'numeric' }) // Still depends on mode, but usually periode is Masehi? "Desember 2024". useCalendar formatDate handles full string.
+        // Actually for Periode string like "Desember 2024", formatDate returns full date.
+        // Let's stick to Masehi for Periode grouping label if database is monthly based?
+        // But the code used `toLocaleDateString`.
+        // Let's us `formatDate` for consistency if we want Dual Mode.
+        // But `periode` in Kwitansi usually "Bulan X".
+        // Let's keep `periodeStr` as matches the mode.
 
         generateKwitansiPDF({
             nomorKwitansi: `KW-${tagihan.id.slice(-8)}`,
@@ -388,6 +399,7 @@ Jazakumullah khairan.
             kategori: tagihan.kategori?.nama,
             periode: periodeStr,
             jumlah: tagihan.jumlah,
+            formattedTanggal: formatDate(new Date()),
             metode: 'Tunai',
             kasir: 'Bendahara PTQA'
         })
@@ -405,7 +417,7 @@ Jazakumullah khairan.
         }
 
         const items = pembayaranHistory.map(p =>
-            `• ${new Date(p.tanggal).toLocaleDateString('id-ID')} - ${p.tagihan?.kategori?.nama || '-'}: Rp ${Number(p.jumlah).toLocaleString('id-ID')} (${p.metode})`
+            `• ${formatDate(p.tanggal)} - ${p.tagihan?.kategori?.nama || '-'}: Rp ${Number(p.jumlah).toLocaleString('id-ID')} (${p.metode})`
         ).join('\n')
 
         const total = pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0)
@@ -435,7 +447,7 @@ ${items}
 
 Konfirmasi pembayaran santri *${selectedSantri.nama}*:
 
-📅 Tanggal: ${new Date(pembayaran.tanggal).toLocaleDateString('id-ID')}
+📅 Tanggal: ${formatDate(pembayaran.tanggal)}
 📋 Kategori: ${pembayaran.tagihan?.kategori?.nama || '-'}
 💰 Jumlah: Rp ${Number(pembayaran.jumlah).toLocaleString('id-ID')}
 💳 Metode: ${pembayaran.metode}
@@ -455,7 +467,7 @@ Jazakumullah khairan.
             subtitle: `NIS: ${selectedSantri?.nis} | Kelas: ${selectedSantri?.kelas?.nama || '-'}`,
             columns: ['Tanggal', 'Kategori', 'Jumlah', 'Metode'],
             data: pembayaranHistory.map(p => [
-                new Date(p.tanggal).toLocaleDateString('id-ID'),
+                formatDate(p.tanggal),
                 p.tagihan?.kategori?.nama || '-',
                 `Rp ${Number(p.jumlah).toLocaleString('id-ID')}`,
                 p.metode
@@ -482,6 +494,7 @@ Jazakumullah khairan.
             kategori: pembayaran.tagihan?.kategori?.nama,
             periode: periodeStr,
             jumlah: pembayaran.jumlah,
+            formattedTanggal: formatDate(pembayaran.tanggal),
             metode: pembayaran.metode,
             kasir: 'Bendahara PTQA'
         })
@@ -609,7 +622,7 @@ Jazakumullah khairan.
                                                         <span className="tagihan-amount">Rp {Number(tagihan.jumlah).toLocaleString('id-ID')}</span>
                                                     </div>
                                                     <div className="check-item-sub">
-                                                        <span>Jatuh tempo: {new Date(tagihan.jatuh_tempo).toLocaleDateString('id-ID')}</span>
+                                                        <span>Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}</span>
                                                         {isOverdue(tagihan.jatuh_tempo) && <span className="overdue-label">Terlambat</span>}
                                                     </div>
                                                 </div>
@@ -723,7 +736,7 @@ Jazakumullah khairan.
                                     <div className="history-list">
                                         {pembayaranHistory.map(p => (
                                             <div key={p.id} className="history-item">
-                                                <div className="history-date">{new Date(p.tanggal).toLocaleDateString('id-ID')}</div>
+                                                <div className="history-date">{formatDate(p.tanggal)}</div>
                                                 <div className="history-info">
                                                     <span>{p.tagihan?.kategori?.nama || '-'}</span>
                                                     <strong className="green">Rp {Number(p.jumlah).toLocaleString('id-ID')}</strong>
@@ -799,14 +812,15 @@ Jazakumullah khairan.
                                             required
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label>Tanggal *</label>
-                                        <input
-                                            type="date"
-                                            value={form.tanggal}
-                                            onChange={e => setForm({ ...form, tanggal: e.target.value })}
-                                            required
-                                        />
+                                    <div className="payment-info-row">
+                                        <span>Tanggal Bayar</span>
+                                        <div style={{ width: '200px' }}>
+                                            <DateRangePicker
+                                                singleDate
+                                                startDate={form.tanggal}
+                                                onChange={(date) => setForm({ ...form, tanggal: date })}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="form-group">

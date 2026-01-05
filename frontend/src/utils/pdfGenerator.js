@@ -22,7 +22,8 @@ export const generateLaporanPDF = async (options) => {
         showTotal = true,
         totalLabel = 'Total',
         totalValue = null,
-        additionalInfo = [] // [{label: 'Halaqoh', value: 'A'}, ...]
+        additionalInfo = [], // [{label: 'Halaqoh', value: 'A'}, ...]
+        printedAt = null // Custom formatted date string for footer
     } = options
 
     const doc = new jsPDF(orientation)
@@ -155,7 +156,8 @@ export const generateLaporanPDF = async (options) => {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100)
-    doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, 14, finalY + 15)
+    const printDate = printedAt || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    doc.text(`Dicetak pada: ${printDate}`, 14, finalY + 15)
     doc.text('Sistem Akademik PTQA Batuan', pageWidth / 2, finalY + 25, { align: 'center' })
 
     // Save
@@ -176,7 +178,9 @@ export const generateKwitansiPDF = async (data) => {
         periode, // contoh: "Desember 2025"
         jumlah,
         metode,
-        kasir
+        kasir,
+        printedAt = null,
+        formattedTanggal = null
     } = data
 
     const doc = new jsPDF()
@@ -259,7 +263,8 @@ export const generateKwitansiPDF = async (data) => {
     drawRow('No. Kwitansi', nomorKwitansi)
 
     // Row 2: Tanggal
-    drawRow('Tanggal', new Date(tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }))
+    const displayTanggal = formattedTanggal || new Date(tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    drawRow('Tanggal', displayTanggal)
 
     // Row 3: Nama Santri
     drawRow('Nama Santri', namaSantri)
@@ -320,7 +325,8 @@ export const generateKwitansiPDF = async (data) => {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100)
     doc.text('PTQA Batuan - Pondok Pesantren Tahfizh Qur\'an Al-Usymuni Batuan', pageWidth / 2, y, { align: 'center' })
-    doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, pageWidth / 2, y + 5, { align: 'center' })
+    const printDate = printedAt || new Date().toLocaleDateString('id-ID')
+    doc.text(`Dicetak: ${printDate}`, pageWidth / 2, y + 5, { align: 'center' })
 
     // Save
     doc.save(`Kwitansi_${nomorKwitansi}_${namaSantri?.replace(/\s/g, '_') || 'santri'}.pdf`)

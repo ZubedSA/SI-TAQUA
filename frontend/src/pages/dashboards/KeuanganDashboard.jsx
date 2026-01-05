@@ -27,6 +27,9 @@ import {
     Search,
     RefreshCw
 } from 'lucide-react'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../context/CalendarContext'
 import { supabase } from '../../lib/supabase'
 import './KeuanganDashboard.css'
 
@@ -45,6 +48,7 @@ ChartJS.register(
  * Fokus pada kas, pembayaran, dan penyaluran dana
  */
 const KeuanganDashboard = () => {
+    const { mode } = useCalendar()
     const [keuanganStats, setKeuanganStats] = useState({
         pemasukan: 0,
         pengeluaran: 0,
@@ -76,6 +80,8 @@ const KeuanganDashboard = () => {
     }
 
     useEffect(() => {
+        console.log('[KeuanganDashboard] Filters changed:', filters)
+        console.log('[KeuanganDashboard] Mode:', mode)
         fetchKeuanganStats()
         fetchMonthlyData()
     }, [filters.bulan, filters.tahun, filters.dateFrom, filters.dateTo])
@@ -314,38 +320,24 @@ const KeuanganDashboard = () => {
 
             {/* Filters Bar */}
             <div className="filters-bar" style={{ marginTop: '20px', marginBottom: '20px' }}>
-                <div className="date-range-filter">
-                    <input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Dari Tanggal"
-                    />
-                    <span>-</span>
-                    <input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Sampai Tanggal"
+                <DateRangePicker
+                    startDate={filters.dateFrom}
+                    endDate={filters.dateTo}
+                    onChange={(start, end) => setFilters({
+                        ...filters,
+                        dateFrom: start,
+                        dateTo: end,
+                        bulan: '',
+                        tahun: new Date().getFullYear()
+                    })}
+                />
+
+                <div style={{ opacity: (filters.dateFrom || filters.dateTo) ? 0.5 : 1, pointerEvents: (filters.dateFrom || filters.dateTo) ? 'none' : 'auto' }}>
+                    <SmartMonthYearFilter
+                        filters={filters}
+                        onFilterChange={setFilters}
                     />
                 </div>
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    <option value="">Semua Bulan</option>
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
-                    ))}
-                </select>
-                <select
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
                 <button className="btn btn-icon" onClick={() => { fetchKeuanganStats(); fetchMonthlyData(); }}>
                     <RefreshCw size={18} />
                 </button>

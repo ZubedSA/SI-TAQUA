@@ -15,9 +15,13 @@ import { useKas, useKategoriPembayaran } from '../../hooks/useKeuangan'
 import { useKasPengeluaran } from '../../hooks/features/useKasPengeluaran'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 const KasPengeluaranPage = () => {
+    const { mode } = useCalendar()
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const { canCreate, canUpdate, canDelete } = usePermissions()
     const showToast = useToast() // showToast is returned directly from context, not destructured
@@ -44,7 +48,12 @@ const KasPengeluaranPage = () => {
 
     useEffect(() => {
         setLoading(loadingMain)
-    }, [loadingMain])
+        if (!loadingMain) {
+            console.log('[KasPengeluaran] Data loaded:', rawData.length, 'items')
+            console.log('[KasPengeluaran] Mode:', mode)
+            console.log('[KasPengeluaran] Filters:', filters)
+        }
+    }, [loadingMain, mode, filters])
 
     useEffect(() => {
         fetchKategori()
@@ -301,38 +310,25 @@ const KasPengeluaranPage = () => {
                         onChange={e => setFilters({ ...filters, search: e.target.value })}
                     />
                 </div>
-                <div className="date-range-filter">
-                    <input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Dari Tanggal"
-                    />
-                    <span>-</span>
-                    <input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Sampai Tanggal"
+
+                <DateRangePicker
+                    startDate={filters.dateFrom}
+                    endDate={filters.dateTo}
+                    onChange={(start, end) => setFilters({
+                        ...filters,
+                        dateFrom: start,
+                        dateTo: end,
+                        bulan: '',
+                        tahun: new Date().getFullYear()
+                    })}
+                />
+
+                <div style={{ opacity: (filters.dateFrom || filters.dateTo) ? 0.5 : 1, pointerEvents: (filters.dateFrom || filters.dateTo) ? 'none' : 'auto' }}>
+                    <SmartMonthYearFilter
+                        filters={filters}
+                        onFilterChange={setFilters}
                     />
                 </div>
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    <option value="">Semua Bulan</option>
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
-                    ))}
-                </select>
-                <select
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
                 <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
             </div>
 
@@ -426,51 +422,57 @@ const KasPengeluaranPage = () => {
                 )}
             </div>
 
-            {showModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3>{editItem ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}</h3>
-                            <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+            {
+                showModal && (
+                    <div className="modal-overlay active">
+                        <div className="modal">
+                            <div className="modal-header">
+                                <h3>{editItem ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'}</h3>
+                                <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
+                            </div>
+                            <form onSubmit={handleFormSubmit}>
+                                <div className="modal-body">
+                                    <div className="form-group">
+                                        <label>Tanggal *</label>
+                                        <DateRangePicker
+                                            singleDate
+                                            startDate={form.tanggal}
+                                            onChange={(date) => setForm({ ...form, tanggal: date })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Keperluan *</label>
+                                        <input type="text" value={form.keperluan} onChange={e => setForm({ ...form, keperluan: e.target.value })} placeholder="Contoh: Beli ATK" required />
+                                    </div>
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label>Kategori</label>
+                                            <select value={form.kategori} onChange={e => setForm({ ...form, kategori: e.target.value })}>
+                                                <option value="">Pilih Kategori</option>
+                                                {kategoriList.map(k => <option key={k.id} value={k.nama}>{k.nama}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Jumlah (Rp) *</label>
+                                            <input type="number" value={form.jumlah} onChange={e => setForm({ ...form, jumlah: e.target.value })} min="0" required />
+                                        </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Keterangan</label>
+                                        <textarea value={form.keterangan} onChange={e => setForm({ ...form, keterangan: e.target.value })} rows={3} />
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
+                                    <button type="submit" className="btn btn-primary" disabled={saving}>
+                                        {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <form onSubmit={handleFormSubmit}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label>Tanggal *</label>
-                                    <input type="date" value={form.tanggal} onChange={e => setForm({ ...form, tanggal: e.target.value })} required />
-                                </div>
-                                <div className="form-group">
-                                    <label>Keperluan *</label>
-                                    <input type="text" value={form.keperluan} onChange={e => setForm({ ...form, keperluan: e.target.value })} placeholder="Contoh: Beli ATK" required />
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Kategori</label>
-                                        <select value={form.kategori} onChange={e => setForm({ ...form, kategori: e.target.value })}>
-                                            <option value="">Pilih Kategori</option>
-                                            {kategoriList.map(k => <option key={k.id} value={k.nama}>{k.nama}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Jumlah (Rp) *</label>
-                                        <input type="number" value={form.jumlah} onChange={e => setForm({ ...form, jumlah: e.target.value })} min="0" required />
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Keterangan</label>
-                                    <textarea value={form.keterangan} onChange={e => setForm({ ...form, keterangan: e.target.value })} rows={3} />
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>
-                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : (editItem ? 'Simpan' : 'Tambah')}
-                                </button>
-                            </div>
-                        </form>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <DeleteConfirmationModal
                 isOpen={deleteModal.isOpen}

@@ -17,10 +17,14 @@ import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import PageHeader from '../../components/layout/PageHeader'
 import StatsCard from '../../components/ui/StatsCard'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 
 const KasPemasukanPage = () => {
+    const { mode } = useCalendar()
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const { canCreate, canUpdate, canDelete } = usePermissions()
     const showToast = useToast() // showToast is returned directly from context, not destructured
@@ -49,7 +53,12 @@ const KasPemasukanPage = () => {
 
     useEffect(() => {
         setLoading(loadingMain)
-    }, [loadingMain])
+        if (!loadingMain) {
+            console.log('[KasPemasukan] Data loaded:', rawData.length, 'items')
+            console.log('[KasPemasukan] Mode:', mode)
+            console.log('[KasPemasukan] Filters:', filters)
+        }
+    }, [loadingMain, mode, filters])
 
     useEffect(() => {
         fetchKategori()
@@ -326,105 +335,29 @@ const KasPemasukanPage = () => {
                         onChange={e => setFilters({ ...filters, search: e.target.value })}
                     />
                 </div>
-                <div className="date-range-filter">
-                    <input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Dari Tanggal"
-                    />
-                    <span>-</span>
-                    <input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                        title="Sampai Tanggal"
+                <DateRangePicker
+                    startDate={filters.dateFrom}
+                    endDate={filters.dateTo}
+                    onChange={(start, end) => setFilters({
+                        ...filters,
+                        dateFrom: start,
+                        dateTo: end,
+                        bulan: '', // Reset bulan selection when using custom date range
+                        tahun: new Date().getFullYear()
+                    })}
+                />
+                <div style={{ opacity: (filters.dateFrom || filters.dateTo) ? 0.5 : 1, pointerEvents: (filters.dateFrom || filters.dateTo) ? 'none' : 'auto' }}>
+                    <SmartMonthYearFilter
+                        filters={filters}
+                        onFilterChange={setFilters}
                     />
                 </div>
-                <select
-                    value={filters.bulan}
-                    onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    <option value="">Semua Bulan</option>
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
-                    ))}
-                </select>
-                <select
-                    value={filters.tahun}
-                    onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
-                    disabled={filters.dateFrom || filters.dateTo}
-                >
-                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
                 <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
             </div>
 
             <div className="table-container">
                 {/* Filters */}
-                <div className="p-4 border-b border-gray-200 space-y-4">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Cari sumber atau keterangan..."
-                                value={filters.search}
-                                onChange={e => setFilters({ ...filters, search: e.target.value })}
-                                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                            />
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                                <span className="text-gray-500 text-sm">Periode:</span>
-                                <input
-                                    type="date"
-                                    value={filters.dateFrom}
-                                    onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                                    className="border-none p-0 text-sm focus:ring-0 text-gray-700 w-auto"
-                                    title="Dari Tanggal"
-                                />
-                                <span className="text-gray-400">-</span>
-                                <input
-                                    type="date"
-                                    value={filters.dateTo}
-                                    onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
-                                    className="border-none p-0 text-sm focus:ring-0 text-gray-700 w-auto"
-                                    title="Sampai Tanggal"
-                                />
-                            </div>
-                            <select
-                                value={filters.bulan}
-                                onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
-                                disabled={filters.dateFrom || filters.dateTo}
-                                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
-                            >
-                                <option value="">Semua Bulan</option>
-                                {[...Array(12)].map((_, i) => (
-                                    <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
-                                ))}
-                            </select>
-                            <select
-                                value={filters.tahun}
-                                onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
-                                disabled={filters.dateFrom || filters.dateTo}
-                                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
-                            >
-                                {[2024, 2025, 2026].map(y => (
-                                    <option key={y} value={y}>{y}</option>
-                                ))}
-                            </select>
-                            <button
-                                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                                onClick={refetch}
-                                title="Refresh Data"
-                            >
-                                <RefreshCw size={18} />
-                            </button>
-                        </div>
-                    </div>
-                </div>
+
 
                 {/* Data Table */}
                 <div className="overflow-x-auto">
@@ -517,11 +450,10 @@ const KasPemasukanPage = () => {
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label>Tanggal *</label>
-                                    <input
-                                        type="date"
-                                        value={form.tanggal}
-                                        onChange={e => setForm({ ...form, tanggal: e.target.value })}
-                                        required
+                                    <DateRangePicker
+                                        singleDate
+                                        startDate={form.tanggal}
+                                        onChange={(date) => setForm({ ...form, tanggal: date })}
                                     />
                                 </div>
                                 <div className="form-group">

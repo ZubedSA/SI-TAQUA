@@ -5,24 +5,13 @@ import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
+import { useCalendar } from '../../../../../context/CalendarContext'
 import '../../../../../pages/laporan/Laporan.css'
 
-const bulanOptions = [
-    { value: 1, label: 'Januari' },
-    { value: 2, label: 'Februari' },
-    { value: 3, label: 'Maret' },
-    { value: 4, label: 'April' },
-    { value: 5, label: 'Mei' },
-    { value: 6, label: 'Juni' },
-    { value: 7, label: 'Juli' },
-    { value: 8, label: 'Agustus' },
-    { value: 9, label: 'September' },
-    { value: 10, label: 'Oktober' },
-    { value: 11, label: 'November' },
-    { value: 12, label: 'Desember' }
-]
+import SmartMonthYearFilter from '../../../../../components/common/SmartMonthYearFilter'
 
 const LaporanUjianSyahriPage = () => {
+    const { formatDate, mode } = useCalendar()
     // AUTO-FILTER: Halaqoh berdasarkan akun
     const {
         halaqohIds,
@@ -88,6 +77,8 @@ const LaporanUjianSyahriPage = () => {
     }
 
     const fetchData = async () => {
+        console.log('[LaporanUjianSyahri] Fetch triggered:', filters)
+        console.log('[LaporanUjianSyahri] Mode:', mode)
         if (!filters.halaqoh_id || !filters.semester_id) return
         setLoading(true)
 
@@ -193,7 +184,10 @@ const LaporanUjianSyahriPage = () => {
         if (data.length === 0) return
 
         const selectedHalaqoh = halaqoh.find(h => h.id === filters.halaqoh_id)
-        const bulanNama = bulanOptions.find(b => b.value === filters.bulan)?.label || '-'
+        // const bulanNama = bulanOptions.find(b => b.value === filters.bulan)?.label || '-'
+        // Use standard date formatter for period name since options are gone
+        const dateObj = new Date(filters.tahun, filters.bulan - 1, 1)
+        const bulanNama = dateObj.toLocaleDateString('id-ID', { month: 'long' })
 
         await generateLaporanPDF({
             title: 'LAPORAN UJIAN SYAHRI (BULANAN)',
@@ -219,7 +213,8 @@ const LaporanUjianSyahriPage = () => {
             ]),
             filename: `Ujian_Syahri_${bulanNama}_${filters.tahun}`,
             totalLabel: 'Total Santri',
-            totalValue: `${data.length} Santri`
+            totalValue: `${data.length} Santri`,
+            printedAt: formatDate(new Date())
         })
     }
 
@@ -324,27 +319,10 @@ const LaporanUjianSyahriPage = () => {
                     )}
                 </div>
 
-                <div className="form-group">
-                    <label className="form-label">Bulan *</label>
-                    <select
-                        className="form-control"
-                        value={filters.bulan}
-                        onChange={e => setFilters({ ...filters, bulan: parseInt(e.target.value) })}
-                    >
-                        {bulanOptions.map(b => (
-                            <option key={b.value} value={b.value}>{b.label}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label className="form-label">Tahun *</label>
-                    <input
-                        type="number"
-                        className="form-control"
-                        value={filters.tahun}
-                        onChange={e => setFilters({ ...filters, tahun: parseInt(e.target.value) })}
-                    />
-                </div>
+                <SmartMonthYearFilter
+                    filters={filters}
+                    onFilterChange={setFilters}
+                />
             </div>
 
             <div className="card">
@@ -411,7 +389,7 @@ const LaporanUjianSyahriPage = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }
 

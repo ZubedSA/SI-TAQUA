@@ -4,9 +4,11 @@ import { supabase } from '../../../../../lib/supabase'
 import { generateLaporanPDF } from '../../../../../utils/pdfGenerator'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
+import { useCalendar } from '../../../../../context/CalendarContext'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanUjianSemesterPage = () => {
+    const { formatDate } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [semester, setSemester] = useState([])
     const [halaqoh, setHalaqoh] = useState([])
@@ -139,7 +141,8 @@ const LaporanUjianSemesterPage = () => {
             ]),
             filename: `Ujian_Semester_${currentSem?.nama?.replace(/\s/g, '_') || 'Laporan'}`,
             totalLabel: 'Total Santri',
-            totalValue: `${data.length} Santri`
+            totalValue: `${data.length} Santri`,
+            printedAt: formatDate(new Date())
         })
     }
 

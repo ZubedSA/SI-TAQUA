@@ -45,7 +45,7 @@ export const sendWhatsApp = (phone, message) => {
  * @returns {string} - Pesan terformat
  */
 export const templateTagihanSantri = (data) => {
-    const { namaSantri, kategori, jumlah, jatuhTempo, namaPesantren = 'PTQA Batuan' } = data
+    const { namaSantri, kategori, jumlah, jatuhTempo, formattedJatuhTempo, namaPesantren = 'PTQA Batuan' } = data
 
     return `Assalamu'alaikum Wr. Wb.
 
@@ -59,7 +59,7 @@ Dengan hormat, kami informasikan tagihan sebagai berikut:
 
 📋 *Kategori:* ${kategori}
 💰 *Jumlah:* Rp ${Number(jumlah).toLocaleString('id-ID')}
-📅 *Jatuh Tempo:* ${new Date(jatuhTempo).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+📅 *Jatuh Tempo:* ${formattedJatuhTempo || new Date(jatuhTempo).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
 
 Mohon untuk melakukan pembayaran sebelum jatuh tempo.
 
@@ -75,7 +75,7 @@ _${namaPesantren}_`
  * @returns {string} - Pesan terformat
  */
 export const templateKonfirmasiPembayaran = (data) => {
-    const { namaSantri, kategori, jumlah, tanggal, metode, namaPesantren = 'PTQA Batuan' } = data
+    const { namaSantri, kategori, jumlah, tanggal, formattedTanggal, metode, namaPesantren = 'PTQA Batuan' } = data
 
     return `Assalamu'alaikum Wr. Wb.
 
@@ -89,7 +89,7 @@ Alhamdulillah, pembayaran santri telah kami terima:
 
 📋 *Kategori:* ${kategori}
 💰 *Jumlah:* Rp ${Number(jumlah).toLocaleString('id-ID')}
-📅 *Tanggal:* ${new Date(tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+📅 *Tanggal:* ${formattedTanggal || new Date(tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
 💳 *Metode:* ${metode}
 
 ✅ *Status: LUNAS*
@@ -106,7 +106,7 @@ _${namaPesantren}_`
  * @returns {string} - Pesan terformat
  */
 export const templatePengingatTagihan = (data) => {
-    const { namaSantri, kategori, jumlah, jatuhTempo, sisaHari, namaPesantren = 'PTQA Batuan' } = data
+    const { namaSantri, kategori, jumlah, jatuhTempo, formattedJatuhTempo, sisaHari, namaPesantren = 'PTQA Batuan' } = data
 
     return `Assalamu'alaikum Wr. Wb.
 
@@ -120,7 +120,7 @@ Kami mengingatkan bahwa tagihan berikut akan segera jatuh tempo:
 
 📋 *Kategori:* ${kategori}
 💰 *Jumlah:* Rp ${Number(jumlah).toLocaleString('id-ID')}
-📅 *Jatuh Tempo:* ${new Date(jatuhTempo).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+📅 *Jatuh Tempo:* ${formattedJatuhTempo || new Date(jatuhTempo).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
 ⏳ *Sisa Waktu:* ${sisaHari} hari lagi
 
 Mohon segera melakukan pembayaran untuk menghindari keterlambatan.

@@ -14,9 +14,12 @@ import EmptyState from '../../../../components/ui/EmptyState'
 import { exportToExcel, exportToCSV } from '../../../../utils/exportUtils'
 import { generateLaporanPDF } from '../../../../utils/pdfGenerator'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import DateRangePicker from '../../../../components/ui/DateRangePicker'
+import { useCalendar } from '../../../../context/CalendarContext'
 
 
 const HafalanList = () => {
+    const { mode } = useCalendar()
     // Read initial tab from URL param
     const [searchParams] = useSearchParams()
     const initialTab = searchParams.get('tab') || 'list'
@@ -286,6 +289,8 @@ const HafalanList = () => {
     }
 
     const fetchHafalan = async () => {
+        console.log('[HafalanList] Fetch triggered')
+        console.log('[HafalanList] Mode:', mode)
         setLoading(true)
         try {
             const { data, error } = await supabase
@@ -697,35 +702,17 @@ _PTQA Batuan_`
 
                         {/* Filters Row */}
                         <div className="flex flex-col md:flex-row gap-3 pt-2 items-start md:items-center">
-                            <div className="flex items-center gap-2 w-full md:w-auto bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                <input
-                                    type="date"
-                                    className="bg-transparent border-none p-0 text-sm focus:ring-0 text-gray-700 w-full md:w-auto"
-                                    value={dateFilter.dari}
-                                    onChange={(e) => setDateFilter({ ...dateFilter, dari: e.target.value })}
-                                />
-                                <span className="text-gray-400">-</span>
-                                <input
-                                    type="date"
-                                    className="bg-transparent border-none p-0 text-sm focus:ring-0 text-gray-700 w-full md:w-auto"
-                                    value={dateFilter.sampai}
-                                    onChange={(e) => setDateFilter({ ...dateFilter, sampai: e.target.value })}
+                            <div className="w-full md:w-auto">
+                                <DateRangePicker
+                                    startDate={dateFilter.dari}
+                                    endDate={dateFilter.sampai}
+                                    onChange={(start, end) => setDateFilter({ dari: start, sampai: end })}
                                 />
                             </div>
 
                             <div className="w-full md:w-auto px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 truncate min-w-[200px]">
                                 {isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
                             </div>
-
-                            {(dateFilter.dari || dateFilter.sampai) && (
-                                <button
-                                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                                    onClick={() => setDateFilter({ dari: '', sampai: '' })}
-                                    title="Reset Filter"
-                                >
-                                    <RefreshCw size={18} />
-                                </button>
-                            )}
 
                             {/* Search */}
                             <div className="relative w-full md:w-64 md:ml-auto">
@@ -874,21 +861,11 @@ _PTQA Batuan_`
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-3 pt-2 items-start md:items-center">
-                            <div className="flex items-center gap-2 w-full md:w-auto bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                <span className="text-xs text-gray-500 font-medium uppercase">Dari</span>
-                                <input
-                                    type="date"
-                                    className="bg-transparent border-none p-0 text-sm focus:ring-0 text-gray-700 w-full md:w-auto"
-                                    value={rekapFilters.tanggalMulai}
-                                    onChange={(e) => setRekapFilters({ ...rekapFilters, tanggalMulai: e.target.value })}
-                                />
-                                <span className="text-gray-400">-</span>
-                                <span className="text-xs text-gray-500 font-medium uppercase">Sampai</span>
-                                <input
-                                    type="date"
-                                    className="bg-transparent border-none p-0 text-sm focus:ring-0 text-gray-700 w-full md:w-auto"
-                                    value={rekapFilters.tanggalSelesai}
-                                    onChange={(e) => setRekapFilters({ ...rekapFilters, tanggalSelesai: e.target.value })}
+                            <div className="flex-1 min-w-[300px]">
+                                <DateRangePicker
+                                    startDate={rekapFilters.tanggalMulai}
+                                    endDate={rekapFilters.tanggalSelesai}
+                                    onChange={(start, end) => setRekapFilters({ ...rekapFilters, tanggalMulai: start, tanggalSelesai: end })}
                                 />
                             </div>
 

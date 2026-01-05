@@ -5,9 +5,12 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
+import { useCalendar } from '../../../../../context/CalendarContext'
+import DateDisplay from '../../../../../components/common/DateDisplay'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanAkademikSantriPage = () => {
+    const { formatDate } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [semester, setSemester] = useState([])
     const [santriList, setSantriList] = useState([])
@@ -240,7 +243,7 @@ const LaporanAkademikSantriPage = () => {
                 body: hafalanData.map(h => [
                     `Juz ${h.juz}`,
                     h.status,
-                    new Date(h.tanggal).toLocaleDateString('id-ID')
+                    formatDate(h.tanggal)
                 ]),
                 theme: 'grid',
                 headStyles: { fillColor: [5, 150, 105] },
@@ -308,7 +311,7 @@ const LaporanAkademikSantriPage = () => {
         const finalY = doc.previousAutoTable.finalY + 15
         doc.setFontSize(8)
         doc.setFont('helvetica', 'italic')
-        doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')} - Si-Taqua PTQA Batuan`, pageWidth / 2, finalY, { align: 'center' })
+        doc.text(`Dicetak: ${formatDate(new Date())} - Si-Taqua PTQA Batuan`, pageWidth / 2, finalY, { align: 'center' })
 
         doc.save(`Laporan_Akademik_${selectedSantri.nama.replace(/\s/g, '_')}.pdf`)
     }
@@ -476,7 +479,7 @@ const LaporanAkademikSantriPage = () => {
                                                             {h.status}
                                                         </span>
                                                     </td>
-                                                    <td>{new Date(h.tanggal).toLocaleDateString('id-ID')}</td>
+                                                    <td><DateDisplay date={h.tanggal} /></td>
                                                 </tr>
                                             ))
                                         )}

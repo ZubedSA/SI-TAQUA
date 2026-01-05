@@ -11,6 +11,9 @@ import EmptyState from '../../components/ui/EmptyState'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import DateDisplay from '../../components/common/DateDisplay'
+import { useCalendar } from '../../context/CalendarContext'
 
 import './Hafalan.css'
 
@@ -20,6 +23,7 @@ const HafalanList = () => {
     const navigate = useNavigate()
     const initialTab = searchParams.get('tab') || 'list'
     const showToast = useToast()
+    const { formatDate } = useCalendar()
 
     const [hafalan, setHafalan] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
@@ -388,7 +392,7 @@ const HafalanList = () => {
 Kepada Yth. Bapak/Ibu *${item.nama_wali || 'Wali Santri'}*
 
 📌 *Nama Santri:* ${item.santri_nama}
-📅 *Tanggal:* ${item.tanggal}
+📅 *Tanggal:* ${formatDate(item.tanggal)}
 📖 *Jenis:* ${item.jenis || 'Setoran'}
 
 *Detail Hafalan:*
@@ -517,7 +521,7 @@ _PTQA Batuan_`
                 </head>
                 <body>
                     <h1>📖 REKAP HAFALAN SANTRI</h1>
-                    <p class="subtitle">PTQA Batuan - Dicetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                    <p class="subtitle">PTQA Batuan - Dicetak: ${formatDate(new Date())}</p>
                     <div class="stats">
                         <div class="stat-item"><span class="stat-label">Total Data</span><br/><span class="stat-value">${rekapData.length}</span></div>
                         <div class="stat-item"><span class="stat-label">Lancar</span><br/><span class="stat-value">${rekapStats.lancar}</span></div>
@@ -540,7 +544,7 @@ _PTQA Batuan_`
                             ${rekapData.map((h, i) => `
                                 <tr>
                                     <td>${i + 1}</td>
-                                    <td>${h.tanggal}</td>
+                                    <td>${formatDate(h.tanggal)}</td>
                                     <td>${h.santri_nama}</td>
                                     <td>${h.halaqoh_nama || '-'}</td>
                                     <td>${h.jenis}</td>
@@ -565,12 +569,12 @@ _PTQA Batuan_`
 
         generateLaporanPDF({
             title: 'REKAP HAFALAN SANTRI',
-            subtitle: `Dicetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+            subtitle: `Dicetak: ${formatDate(new Date())}`,
             orientation: 'landscape',
             columns: ['No', 'Tanggal', 'Nama Santri', 'Halaqoh', 'Jenis', 'Hafalan', 'Status'],
             data: rekapData.map((h, i) => [
                 i + 1,
-                h.tanggal,
+                formatDate(h.tanggal),
                 h.santri_nama,
                 h.halaqoh_nama || '-',
                 h.jenis,
@@ -584,7 +588,7 @@ _PTQA Batuan_`
     const handleDownloadExcel = () => {
         const columns = ['Tanggal', 'Nama Santri', 'Halaqoh', 'Jenis', 'Hafalan', 'Status']
         const exportData = rekapData.map(h => ({
-            Tanggal: h.tanggal,
+            Tanggal: formatDate(h.tanggal),
             'Nama Santri': h.santri_nama,
             Halaqoh: h.halaqoh_nama || '-',
             Jenis: h.jenis,
@@ -597,7 +601,7 @@ _PTQA Batuan_`
     const handleDownloadCSV = () => {
         const columns = ['Tanggal', 'Nama Santri', 'Halaqoh', 'Jenis', 'Hafalan', 'Status']
         const exportData = rekapData.map(h => ({
-            Tanggal: h.tanggal,
+            Tanggal: formatDate(h.tanggal),
             'Nama Santri': h.santri_nama,
             Halaqoh: h.halaqoh_nama || '-',
             Jenis: h.jenis,
@@ -732,31 +736,14 @@ _PTQA Batuan_`
 
                     {/* Date Filter */}
                     <div className="date-filter-row">
-                        <div className="date-filter-group">
-                            <label><Calendar size={14} /> Dari Tanggal</label>
-                            <input
-                                type="date"
-                                className="form-control"
-                                value={dateFilter.dari}
-                                onChange={(e) => setDateFilter({ ...dateFilter, dari: e.target.value })}
+                        <div className="date-filter-group" style={{ maxWidth: '300px' }}>
+                            <label><Calendar size={14} /> Periode</label>
+                            <DateRangePicker
+                                startDate={dateFilter.dari}
+                                endDate={dateFilter.sampai}
+                                onChange={(start, end) => setDateFilter({ dari: start, sampai: end })}
                             />
-
                         </div>
-                        <div className="date-filter-group">
-                            <label><Calendar size={14} /> Sampai Tanggal</label>
-                            <input
-                                type="date"
-                                className="form-control"
-                                value={dateFilter.sampai}
-                                onChange={(e) => setDateFilter({ ...dateFilter, sampai: e.target.value })}
-                            />
-
-                        </div>
-                        {(dateFilter.dari || dateFilter.sampai) && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => setDateFilter({ dari: '', sampai: '' })}>
-                                <RefreshCw size={14} /> Reset
-                            </button>
-                        )}
                     </div>
 
                     {/* Halaqoh Filter */}
@@ -869,22 +856,12 @@ _PTQA Batuan_`
                 <>
                     {/* Rekap Filters */}
                     <div className="rekap-filters">
-                        <div className="filter-group">
-                            <label className="filter-label"><Calendar size={14} /> Dari Tanggal</label>
-                            <input
-                                type="date"
-                                className="form-control"
-                                value={rekapFilters.tanggalMulai}
-                                onChange={(e) => setRekapFilters({ ...rekapFilters, tanggalMulai: e.target.value })}
-                            />
-                        </div>
-                        <div className="filter-group">
-                            <label className="filter-label"><Calendar size={14} /> Sampai Tanggal</label>
-                            <input
-                                type="date"
-                                className="form-control"
-                                value={rekapFilters.tanggalSelesai}
-                                onChange={(e) => setRekapFilters({ ...rekapFilters, tanggalSelesai: e.target.value })}
+                        <div className="filter-group" style={{ minWidth: '300px' }}>
+                            <label className="filter-label"><Calendar size={14} /> Periode Rekap</label>
+                            <DateRangePicker
+                                startDate={rekapFilters.tanggalMulai}
+                                endDate={rekapFilters.tanggalSelesai}
+                                onChange={(start, end) => setRekapFilters({ ...rekapFilters, tanggalMulai: start, tanggalSelesai: end })}
                             />
                         </div>
                         <div className="filter-group">
@@ -1011,7 +988,7 @@ _PTQA Batuan_`
                                         rekapData.map((item, idx) => (
                                             <tr key={item.id}>
                                                 <td>{idx + 1}</td>
-                                                <td>{item.tanggal}</td>
+                                                <td><DateDisplay date={item.tanggal} /></td>
                                                 <td className="name-cell">{item.santri_nama}</td>
                                                 <td>{item.halaqoh_nama}</td>
                                                 <td>
@@ -1388,7 +1365,7 @@ _PTQA Batuan_`
                                             const bulanNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
                                             periodInfo = pencapaianBulan ? `<p><strong>Periode:</strong> Bulan ${bulanNames[parseInt(pencapaianBulan) - 1]}</p>` : ''
                                         } else if (pencapaianKategori === 'mingguan') {
-                                            periodInfo = `<p><strong>Periode:</strong> ${pencapaianTanggal.dari} s/d ${pencapaianTanggal.sampai}</p>`
+                                            periodInfo = `<p><strong>Periode:</strong> ${formatDate(pencapaianTanggal.dari)} s/d ${formatDate(pencapaianTanggal.sampai)}</p>`
                                         }
 
                                         // Generate table rows
@@ -1456,7 +1433,7 @@ _PTQA Batuan_`
                                                     </tbody>
                                                 </table>
                                                 <div class="footer">
-                                                    <p>Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                                    <p>Dicetak pada: ${formatDate(new Date())}</p>
                                                 </div>
                                             </body>
                                             </html>

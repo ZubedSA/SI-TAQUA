@@ -5,6 +5,7 @@ import { Bell, User, Menu, ChevronDown, Settings, LogOut, UserCircle, Clock, Sea
 import GlobalSearch from '../common/GlobalSearch'
 import NotificationDropdown from './NotificationDropdown'
 import RoleSwitcher from './RoleSwitcher'
+import CalendarModeToggle from '../common/CalendarModeToggle'
 
 const Header = ({ onMenuClick }) => {
     const { user, userProfile, activeRole, signOut, hasMultipleRoles } = useAuth()
@@ -110,6 +111,11 @@ const Header = ({ onMenuClick }) => {
                         <Menu size={24} />
                     </button>
 
+                    {/* Mobile Calendar Toggle (Visible < sm) */}
+                    <div className="sm:hidden">
+                        <CalendarModeToggle />
+                    </div>
+
                     {/* Breadcrumb Placeholder or Page Title could go here */}
                 </div>
 
@@ -133,6 +139,11 @@ const Header = ({ onMenuClick }) => {
                     </button>
 
                     <div className="h-6 w-px bg-gray-200 hidden md:block"></div>
+
+                    {/* Calendar Toggle */}
+                    <div className="hidden sm:block">
+                        <CalendarModeToggle />
+                    </div>
 
                     {/* Real-time Clock */}
                     <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-primary-50 text-emerald-700 rounded-full text-xs font-medium border border-primary-100">

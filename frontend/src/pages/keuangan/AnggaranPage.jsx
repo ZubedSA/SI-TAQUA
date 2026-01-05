@@ -10,9 +10,12 @@ import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 const AnggaranPage = () => {
+    const { mode } = useCalendar()
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const showToast = useToast()
     // Multiple checks - admin dan bendahara bisa CRUD
@@ -63,6 +66,8 @@ const AnggaranPage = () => {
 
     const executeSave = async () => {
         setSaving(true)
+        console.log('[Anggaran] Saving proposal:', form)
+        console.log('[Anggaran] Mode:', mode)
         try {
             const payload = {
                 nama_program: form.nama_program,
@@ -424,10 +429,10 @@ const AnggaranPage = () => {
                                     </div>
                                     <div className="form-group">
                                         <label>Tanggal Pengajuan</label>
-                                        <input
-                                            type="date"
-                                            value={form.tanggal_pengajuan}
-                                            onChange={e => setForm({ ...form, tanggal_pengajuan: e.target.value })}
+                                        <DateRangePicker
+                                            singleDate
+                                            startDate={form.tanggal_pengajuan}
+                                            onChange={(date) => setForm({ ...form, tanggal_pengajuan: date })}
                                         />
                                     </div>
                                 </div>
