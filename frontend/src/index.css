@@ -1866,13 +1866,57 @@ select option:hover {
   .content .stat-card,
   .content .chart-card,
   .content .data-card,
-  .content .hafalan-stat-card {
+  .content .hafalan-stat-card,
+  .content .keuangan-stat-card,
+  .content .keuangan-card,
+  .content .ota-stat-card,
+  .content .ota-panel,
+  .content .ota-welcome-header,
+  .content .ota-quick-links,
+  .content .ota-announcements,
+  .content .dashboard-welcome,
+  .content .admin-stat-card,
+  .content .admin-card,
+  .content .pengurus-stat-card,
+  .content .secondary-stat-card,
+  .content .pengurus-card {
     margin-left: -16px;
     margin-right: -16px;
     width: calc(100% + 32px);
     border-radius: 0 !important;
     border-left: none;
     border-right: none;
+  }
+
+  /* OTA Dashboard specific - inner wrapper also needs adjustment */
+  .ota-dashboard-inner {
+    padding: 16px;
+  }
+
+  .ota-dashboard-inner .ota-stat-card,
+  .ota-dashboard-inner .ota-panel,
+  .ota-dashboard-inner .ota-welcome-header,
+  .ota-dashboard-inner .ota-quick-links,
+  .ota-dashboard-inner .ota-announcements {
+    margin-left: -16px;
+    margin-right: -16px;
+    width: calc(100% + 32px);
+    border-radius: 0 !important;
+  }
+
+  /* Pengurus Dashboard specific - has its own padding */
+  .pengurus-dashboard {
+    padding: 16px;
+  }
+
+  .pengurus-dashboard .pengurus-stat-card,
+  .pengurus-dashboard .secondary-stat-card,
+  .pengurus-dashboard .pengurus-card,
+  .pengurus-dashboard .pengurus-welcome {
+    margin-left: -16px;
+    margin-right: -16px;
+    width: calc(100% + 32px);
+    border-radius: 0 !important;
   }
 
   /* Stats */
