@@ -20,6 +20,7 @@ import {
     Search
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import './PengurusDashboard.css'
 
 /**
  * Dashboard Pengurus - Pusat pembinaan dan pengawasan santri
@@ -178,7 +179,7 @@ const PengurusDashboard = () => {
     }
 
     return (
-        <div className="p-4 lg:p-6 space-y-6">
+        <div className="p-4 lg:p-6 space-y-6" data-dashboard="pengurus">
             {/* Welcome Header */}
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 lg:p-8 text-white shadow-lg relative overflow-hidden">
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

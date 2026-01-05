@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Eye, RefreshCw, Upload, FileSpreadsheet, X, MoreVertical, ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, User, Phone, School, Edit } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
-import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
+import { logCreate, logUpdate } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
-import './Santri.css'
+import PageHeader from '../../components/layout/PageHeader'
+import { Card } from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import FormInput from '../../components/ui/FormInput'
 
 const SantriForm = () => {
     const navigate = useNavigate()
@@ -17,10 +20,6 @@ const SantriForm = () => {
     const showToast = useToast()
 
     // Determine mode: view (read-only) vs edit
-    // If URL is /santri/:id (without /edit), it's view mode
-    // If URL is /santri/:id/edit, it's edit mode
-    // If URL is /santri/create, it's create mode
-    // Check if view mode (based on URL)
     const isViewMode = location.pathname.includes('/santri/') && !location.pathname.includes('/edit') && !location.pathname.includes('/create')
     const canEdit = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
     const isEdit = Boolean(id)
@@ -43,7 +42,7 @@ const SantriForm = () => {
         kelas_id: '',
         halaqoh_id: '',
         status: 'Aktif',
-        angkatan: '' // Add angkatan field
+        angkatan: ''
     })
 
     useEffect(() => {
@@ -200,133 +199,211 @@ const SantriForm = () => {
         return <Spinner className="py-12" label="Memuat data santri..." />
     }
 
+    const inputClass = "w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all disabled:bg-gray-50 disabled:text-gray-500"
+    const labelClass = "block text-sm font-medium text-gray-700 mb-1"
+
     return (
-        <div className="santri-form-page">
-            <div className="page-header">
-                <div>
-                    <button className="btn btn-secondary btn-sm mb-2" onClick={() => navigate('/santri')}>
+        <div className="space-y-6">
+            <PageHeader
+                title={isViewMode ? 'Detail Santri' : isEdit ? 'Edit Santri' : 'Tambah Santri Baru'}
+                description={isViewMode ? 'Informasi lengkap data santri' : isEdit ? 'Update data santri' : 'Isi form untuk menambah santri baru'}
+                icon={User}
+                actions={
+                    <Button variant="secondary" onClick={() => navigate('/santri')}>
                         <ArrowLeft size={16} /> Kembali
-                    </button>
-                    <h1 className="page-title">{isViewMode ? 'Detail Santri' : isEdit ? 'Edit Santri' : 'Tambah Santri Baru'}</h1>
-                    <p className="page-subtitle">{isViewMode ? 'Informasi lengkap data santri' : isEdit ? 'Update data santri' : 'Isi form untuk menambah santri baru'}</p>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
-            <form onSubmit={handleFormSubmit} className="form-card">
-                {/* Data Pribadi */}
-                <div className="form-section">
-                    <h3 className="form-section-title">Data Pribadi</h3>
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label className="form-label">NIS *</label>
-                            <input type="text" name="nis" className="form-control" value={formData.nis} onChange={handleChange} required readOnly={isViewMode} disabled={isViewMode} />
+            <form onSubmit={handleFormSubmit}>
+                <div className="space-y-6">
+                    {/* Data Pribadi */}
+                    <Card className="border-gray-200 p-6">
+                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                            <User className="text-primary-600" size={20} />
+                            <h3 className="font-semibold text-lg text-gray-900">Data Pribadi</h3>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Nama Lengkap *</label>
-                            <input type="text" name="nama" className="form-control" value={formData.nama} onChange={handleChange} required readOnly={isViewMode} disabled={isViewMode} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Jenis Kelamin</label>
-                            <select name="jenis_kelamin" className="form-control" value={formData.jenis_kelamin} onChange={handleChange} disabled={isViewMode}>
-                                <option value="Laki-laki">Laki-laki</option>
-                                <option value="Perempuan">Perempuan</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Tempat Lahir</label>
-                            <input type="text" name="tempat_lahir" className="form-control" value={formData.tempat_lahir} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Tanggal Lahir</label>
-                            <input type="date" name="tanggal_lahir" className="form-control" value={formData.tanggal_lahir} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">No. Telepon</label>
-                            <input type="text" name="no_telp" className="form-control" value={formData.no_telp} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
-                        </div>
-                    </div>
-                    <div className="form-group">
-                        <label className="form-label">Alamat</label>
-                        <textarea name="alamat" className="form-control" rows={2} value={formData.alamat} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
-                    </div>
-                </div>
 
-                {/* Data Wali */}
-                <div className="form-section">
-                    <h3 className="form-section-title">Data Wali</h3>
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label className="form-label">Nama Wali</label>
-                            <input type="text" name="nama_wali" className="form-control" value={formData.nama_wali} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormInput
+                                label="NIS *"
+                                name="nis"
+                                value={formData.nis}
+                                onChange={handleChange}
+                                required
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                            />
+                            <FormInput
+                                label="Nama Lengkap *"
+                                name="nama"
+                                value={formData.nama}
+                                onChange={handleChange}
+                                required
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                            />
+                            <div>
+                                <label className={labelClass}>Jenis Kelamin</label>
+                                <select
+                                    name="jenis_kelamin"
+                                    className={inputClass}
+                                    value={formData.jenis_kelamin}
+                                    onChange={handleChange}
+                                    disabled={isViewMode}
+                                >
+                                    <option value="Laki-laki">Laki-laki</option>
+                                    <option value="Perempuan">Perempuan</option>
+                                </select>
+                            </div>
+                            <FormInput
+                                label="Tempat Lahir"
+                                name="tempat_lahir"
+                                value={formData.tempat_lahir}
+                                onChange={handleChange}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                            />
+                            <FormInput
+                                label="Tanggal Lahir"
+                                type="date"
+                                name="tanggal_lahir"
+                                value={formData.tanggal_lahir}
+                                onChange={handleChange}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                            />
+                            <FormInput
+                                label="No. Telepon"
+                                name="no_telp"
+                                value={formData.no_telp}
+                                onChange={handleChange}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                                icon={Phone}
+                            />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">No. Telepon Wali</label>
-                            <input type="text" name="no_telp_wali" className="form-control" value={formData.no_telp_wali} onChange={handleChange} readOnly={isViewMode} disabled={isViewMode} />
+                        <div className="mt-6">
+                            <label className={labelClass}>Alamat</label>
+                            <textarea
+                                name="alamat"
+                                className={inputClass}
+                                rows={3}
+                                value={formData.alamat}
+                                onChange={handleChange}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                            />
                         </div>
-                    </div>
-                </div>
+                    </Card>
 
-                {/* Penempatan */}
-                <div className="form-section">
-                    <h3 className="form-section-title">Penempatan</h3>
-                    <div className="form-grid">
-                        <div className="form-group">
-                            <label className="form-label">Kelas</label>
-                            <select name="kelas_id" className="form-control" value={formData.kelas_id} onChange={handleChange} disabled={isViewMode}>
-                                <option value="">Pilih Kelas</option>
-                                <option value="unknown">Tidak Ada Kelas</option>
-                                {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
-                            </select>
+                    {/* Data Wali */}
+                    <Card className="border-gray-200 p-6">
+                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                            <User className="text-primary-600" size={20} />
+                            <h3 className="font-semibold text-lg text-gray-900">Data Wali</h3>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Halaqoh</label>
-                            <select name="halaqoh_id" className="form-control" value={formData.halaqoh_id} onChange={handleChange} disabled={isViewMode}>
-                                <option value="">Pilih Halaqoh</option>
-                                {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama}</option>)}
-                            </select>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormInput
+                                label="Nama Wali"
+                                name="nama_wali"
+                                value={formData.nama_wali}
+                                onChange={handleChange}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                            />
+                            <FormInput
+                                label="No. Telepon Wali"
+                                name="no_telp_wali"
+                                value={formData.no_telp_wali}
+                                onChange={handleChange}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
+                                icon={Phone}
+                            />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Angkatan</label>
-                            <input
+                    </Card>
+
+                    {/* Penempatan */}
+                    <Card className="border-gray-200 p-6">
+                        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                            <School className="text-primary-600" size={20} />
+                            <h3 className="font-semibold text-lg text-gray-900">Penempatan & Akademik</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className={labelClass}>Kelas</label>
+                                <select
+                                    name="kelas_id"
+                                    className={inputClass}
+                                    value={formData.kelas_id}
+                                    onChange={handleChange}
+                                    disabled={isViewMode}
+                                >
+                                    <option value="">Pilih Kelas</option>
+                                    <option value="unknown">Tidak Ada Kelas</option>
+                                    {kelasList.map(k => <option key={k.id} value={k.id}>{k.nama}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Halaqoh</label>
+                                <select
+                                    name="halaqoh_id"
+                                    className={inputClass}
+                                    value={formData.halaqoh_id}
+                                    onChange={handleChange}
+                                    disabled={isViewMode}
+                                >
+                                    <option value="">Pilih Halaqoh</option>
+                                    {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama}</option>)}
+                                </select>
+                            </div>
+                            <FormInput
+                                label="Angkatan"
                                 type="number"
                                 name="angkatan"
-                                placeholder="Angkatan ke- (1, 2, 3...)"
-                                className="form-control"
+                                placeholder="Angkatan ke- (Contoh: 2024)"
                                 value={formData.angkatan}
                                 onChange={handleChange}
                                 min="1"
                                 readOnly={isViewMode}
                                 disabled={isViewMode}
                             />
+                            <div>
+                                <label className={labelClass}>Status</label>
+                                <select
+                                    name="status"
+                                    className={inputClass}
+                                    value={formData.status}
+                                    onChange={handleChange}
+                                    disabled={isViewMode}
+                                >
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Tidak Aktif">Tidak Aktif</option>
+                                    <option value="Lulus">Lulus</option>
+                                    <option value="Pindah">Pindah</option>
+                                </select>
+                            </div>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Status</label>
-                            <select name="status" className="form-control" value={formData.status} onChange={handleChange} disabled={isViewMode}>
-                                <option value="Aktif">Aktif</option>
-                                <option value="Tidak Aktif">Tidak Aktif</option>
-                                <option value="Lulus">Lulus</option>
-                                <option value="Pindah">Pindah</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                    </Card>
 
-                {/* Actions */}
-                <div className="form-actions">
-                    <button type="button" className="btn btn-secondary" onClick={() => navigate('/santri')}>
-                        {isViewMode ? 'Kembali' : 'Batal'}
-                    </button>
-                    {isViewMode ? (
-                        canEdit && (
-                            <button type="button" className="btn btn-primary" onClick={() => navigate(`/santri/${id}/edit`)}>
-                                Edit Data
-                            </button>
-                        )
-                    ) : (
-                        <button type="submit" className="btn btn-primary" disabled={loading}>
-                            {loading ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan</>}
-                        </button>
-                    )}
+                    {/* Actions */}
+                    <div className="flex justify-end gap-3 pt-4">
+                        <Button type="button" variant="secondary" onClick={() => navigate('/santri')}>
+                            {isViewMode ? 'Kembali' : 'Batal'}
+                        </Button>
+                        {isViewMode ? (
+                            canEdit && (
+                                <Button type="button" onClick={() => navigate(`/santri/${id}/edit`)}>
+                                    <Edit size={18} /> Edit Data
+                                </Button>
+                            )
+                        ) : (
+                            <Button type="submit" disabled={loading} isLoading={loading}>
+                                <Save size={18} /> Simpan
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </form>
 

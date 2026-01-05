@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import logoFile from "../../assets/Logo_PTQA_075759.png";
 import {
     LayoutDashboard,
     Users,
@@ -49,7 +50,7 @@ import {
     Send, // For Penyaluran
     ShieldAlert
 } from 'lucide-react'
-import './Sidebar.css'
+// import './Sidebar.css' removed
 
 // ============ ADMIN MENU - Controller/Audit Focus ============
 // Admin = controller, fokus kontrol & audit, menu sedikit tapi kuat
@@ -526,7 +527,6 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     const isRealAdmin = roles?.includes('admin')
 
     // Select menu based on active role
-    // Admin gets special controller menu, pengurus gets pembinaan menu, OTA gets donasi menu, musyrif gets read-only akademik menu, others get operator menu
     const baseMenuItems =
         activeRole === 'admin' ? adminMenuItems :
             activeRole === 'pengurus' ? pengurusMenuItems :
@@ -534,13 +534,11 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                     activeRole === 'musyrif' ? musyrifMenuItems :
                         operatorMenuItems
 
-    // Filter menu berdasarkan role user (for operator menu)
+    // Filter menu berdasarkan role user
     const filteredMenuItems = baseMenuItems.filter(item => {
         if (!item.roles || item.roles.length === 0) return true
         return item.roles.includes(activeRole)
     })
-
-
 
     const handleLogout = async () => {
         try {
@@ -552,18 +550,16 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     }
 
     const handleNavClick = () => {
-        if (onClose) onClose()
+        if (window.innerWidth <= 1024 && onClose) onClose()
     }
 
-    // Get all top-level menu IDs (both admin and operator menus)
+    // Get all top-level menu IDs 
     const topLevelMenuIds = [
-        // Admin menu IDs
         'users-roles', 'master-data', 'monitoring-akademik', 'monitoring-keuangan', 'monitoring-pengurus', 'monitoring-ota', 'logs',
-        // Operator menu IDs
         'data-pondok', 'akademik', 'alur-kas', 'pembayaran', 'penyaluran'
     ]
 
-    // Nested submenu IDs for Akademik deep structure with parent mapping
+    // Nested submenu IDs
     const nestedSubmenuIds = [
         'input-nilai', 'ujian-semester', 'nilai-tahfizh', 'nilai-madros',
         'hafalan-menu',
@@ -580,7 +576,6 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         'laporan-akademik-santri': 'laporan-akademik'
     }
 
-    // Get all ancestors of a menu ID
     const getAncestors = (menuId) => {
         const ancestors = []
         let current = submenuParents[menuId]
@@ -594,38 +589,23 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     const toggleMenu = (menuId) => {
         setOpenMenus(prev => {
             const isCurrentlyOpen = prev[menuId]
-
-            // If closing, just close it and its children
             if (isCurrentlyOpen) {
                 const newState = { ...prev }
                 newState[menuId] = false
-                // Also close any children of this menu
                 Object.keys(submenuParents).forEach(childId => {
-                    if (submenuParents[childId] === menuId) {
-                        newState[childId] = false
-                    }
+                    if (submenuParents[childId] === menuId) newState[childId] = false
                 })
                 return newState
             }
 
-            // Check if this is a top-level menu
             const isTopLevel = topLevelMenuIds.includes(menuId)
-
-            // Check if this is a nested submenu
             const isNestedSubmenu = nestedSubmenuIds.includes(menuId)
 
             if (isTopLevel) {
-                // Close all other top-level menus AND their nested children
                 const newState = {}
                 Object.keys(prev).forEach(key => {
-                    // Close other top-level menus
-                    if (topLevelMenuIds.includes(key)) {
-                        newState[key] = false
-                    }
-                    // Close all nested submenus when switching top-level
-                    if (nestedSubmenuIds.includes(key)) {
-                        newState[key] = false
-                    }
+                    if (topLevelMenuIds.includes(key)) newState[key] = false
+                    if (nestedSubmenuIds.includes(key)) newState[key] = false
                 })
                 newState[menuId] = true
                 return newState
@@ -634,61 +614,35 @@ const Sidebar = ({ mobileOpen, onClose }) => {
             if (isNestedSubmenu) {
                 const newState = { ...prev }
                 const ancestors = getAncestors(menuId)
-
-                // Keep ancestors open, close siblings only
                 nestedSubmenuIds.forEach(key => {
-                    if (key === menuId) {
-                        // Open this menu
-                        newState[key] = true
-                    } else if (ancestors.includes(key)) {
-                        // Keep ancestors open
-                        newState[key] = true
-                    } else if (!ancestors.includes(key) && submenuParents[menuId] === submenuParents[key]) {
-                        // Close siblings (same parent)
-                        newState[key] = false
-                    }
-                    // Leave other menus as-is
+                    if (key === menuId) newState[key] = true
+                    else if (ancestors.includes(key)) newState[key] = true
+                    else if (!ancestors.includes(key) && submenuParents[menuId] === submenuParents[key]) newState[key] = false
                 })
-
                 newState[menuId] = true
                 return newState
             }
 
-            // Default: just toggle
-            return {
-                ...prev,
-                [menuId]: true
-            }
+            return { ...prev, [menuId]: true }
         })
     }
 
-    // Check if any child path is active
     const isChildActive = (children) => {
         if (!children) return false
         return children.some(child => {
-            if (child.path) {
-                return location.pathname === child.path || location.pathname.startsWith(child.path + '/')
-            }
-            if (child.children) {
-                return isChildActive(child.children)
-            }
+            if (child.path) return location.pathname === child.path || location.pathname.startsWith(child.path + '/')
+            if (child.children) return isChildActive(child.children)
             return false
         })
     }
 
     useEffect(() => {
-        // Only run on initial mount or role change, not on every path change
-        // This prevents menus from closing when clicking child links
         setOpenMenus(prev => {
             const newOpenMenus = { ...prev }
-
             const scanItems = (items) => {
                 items.forEach(item => {
                     if (item.children) {
-                        if (isChildActive(item.children)) {
-                            // Keep this menu open if a child is active
-                            newOpenMenus[item.id] = true
-                        }
+                        if (isChildActive(item.children)) newOpenMenus[item.id] = true
                         scanItems(item.children)
                     }
                 })
@@ -698,112 +652,134 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         })
     }, [location.pathname, activeRole])
 
-    // Render submenu item
     const renderMenuItem = (item, level = 0) => {
-        // Filter children by role if they exist
         const filteredChildren = item.children?.filter(child => {
             if (!child.roles || child.roles.length === 0) return true
-            // Allow if activeRole is allowed OR if user is real admin and admin is allowed
-            // This ensures Admin masquerading as Bendahara sees 'Persetujuan' (which allows 'admin')
             if (isRealAdmin && child.roles.includes('admin')) return true
             return child.roles.includes(activeRole)
         })
 
         const hasChildren = filteredChildren && filteredChildren.length > 0
         const isOpen = openMenus[item.id]
-        const paddingLeft = 14 + (level * 12)
+
+        // Tailwind padding calculation
+        const paddingLeftClass = level === 0 ? 'pl-3' : level === 1 ? 'pl-9' : level === 2 ? 'pl-11' : 'pl-14';
 
         if (hasChildren) {
             return (
-                <li key={item.id} className="nav-item has-submenu">
+                <li key={item.id} className="mb-1">
                     <button
-                        className={`nav-link submenu-toggle ${isOpen ? 'open' : ''} ${isChildActive(item.children) ? 'active' : ''}`}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 
+                            ${isOpen || isChildActive(item.children)
+                                ? 'text-primary-700 bg-primary-50'
+                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            }
+                            ${level > 0 ? paddingLeftClass : ''}
+                        `}
                         onClick={() => toggleMenu(item.id)}
-                        style={{ paddingLeft: `${paddingLeft}px` }}
                     >
-                        <span className="nav-icon">
-                            <item.icon size={level === 0 ? 20 : 16} />
-                        </span>
-                        <span className="nav-text">{item.label}</span>
-                        <span className="submenu-arrow">
-                            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                        </span>
+                        <item.icon size={20} className={`shrink-0 ${isOpen || isChildActive(item.children) ? 'text-primary-600' : 'text-gray-400'}`} />
+                        <span className="flex-1 text-left truncate">{item.label}</span>
+                        {isOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
                     </button>
-                    <ul className={`submenu ${isOpen ? 'open' : ''}`}>
-                        {filteredChildren.map(child => renderMenuItem(child, level + 1))}
-                    </ul>
+                    {isOpen && (
+                        <ul className="mt-1 space-y-1">
+                            {filteredChildren.map(child => renderMenuItem(child, level + 1))}
+                        </ul>
+                    )}
                 </li>
             )
         }
 
-        // Custom active check for paths with query params
         const isItemActive = () => {
             const currentPath = location.pathname
             const currentSearch = location.search
             const itemPath = item.path.split('?')[0]
             const itemSearch = item.path.includes('?') ? '?' + item.path.split('?')[1] : ''
-
-            // If item has query param, must match both path and query
-            if (itemSearch) {
-                return currentPath === itemPath && currentSearch === itemSearch
-            }
-            // If item has no query param, must match path exactly and have no tab query
+            if (itemSearch) return currentPath === itemPath && currentSearch === itemSearch
             return currentPath === itemPath && !currentSearch.includes('tab=')
         }
 
+        const active = isItemActive()
+
         return (
-            <li key={item.path} className="nav-item">
+            <li key={item.path} className="mb-1">
                 <NavLink
                     to={item.path}
-                    className={() => `nav-link ${isItemActive() ? 'active' : ''}`}
+                    className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
+                        ${active
+                            ? 'bg-primary-600 text-white shadow-sm shadow-primary-200'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }
+                        ${level > 0 ? paddingLeftClass : ''}
+                    `}
                     onClick={handleNavClick}
-                    style={{ paddingLeft: `${paddingLeft}px` }}
                 >
-                    <span className="nav-icon">
-                        <item.icon size={level === 0 ? 20 : 16} />
-                    </span>
-                    <span className="nav-text">{item.label}</span>
+                    <item.icon size={20} className={`shrink-0 ${active ? 'text-white' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                    <span className="truncate">{item.label}</span>
                 </NavLink>
             </li>
         )
     }
 
-    const sidebarStyle = {
-        transform: mobileOpen ? 'translateX(0)' : undefined
-    }
-
     return (
-        <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`} style={sidebarStyle}>
-            <div className="sidebar-header">
-                <div className="logo">
-                    <img src="/logo-white.png" alt="Logo" className="logo-image" />
-                    <div className="logo-text">
-                        <span className="logo-title">Si-Taqua</span>
+        <>
+            {/* Desktop Sidebar & Mobile Drawer */}
+            <aside
+                className={`
+                    fixed inset-y-0 left-0 z-50 w-[260px] bg-white border-r border-gray-200 
+                    transition-transform duration-300 ease-in-out lg:translate-x-0
+                    ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+                `}
+            >
+                {/* Header */}
+                <div className="h-16 flex items-center px-6 border-b border-gray-100 bg-white">
+                    <div className="flex items-center gap-3">
+                        <img
+                            src={logoFile}
+                            alt="Logo PTQA"
+                            className="w-8 h-8 object-contain"
+                        />
+                        <span className="text-lg font-bold text-gray-900 tracking-tight">Si-Taqua</span>
+                    </div>
+                    <button
+                        className="ml-auto lg:hidden text-gray-400 hover:text-gray-600"
+                        onClick={onClose}
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Navigation */}
+                <nav className="flex-1 overflow-y-auto p-4 custom-scrollbar h-[calc(100vh-8rem)]">
+                    <ul className="space-y-1">
+                        {filteredMenuItems.map((item) => renderMenuItem(item))}
+                    </ul>
+                </nav>
+
+                {/* Footer */}
+                <div className="absolute bottom-0 left-0 w-full p-4 border-t border-gray-100 bg-gray-50">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                        <LogOut size={20} />
+                        <span>Keluar</span>
+                    </button>
+                    <div className="mt-2 text-xs text-center text-gray-400 font-mono">
+                        v.2025.01.02.1
                     </div>
                 </div>
-                <button className="sidebar-close-btn" onClick={onClose}>
-                    <X size={24} />
-                </button>
-            </div>
+            </aside>
 
-            <nav className="sidebar-nav">
-                <ul className="nav-list">
-                    {filteredMenuItems.map((item) => renderMenuItem(item))}
-                </ul>
-            </nav>
-
-            <div className="sidebar-footer">
-                <div className="px-4 py-2 text-xs text-slate-400 text-center border-b border-slate-700 mb-2">
-                    v.2025.01.02.1
-                </div>
-                <button className="nav-link logout-link" onClick={handleLogout}>
-                    <span className="nav-icon">
-                        <LogOut size={20} />
-                    </span>
-                    <span className="nav-text">Keluar</span>
-                </button>
-            </div>
-        </aside>
+            {/* Backdrop for Mobile */}
+            {mobileOpen && (
+                <div
+                    className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+                    onClick={onClose}
+                />
+            )}
+        </>
     )
 }
 

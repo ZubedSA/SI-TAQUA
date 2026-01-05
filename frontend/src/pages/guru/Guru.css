@@ -1,9 +1,5 @@
-.guru-page .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 28px;
-}
+/* .page-header uses global styles */
+
 
 @media screen and (max-width: 768px) {
     .guru-page .page-header {
@@ -28,15 +24,8 @@
     }
 }
 
-/* Force Full Width for Tables */
-/* Force Full Width for Tables */
-.guru-page .table-container {
-    margin: 0;
-    width: 100%;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-}
+/* Table styles use global standard */
+
 
 .table-search {
     position: relative;

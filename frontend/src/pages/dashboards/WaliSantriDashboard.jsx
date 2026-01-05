@@ -116,7 +116,7 @@ const WaliSantriDashboard = () => {
     const waliName = userProfile?.nama || user?.email?.split('@')[0] || 'Wali'
 
     return (
-        <div className="walisantri-dashboard">
+        <div className="walisantri-dashboard" data-dashboard="walisantri">
             {/* Welcome Header */}
             <div className="dashboard-welcome walisantri">
                 <div className="welcome-content">

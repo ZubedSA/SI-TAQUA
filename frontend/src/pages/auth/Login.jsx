@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { translateError } from '../../utils/errorUtils'
 import { supabase } from '../../lib/supabase'
 import SecurityChallengeModal from '../../components/ui/SecurityChallengeModal'
+import logoFile from '../../assets/Logo_PTQA_075759.png'
 import './Login.css'
 
 const Login = () => {
@@ -185,8 +186,8 @@ const Login = () => {
             <div className="login-card">
                 {/* Header with Logo */}
                 <div className="login-header">
-                    <img src="/logo.png" alt="Logo PTQ Al-Usymuni" className="login-logo" />
-                    <p className="system-title">Sistem Informasi Akademik</p>
+                    <img src={logoFile} alt="Logo PTQA Batuan" className="login-logo" />
+                    <p className="system-title">Sistem Informasi PTQA Batuan</p>
                 </div>
 
                 {/* Alerts */}

@@ -9,10 +9,11 @@ import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import DownloadButton from '../../components/ui/DownloadButton'
+import PageHeader from '../../components/layout/PageHeader'
+import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
-import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
-import './Guru.css'
+
 
 const GuruList = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
@@ -135,44 +136,48 @@ const GuruList = () => {
         })
 
     return (
-        <div className="guru-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Data Guru</h1>
-                    <p className="page-subtitle">Kelola data pengajar dan wali kelas</p>
-                </div>
-                <div className="header-actions">
-                    <DownloadButton
-                        onDownloadPDF={handleDownloadPDF}
-                        onDownloadExcel={handleDownloadExcel}
-                        onDownloadCSV={handleDownloadCSV}
-                    />
-                    {canEdit && (
-                        <Link to="/guru/create" className="btn btn-primary">
-                            <Plus size={18} />
-                            Tambah Guru
-                        </Link>
-                    )}
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Data Guru"
+                description="Kelola data pengajar dan wali kelas"
+                actions={
+                    <div className="flex items-center gap-2">
+                        <DownloadButton
+                            onDownloadPDF={handleDownloadPDF}
+                            onDownloadExcel={handleDownloadExcel}
+                            onDownloadCSV={handleDownloadCSV}
+                        />
+                        {canEdit && (
+                            <Link to="/guru/create" className="btn btn-primary">
+                                <Plus size={18} />
+                                Tambah Guru
+                            </Link>
+                        )}
+                    </div>
+                }
+            />
 
-            <div className="table-container">
-                <div className="table-header">
-                    <h3 className="table-title">Daftar Guru ({filteredGuru.length})</h3>
-                    <div className="table-controls">
-                        <div className="table-search">
-                            <Search size={18} className="search-icon" />
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Daftar Guru ({filteredGuru.length})</h3>
+                    <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                        <div className="relative w-full md:w-64">
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Cari guru..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="search-input"
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                             />
                         </div>
-                        <div className="sort-select">
-                            <label>Urutkan:</label>
-                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <span className="text-sm text-gray-500 whitespace-nowrap">Urutkan:</span>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full md:w-auto px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                            >
                                 <option value="nama-asc">Nama A-Z</option>
                                 <option value="nama-desc">Nama Z-A</option>
                                 <option value="nip-asc">NIP Terkecil</option>
@@ -184,25 +189,25 @@ const GuruList = () => {
                     </div>
                 </div>
 
-                <div className="table-wrapper">
-                    <table className="table">
-                        <thead>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
                             <tr>
-                                <th>NIP</th>
-                                <th>Nama</th>
-                                <th>Jenis Kelamin</th>
-                                <th>Jabatan</th>
-                                <th>No. Telepon</th>
-                                <th>Status</th>
-                                {canEdit && <th>Aksi</th>}
+                                <th className="px-6 py-3">NIP</th>
+                                <th className="px-6 py-3">Nama</th>
+                                <th className="px-6 py-3">Jenis Kelamin</th>
+                                <th className="px-6 py-3">Jabatan</th>
+                                <th className="px-6 py-3">No. Telepon</th>
+                                <th className="px-6 py-3">Status</th>
+                                {canEdit && <th className="px-6 py-3 text-right">Aksi</th>}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={canEdit ? 7 : 6}><Spinner className="py-8" label="Memuat data guru..." /></td></tr>
+                                <tr><td colSpan={canEdit ? 7 : 6}><Spinner className="py-12" label="Memuat data guru..." /></td></tr>
                             ) : filteredGuru.length === 0 ? (
                                 <tr>
-                                    <td colSpan={canEdit ? 7 : 6}>
+                                    <td colSpan={canEdit ? 7 : 6} className="p-8">
                                         <EmptyState
                                             icon={UserX}
                                             title="Belum ada data guru"
@@ -217,25 +222,30 @@ const GuruList = () => {
                                     <tr
                                         key={item.id}
                                         onClick={() => navigate(`/guru/${item.id}`)}
-                                        style={{ cursor: 'pointer' }}
-                                        className="hover:bg-gray-50"
+                                        className="hover:bg-gray-50 cursor-pointer transition-colors"
                                     >
-                                        <td>{item.nip}</td>
-                                        <td className="name-cell">{item.nama}</td>
-                                        <td>{item.jenis_kelamin}</td>
-                                        <td>
-                                            <span className={`badge ${item.jabatan === 'Wali Kelas' ? 'badge-info' : 'badge-success'}`}>
+                                        <td className="px-6 py-4 font-mono text-gray-600">{item.nip}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">{item.nama}</td>
+                                        <td className="px-6 py-4 text-gray-600">{item.jenis_kelamin}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${item.jabatan === 'Wali Kelas'
+                                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                }`}>
                                                 {item.jabatan}
                                             </span>
                                         </td>
-                                        <td>{item.no_telp || '-'}</td>
-                                        <td>
-                                            <span className={`badge ${item.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>
+                                        <td className="px-6 py-4 text-gray-600">{item.no_telp || '-'}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${item.status === 'Aktif'
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                }`}>
                                                 {item.status}
                                             </span>
                                         </td>
                                         {canEdit && (
-                                            <td>
+                                            <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                                                 <MobileActionMenu
                                                     actions={[
                                                         { icon: <Eye size={16} />, label: 'Detail', path: `/guru/${item.id}` },
@@ -243,67 +253,33 @@ const GuruList = () => {
                                                         { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedGuru(item); setShowDeleteModal(true) }, danger: true }
                                                     ]}
                                                 >
-                                                    <Link
-                                                        to={`/guru/${item.id}`}
-                                                        className="btn-icon"
-                                                        title="Lihat Detail"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#dbeafe',
-                                                            color: '#2563eb',
-                                                            marginRight: '4px',
-                                                            textDecoration: 'none'
-                                                        }}
-                                                    >
-                                                        <Eye size={16} />
-                                                    </Link>
-                                                    <Link
-                                                        to={`/guru/${item.id}/edit`}
-                                                        className="btn-icon"
-                                                        title="Edit"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fef3c7',
-                                                            color: '#d97706',
-                                                            marginRight: '4px',
-                                                            textDecoration: 'none'
-                                                        }}
-                                                    >
-                                                        <Edit size={16} />
-                                                    </Link>
-                                                    <button
-                                                        className="btn-icon btn-icon-danger"
-                                                        title="Hapus"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setSelectedGuru(item)
-                                                            setShowDeleteModal(true)
-                                                        }}
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fee2e2',
-                                                            color: '#dc2626',
-                                                            border: 'none',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Link
+                                                            to={`/guru/${item.id}`}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Lihat Detail"
+                                                        >
+                                                            <Eye size={18} />
+                                                        </Link>
+                                                        <Link
+                                                            to={`/guru/${item.id}/edit`}
+                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit size={18} />
+                                                        </Link>
+                                                        <button
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Hapus"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setSelectedGuru(item)
+                                                                setShowDeleteModal(true)
+                                                            }}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
                                                 </MobileActionMenu>
                                             </td>
                                         )}
@@ -314,9 +290,12 @@ const GuruList = () => {
                     </table>
                 </div>
 
-                <div className="table-footer">
-                    <p className="table-info">Menampilkan {filteredGuru.length} dari {guru.length} guru</p>
-                    <button className="btn btn-sm btn-secondary" onClick={fetchGuru}>
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                    <p className="text-sm text-gray-500">Menampilkan {filteredGuru.length} dari {guru.length} guru</p>
+                    <button
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors shadow-sm"
+                        onClick={fetchGuru}
+                    >
                         <RefreshCw size={14} /> Refresh
                     </button>
                 </div>

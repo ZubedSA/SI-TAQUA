@@ -146,7 +146,7 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="admin-dashboard">
+        <div className="admin-dashboard" data-dashboard="admin">
             {/* Welcome Header */}
             <div className="dashboard-welcome">
                 <div className="welcome-content">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Users, RefreshCw, Eye, X, UserPlus, Check } from 'lucide-react'
+import { Plus, Edit, Trash2, Users, RefreshCw, Eye, X, UserPlus, Check, Search, GraduationCap } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
@@ -9,10 +9,12 @@ import EmptyState from '../../components/ui/EmptyState'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
-
+import PageHeader from '../../components/layout/PageHeader'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import { Card } from '../../components/ui/Card'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
-import './Kelas.css'
 
 const KelasPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
@@ -281,25 +283,26 @@ const KelasPage = () => {
     )
 
     return (
-        <div className="kelas-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Manajemen Kelas</h1>
-                    <p className="page-subtitle">Kelola data kelas dan wali kelas</p>
-                </div>
-                <div className="header-actions">
-                    <DownloadButton
-                        onDownloadPDF={handleDownloadPDF}
-                        onDownloadExcel={handleDownloadExcel}
-                        onDownloadCSV={handleDownloadCSV}
-                    />
-                    {canEdit && (
-                        <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) }}>
-                            <Plus size={18} /> Tambah Kelas
-                        </button>
-                    )}
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Manajemen Kelas"
+                description="Kelola data kelas dan wali kelas"
+                icon={GraduationCap}
+                actions={
+                    <div className="flex gap-2">
+                        <DownloadButton
+                            onDownloadPDF={handleDownloadPDF}
+                            onDownloadExcel={handleDownloadExcel}
+                            onDownloadCSV={handleDownloadCSV}
+                        />
+                        {canEdit && (
+                            <Button onClick={() => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) }}>
+                                <Plus size={18} /> Tambah Kelas
+                            </Button>
+                        )}
+                    </div>
+                }
+            />
 
             {loading ? (
                 <Spinner className="py-12" label="Memuat data kelas..." />
@@ -312,77 +315,139 @@ const KelasPage = () => {
                     onAction={canEdit ? () => { setEditData(null); setFormData({ nama: '', wali_kelas_id: '' }); setShowModal(true) } : null}
                 />
             ) : (
-                <div className="kelas-grid">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {kelasList.map(kelas => (
-                        <div key={kelas.id} className="kelas-card" onClick={() => fetchSantriByKelas(kelas)} style={{ cursor: 'pointer' }}>
-                            <div className="kelas-header">
-                                <h3 className="kelas-name">{kelas.nama}</h3>
-                            </div>
-                            <div className="kelas-body">
-                                <div className="kelas-info">
-                                    <Users size={16} />
-                                    <span>{santriCounts[kelas.id] || 0} Santri</span>
+                        <Card
+                            key={kelas.id}
+                            className="hover:shadow-md transition-shadow cursor-pointer border-gray-200"
+                            onClick={() => fetchSantriByKelas(kelas)}
+                        >
+                            <div className="p-5 flex flex-col h-full">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-2 bg-primary-50 text-primary-600 rounded-lg">
+                                        <GraduationCap size={24} />
+                                    </div>
+                                    {canEdit && (
+                                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                            <button
+                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                onClick={() => handleEdit(kelas)}
+                                                title="Edit Kelas"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button
+                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                onClick={() => confirmDelete(kelas)}
+                                                title="Hapus Kelas"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                                <p className="wali-kelas">Wali: {kelas.wali_kelas?.nama || '-'}</p>
-                            </div>
-                            {canEdit && (
-                                <div className="kelas-actions" onClick={e => e.stopPropagation()}>
-                                    <button className="btn-icon btn-icon-success" title="Tambah Santri" onClick={() => openAddSantriModal(kelas)}><UserPlus size={16} /></button>
-                                    <button className="btn-icon" onClick={() => handleEdit(kelas)}><Edit size={16} /></button>
-                                    <button className="btn-icon btn-icon-danger" onClick={() => confirmDelete(kelas)}><Trash2 size={16} /></button>
+
+                                <h3 className="text-lg font-semibold text-gray-900 mb-1">{kelas.nama}</h3>
+                                <p className="text-sm text-gray-500 mb-6">Wali: {kelas.wali_kelas?.nama || '-'}</p>
+
+                                <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <Users size={16} />
+                                        <span>{santriCounts[kelas.id] || 0} Santri</span>
+                                    </div>
+                                    {canEdit && (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={(e) => { e.stopPropagation(); openAddSantriModal(kelas); }}
+                                            className="!px-3 !py-1"
+                                        >
+                                            <Plus size={14} /> Santri
+                                        </Button>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        </Card>
                     ))}
                 </div>
             )}
 
             {/* Santri Modal - Lihat Daftar Santri */}
             {showSantriModal && (
-                <div className="modal-overlay active">
-                    <div className="modal" style={{ maxWidth: '700px' }}>
-                        <div className="modal-header">
-                            <h3 className="modal-title"><Users size={20} /> Santri Kelas {selectedKelas?.nama}</h3>
-                            <button className="modal-close" onClick={() => setShowSantriModal(false)}>×</button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <Users size={20} className="text-primary-600" />
+                                Santri Kelas {selectedKelas?.nama}
+                            </h3>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={() => setShowSantriModal(false)}>
+                                <X size={24} />
+                            </button>
                         </div>
-                        <div className="modal-body">
+                        <div className="p-0 overflow-auto">
                             {loadingSantri ? (
-                                <Spinner className="py-4" label="Memuat data santri..." />
+                                <Spinner className="py-12" label="Memuat data santri..." />
                             ) : santriList.length === 0 ? (
-                                <div className="text-center py-8 text-muted">
-                                    <p>Belum ada santri di kelas ini.</p>
-                                    {canEdit && <button className="btn btn-sm btn-primary mt-2" onClick={() => openAddSantriModal(selectedKelas)}>Tambah Santri</button>}
+                                <div className="text-center py-12 px-6">
+                                    <div className="bg-gray-50 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                        <Users size={32} className="text-gray-300" />
+                                    </div>
+                                    <p className="text-gray-500 mb-4">Belum ada santri di kelas ini.</p>
+                                    {canEdit && (
+                                        <Button onClick={() => openAddSantriModal(selectedKelas)}>
+                                            <UserPlus size={18} /> Tambah Santri
+                                        </Button>
+                                    )}
                                 </div>
                             ) : (
-                                <div className="table-wrapper">
-                                    <table className="table">
-                                        <thead>
-                                            <tr><th>NIS</th><th>Nama</th><th>L/P</th><th>Status</th>{canEdit && <th>Aksi</th>}</tr>
-                                        </thead>
-                                        <tbody>
-                                            {santriList.map(s => (
-                                                <tr key={s.id}>
-                                                    <td>{s.nis || '-'}</td>
-                                                    <td>{s.nama}</td>
-                                                    <td>{s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</td>
-                                                    <td><span className={`badge ${s.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{s.status}</span></td>
-                                                    {canEdit && (
-                                                        <td>
-                                                            <button className="btn-icon btn-icon-danger btn-sm" title="Hapus dari kelas" onClick={() => confirmRemoveSantri(s.id)}>
-                                                                <X size={14} />
-                                                            </button>
-                                                        </td>
-                                                    )}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0">
+                                        <tr>
+                                            <th className="px-6 py-3">NIS</th>
+                                            <th className="px-6 py-3">Nama</th>
+                                            <th className="px-6 py-3">L/P</th>
+                                            <th className="px-6 py-3">Status</th>
+                                            {canEdit && <th className="px-6 py-3 text-right">Aksi</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {santriList.map(s => (
+                                            <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-3 font-mono text-gray-600">{s.nis || '-'}</td>
+                                                <td className="px-6 py-3 font-medium text-gray-900">{s.nama}</td>
+                                                <td className="px-6 py-3 text-gray-600">{s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</td>
+                                                <td className="px-6 py-3">
+                                                    <Badge variant={s.status === 'Aktif' ? 'success' : 'warning'}>
+                                                        {s.status}
+                                                    </Badge>
+                                                </td>
+                                                {canEdit && (
+                                                    <td className="px-6 py-3 text-right">
+                                                        <button
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Hapus dari kelas"
+                                                            onClick={() => confirmRemoveSantri(s.id)}
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             )}
                         </div>
-                        <div className="modal-footer">
-                            {canEdit && <button className="btn btn-primary" onClick={() => openAddSantriModal(selectedKelas)}><UserPlus size={16} /> Tambah Santri</button>}
-                            <button className="btn btn-secondary" onClick={() => setShowSantriModal(false)}>Tutup</button>
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 shrink-0">
+                            {canEdit && (
+                                <Button onClick={() => openAddSantriModal(selectedKelas)}>
+                                    <UserPlus size={18} /> Tambah Santri
+                                </Button>
+                            )}
+                            <Button variant="secondary" onClick={() => setShowSantriModal(false)}>
+                                Tutup
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -390,17 +455,24 @@ const KelasPage = () => {
 
             {/* Add Santri Modal - Pilih Santri untuk Ditambahkan */}
             {showAddSantriModal && (
-                <div className="modal-overlay active">
-                    <div className="modal" style={{ maxWidth: '700px' }}>
-                        <div className="modal-header">
-                            <h3 className="modal-title"><UserPlus size={20} /> Tambah Santri ke {selectedKelas?.nama}</h3>
-                            <button className="modal-close" onClick={() => setShowAddSantriModal(false)}>×</button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[85vh]">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <UserPlus size={20} className="text-primary-600" />
+                                Tambah Santri ke {selectedKelas?.nama}
+                            </h3>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={() => setShowAddSantriModal(false)}>
+                                <X size={24} />
+                            </button>
                         </div>
-                        <div className="modal-body">
-                            <div className="form-group mb-3">
+
+                        <div className="p-6 overflow-hidden flex flex-col h-full">
+                            <div className="relative mb-4">
+                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     type="text"
-                                    className="form-control"
+                                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                                     placeholder="Cari nama atau NIS santri..."
                                     value={searchSantri}
                                     onChange={e => setSearchSantri(e.target.value)}
@@ -408,55 +480,62 @@ const KelasPage = () => {
                             </div>
 
                             {selectedSantriIds.length > 0 && (
-                                <div className="alert alert-info mb-3">
-                                    <Check size={16} /> {selectedSantriIds.length} santri dipilih
+                                <div className="mb-4 p-3 bg-primary-50 text-primary-700 rounded-lg text-sm flex items-center gap-2 border border-primary-200">
+                                    <Check size={16} /> <strong>{selectedSantriIds.length}</strong> santri dipilih
                                 </div>
                             )}
 
-                            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                                <div className="table-wrapper">
-                                    <table className="table">
-                                        <thead>
-                                            <tr><th style={{ width: '40px' }}></th><th>NIS</th><th>Nama</th><th>Kelas Saat Ini</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredAvailableSantri.length === 0 ? (
-                                                <tr><td colSpan="4" className="text-center text-muted">Tidak ada santri ditemukan</td></tr>
-                                            ) : (
-                                                filteredAvailableSantri.map(s => {
-                                                    const currentKelas = kelasList.find(k => k.id === s.kelas_id)
-                                                    const isSelected = selectedSantriIds.includes(s.id)
-                                                    return (
-                                                        <tr key={s.id} onClick={() => toggleSantriSelection(s.id)} style={{ cursor: 'pointer', backgroundColor: isSelected ? 'rgba(46, 204, 113, 0.1)' : 'transparent' }}>
-                                                            <td>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isSelected}
-                                                                    onChange={() => { }}
-                                                                    style={{ cursor: 'pointer' }}
-                                                                />
-                                                            </td>
-                                                            <td>{s.nis || '-'}</td>
-                                                            <td>{s.nama}</td>
-                                                            <td>{currentKelas?.nama || <span className="text-muted">Belum ada</span>}</td>
-                                                        </tr>
-                                                    )
-                                                })
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div className="overflow-y-auto flex-1 border border-gray-200 rounded-lg">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0">
+                                        <tr>
+                                            <th className="px-4 py-2 w-10"></th>
+                                            <th className="px-4 py-2">NIS</th>
+                                            <th className="px-4 py-2">Nama</th>
+                                            <th className="px-4 py-2">Kelas Saat Ini</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredAvailableSantri.length === 0 ? (
+                                            <tr><td colSpan="4" className="text-center py-8 text-gray-500">Tidak ada santri ditemukan</td></tr>
+                                        ) : (
+                                            filteredAvailableSantri.map(s => {
+                                                const currentKelas = kelasList.find(k => k.id === s.kelas_id)
+                                                const isSelected = selectedSantriIds.includes(s.id)
+                                                return (
+                                                    <tr
+                                                        key={s.id}
+                                                        onClick={() => toggleSantriSelection(s.id)}
+                                                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
+                                                    >
+                                                        <td className="px-4 py-2">
+                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
+                                                                {isSelected && <Check size={12} className="text-white" />}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2 font-mono text-gray-600">{s.nis || '-'}</td>
+                                                        <td className="px-4 py-2 font-medium text-gray-900">{s.nama}</td>
+                                                        <td className="px-4 py-2 text-gray-500">{currentKelas?.nama || <span className="text-gray-400 italic">Belum ada</span>}</td>
+                                                    </tr>
+                                                )
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowAddSantriModal(false)}>Batal</button>
-                            <button
-                                className="btn btn-primary"
+
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 shrink-0">
+                            <Button variant="secondary" onClick={() => setShowAddSantriModal(false)}>
+                                Batal
+                            </Button>
+                            <Button
                                 onClick={handleConfirmAddSantri}
                                 disabled={savingSantri || selectedSantriIds.length === 0}
+                                isLoading={savingSantri}
                             >
-                                {savingSantri ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : `Tambahkan ${selectedSantriIds.length} Santri`}
-                            </button>
+                                {savingSantri ? 'Menyimpan...' : `Tambahkan ${selectedSantriIds.length} Santri`}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -464,39 +543,45 @@ const KelasPage = () => {
 
             {/* Form Modal */}
             {showModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title">{editData ? 'Edit Kelas' : 'Tambah Kelas'}</h3>
-                            <button className="modal-close" onClick={() => { setShowModal(false); setEditData(null) }}>×</button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900">{editData ? 'Edit Kelas' : 'Tambah Kelas Baru'}</h3>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setShowModal(false); setEditData(null) }}>
+                                <X size={24} />
+                            </button>
                         </div>
                         <form onSubmit={handleFormSubmit}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Kelas *</label>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Kelas *</label>
                                     <input
                                         type="text"
-                                        className="form-control"
+                                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                                         placeholder="Contoh: 7A, 8B, 9C, 10 IPA 1"
                                         value={formData.nama}
                                         onChange={e => setFormData({ ...formData, nama: e.target.value })}
                                         required
                                     />
-                                    <small className="form-hint">Masukkan nama kelas beserta tingkatnya</small>
+                                    <p className="mt-1 text-xs text-gray-500">Masukkan nama kelas beserta tingkatnya</p>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Wali Kelas</label>
-                                    <select className="form-control" value={formData.wali_kelas_id} onChange={e => setFormData({ ...formData, wali_kelas_id: e.target.value })}>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Wali Kelas</label>
+                                    <select
+                                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                        value={formData.wali_kelas_id}
+                                        onChange={e => setFormData({ ...formData, wali_kelas_id: e.target.value })}
+                                    >
                                         <option value="">Pilih Wali Kelas</option>
                                         {guruList.map(g => <option key={g.id} value={g.id}>{g.nama}</option>)}
                                     </select>
                                 </div>
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>
-                                    {saving ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : 'Simpan'}
-                                </button>
+                            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>Batal</Button>
+                                <Button type="submit" disabled={saving} isLoading={saving}>
+                                    {saving ? 'Menyimpan...' : 'Simpan'}
+                                </Button>
                             </div>
                         </form>
                     </div>
@@ -538,4 +623,3 @@ const KelasPage = () => {
 }
 
 export default KelasPage
-

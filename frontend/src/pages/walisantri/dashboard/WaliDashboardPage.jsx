@@ -2,16 +2,21 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
     BookOpen, Wallet, Calendar, Bell, CheckCircle, AlertCircle,
-    Clock, TrendingUp, ChevronRight, RefreshCw
+    Clock, TrendingUp, ChevronRight, RefreshCw, User
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
+import Badge from '../../../components/ui/Badge'
+import EmptyState from '../../../components/ui/EmptyState'
+
 
 /**
  * WaliDashboardPage - Dashboard utama untuk Portal Wali Santri
- * Menampilkan ringkasan info santri, hafalan terakhir, status SPP, dan kehadiran
+ * Refactored to use Global Layout System (Phase 2)
  */
 const WaliDashboardPage = () => {
     const { user, userProfile } = useAuth()
@@ -151,203 +156,206 @@ const WaliDashboardPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     if (santriList.length === 0) {
         return (
-            <div className="wali-empty-state">
-                <div className="wali-empty-icon">
-                    <AlertCircle size={40} />
-                </div>
-                <h3 className="wali-empty-title">Belum Ada Data Santri</h3>
-                <p className="wali-empty-text">
-                    Akun Anda belum terhubung dengan data santri. Silakan hubungi admin pondok.
-                </p>
+            <div className="p-6">
+                <EmptyState
+                    icon={User}
+                    title="Belum Ada Data Santri"
+                    description="Akun Anda belum terhubung dengan data santri. Silakan hubungi admin pondok."
+                />
             </div>
         )
     }
 
     return (
-        <div className="wali-dashboard">
-            {/* Header */}
-            <div className="wali-page-header">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <h1 className="wali-page-title">Beranda</h1>
-                        <p className="wali-page-subtitle">
-                            Assalamu'alaikum, {userProfile?.nama || 'Bapak/Ibu'} 👋
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleRefresh}
-                        className="wali-btn wali-btn-secondary"
-                        style={{ padding: '10px' }}
-                    >
-                        <RefreshCw size={18} />
-                    </button>
-                </div>
-            </div>
+        <div className="space-y-6">
+            {/* Standard Page Header */}
+            <PageHeader
+                title="Beranda Wali"
+                description={`Assalamu'alaikum, ${userProfile?.nama || 'Bapak/Ibu'} 👋`}
+                icon={BookOpen}
+                actions={
+                    <Button variant="outline" onClick={handleRefresh}>
+                        <RefreshCw size={16} className="mr-2" />
+                        Refresh
+                    </Button>
+                }
+            />
 
             {/* Santri Selector (jika lebih dari 1 santri) */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
+                <div className="flex overflow-x-auto gap-4 pb-2">
                     {santriList.map(santri => (
-                        <SantriCard
-                            key={santri.id}
-                            santri={santri}
-                            selected={selectedSantri?.id === santri.id}
-                            onClick={() => setSelectedSantri(santri)}
-                        />
+                        <div key={santri.id} className="min-w-[300px]">
+                            <SantriCard
+                                santri={santri}
+                                selected={selectedSantri?.id === santri.id}
+                                onClick={() => setSelectedSantri(santri)}
+                            />
+                        </div>
                     ))}
                 </div>
             )}
 
-            {/* Santri Info Card */}
+            {/* Santri Info Card (If only 1) */}
             {selectedSantri && santriList.length === 1 && (
                 <SantriCard santri={selectedSantri} showDetails />
             )}
 
-            {/* Quick Stats */}
-            <div className="wali-dashboard-grid" style={{ marginTop: '24px' }}>
+            {/* Global Grid System: Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Hafalan Terakhir */}
-                <div className="wali-stat-card">
-                    <div className="wali-stat-header">
-                        <div className="wali-stat-icon green">
-                            <BookOpen size={22} />
+                <Card className="p-6 border-l-4 border-l-emerald-500">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+                            <BookOpen size={24} />
                         </div>
+                        <Badge variant="success">Terbaru</Badge>
                     </div>
-                    <p className="wali-stat-value">
-                        {dashboardData.hafalanTerakhir?.surah || '-'}
-                    </p>
-                    <p className="wali-stat-label">
-                        Hafalan Terakhir
+                    <div className="space-y-1">
+                        <p className="text-sm text-gray-500 font-medium">Hafalan Terakhir</p>
+                        <h3 className="text-2xl font-bold text-gray-900">
+                            {dashboardData.hafalanTerakhir?.surah || '-'}
+                        </h3>
                         {dashboardData.hafalanTerakhir?.tanggal && (
-                            <span> • {formatDate(dashboardData.hafalanTerakhir.tanggal)}</span>
+                            <p className="text-xs text-gray-400">
+                                {formatDate(dashboardData.hafalanTerakhir.tanggal)}
+                            </p>
                         )}
-                    </p>
-                </div>
+                    </div>
+                </Card>
 
                 {/* Kehadiran */}
-                <div className="wali-stat-card">
-                    <div className="wali-stat-header">
-                        <div className="wali-stat-icon blue">
-                            <Calendar size={22} />
+                <Card className="p-6 border-l-4 border-l-blue-500">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
+                            <Calendar size={24} />
                         </div>
                     </div>
-                    <p className="wali-stat-value">
-                        {dashboardData.presensiStats.hadir}
-                    </p>
-                    <p className="wali-stat-label">
-                        Hadir (30 hari terakhir)
-                    </p>
-                </div>
+                    <div className="space-y-1">
+                        <p className="text-sm text-gray-500 font-medium">Kehadiran (30 Hari)</p>
+                        <h3 className="text-2xl font-bold text-gray-900">
+                            {dashboardData.presensiStats.hadir} <span className="text-sm font-normal text-gray-500">Hadir</span>
+                        </h3>
+                    </div>
+                </Card>
 
                 {/* Status SPP */}
-                <div className="wali-stat-card">
-                    <div className="wali-stat-header">
-                        <div className={`wali-stat-icon ${dashboardData.tagihanBelumLunas.length > 0 ? 'red' : 'green'}`}>
-                            <Wallet size={22} />
+                <Card className={`p-6 border-l-4 ${dashboardData.tagihanBelumLunas.length > 0 ? 'border-l-red-500' : 'border-l-green-500'}`}>
+                    <div className="flex justify-between items-start mb-4">
+                        <div className={`p-2 rounded-lg ${dashboardData.tagihanBelumLunas.length > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                            <Wallet size={24} />
                         </div>
                     </div>
-                    <p className="wali-stat-value">
+                    <div className="space-y-1">
+                        <p className="text-sm text-gray-500 font-medium">Status Pembayaran</p>
                         {dashboardData.tagihanBelumLunas.length > 0 ? (
-                            <span style={{ color: '#dc2626' }}>
-                                {dashboardData.tagihanBelumLunas.length} Tagihan
-                            </span>
+                            <h3 className="text-2xl font-bold text-red-600">
+                                {dashboardData.tagihanBelumLunas.length} <span className="text-sm font-normal text-gray-500">Tagihan</span>
+                            </h3>
                         ) : (
-                            <span style={{ color: '#16a34a' }}>Lunas</span>
+                            <h3 className="text-2xl font-bold text-green-600">Lunas</h3>
                         )}
-                    </p>
-                    <p className="wali-stat-label">Status Pembayaran</p>
-                </div>
+                    </div>
+                </Card>
             </div>
 
-            {/* Tagihan Belum Lunas */}
-            {dashboardData.tagihanBelumLunas.length > 0 && (
-                <div className="wali-section">
-                    <div className="wali-section-header">
-                        <h3 className="wali-section-title">Tagihan Belum Lunas</h3>
-                        <Link to="/wali/keuangan" className="wali-section-link">
-                            Lihat Semua <ChevronRight size={14} />
-                        </Link>
-                    </div>
-                    <div className="wali-data-list">
-                        {dashboardData.tagihanBelumLunas.map(tagihan => (
-                            <div key={tagihan.id} className="wali-data-item">
-                                <div className="wali-data-item-info">
-                                    <p className="wali-data-item-title">
-                                        {tagihan.kategori?.nama || 'Pembayaran'}
-                                    </p>
-                                    <p className="wali-data-item-subtitle">
-                                        Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}
-                                    </p>
-                                </div>
-                                <span className="wali-data-item-value belum">
-                                    {formatCurrency(tagihan.jumlah)}
-                                </span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Tagihan & Actions */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Tagihan Belum Lunas */}
+                    {dashboardData.tagihanBelumLunas.length > 0 && (
+                        <Card title="Tagihan Belum Lunas">
+                            <div className="divide-y divide-gray-100">
+                                {dashboardData.tagihanBelumLunas.map(tagihan => (
+                                    <div key={tagihan.id} className="py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:bg-gray-50 transition-colors px-4 -mx-4">
+                                        <div className="pl-4">
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {tagihan.kategori?.nama || 'Pembayaran'}
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}
+                                            </p>
+                                        </div>
+                                        <div className="pr-4 text-right">
+                                            <span className="block text-sm font-bold text-red-600 mb-1">
+                                                {formatCurrency(tagihan.jumlah)}
+                                            </span>
+                                            <Badge variant="danger">Belum Lunas</Badge>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                <Link to="/wali/keuangan" className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1">
+                                    Lihat Semua Tagihan <ChevronRight size={16} />
+                                </Link>
+                            </div>
+                        </Card>
+                    )}
 
-            {/* Pengumuman Terbaru */}
-            <div className="wali-section">
-                <div className="wali-section-header">
-                    <h3 className="wali-section-title">Pengumuman Terbaru</h3>
-                    <Link to="/wali/informasi" className="wali-section-link">
-                        Lihat Semua <ChevronRight size={14} />
-                    </Link>
-                </div>
-
-                {dashboardData.pengumumanTerbaru.length > 0 ? (
-                    dashboardData.pengumumanTerbaru.map(pengumuman => (
-                        <div key={pengumuman.id} className="wali-pengumuman-item">
-                            <p className="wali-pengumuman-date">
-                                {formatDate(pengumuman.tanggal_publish)}
-                            </p>
-                            <h4 className="wali-pengumuman-title">{pengumuman.judul}</h4>
-                            <p className="wali-pengumuman-content">
-                                {pengumuman.isi.length > 150
-                                    ? pengumuman.isi.substring(0, 150) + '...'
-                                    : pengumuman.isi}
-                            </p>
-                            <span className={`wali-pengumuman-kategori ${pengumuman.kategori?.toLowerCase()}`}>
-                                {pengumuman.kategori}
-                            </span>
+                    {/* Quick Access Grid */}
+                    <Card title="Akses Cepat">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Link to="/wali/akademik/hafalan" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
+                                <BookOpen size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
+                                <span className="text-sm font-medium">Hafalan</span>
+                            </Link>
+                            <Link to="/wali/keuangan" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
+                                <Wallet size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
+                                <span className="text-sm font-medium">Tagihan</span>
+                            </Link>
+                            <Link to="/wali/akademik/kehadiran" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
+                                <Calendar size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
+                                <span className="text-sm font-medium">Kehadiran</span>
+                            </Link>
+                            <Link to="/wali/pesan/kirim" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
+                                <Bell size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
+                                <span className="text-sm font-medium">Pesan</span>
+                            </Link>
                         </div>
-                    ))
-                ) : (
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                        Belum ada pengumuman terbaru.
-                    </p>
-                )}
-            </div>
+                    </Card>
+                </div>
 
-            {/* Quick Actions */}
-            <div className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>Akses Cepat</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                    <Link to="/wali/akademik/hafalan" className="wali-btn wali-btn-secondary">
-                        <BookOpen size={18} />
-                        Lihat Hafalan
-                    </Link>
-                    <Link to="/wali/keuangan" className="wali-btn wali-btn-secondary">
-                        <Wallet size={18} />
-                        Cek Tagihan
-                    </Link>
-                    <Link to="/wali/akademik/kehadiran" className="wali-btn wali-btn-secondary">
-                        <Calendar size={18} />
-                        Kehadiran
-                    </Link>
-                    <Link to="/wali/pesan/kirim" className="wali-btn wali-btn-primary">
-                        <Bell size={18} />
-                        Kirim Pesan
-                    </Link>
+                {/* Right Column: Pengumuman */}
+                <div className="lg:col-span-1">
+                    <Card title="Pengumuman Terbaru" className="h-full">
+                        {dashboardData.pengumumanTerbaru.length > 0 ? (
+                            <div className="space-y-4">
+                                {dashboardData.pengumumanTerbaru.map(pengumuman => (
+                                    <div key={pengumuman.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <Badge variant="info" size="sm">{pengumuman.kategori}</Badge>
+                                            <span className="text-xs text-gray-500">{formatDate(pengumuman.tanggal_publish)}</span>
+                                        </div>
+                                        <h4 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">{pengumuman.judul}</h4>
+                                        <p className="text-xs text-gray-600 line-clamp-3">
+                                            {pengumuman.isi}
+                                        </p>
+                                    </div>
+                                ))}
+                                <div className="pt-2">
+                                    <Link to="/wali/informasi" className="text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-1 justify-center">
+                                        Lihat Semua Pengumuman <ChevronRight size={16} />
+                                    </Link>
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyState
+                                icon={Bell}
+                                title="Tidak Ada Pengumuman"
+                                description="Belum ada informasi terbaru dari pondok."
+                                compact
+                            />
+                        )}
+                    </Card>
                 </div>
             </div>
         </div>

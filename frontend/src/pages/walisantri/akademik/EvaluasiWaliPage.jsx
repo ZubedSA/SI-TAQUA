@@ -7,11 +7,15 @@ import {
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import EmptyState from '../../../components/ui/EmptyState'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * EvaluasiWaliPage - Halaman untuk melihat evaluasi dan nilai santri
  * Read-only - wali hanya bisa melihat, tidak bisa mengedit
+ * Refactored to use Global Layout System (Phase 2)
  */
 const EvaluasiWaliPage = () => {
     const { user } = useAuth()
@@ -47,7 +51,7 @@ const EvaluasiWaliPage = () => {
         }
     }
 
-    // Fetch evaluasi data
+    // Fetch evaluasi data area...
     const fetchEvaluasiData = async (santriId) => {
         if (!santriId) return
 
@@ -115,10 +119,17 @@ const EvaluasiWaliPage = () => {
     }
 
     const getNilaiColor = (nilai) => {
-        if (nilai >= 80) return '#16a34a'
-        if (nilai >= 70) return '#2563eb'
-        if (nilai >= 60) return '#d97706'
-        return '#dc2626'
+        if (nilai >= 80) return 'text-emerald-600'
+        if (nilai >= 70) return 'text-blue-600'
+        if (nilai >= 60) return 'text-amber-600'
+        return 'text-red-600'
+    }
+
+    const getNilaiBg = (nilai) => {
+        if (nilai >= 80) return 'bg-emerald-50'
+        if (nilai >= 70) return 'bg-blue-50'
+        if (nilai >= 60) return 'bg-amber-50'
+        return 'bg-red-50'
     }
 
     const getNilaiLabel = (nilai) => {
@@ -131,27 +142,24 @@ const EvaluasiWaliPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-evaluasi-page">
-            {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/beranda" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Evaluasi & Nilai</h1>
-                <p className="wali-page-subtitle">Perkembangan akademik dan perilaku santri</p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Evaluasi & Nilai"
+                description="Perkembangan akademik dan perilaku santri"
+                icon={TrendingUp}
+                backUrl="/wali/beranda"
+            />
 
             {/* Santri Selector */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {santriList.map(santri => (
                         <SantriCard
                             key={santri.id}
@@ -164,80 +172,77 @@ const EvaluasiWaliPage = () => {
             )}
 
             {/* Tabs */}
-            <div className="wali-tabs">
+            <div className="flex gap-2 overflow-x-auto pb-2 border-b border-gray-200">
                 <button
-                    className={`wali-tab ${activeTab === 'nilai' ? 'active' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'nilai'
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-600 hover:bg-gray-50'
+                        }`}
                     onClick={() => setActiveTab('nilai')}
                 >
-                    <Award size={16} />
-                    Nilai
+                    <Award size={18} />
+                    Nilai Akademik
                 </button>
                 <button
-                    className={`wali-tab ${activeTab === 'perilaku' ? 'active' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'perilaku'
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-600 hover:bg-gray-50'
+                        }`}
                     onClick={() => setActiveTab('perilaku')}
                 >
-                    <Heart size={16} />
-                    Akhlak
+                    <Heart size={18} />
+                    Akhlak & Perilaku
                 </button>
                 <button
-                    className={`wali-tab ${activeTab === 'catatan' ? 'active' : ''}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'catatan'
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-600 hover:bg-gray-50'
+                        }`}
                     onClick={() => setActiveTab('catatan')}
                 >
-                    <BookOpen size={16} />
+                    <BookOpen size={18} />
                     Catatan Guru
                 </button>
             </div>
 
             {/* Content */}
-            <div className="wali-section" style={{ marginTop: 0 }}>
+            <div>
                 {/* Tab: Nilai */}
                 {activeTab === 'nilai' && (
-                    <>
-                        <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
-                            Nilai Akademik
+                    <Card>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 px-2">
+                            Daftar Nilai
                         </h3>
-
                         {nilaiData.length > 0 ? (
-                            <div className="table-wrapper">
-                                <table className="table">
-                                    <thead>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                                         <tr>
-                                            <th>Mata Pelajaran</th>
-                                            <th>Tugas</th>
-                                            <th>UTS</th>
-                                            <th>UAS</th>
-                                            <th>Akhir</th>
-                                            <th>Predikat</th>
+                                            <th className="px-4 py-3 font-medium">Mata Pelajaran</th>
+                                            <th className="px-4 py-3 font-medium text-center">Tugas</th>
+                                            <th className="px-4 py-3 font-medium text-center">UTS</th>
+                                            <th className="px-4 py-3 font-medium text-center">UAS</th>
+                                            <th className="px-4 py-3 font-medium text-center">Akhir</th>
+                                            <th className="px-4 py-3 font-medium text-center">Predikat</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-gray-100">
                                         {nilaiData.map(nilai => (
-                                            <tr key={nilai.id}>
-                                                <td>
-                                                    <strong>{nilai.mapel?.nama || '-'}</strong>
-                                                    <br />
-                                                    <small style={{ color: 'var(--text-secondary)' }}>
+                                            <tr key={nilai.id} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3">
+                                                    <div className="font-medium text-gray-900">{nilai.mapel?.nama || '-'}</div>
+                                                    <div className="text-xs text-gray-500">
                                                         {nilai.semester} - {nilai.tahun_ajaran}
-                                                    </small>
+                                                    </div>
                                                 </td>
-                                                <td>{nilai.nilai_tugas || '-'}</td>
-                                                <td>{nilai.nilai_uts || '-'}</td>
-                                                <td>{nilai.nilai_uas || '-'}</td>
-                                                <td style={{
-                                                    fontWeight: 600,
-                                                    color: getNilaiColor(nilai.nilai_akhir)
-                                                }}>
+                                                <td className="px-4 py-3 text-center">{nilai.nilai_tugas || '-'}</td>
+                                                <td className="px-4 py-3 text-center">{nilai.nilai_uts || '-'}</td>
+                                                <td className="px-4 py-3 text-center">{nilai.nilai_uas || '-'}</td>
+                                                <td className={`px-4 py-3 text-center font-bold ${getNilaiColor(nilai.nilai_akhir)}`}>
                                                     {nilai.nilai_akhir || '-'}
                                                 </td>
-                                                <td>
-                                                    <span style={{
-                                                        padding: '4px 8px',
-                                                        borderRadius: '12px',
-                                                        fontSize: '11px',
-                                                        fontWeight: 500,
-                                                        background: `${getNilaiColor(nilai.nilai_akhir)}20`,
-                                                        color: getNilaiColor(nilai.nilai_akhir)
-                                                    }}>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getNilaiColor(nilai.nilai_akhir)} ${getNilaiBg(nilai.nilai_akhir)}`}>
                                                         {getNilaiLabel(nilai.nilai_akhir)}
                                                     </span>
                                                 </td>
@@ -247,42 +252,39 @@ const EvaluasiWaliPage = () => {
                                 </table>
                             </div>
                         ) : (
-                            <div className="wali-empty-state">
-                                <div className="wali-empty-icon">
-                                    <Award size={40} />
-                                </div>
-                                <h3 className="wali-empty-title">Belum Ada Data Nilai</h3>
-                                <p className="wali-empty-text">
-                                    Data nilai santri belum tersedia atau belum diinput.
-                                </p>
-                            </div>
+                            <EmptyState
+                                icon={Award}
+                                title="Belum Ada Data Nilai"
+                                description="Data nilai santri belum tersedia atau belum diinput."
+                            />
                         )}
-                    </>
+                    </Card>
                 )}
 
                 {/* Tab: Perilaku/Akhlak */}
                 {activeTab === 'perilaku' && (
-                    <>
-                        <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
-                            Evaluasi Akhlak & Kedisiplinan
+                    <Card>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 px-2">
+                            Riwayat Perilaku
                         </h3>
-
                         {perilakuData.length > 0 ? (
-                            <div className="wali-data-list">
+                            <div className="space-y-3">
                                 {perilakuData.map(perilaku => (
-                                    <div key={perilaku.id} className="wali-perilaku-item">
-                                        <div className="wali-perilaku-header">
-                                            <span className="wali-perilaku-date">
+                                    <div key={perilaku.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="text-xs text-gray-500 font-medium">
                                                 {formatDate(perilaku.tanggal)}
-                                            </span>
-                                            <span className={`santri-status-badge ${perilaku.jenis === 'Positif' ? 'status-aktif' : 'status-tidak-aktif'
+                                            </div>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${perilaku.jenis === 'Positif'
+                                                ? 'bg-green-100 text-green-700'
+                                                : 'bg-red-100 text-red-700'
                                                 }`}>
                                                 {perilaku.jenis}
                                             </span>
                                         </div>
-                                        <p className="wali-perilaku-desc">{perilaku.keterangan}</p>
+                                        <p className="text-gray-800 text-sm mb-2">{perilaku.keterangan}</p>
                                         {perilaku.poin && (
-                                            <span className="wali-perilaku-poin">
+                                            <span className="inline-flex items-center px-2 py-1 bg-primary-600 text-white text-xs font-bold rounded-md">
                                                 {perilaku.jenis === 'Positif' ? '+' : '-'}{perilaku.poin} Poin
                                             </span>
                                         )}
@@ -290,43 +292,40 @@ const EvaluasiWaliPage = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="wali-empty-state">
-                                <div className="wali-empty-icon">
-                                    <Heart size={40} />
-                                </div>
-                                <h3 className="wali-empty-title">Belum Ada Data Perilaku</h3>
-                                <p className="wali-empty-text">
-                                    Catatan perilaku santri belum tersedia.
-                                </p>
-                            </div>
+                            <EmptyState
+                                icon={Heart}
+                                title="Belum Ada Data Perilaku"
+                                description="Catatan perilaku santri belum tersedia."
+                            />
                         )}
-                    </>
+                    </Card>
                 )}
 
                 {/* Tab: Catatan Guru */}
                 {activeTab === 'catatan' && (
-                    <>
-                        <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
-                            Catatan dari Guru/Pembina
+                    <Card>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4 px-2">
+                            Catatan Guru / Taujihad
                         </h3>
-
                         {taujihadData.length > 0 ? (
-                            <div className="wali-data-list">
+                            <div className="space-y-4">
                                 {taujihadData.map(catatan => (
-                                    <div key={catatan.id} className="wali-catatan-item">
-                                        <div className="wali-catatan-header">
-                                            <span className="wali-catatan-guru">
-                                                <Users size={14} />
-                                                {catatan.guru?.nama || 'Guru'}
-                                            </span>
-                                            <span className="wali-catatan-date">
+                                    <div key={catatan.id} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all">
+                                        <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-100">
+                                            <div className="flex items-center gap-2 text-sm font-medium text-primary-700">
+                                                <Users size={16} />
+                                                {catatan.guru?.nama || 'Guru / Ustadz'}
+                                            </div>
+                                            <span className="text-xs text-gray-500">
                                                 {formatDate(catatan.tanggal)}
                                             </span>
                                         </div>
-                                        <p className="wali-catatan-content">{catatan.isi}</p>
+                                        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
+                                            {catatan.isi}
+                                        </p>
                                         {catatan.rekomendasi && (
-                                            <div className="wali-catatan-rekomendasi">
-                                                <Star size={14} />
+                                            <div className="mt-4 flex items-start gap-3 p-3 bg-amber-50 rounded-lg text-amber-800 text-sm">
+                                                <Star size={16} className="mt-0.5 shrink-0" />
                                                 <span>{catatan.rekomendasi}</span>
                                             </div>
                                         )}
@@ -334,98 +333,15 @@ const EvaluasiWaliPage = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="wali-empty-state">
-                                <div className="wali-empty-icon">
-                                    <BookOpen size={40} />
-                                </div>
-                                <h3 className="wali-empty-title">Belum Ada Catatan</h3>
-                                <p className="wali-empty-text">
-                                    Catatan dari guru/pembina belum tersedia.
-                                </p>
-                            </div>
+                            <EmptyState
+                                icon={BookOpen}
+                                title="Belum Ada Catatan"
+                                description="Catatan dari guru/pembina belum tersedia."
+                            />
                         )}
-                    </>
+                    </Card>
                 )}
             </div>
-
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-back-link:hover {
-          color: var(--primary-color);
-        }
-        .wali-tabs {
-          display: flex;
-          gap: 8px;
-        }
-        .wali-tab {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .wali-perilaku-item,
-        .wali-catatan-item {
-          padding: 16px;
-          background: var(--bg-secondary, #f8fafc);
-          border-radius: 12px;
-          margin-bottom: 12px;
-        }
-        .wali-perilaku-header,
-        .wali-catatan-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-        .wali-perilaku-date,
-        .wali-catatan-date {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-        .wali-perilaku-desc,
-        .wali-catatan-content {
-          font-size: 14px;
-          color: var(--text-primary);
-          margin: 0;
-          line-height: 1.5;
-        }
-        .wali-perilaku-poin {
-          display: inline-block;
-          margin-top: 8px;
-          padding: 4px 10px;
-          background: var(--primary-color);
-          color: #fff;
-          font-size: 12px;
-          font-weight: 500;
-          border-radius: 20px;
-        }
-        .wali-catatan-guru {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--text-primary);
-        }
-        .wali-catatan-rekomendasi {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 12px;
-          padding: 10px;
-          background: #fef3c7;
-          border-radius: 8px;
-          font-size: 13px;
-          color: #92400e;
-        }
-      `}</style>
         </div>
     )
 }

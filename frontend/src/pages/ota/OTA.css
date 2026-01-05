@@ -4,20 +4,15 @@
    ===================================================== */
 
 /* Base Container */
+/* Base Container */
 .ota-container {
-    padding: 0;
+    /* Padding handled globally */
     min-height: 100vh;
     background: var(--bg-secondary, #f8fafc);
 }
 
-/* Force Full Width for Tables - Desktop (Counteract .content padding: 32px) */
-/* Force Full Width for Tables - Desktop */
-.ota-container .ota-table-container,
-.ota-list-page .table-container {
-    margin: 0;
-    width: 100%;
-    border-radius: 0;
-}
+/* Table styles inherit from index.css */
+
 
 /* Header Section */
 .ota-header {

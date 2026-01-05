@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { useLayoutEffect } from 'react'
 import WaliNavbar from './components/WaliNavbar'
-import './WaliPortal.css'
+// import './WaliPortal.css' // REMOVED
 
 /**
  * WaliLayout - Layout khusus untuk Portal Wali Santri
@@ -17,11 +17,11 @@ const WaliLayout = () => {
     }, [])
 
     return (
-        <div className="wali-layout">
-            <main className="wali-main">
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
+            <WaliNavbar />
+            <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in">
                 <Outlet />
             </main>
-            <WaliNavbar />
         </div>
     )
 }

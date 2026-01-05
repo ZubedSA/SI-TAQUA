@@ -74,7 +74,7 @@ const DownloadButton = ({
         const opt = downloadOptions[0]
         return (
             <button
-                className={`btn btn-secondary ${className}`}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${className}`}
                 onClick={() => handleDownload(opt.format, opt.handler)}
                 disabled={disabled || downloading}
             >
@@ -85,58 +85,27 @@ const DownloadButton = ({
     }
 
     return (
-        <div className="download-button-wrapper" ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
+        <div className="relative inline-block" ref={dropdownRef}>
             <button
-                className={`btn btn-secondary ${className}`}
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all ${className}`}
                 onClick={() => setIsOpen(!isOpen)}
                 disabled={disabled || downloading}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
                 <Download size={18} />
                 {downloading ? 'Downloading...' : 'Download'}
-                <ChevronDown size={14} style={{ marginLeft: '2px' }} />
+                <ChevronDown size={14} className="ml-1" />
             </button>
 
             {isOpen && (
-                <div
-                    className="download-dropdown"
-                    style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: '4px',
-                        background: 'var(--card-bg, #ffffff)',
-                        border: '1px solid var(--border-color, #e5e7eb)',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                        minWidth: '160px',
-                        zIndex: 1000,
-                        overflow: 'hidden'
-                    }}
-                >
+                <div className="absolute right-0 top-full mt-1 min-w-[180px] bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in zoom-in-95">
                     {downloadOptions.map((opt) => (
                         <button
                             key={opt.format}
                             onClick={() => handleDownload(opt.format, opt.handler)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                width: '100%',
-                                padding: '10px 14px',
-                                border: 'none',
-                                background: 'transparent',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                color: 'var(--text-primary, #374151)',
-                                textAlign: 'left',
-                                transition: 'background 0.15s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--hover-bg, #f3f4f6)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 text-left transition-colors"
                         >
-                            {opt.icon}
-                            {opt.label}
+                            <span className="text-gray-400">{opt.icon}</span>
+                            <span className="font-medium">{opt.label}</span>
                         </button>
                     ))}
                 </div>

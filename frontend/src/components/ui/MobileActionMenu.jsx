@@ -52,14 +52,16 @@ const MobileActionMenu = ({ children, actions }) => {
     }
 
     return (
-        <div className="action-buttons">
+        <div className="flex items-center gap-2">
             {/* Desktop: Show regular buttons */}
-            {children}
+            <div className="hidden md:flex items-center gap-2">
+                {children}
+            </div>
 
             {/* Mobile: Show dropdown */}
-            <div className="mobile-action-wrapper" ref={menuRef}>
+            <div className="relative md:hidden" ref={menuRef}>
                 <button
-                    className="mobile-action-toggle"
+                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                     onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
@@ -79,17 +81,20 @@ const MobileActionMenu = ({ children, actions }) => {
                     <MoreVertical size={18} aria-hidden="true" />
                 </button>
                 {isOpen && (
-                    <div className="mobile-action-menu show" role="menu">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 origin-top-right animate-in fade-in zoom-in-95" role="menu">
                         {actions.map((action, index) => (
                             <button
                                 key={index}
-                                className={`mobile-action-item ${action.danger ? 'danger' : ''}`}
+                                className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors ${action.danger
+                                        ? 'text-red-600 hover:bg-red-50'
+                                        : 'text-gray-700 hover:bg-gray-50'
+                                    }`}
                                 onClick={(e) => handleActionClick(action, e)}
                                 type="button"
                                 role="menuitem"
                             >
-                                <span className="action-icon" aria-hidden="true">{action.icon}</span>
-                                <span>{action.label}</span>
+                                <span className="text-current opacity-70" aria-hidden="true">{action.icon}</span>
+                                <span className="font-medium">{action.label}</span>
                             </button>
                         ))}
                     </div>

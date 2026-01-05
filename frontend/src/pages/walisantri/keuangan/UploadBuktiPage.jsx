@@ -8,7 +8,6 @@ import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
 import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
 
 /**
  * UploadBuktiPage - Halaman untuk upload bukti transfer pembayaran

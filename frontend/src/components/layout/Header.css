@@ -1,58 +1,186 @@
-/* Header specific styles */
+/* ==========================================================================
+   HEADER COMPONENT STYLES
+   Theme: Professional Modern (Clean, Light)
+   ========================================================================== */
+
+.header {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    height: var(--header-height);
+    padding: 0 var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    transition: all 0.3s ease;
+}
 
 .header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
-    flex: 1;
+    gap: var(--spacing-md);
 }
 
-/* Profile Wrapper */
-.user-profile-wrapper {
+.header-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: none;
+    /* Hidden on mobile default, shown on desktop */
+}
+
+@media (min-width: 1024px) {
+    .header-title {
+        display: block;
+    }
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* --- Search Button (Clean) --- */
+.search-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-btn:hover {
+    background-color: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--text-primary);
+}
+
+.search-shortcut {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.375rem;
+    background-color: var(--color-white);
+    border: 1px solid var(--gray-200);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* --- Action Buttons (Theme, Notif) --- */
+.action-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-sm);
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background-color: var(--gray-100);
+    color: var(--primary-600);
+}
+
+.notification-wrapper {
     position: relative;
 }
 
+.notification-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--danger-text);
+    border-radius: 50%;
+    border: 2px solid var(--color-white);
+}
+
+/* --- User Profile (Minimalist) --- */
 .user-profile {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 12px 6px 6px;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-radius: 50px;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
+    gap: 0.75rem;
+    padding: 0.25rem;
+    padding-left: 0.75rem;
+    margin-left: 0.5rem;
+    border-left: 1px solid var(--border-color);
     cursor: pointer;
 }
 
-.user-profile:hover {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+    display: none;
+    /* Hide on mobile */
 }
 
-.dropdown-arrow {
-    color: #666;
-    transition: transform 0.2s ease;
+@media (min-width: 768px) {
+    .user-info {
+        display: flex;
+    }
 }
 
-.dropdown-arrow.open {
-    transform: rotate(180deg);
+.user-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.2;
 }
 
-/* Dropdown Menu */
+.user-role {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--primary-100);
+    color: var(--primary-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: 1px solid var(--primary-200);
+}
+
+/* --- Dropdown Menu --- */
 .profile-dropdown {
     position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    min-width: 200px;
-    padding: 8px;
-    z-index: 1000;
-    animation: dropdownFade 0.2s ease;
+    top: calc(100% + 4px);
+    right: var(--spacing-lg);
+    width: 200px;
+    background-color: var(--color-white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    padding: 0.5rem;
+    z-index: 100;
+    animation: slideDown 0.2s ease-out;
 }
 
-@keyframes dropdownFade {
+@keyframes slideDown {
     from {
         opacity: 0;
         transform: translateY(-10px);
@@ -67,573 +195,51 @@
 .dropdown-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 0.75rem;
     width: 100%;
-    padding: 12px 16px;
+    padding: 0.625rem 0.75rem;
     border: none;
     background: transparent;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #333;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    transition: all 0.2s;
 }
 
 .dropdown-item:hover {
-    background: #f5f5f5;
+    background-color: var(--gray-50);
 }
 
 .dropdown-item.logout {
-    color: #dc3545;
+    color: var(--danger-text);
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--gray-100);
 }
 
 .dropdown-item.logout:hover {
-    background: #fee2e2;
+    background-color: var(--danger-bg);
 }
 
-.dropdown-divider {
-    height: 1px;
-    background: #eee;
-    margin: 8px 0;
-}
-
-/* Profile Modal Styles */
-.profile-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-}
-
-.profile-avatar-large {
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #10b981, #059669);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-.profile-details {
-    width: 100%;
-}
-
-.profile-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.profile-row:last-child {
-    border-bottom: none;
-}
-
-.profile-row label {
-    font-weight: 500;
-    color: #666;
-    font-size: 14px;
-}
-
-.profile-row span {
-    color: #333;
-    font-size: 14px;
-}
-
-/* Desktop: hide menu button */
-@media screen and (min-width: 769px) {
-    .menu-btn {
-        display: none !important;
+/* --- Mobile Responsiveness --- */
+@media (max-width: 768px) {
+    .header {
+        padding: 0 var(--spacing-md);
     }
-}
-
-/* Mobile: show menu button */
-@media screen and (max-width: 768px) {
-    .menu-btn {
-        display: flex !important;
-    }
-
-    .search-container {
-        display: none !important;
-    }
-}
-
-/* Premium Real-time Clock - Green Theme */
-.header-clock {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    background: linear-gradient(135deg, #047857 0%, #059669 100%);
-    border-radius: 12px;
-    margin-right: 16px;
-    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.25);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.header-clock .clock-icon {
-    color: rgba(255, 255, 255, 0.9);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.6;
-    }
-}
-
-.header-clock .clock-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-}
-
-.header-clock .clock-time {
-    font-size: 16px;
-    font-weight: 700;
-    color: #ffffff;
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    letter-spacing: 1px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.header-clock .clock-date {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.85);
-    text-transform: capitalize;
-}
-
-.header-clock .clock-wib {
-    font-size: 9px;
-    font-weight: 600;
-    color: #047857;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 3px 6px;
-    border-radius: 4px;
-    letter-spacing: 0.5px;
-}
-
-/* Theme Toggle Button */
-.theme-toggle-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    border: none;
-    background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-white) 100%);
-    color: var(--text-body);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: var(--shadow-sm);
-    position: relative;
-    overflow: hidden;
-}
-
-.theme-toggle-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--primary-gradient);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-radius: 12px;
-}
-
-.theme-toggle-btn:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-md);
-}
-
-.theme-toggle-btn:hover::before {
-    opacity: 1;
-}
-
-.theme-toggle-btn:hover svg {
-    color: white;
-    position: relative;
-    z-index: 1;
-}
-
-.theme-toggle-btn svg {
-    transition: all 0.3s ease;
-}
-
-.theme-toggle-btn:active {
-    transform: scale(0.95);
-}
-
-/* Global Search Button */
-.search-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: var(--bg-light, #f3f4f6);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 10px;
-    cursor: pointer;
-    color: var(--text-muted, #6b7280);
-    font-size: 14px;
-    transition: all 0.2s ease;
-    margin-right: 8px;
-}
-
-.search-btn:hover {
-    background: var(--bg-white, #ffffff);
-    border-color: var(--primary-color, #3b82f6);
-    color: var(--text-primary, #1f2937);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
-}
-
-.search-btn-text {
-    white-space: nowrap;
-}
-
-.search-shortcut {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 6px;
-    background: var(--bg-white, #ffffff);
-    border: 1px solid var(--border-color, #d1d5db);
-    border-radius: 4px;
-    font-size: 11px;
-    font-family: inherit;
-    color: var(--text-muted, #9ca3af);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="dark"] .search-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-[data-theme="dark"] .search-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: var(--primary-color, #3b82f6);
-}
-
-[data-theme="dark"] .search-shortcut {
-    background: rgba(0, 0, 0, 0.3);
-    border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Notification Wrapper */
-.notification-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-/* Dark mode specific for toggle button */
-[data-theme="dark"] .theme-toggle-btn {
-    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-    color: #fbbf24;
-}
-
-[data-theme="dark"] .theme-toggle-btn:hover {
-    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
-}
-
-/* Dark mode adjustments for header elements */
-[data-theme="dark"] .user-profile {
-    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-    border-color: #475569;
-}
-
-[data-theme="dark"] .user-profile:hover {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
-}
-
-[data-theme="dark"] .profile-dropdown {
-    background: #1e293b;
-    border: 1px solid #334155;
-}
-
-[data-theme="dark"] .dropdown-item {
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .dropdown-item:hover {
-    background: #334155;
-}
-
-[data-theme="dark"] .modal {
-    background: #1e293b;
-}
-
-[data-theme="dark"] .modal-header,
-[data-theme="dark"] .modal-footer {
-    border-color: #334155;
-}
-
-[data-theme="dark"] .profile-card {
-    background: #0f172a;
-}
-
-[data-theme="dark"] .profile-row label {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .profile-row span {
-    color: #e2e8f0;
-}
-
-/* Dark Mode - Premium Gold Clock */
-[data-theme="dark"] .header-clock {
-    background: linear-gradient(135deg, rgba(212, 165, 56, 0.15) 0%, rgba(212, 165, 56, 0.05) 100%);
-    border: 1px solid rgba(212, 165, 56, 0.2);
-}
-
-[data-theme="dark"] .header-clock .clock-icon {
-    color: #d4a538;
-}
-
-[data-theme="dark"] .header-clock .clock-time {
-    color: #f4c430;
-    text-shadow: 0 0 10px rgba(212, 165, 56, 0.3);
-}
-
-[data-theme="dark"] .header-clock .clock-date {
-    color: rgba(212, 165, 56, 0.8);
-}
-
-[data-theme="dark"] .header-clock .clock-wib {
-    background: linear-gradient(135deg, #b8860b 0%, #d4a538 100%);
-    color: #0f172a;
-    font-weight: 700;
-}
-
-/* ========== MOBILE RESPONSIVE HEADER - CLEAN LAYOUT ========== */
-@media screen and (max-width: 768px) {
-    .header-left {
-        flex: 0 0 auto;
-        margin-right: 8px;
-        /* Slightly more breathing room since clock is gone */
-    }
-
-    .header-actions {
-        display: flex !important;
-        align-items: center;
-        gap: 8px;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        flex: 1;
-        justify-content: flex-end;
-        min-width: 0;
-        padding-right: 36px;
-        /* More breathing room for profile icon - align with content below */
-    }
-
-    /* Hide Clock as requested */
-    .header-clock {
-        display: none !important;
-    }
-
-    /* Search Button */
-    .search-btn {
-        padding: 6px 12px;
-        /* Restore comfortable padding */
-        margin-right: 0;
-        height: 38px;
-        /* Standard mobile touch target */
-        min-width: unset;
-        background: transparent;
-        /* Cleaner look? or keep gray? Keep default but sizing fixed */
-        border: 1px solid transparent;
-        /* Subtle */
-    }
-
-    /* If user wants search text visible, we have space now */
-    .search-btn-text {
-        display: block;
-        font-size: 13px;
-        color: var(--text-muted);
-    }
-
-    /* On very small screens, maybe hide search text again? Let's keep it for now as 768 is tablet-ish */
 
     .search-shortcut {
         display: none;
     }
 
-    /* Buttons */
-    .theme-toggle-btn,
-    .notification-btn {
-        width: 38px;
-        height: 38px;
-        flex-shrink: 0;
-    }
-
-    .notification-badge {
-        right: 4px;
-        top: 4px;
-    }
-
-    /* User Profile - better mobile positioning */
-    .user-profile-wrapper {
-        margin-left: 4px;
-        margin-right: 18px;
-        /* Add right margin for edge spacing - align with content */
-        flex-shrink: 1;
-        min-width: 0;
-    }
-
     .user-profile {
-        padding: 4px 10px 4px 4px;
-        /* More right padding */
-        gap: 8px;
-        max-width: 100%;
-    }
-
-    .user-avatar {
-        width: 32px;
-        height: 32px;
-        flex-shrink: 0;
-    }
-
-    .user-info {
-        display: flex !important;
-        flex-direction: column;
-        min-width: 0;
-        max-width: 120px;
-        /* More space for name now */
-    }
-
-    .user-name {
-        font-size: 13px;
-        /* Legible size */
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    .user-role {
-        display: block;
-        font-size: 10px;
-        opacity: 0.8;
-        line-height: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .dropdown-arrow {
-        display: block;
-        /* We can even show the arrow now if we want, or keep hidden. Screenshot had nice clean look without it. Let's keep hidden for simplicity */
-        display: none;
+        border-left: none;
+        margin-left: 0;
+        padding-left: 0;
     }
 
     .profile-dropdown {
-        right: 0;
-        min-width: 180px;
-    }
-}
-
-/* Extra small screens */
-@media screen and (max-width: 480px) {
-    .header-actions {
-        gap: 6px;
-    }
-
-    /* Buttons */
-    .theme-toggle-btn,
-    .notification-btn {
-        width: 34px;
-        height: 34px;
-    }
-
-    .theme-toggle-btn svg,
-    .notification-btn svg {
-        width: 18px;
-        height: 18px;
-    }
-
-    .user-avatar {
-        width: 28px;
-        height: 28px;
-    }
-
-    .user-profile {
-        padding: 4px;
-        max-width: 130px;
-    }
-
-    .user-info {
-        max-width: 90px;
-    }
-
-    /* On 480px, we might want to hide search text if it feels tight */
-    .search-btn {
-        padding: 6px 8px;
-    }
-
-    .search-btn-text {
-        font-size: 12px;
-        /* Slightly smaller */
-    }
-}
-
-/* Ultra small screens (Samsung A series, older iPhones) */
-@media screen and (max-width: 360px) {
-    .header-actions {
-        gap: 4px;
-    }
-
-    .theme-toggle-btn,
-    .notification-btn,
-    .search-btn {
-        width: 32px;
-        height: 32px;
-        padding: 4px;
-    }
-
-    /* Hide search text on ultra small screens to keep profile named visible */
-    .search-btn-text {
-        display: none;
-    }
-
-    .search-btn {
-        justify-content: center;
-        width: 32px;
-        min-width: 32px;
-    }
-
-    .theme-toggle-btn svg,
-    .notification-btn svg,
-    .search-btn svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    .user-avatar {
-        width: 26px;
-        height: 26px;
-    }
-
-    .user-profile {
-        padding: 2px;
-    }
-
-    .user-name {
-        font-size: 11px;
-    }
-
-    .user-info {
-        max-width: 70px;
+        right: var(--spacing-md);
+        width: calc(100% - 32px);
+        /* Full width minus padding */
     }
 }

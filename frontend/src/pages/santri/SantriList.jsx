@@ -13,9 +13,11 @@ import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
-import { useSantri } from '../../hooks/useAkademik'
+// useSantri removed
 import { useSantriList } from '../../hooks/features/useSantriList'
-import './Santri.css'
+import PageHeader from '../../components/layout/PageHeader'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
 
 const SantriList = () => {
     const { activeRole, userProfile, isAdmin, isGuru, isBendahara, hasRole } = useAuth()
@@ -322,55 +324,60 @@ const SantriList = () => {
         })
 
     return (
-        <div className="santri-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Data Santri</h1>
-                    <p className="page-subtitle">Kelola data santri pondok pesantren</p>
-                </div>
-                <div className="header-actions">
-                    <DownloadButton
-                        onDownloadPDF={handleDownloadPDF}
-                        onDownloadExcel={handleDownloadExcel}
-                        onDownloadCSV={handleDownloadCSV}
-                    />
-                    {canEditSantri && (
-                        <>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileUpload}
-                                accept=".xlsx,.xls,.csv"
-                                style={{ display: 'none' }}
-                            />
-                            <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()}>
-                                <Upload size={18} /> Import Excel/CSV
-                            </button>
-                            <Link to="/santri/create" className="btn btn-primary">
-                                <Plus size={18} /> Tambah Santri
-                            </Link>
-                        </>
-                    )}
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Data Santri"
+                description="Kelola data santri pondok pesantren"
+                icon={UserX}
+                actions={
+                    <div className="flex gap-2">
+                        <DownloadButton
+                            onDownloadPDF={handleDownloadPDF}
+                            onDownloadExcel={handleDownloadExcel}
+                            onDownloadCSV={handleDownloadCSV}
+                        />
+                        {canEditSantri && (
+                            <>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileUpload}
+                                    accept=".xlsx,.xls,.csv"
+                                    style={{ display: 'none' }}
+                                />
+                                <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                                    <Upload size={18} /> Import Excel/CSV
+                                </Button>
+                                <Link to="/santri/create">
+                                    <Button>
+                                        <Plus size={18} /> Tambah Santri
+                                    </Button>
+                                </Link>
+                            </>
+                        )}
+                    </div>
+                }
+            />
 
-            <div className="table-container">
-                <div className="table-header">
-                    <h3 className="table-title">Daftar Santri ({filteredSantri.length})</h3>
-                    <div className="table-controls">
-                        <div className="table-search">
-                            <Search size={18} className="search-icon" />
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-200 space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div className="relative flex-1 w-full md:max-w-md">
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Cari santri..."
+                                placeholder="Cari santri berdasarkan nama atau NIS..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="search-input"
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                             />
                         </div>
-                        <div className="sort-select">
-                            <label>Urutkan:</label>
-                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full md:w-auto px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                            >
                                 <option value="nama-asc">Nama A-Z</option>
                                 <option value="nama-desc">Nama Z-A</option>
                                 <option value="nis-asc">NIS Terkecil</option>
@@ -380,35 +387,38 @@ const SantriList = () => {
                                 <option value="status-asc">Status A-Z</option>
                                 <option value="status-desc">Status Z-A</option>
                             </select>
+                            <Button variant="secondary" size="icon" onClick={fetchSantri} title="Refresh Data">
+                                <RefreshCw size={18} />
+                            </Button>
                         </div>
                     </div>
                 </div>
 
-                <div className="table-wrapper">
-                    <table className="table">
-                        <thead>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
                             <tr>
-                                <th>NIS</th>
-                                <th>Nama</th>
-                                <th>Jenis Kelamin</th>
-                                <th>Angkatan</th>
-                                <th>Kelas</th>
-                                <th>Halaqoh</th>
-                                <th>Status</th>
-                                {canEditSantri && <th>Aksi</th>}
+                                <th className="px-6 py-3">NIS</th>
+                                <th className="px-6 py-3">Nama</th>
+                                <th className="px-6 py-3">Jenis Kelamin</th>
+                                <th className="px-6 py-3">Angkatan</th>
+                                <th className="px-6 py-3">Kelas</th>
+                                <th className="px-6 py-3">Halaqoh</th>
+                                <th className="px-6 py-3">Status</th>
+                                {canEditSantri && <th className="px-6 py-3 text-right">Aksi</th>}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={canEditSantri ? 8 : 7}><Spinner className="py-8" label="Memuat data santri..." /></td></tr>
+                                <tr><td colSpan={canEditSantri ? 8 : 7}><Spinner className="py-12" label="Memuat data santri..." /></td></tr>
                             ) : filteredSantri.length === 0 ? (
                                 <tr>
-                                    <td colSpan={canEditSantri ? 8 : 7}>
+                                    <td colSpan={canEditSantri ? 8 : 7} className="p-8">
                                         <EmptyState
                                             icon={UserX}
                                             title="Belum ada data santri"
                                             message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada santri yang terdaftar."}
-                                            actionLabel={canEditSantri && !searchTerm ? "Tambah Santri Data" : null}
+                                            actionLabel={canEditSantri && !searchTerm ? "Tambah Santri" : null}
                                             onAction={canEditSantri && !searchTerm ? () => navigate('/santri/create') : null}
                                         />
                                     </td>
@@ -418,25 +428,28 @@ const SantriList = () => {
                                     <tr
                                         key={item.id}
                                         onClick={() => navigate(`/santri/${item.id}`)}
-                                        style={{ cursor: 'pointer' }}
-                                        className="hover:bg-gray-50"
+                                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
                                     >
-                                        <td>{item.nis}</td>
-                                        <td className="name-cell">{item.nama}</td>
-                                        <td>{item.jenis_kelamin}</td>
-                                        <td>
+                                        <td className="px-6 py-4 font-mono text-gray-600">{item.nis}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900 group-hover:text-primary-600 transition-colors">{item.nama}</td>
+                                        <td className="px-6 py-4 text-gray-600">{item.jenis_kelamin}</td>
+                                        <td className="px-6 py-4 text-gray-600">
                                             {item.angkatan}
                                             {item.raw_angkatan_id && (
-                                                <div style={{ fontSize: '10px', color: '#888' }}>
-                                                    ID: {item.raw_angkatan_id.substring(0, 6)}...
+                                                <div className="text-[10px] text-gray-400">
+                                                    ID: {String(item.raw_angkatan_id).substring(0, 6)}...
                                                 </div>
                                             )}
                                         </td>
-                                        <td>{item.kelas}</td>
-                                        <td>{item.halaqoh}</td>
-                                        <td><span className={`badge ${item.status === 'Aktif' ? 'badge-success' : 'badge-warning'}`}>{item.status}</span></td>
+                                        <td className="px-6 py-4 text-gray-600">{item.kelas}</td>
+                                        <td className="px-6 py-4 text-gray-600">{item.halaqoh}</td>
+                                        <td className="px-6 py-4">
+                                            <Badge variant={item.status === 'Aktif' ? 'success' : 'warning'}>
+                                                {item.status}
+                                            </Badge>
+                                        </td>
                                         {canEditSantri && (
-                                            <td>
+                                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                                 <MobileActionMenu
                                                     actions={[
                                                         { icon: <Eye size={16} />, label: 'Detail', path: `/santri/${item.id}` },
@@ -444,67 +457,29 @@ const SantriList = () => {
                                                         { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedSantri(item); setShowDeleteModal(true) }, danger: true }
                                                     ]}
                                                 >
-                                                    <Link
-                                                        to={`/santri/${item.id}`}
-                                                        className="btn-icon"
-                                                        title="Lihat Detail"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#dbeafe',
-                                                            color: '#2563eb',
-                                                            marginRight: '4px',
-                                                            textDecoration: 'none'
-                                                        }}
-                                                    >
-                                                        <Eye size={16} />
-                                                    </Link>
-                                                    <Link
-                                                        to={`/santri/${item.id}/edit`}
-                                                        className="btn-icon"
-                                                        title="Edit"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fef3c7',
-                                                            color: '#d97706',
-                                                            marginRight: '4px',
-                                                            textDecoration: 'none'
-                                                        }}
-                                                    >
-                                                        <Edit size={16} />
-                                                    </Link>
-                                                    <button
-                                                        className="btn-icon btn-icon-danger"
-                                                        title="Hapus"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            setSelectedSantri(item)
-                                                            setShowDeleteModal(true)
-                                                        }}
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fee2e2',
-                                                            color: '#dc2626',
-                                                            border: 'none',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Link
+                                                            to={`/santri/${item.id}`}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="Lihat Detail"
+                                                        >
+                                                            <Eye size={18} />
+                                                        </Link>
+                                                        <Link
+                                                            to={`/santri/${item.id}/edit`}
+                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit size={18} />
+                                                        </Link>
+                                                        <button
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Hapus"
+                                                            onClick={() => { setSelectedSantri(item); setShowDeleteModal(true) }}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
                                                 </MobileActionMenu>
                                             </td>
                                         )}
@@ -515,73 +490,76 @@ const SantriList = () => {
                     </table>
                 </div>
 
-                <div className="table-footer">
-                    <p className="table-info">Menampilkan {filteredSantri.length} dari {santri.length} santri</p>
-                    <button className="btn btn-sm btn-secondary" onClick={fetchSantri}><RefreshCw size={14} /> Refresh</button>
+                <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <p className="text-sm text-gray-600">Menampilkan {filteredSantri.length} dari {santri.length} santri</p>
                 </div>
             </div>
 
-            {/* Import Modal */}
+            {/* Import Modal - Using Inline styles largely removed for Tailwind classes where possible, but preserving modal logic structure */}
             {showImportModal && (
-                <div className="modal-overlay active">
-                    <div className="modal" style={{ maxWidth: '700px' }}>
-                        <div className="modal-header">
-                            <h3 className="modal-title"><FileSpreadsheet size={20} /> Preview Import Data</h3>
-                            <button className="modal-close" onClick={() => { setShowImportModal(false); setImportData([]) }}>×</button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <FileSpreadsheet size={20} className="text-primary-600" />
+                                Preview Import Data
+                            </h3>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setShowImportModal(false); setImportData([]) }}>
+                                <X size={24} />
+                            </button>
                         </div>
-                        <div className="modal-body">
+                        <div className="p-6">
                             {importSuccess ? (
-                                <div className="alert alert-success" style={{ whiteSpace: 'pre-line' }}>{importSuccess}</div>
+                                <div className="p-4 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 whitespace-pre-line">
+                                    {importSuccess}
+                                </div>
                             ) : (
                                 <>
-                                    <div className="text-xs text-muted mb-2 p-2 bg-gray-100 rounded">
+                                    <div className="text-xs text-gray-500 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                         <strong>Kolom Terbaca:</strong> {detectedHeaders.join(', ')}
                                     </div>
 
                                     {/* Stats */}
-                                    <div className="flex gap-3 mb-3">
-                                        <span className="badge badge-success">
+                                    <div className="flex gap-3 mb-4">
+                                        <Badge variant="success">
                                             ✓ Valid: {importData.filter(d => d.isValid).length}
-                                        </span>
-                                        <span className="badge badge-danger" style={{ backgroundColor: importData.some(d => !d.isValid) ? '#dc3545' : '#6c757d' }}>
+                                        </Badge>
+                                        <Badge variant={importData.some(d => !d.isValid) ? 'danger' : 'neutral'}>
                                             ✗ Error: {importData.filter(d => !d.isValid).length}
-                                        </span>
+                                        </Badge>
                                     </div>
 
                                     {/* Preview Table */}
-                                    <div style={{ maxHeight: '280px', overflow: 'auto', border: '1px solid #ddd' }}>
-                                        <table className="table table-sm" style={{ fontSize: '12px' }}>
-                                            <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa' }}>
+                                    <div className="max-h-[280px] overflow-auto border border-gray-200 rounded-lg">
+                                        <table className="w-full text-xs text-left">
+                                            <thead className="sticky top-0 bg-gray-50 border-b border-gray-200 text-gray-600">
                                                 <tr>
-                                                    <th style={{ width: '40px' }}>#</th>
-                                                    <th>NIS</th>
-                                                    <th>Nama</th>
-                                                    <th>No HP</th>
-                                                    <th>Angkatan</th>
-                                                    <th>Status</th>
+                                                    <th className="px-3 py-2 w-12">#</th>
+                                                    <th className="px-3 py-2">NIS</th>
+                                                    <th className="px-3 py-2">Nama</th>
+                                                    <th className="px-3 py-2">No HP</th>
+                                                    <th className="px-3 py-2">Angkatan</th>
+                                                    <th className="px-3 py-2">Status</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody className="divide-y divide-gray-100">
                                                 {importData.map((row, i) => (
                                                     <tr
                                                         key={i}
-                                                        style={{
-                                                            backgroundColor: row.isValid ? 'transparent' : '#ffe6e6',
-                                                            color: row.isValid ? 'inherit' : '#721c24'
-                                                        }}
+                                                        className={!row.isValid ? 'bg-red-50' : ''}
                                                     >
-                                                        <td>{row.rowNum}</td>
-                                                        <td>{row.nis || <span style={{ color: 'red' }}>-</span>}</td>
-                                                        <td>{row.nama || <span style={{ color: 'red' }}>-</span>}</td>
-                                                        <td style={{ color: row.no_telp_wali ? 'green' : 'orange' }}>
-                                                            {row.no_telp_wali || <span style={{ fontStyle: 'italic' }}>kosong</span>}
+                                                        <td className="px-3 py-2 text-gray-500">{row.rowNum}</td>
+                                                        <td className="px-3 py-2 font-mono">{row.nis || <span className="text-red-500">-</span>}</td>
+                                                        <td className="px-3 py-2">{row.nama || <span className="text-red-500">-</span>}</td>
+                                                        <td className={`px-3 py-2 ${row.no_telp_wali ? 'text-emerald-600' : 'text-amber-500 italic'}`}>
+                                                            {row.no_telp_wali || 'kosong'}
                                                         </td>
-                                                        <td>{row.nama_angkatan || <span style={{ color: 'red' }}>-</span>}</td>
-                                                        <td>
+                                                        <td className="px-3 py-2">{row.nama_angkatan || <span className="text-red-500">-</span>}</td>
+                                                        <td className="px-3 py-2">
                                                             {row.isValid ? (
-                                                                <span style={{ color: 'green' }}>✓ OK</span>
+                                                                <span className="text-emerald-600 font-medium">✓ OK</span>
                                                             ) : (
-                                                                <span style={{ color: 'red', fontSize: '11px' }}>
+                                                                <span className="text-red-600">
                                                                     {row.errors.join(', ')}
                                                                 </span>
                                                             )}
@@ -593,29 +571,28 @@ const SantriList = () => {
                                     </div>
 
                                     {importData.some(d => !d.isValid) && (
-                                        <div className="alert alert-warning mt-3" style={{ fontSize: '13px' }}>
-                                            ⚠️ Baris dengan error akan <strong>dilewati</strong> saat import.
-                                            Hanya data valid yang akan disimpan.
+                                        <div className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg border border-amber-200 text-sm flex items-start gap-2">
+                                            <UserX size={16} className="mt-0.5 shrink-0" />
+                                            <div>
+                                                Baris dengan error akan <strong>dilewati</strong> saat import.
+                                                Hanya data valid yang akan disimpan.
+                                            </div>
                                         </div>
                                     )}
                                 </>
                             )}
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => { setShowImportModal(false); setImportData([]) }}>
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+                            <Button variant="secondary" onClick={() => { setShowImportModal(false); setImportData([]) }}>
                                 Batal
-                            </button>
-                            <button
-                                className="btn btn-primary"
+                            </Button>
+                            <Button
                                 onClick={handleImport}
                                 disabled={importing || importSuccess || !importData.some(d => d.isValid)}
+                                isLoading={importing}
                             >
-                                {importing ? (
-                                    <><RefreshCw size={16} className="spin" /> Importing...</>
-                                ) : (
-                                    `Import ${importData.filter(d => d.isValid).length} Data Valid`
-                                )}
-                            </button>
+                                {importing ? 'Importing...' : `Import ${importData.filter(d => d.isValid).length} Data Valid`}
+                            </Button>
                         </div>
                     </div>
                 </div>

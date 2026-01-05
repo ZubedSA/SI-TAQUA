@@ -27,7 +27,6 @@ import {
     Circle
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useTheme } from '../../context/ThemeContext'
 import './AkademikDashboard.css'
 
 // Register ChartJS
@@ -48,7 +47,6 @@ ChartJS.register(
  * Fokus pada hafalan, nilai, presensi, dan santri
  */
 const AkademikDashboard = () => {
-    const { isDark } = useTheme()
     const [stats, setStats] = useState({
         totalSantri: 0,
         totalHalaqoh: 0
@@ -181,7 +179,7 @@ const AkademikDashboard = () => {
                 display: true,
                 position: 'top',
                 labels: {
-                    color: isDark ? '#e2e8f0' : '#4b5563',
+                    color: '#4b5563',
                     font: {
                         family: "'Inter', sans-serif",
                         size: 12
@@ -189,10 +187,10 @@ const AkademikDashboard = () => {
                 }
             },
             tooltip: {
-                backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                titleColor: isDark ? '#f1f5f9' : '#1f2937',
-                bodyColor: isDark ? '#cbd5e1' : '#4b5563',
-                borderColor: isDark ? '#334155' : '#e5e7eb',
+                backgroundColor: '#ffffff',
+                titleColor: '#1f2937',
+                bodyColor: '#4b5563',
+                borderColor: '#e5e7eb',
                 borderWidth: 1,
                 padding: 12,
                 titleFont: { family: "'Inter', sans-serif", size: 14, weight: 'bold' },
@@ -202,10 +200,10 @@ const AkademikDashboard = () => {
         scales: {
             y: {
                 grid: {
-                    color: isDark ? '#334155' : '#f3f4f6',
+                    color: '#f3f4f6',
                 },
                 ticks: {
-                    color: isDark ? '#94a3b8' : '#6b7280',
+                    color: '#6b7280',
                     font: {
                         family: "'Inter', sans-serif",
                         size: 11
@@ -217,7 +215,7 @@ const AkademikDashboard = () => {
                     display: false
                 },
                 ticks: {
-                    color: isDark ? '#94a3b8' : '#6b7280',
+                    color: '#6b7280',
                     font: {
                         family: "'Inter', sans-serif",
                         size: 11
@@ -228,7 +226,7 @@ const AkademikDashboard = () => {
     }
 
     return (
-        <div className="akademik-dashboard">
+        <div className="akademik-dashboard" data-dashboard="akademik">
             {/* Welcome Header */}
             <div className="dashboard-welcome akademik">
                 <div className="welcome-content">

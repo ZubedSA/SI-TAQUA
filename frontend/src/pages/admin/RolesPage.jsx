@@ -1,7 +1,8 @@
 import React from 'react';
 import { Shield, Check, X, ShieldAlert, Lock, UserCog, Database, School, Wallet, UserCircle } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
-import './AdminPages.css';
+import PageHeader from '../../components/layout/PageHeader';
+import { Card } from '../../components/ui/Card';
 
 const RolesPage = () => {
     const { isAdmin } = usePermissions();
@@ -9,7 +10,7 @@ const RolesPage = () => {
     if (!isAdmin()) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-red-100">
+                <div className="text-center p-8 bg-white rounded-xl shadow-lg border border-red-100 max-w-lg">
                     <ShieldAlert size={64} className="text-red-500 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-gray-800 mb-2">Akses Ditolak</h2>
                     <p className="text-gray-600">Anda tidak memiliki izin untuk mengakses halaman pengaturan role ini.</p>
@@ -19,13 +20,13 @@ const RolesPage = () => {
     }
 
     const roles = [
-        { id: 'admin', name: 'Administrator', color: '#1d4ed8', icon: <Shield size={20} /> },
-        { id: 'guru', name: 'Guru / Akademik', color: '#059669', icon: <School size={20} /> },
-        { id: 'bendahara', name: 'Bendahara', color: '#d97706', icon: <Wallet size={20} /> },
-        { id: 'pengasuh', name: 'Pengasuh', color: '#7c3aed', icon: <UserCog size={20} /> },
-        { id: 'pengurus', name: 'Pengurus', color: '#db2777', icon: <UserCircle size={20} /> },
-        { id: 'ota', name: 'Orang Tua Asuh', color: '#0891b2', icon: <UserCircle size={20} /> },
-        { id: 'wali', name: 'Wali Santri', color: '#4b5563', icon: <UserCircle size={20} /> }
+        { id: 'admin', name: 'Administrator', color: 'bg-blue-600', icon: <Shield size={20} className="text-blue-600" /> },
+        { id: 'guru', name: 'Guru / Akademik', color: 'bg-emerald-600', icon: <School size={20} className="text-emerald-600" /> },
+        { id: 'bendahara', name: 'Bendahara', color: 'bg-amber-600', icon: <Wallet size={20} className="text-amber-600" /> },
+        { id: 'pengasuh', name: 'Pengasuh', color: 'bg-violet-600', icon: <UserCog size={20} className="text-violet-600" /> },
+        { id: 'pengurus', name: 'Pengurus', color: 'bg-pink-600', icon: <UserCircle size={20} className="text-pink-600" /> },
+        { id: 'ota', name: 'Orang Tua Asuh', color: 'bg-cyan-600', icon: <UserCircle size={20} className="text-cyan-600" /> },
+        { id: 'wali', name: 'Wali Santri', color: 'bg-gray-600', icon: <UserCircle size={20} className="text-gray-600" /> }
     ];
 
     const modules = [
@@ -63,62 +64,67 @@ const RolesPage = () => {
     ];
 
     return (
-        <div className="admin-page">
-            <div className="admin-header">
-                <div>
-                    <h1>
-                        <Lock className="text-blue-600" /> Roles & Manajemen Akses
-                    </h1>
-                    <p>Konfigurasi hak akses modul berdasarkan peran pengguna.</p>
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Roles & Manajemen Akses"
+                description="Konfigurasi hak akses modul berdasarkan peran pengguna."
+                icon={Lock}
+            />
 
-            <div className="role-grid">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                 {roles.map(role => (
-                    <div key={role.id} className="role-card" style={{ borderTopColor: role.color }}>
-                        <div className="role-card-header">
-                            {role.icon}
-                            <h3>{role.name}</h3>
+                    <Card key={role.id} className="border-t-4 border-t-transparent hover:-translate-y-1 transition-transform" style={{ borderTopColor: 'transparent' }}>
+                        <div className={`h-1.5 w-full rounded-t-xl ${role.color} absolute top-0 left-0 right-0`}></div>
+                        <div className="p-4 pt-6">
+                            <div className="flex items-center gap-2 mb-1">
+                                {role.icon}
+                                <h3 className="text-sm font-bold text-gray-900">{role.name}</h3>
+                            </div>
+                            <span className="text-xs text-gray-500 capitalize px-2 py-0.5 bg-gray-100 rounded-md border border-gray-200 inline-block mt-2">
+                                {role.id}
+                            </span>
                         </div>
-                        <span className="role-id">{role.id}</span>
-                    </div>
+                    </Card>
                 ))}
             </div>
 
-            <div className="table-container">
-                <div className="table-wrapper">
-                    <table className="table">
-                        <thead>
+            <Card className="overflow-hidden border-gray-200">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
                             <tr>
-                                <th>Modul / Fitur</th>
+                                <th className="px-6 py-4 font-semibold text-gray-800 sticky left-0 bg-gray-50 z-10">Modul / Fitur</th>
                                 {roles.map(role => (
-                                    <th key={role.id} className="text-center">
-                                        {role.name}
+                                    <th key={role.id} className="px-4 py-4 text-center min-w-[100px]">
+                                        <div className="flex flex-col items-center gap-1">
+                                            {role.icon}
+                                            <span className="text-xs mt-1">{role.name.split(' ')[0]}</span>
+                                        </div>
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-100">
                             {modules.map(group => (
                                 <React.Fragment key={group.group}>
-                                    <tr className="group-header">
-                                        <td colSpan={roles.length + 1}>
+                                    <tr className="bg-blue-50/50">
+                                        <td colSpan={roles.length + 1} className="px-6 py-3 text-xs font-bold text-blue-700 uppercase tracking-wider">
                                             {group.group}
                                         </td>
                                     </tr>
                                     {group.items.map(module => (
-                                        <tr key={module.id}>
-                                            <td>
-                                                <span className="font-medium">{module.label}</span>
+                                        <tr key={module.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium text-gray-700 sticky left-0 bg-white z-10 border-r border-gray-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]">
+                                                {module.label}
                                             </td>
                                             {roles.map(role => (
-                                                <td key={role.id} className="text-center">
+                                                <td key={role.id} className="px-4 py-4 text-center">
                                                     {module.perms.includes(role.id) ? (
-                                                        <div className="perm-check">
+                                                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600">
                                                             <Check size={14} strokeWidth={3} />
                                                         </div>
                                                     ) : (
-                                                        <div className="perm-x">
+                                                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-300">
                                                             <X size={14} />
                                                         </div>
                                                     )}
@@ -131,15 +137,15 @@ const RolesPage = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </Card>
 
-            <div className="admin-footer-info">
-                <Shield className="icon" size={24} />
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-4">
+                <Shield className="text-blue-600 shrink-0 mt-0.5" size={24} />
                 <div>
-                    <h4>Informasi RBAC</h4>
-                    <p>
-                        Sistem menggunakan **Role-Based Access Control**. Matriks di atas adalah konfigurasi hak akses modul utama.
-                        Untuk tingkat keamanan lebih lanjut, sistem juga menerapkan **RLS (Row Level Security)** di tingkat database yang memastikan pengguna hanya dapat melihat data yang relevan bagi mereka.
+                    <h4 className="font-bold text-blue-800 text-sm">Informasi RBAC</h4>
+                    <p className="text-blue-700 text-sm mt-1 leading-relaxed">
+                        Sistem menggunakan <strong>Role-Based Access Control</strong>. Matriks di atas adalah konfigurasi hak akses modul utama.
+                        Untuk tingkat keamanan lebih lanjut, sistem juga menerapkan <strong>RLS (Row Level Security)</strong> di tingkat database yang memastikan pengguna hanya dapat melihat data yang relevan bagi mereka.
                     </p>
                 </div>
             </div>

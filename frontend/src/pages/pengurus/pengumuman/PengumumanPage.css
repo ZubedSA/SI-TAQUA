@@ -3,21 +3,14 @@
    ===================================================== */
 
 .pengumuman-page {
-    padding: 0;
+    /* Uses global content padding */
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
 }
 
-/* Header */
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
+/* Header uses global styling */
+
 
 .header-left h1 {
     font-size: 1.5rem;

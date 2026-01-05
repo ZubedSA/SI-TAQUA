@@ -7,11 +7,15 @@ import {
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import EmptyState from '../../../components/ui/EmptyState'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * KehadiranWaliPage - Halaman untuk melihat data kehadiran santri
  * Read-only - wali hanya bisa melihat, tidak bisa mengedit
+ * Refactored to use Global Layout System (Phase 2)
  */
 const KehadiranWaliPage = () => {
     const { user } = useAuth()
@@ -133,31 +137,21 @@ const KehadiranWaliPage = () => {
 
     const getStatusIcon = (status) => {
         switch (status) {
-            case 'hadir':
-                return <CheckCircle size={18} />
-            case 'izin':
-                return <Clock size={18} />
-            case 'sakit':
-                return <AlertCircle size={18} />
-            case 'alpha':
-                return <XCircle size={18} />
-            default:
-                return null
+            case 'hadir': return <CheckCircle size={20} />
+            case 'izin': return <Clock size={20} />
+            case 'sakit': return <AlertCircle size={20} />
+            case 'alpha': return <XCircle size={20} />
+            default: return null
         }
     }
 
-    const getStatusClass = (status) => {
+    const getStatusColorClass = (status) => {
         switch (status) {
-            case 'hadir':
-                return 'status-hadir'
-            case 'izin':
-                return 'status-izin'
-            case 'sakit':
-                return 'status-sakit'
-            case 'alpha':
-                return 'status-alpha'
-            default:
-                return ''
+            case 'hadir': return 'bg-emerald-100 text-emerald-600'
+            case 'izin': return 'bg-blue-100 text-blue-600'
+            case 'sakit': return 'bg-amber-100 text-amber-600'
+            case 'alpha': return 'bg-red-100 text-red-600'
+            default: return 'bg-gray-100 text-gray-600'
         }
     }
 
@@ -176,27 +170,24 @@ const KehadiranWaliPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-kehadiran-page">
-            {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/beranda" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Data Kehadiran</h1>
-                <p className="wali-page-subtitle">Rekap kehadiran santri di pondok</p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Data Kehadiran"
+                description="Rekap kehadiran santri di pondok"
+                icon={Calendar}
+                backUrl="/wali/beranda"
+            />
 
             {/* Santri Selector */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {santriList.map(santri => (
                         <SantriCard
                             key={santri.id}
@@ -209,245 +200,114 @@ const KehadiranWaliPage = () => {
             )}
 
             {/* Filter */}
-            <div className="wali-section" style={{ marginTop: santriList.length > 1 ? 0 : '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
-                    <select
-                        value={filterBulan}
-                        onChange={(e) => setFilterBulan(e.target.value)}
-                        className="wali-form-select"
-                        style={{ flex: 1 }}
-                    >
-                        <option value="">30 Hari Terakhir</option>
-                        {getMonthOptions().map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                    </select>
-                </div>
+            <div className="flex items-center gap-3">
+                <Filter size={18} className="text-gray-400" />
+                <select
+                    value={filterBulan}
+                    onChange={(e) => setFilterBulan(e.target.value)}
+                    className="pl-3 pr-8 py-2 bg-white border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                >
+                    <option value="">30 Hari Terakhir</option>
+                    {getMonthOptions().map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
             </div>
 
             {/* Stats Cards */}
-            <div className="wali-stats-grid">
-                <div className="wali-stat-mini hadir">
-                    <CheckCircle size={20} />
-                    <div>
-                        <span className="wali-stat-mini-value">{stats.hadir}</span>
-                        <span className="wali-stat-mini-label">Hadir</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <div className="p-2 rounded-full bg-emerald-100 text-emerald-600 mb-2">
+                        <CheckCircle size={20} />
                     </div>
+                    <span className="text-2xl font-bold text-gray-900">{stats.hadir}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">Hadir</span>
                 </div>
-                <div className="wali-stat-mini izin">
-                    <Clock size={20} />
-                    <div>
-                        <span className="wali-stat-mini-value">{stats.izin}</span>
-                        <span className="wali-stat-mini-label">Izin</span>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <div className="p-2 rounded-full bg-blue-100 text-blue-600 mb-2">
+                        <Clock size={20} />
                     </div>
+                    <span className="text-2xl font-bold text-gray-900">{stats.izin}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">Izin</span>
                 </div>
-                <div className="wali-stat-mini sakit">
-                    <AlertCircle size={20} />
-                    <div>
-                        <span className="wali-stat-mini-value">{stats.sakit}</span>
-                        <span className="wali-stat-mini-label">Sakit</span>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <div className="p-2 rounded-full bg-amber-100 text-amber-600 mb-2">
+                        <AlertCircle size={20} />
                     </div>
+                    <span className="text-2xl font-bold text-gray-900">{stats.sakit}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">Sakit</span>
                 </div>
-                <div className="wali-stat-mini alpha">
-                    <XCircle size={20} />
-                    <div>
-                        <span className="wali-stat-mini-value">{stats.alpha}</span>
-                        <span className="wali-stat-mini-label">Alpha</span>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
+                    <div className="p-2 rounded-full bg-red-100 text-red-600 mb-2">
+                        <XCircle size={20} />
                     </div>
+                    <span className="text-2xl font-bold text-gray-900">{stats.alpha}</span>
+                    <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">Alpha</span>
                 </div>
             </div>
 
             {/* Percentage Bar */}
-            <div className="wali-section">
-                <div className="wali-attendance-bar">
-                    <div className="wali-attendance-header">
-                        <BarChart2 size={18} />
-                        <span>Persentase Kehadiran</span>
-                        <strong>{persentaseHadir}%</strong>
+            <Card>
+                <div className="p-2">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 text-gray-600">
+                            <BarChart2 size={18} />
+                            <span className="font-medium text-sm">Persentase Kehadiran</span>
+                        </div>
+                        <span className="font-bold text-xl text-primary-600">{persentaseHadir}%</span>
                     </div>
-                    <div className="wali-progress-bar">
+                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                            className="wali-progress-fill"
+                            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500 ease-out"
                             style={{ width: `${persentaseHadir}%` }}
                         ></div>
                     </div>
-                    <p className="wali-attendance-note">
+                    <p className="mt-3 text-sm text-gray-500">
                         {persentaseHadir >= 90 ? '🎉 Excellent! Kehadiran sangat baik.' :
                             persentaseHadir >= 75 ? '👍 Baik! Pertahankan kehadiran.' :
                                 persentaseHadir >= 50 ? '⚠️ Perlu ditingkatkan.' :
                                     '❌ Kehadiran perlu perhatian khusus.'}
                     </p>
                 </div>
-            </div>
+            </Card>
 
             {/* Presensi List */}
-            <div className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
+            <Card>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
                     Riwayat Kehadiran ({presensiData.length})
                 </h3>
 
                 {presensiData.length > 0 ? (
-                    <div className="wali-data-list">
+                    <div className="space-y-3">
                         {presensiData.map(presensi => (
-                            <div key={presensi.id} className="wali-presensi-item">
-                                <div className={`wali-presensi-icon ${getStatusClass(presensi.status)}`}>
+                            <div key={presensi.id} className="flex items-start gap-4 p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${getStatusColorClass(presensi.status)}`}>
                                     {getStatusIcon(presensi.status)}
                                 </div>
-                                <div className="wali-presensi-info">
-                                    <p className="wali-presensi-date">{formatDate(presensi.tanggal)}</p>
-                                    <span className={`wali-presensi-status ${getStatusClass(presensi.status)}`}>
-                                        {getStatusLabel(presensi.status)}
-                                    </span>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+                                        <p className="font-medium text-gray-900">
+                                            {formatDate(presensi.tanggal)}
+                                        </p>
+                                        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium w-fit ${getStatusColorClass(presensi.status).replace('bg-', 'bg-opacity-20 bg-')}`}>
+                                            {getStatusLabel(presensi.status)}
+                                        </span>
+                                    </div>
                                     {presensi.keterangan && (
-                                        <p className="wali-presensi-ket">{presensi.keterangan}</p>
+                                        <p className="text-sm text-gray-500 mt-1">{presensi.keterangan}</p>
                                     )}
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div className="wali-empty-state">
-                        <div className="wali-empty-icon">
-                            <Calendar size={40} />
-                        </div>
-                        <h3 className="wali-empty-title">Belum Ada Data Kehadiran</h3>
-                        <p className="wali-empty-text">
-                            Data kehadiran untuk periode ini belum tersedia.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon={Calendar}
+                        title="Belum Ada Data Kehadiran"
+                        description="Data kehadiran untuk periode ini belum tersedia."
+                    />
                 )}
-            </div>
-
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-back-link:hover {
-          color: var(--primary-color);
-        }
-        .wali-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-        @media (max-width: 640px) {
-          .wali-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-        .wali-stat-mini {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px;
-          background: var(--bg-card);
-          border-radius: 12px;
-          border: 1px solid var(--border-color);
-        }
-        .wali-stat-mini.hadir { color: #16a34a; }
-        .wali-stat-mini.izin { color: #2563eb; }
-        .wali-stat-mini.sakit { color: #d97706; }
-        .wali-stat-mini.alpha { color: #dc2626; }
-        .wali-stat-mini-value {
-          display: block;
-          font-size: 20px;
-          font-weight: 700;
-          color: inherit;
-        }
-        .wali-stat-mini-label {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-        .wali-attendance-bar {
-          padding: 16px;
-          background: var(--bg-secondary);
-          border-radius: 12px;
-        }
-        .wali-attendance-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 12px;
-          font-size: 14px;
-          color: var(--text-secondary);
-        }
-        .wali-attendance-header strong {
-          margin-left: auto;
-          font-size: 18px;
-          color: var(--primary-color);
-        }
-        .wali-progress-bar {
-          height: 12px;
-          background: var(--border-color);
-          border-radius: 6px;
-          overflow: hidden;
-        }
-        .wali-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #16a34a, #22c55e);
-          border-radius: 6px;
-          transition: width 0.3s ease;
-        }
-        .wali-attendance-note {
-          margin: 12px 0 0;
-          font-size: 13px;
-          color: var(--text-secondary);
-        }
-        .wali-presensi-item {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 12px;
-          background: var(--bg-secondary);
-          border-radius: 12px;
-          margin-bottom: 8px;
-        }
-        .wali-presensi-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .wali-presensi-icon.status-hadir { background: #dcfce7; color: #16a34a; }
-        .wali-presensi-icon.status-izin { background: #dbeafe; color: #2563eb; }
-        .wali-presensi-icon.status-sakit { background: #fef3c7; color: #d97706; }
-        .wali-presensi-icon.status-alpha { background: #fee2e2; color: #dc2626; }
-        .wali-presensi-info {
-          flex: 1;
-        }
-        .wali-presensi-date {
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-primary);
-          margin: 0 0 4px;
-        }
-        .wali-presensi-status {
-          display: inline-block;
-          padding: 2px 8px;
-          font-size: 11px;
-          font-weight: 500;
-          border-radius: 12px;
-        }
-        .wali-presensi-status.status-hadir { background: #dcfce7; color: #16a34a; }
-        .wali-presensi-status.status-izin { background: #dbeafe; color: #2563eb; }
-        .wali-presensi-status.status-sakit { background: #fef3c7; color: #d97706; }
-        .wali-presensi-status.status-alpha { background: #fee2e2; color: #dc2626; }
-        .wali-presensi-ket {
-          font-size: 12px;
-          color: var(--text-secondary);
-          margin: 6px 0 0;
-        }
-      `}</style>
+            </Card>
         </div>
     )
 }

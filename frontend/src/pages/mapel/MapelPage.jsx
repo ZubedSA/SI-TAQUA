@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, BookOpen, Search, RefreshCw, BookMarked, GraduationCap, MoreVertical } from 'lucide-react'
+import { Plus, Edit, Trash2, BookOpen, Search, RefreshCw, BookMarked, GraduationCap } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
@@ -13,7 +13,12 @@ import { generateLaporanPDF } from '../../utils/pdfGenerator'
 
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
-import './Mapel.css'
+import PageHeader from '../../components/layout/PageHeader'
+import StatsCard from '../../components/ui/StatsCard'
+import { Card } from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import FormInput from '../../components/ui/FormInput'
 
 const MapelPage = () => {
     const { activeRole, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
@@ -21,7 +26,6 @@ const MapelPage = () => {
 
     // Multiple checks for role detection - Guru hanya read-only di Data Pondok
     const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
-    const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
     const canEdit = adminCheck
     const [mapelList, setMapelList] = useState([])
     const [searchTerm, setSearchTerm] = useState('')
@@ -158,78 +162,97 @@ const MapelPage = () => {
         showToast.success('PDF berhasil didownload')
     }
 
-    const countByKategori = (kat) => mapelList.filter(m => m.kategori === kat).length
+    const stats = {
+        total: mapelList.length,
+        tahfizhiyah: mapelList.filter(m => m.kategori === 'Tahfizhiyah').length,
+        madrosiyah: mapelList.filter(m => m.kategori === 'Madrosiyah').length
+    }
 
     return (
-        <div className="mapel-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Mata Pelajaran</h1>
-                    <p className="page-subtitle">Kelola daftar mata pelajaran</p>
-                </div>
-                <div className="header-actions">
-                    <DownloadButton
-                        onDownloadPDF={handleDownloadPDF}
-                        onDownloadExcel={handleDownloadExcel}
-                        onDownloadCSV={handleDownloadCSV}
-                    />
-                    {canEdit && (
-                        <button className="btn btn-primary" onClick={() => { setEditData(null); setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' }); setShowModal(true) }}>
-                            <Plus size={18} /> Tambah Mapel
-                        </button>
-                    )}
-                </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Mata Pelajaran"
+                description="Kelola daftar mata pelajaran sekolah"
+                icon={BookOpen}
+                actions={
+                    <div className="flex gap-2">
+                        <DownloadButton
+                            onDownloadPDF={handleDownloadPDF}
+                            onDownloadExcel={handleDownloadExcel}
+                            onDownloadCSV={handleDownloadCSV}
+                        />
+                        {canEdit && (
+                            <Button onClick={() => { setEditData(null); setFormData({ kode: '', nama: '', deskripsi: '', kategori: 'Madrosiyah' }); setShowModal(true) }} icon={Plus}>
+                                Tambah Mapel
+                            </Button>
+                        )}
+                    </div>
+                }
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatsCard title="Total Mapel" value={stats.total} icon={BookOpen} color="primary" />
+                <StatsCard title="Tahfizhiyah" value={stats.tahfizhiyah} icon={BookMarked} color="green" />
+                <StatsCard title="Madrosiyah" value={stats.madrosiyah} icon={GraduationCap} color="orange" />
             </div>
 
-
-
-            <div className="table-container">
-                <div className="table-header">
-                    <h3 className="table-title">Daftar Mapel ({filteredMapel.length})</h3>
-                    <div className="table-controls">
-                        <button
-                            className={`btn btn-sm ${activeKategori === 'Semua' ? 'btn-primary' : 'btn-outline'}`}
+            <Card className="overflow-hidden">
+                <div className="p-4 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+                        <Button
+                            variant={activeKategori === 'Semua' ? 'primary' : 'outline'}
+                            size="sm"
                             onClick={() => setActiveKategori('Semua')}
                         >
                             Semua
-                        </button>
-                        <button
-                            className={`btn btn-sm ${activeKategori === 'Tahfizhiyah' ? 'btn-primary' : 'btn-outline'}`}
+                        </Button>
+                        <Button
+                            variant={activeKategori === 'Tahfizhiyah' ? 'primary' : 'outline'}
+                            size="sm"
                             onClick={() => setActiveKategori('Tahfizhiyah')}
-                            title="Tahfizhiyah"
+                            icon={BookMarked}
                         >
-                            <BookMarked size={16} /> <span className="hide-mobile">Tahfizhiyah</span>
-                        </button>
-                        <button
-                            className={`btn btn-sm ${activeKategori === 'Madrosiyah' ? 'btn-primary' : 'btn-outline'}`}
+                            Tahfizhiyah
+                        </Button>
+                        <Button
+                            variant={activeKategori === 'Madrosiyah' ? 'primary' : 'outline'}
+                            size="sm"
                             onClick={() => setActiveKategori('Madrosiyah')}
-                            title="Madrosiyah"
+                            icon={GraduationCap}
                         >
-                            <GraduationCap size={16} /> <span className="hide-mobile">Madrosiyah</span>
-                        </button>
-                        <div className="table-search">
-                            <Search size={18} className="search-icon" />
-                            <input type="text" placeholder="Cari mapel..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="search-input" />
-                        </div>
+                            Madrosiyah
+                        </Button>
+                    </div>
+
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Cari mapel..."
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
                     </div>
                 </div>
-                <div className="table-wrapper">
-                    <table className="table">
-                        <thead>
+
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                             <tr>
-                                <th>Kode</th>
-                                <th>Nama Mapel</th>
-                                <th>Kategori</th>
-                                <th>Deskripsi</th>
-                                {canEdit && <th>Aksi</th>}
+                                <th className="px-6 py-4 font-medium">Kode</th>
+                                <th className="px-6 py-4 font-medium">Nama Mapel</th>
+                                <th className="px-6 py-4 font-medium">Kategori</th>
+                                <th className="px-6 py-4 font-medium">Deskripsi</th>
+                                {canEdit && <th className="px-6 py-4 font-medium text-right">Aksi</th>}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-gray-100">
                             {loading ? (
-                                <tr><td colSpan={canEdit ? 5 : 4}><Spinner className="py-8" label="Memuat data mapel..." /></td></tr>
+                                <tr><td colSpan={canEdit ? 5 : 4} className="px-6 py-12"><Spinner label="Memuat data mapel..." /></td></tr>
                             ) : filteredMapel.length === 0 ? (
                                 <tr>
-                                    <td colSpan={canEdit ? 5 : 4}>
+                                    <td colSpan={canEdit ? 5 : 4} className="px-6 py-12">
                                         <EmptyState
                                             icon={BookOpen}
                                             title="Belum ada mata pelajaran"
@@ -241,62 +264,35 @@ const MapelPage = () => {
                                 </tr>
                             ) : (
                                 filteredMapel.map(mapel => (
-                                    <tr key={mapel.id}>
-                                        <td><span className="badge badge-info">{mapel.kode}</span></td>
-                                        <td className="name-cell"><BookOpen size={16} className="text-muted" /> {mapel.nama}</td>
-                                        <td>
-                                            <span className={`badge ${mapel.kategori === 'Tahfizhiyah' ? 'badge-success' : 'badge-warning'}`}>
-                                                {mapel.kategori || 'Madrosiyah'}
-                                            </span>
+                                    <tr key={mapel.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <Badge variant="info" className="font-mono">{mapel.kode}</Badge>
                                         </td>
-                                        <td className="text-muted">{mapel.deskripsi || '-'}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">
+                                            {mapel.nama}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Badge variant={mapel.kategori === 'Tahfizhiyah' ? 'success' : 'warning'}>
+                                                {mapel.kategori || 'Madrosiyah'}
+                                            </Badge>
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-500 max-w-xs truncate" title={mapel.deskripsi}>
+                                            {mapel.deskripsi || '-'}
+                                        </td>
                                         {canEdit && (
-                                            <td>
+                                            <td className="px-6 py-4 text-right">
                                                 <MobileActionMenu
                                                     actions={[
                                                         { icon: <Edit size={16} />, label: 'Edit', onClick: () => handleEdit(mapel) },
                                                         { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(mapel), danger: true }
                                                     ]}
                                                 >
-                                                    <button
-                                                        className="btn-icon"
-                                                        onClick={() => handleEdit(mapel)}
-                                                        title="Edit"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            border: 'none',
-                                                            background: '#fef3c7',
-                                                            color: '#d97706',
-                                                            cursor: 'pointer',
-                                                            marginRight: '4px'
-                                                        }}
-                                                    >
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:bg-amber-50" onClick={() => handleEdit(mapel)} title="Edit">
                                                         <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        className="btn-icon btn-icon-danger"
-                                                        onClick={() => confirmDelete(mapel)}
-                                                        title="Hapus"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            border: 'none',
-                                                            background: '#fee2e2',
-                                                            color: '#ef4444',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
+                                                    </Button>
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => confirmDelete(mapel)} title="Hapus">
                                                         <Trash2 size={16} />
-                                                    </button>
+                                                    </Button>
                                                 </MobileActionMenu>
                                             </td>
                                         )}
@@ -306,42 +302,59 @@ const MapelPage = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </Card>
 
             {showModal && (
-                <div className="modal-overlay active">
-                    <div className="modal">
-                        <div className="modal-header">
-                            <h3 className="modal-title">{editData ? 'Edit Mapel' : 'Tambah Mapel'}</h3>
-                            <button className="modal-close" onClick={() => { setShowModal(false); setEditData(null) }}>×</button>
+                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-gray-900">{editData ? 'Edit Mapel' : 'Tambah Mapel'}</h3>
+                            <button onClick={() => { setShowModal(false); setEditData(null) }} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
                         </div>
                         <form onSubmit={handleFormSubmit}>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label className="form-label">Kode Mapel *</label>
-                                    <input type="text" className="form-control" value={formData.kode} onChange={e => setFormData({ ...formData, kode: e.target.value.toUpperCase() })} maxLength={5} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Nama Mapel *</label>
-                                    <input type="text" className="form-control" value={formData.nama} onChange={e => setFormData({ ...formData, nama: e.target.value })} required />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Kategori *</label>
-                                    <select className="form-control" value={formData.kategori} onChange={e => setFormData({ ...formData, kategori: e.target.value })}>
+                            <div className="p-6 space-y-4">
+                                <FormInput
+                                    label="Kode Mapel"
+                                    value={formData.kode}
+                                    onChange={e => setFormData({ ...formData, kode: e.target.value.toUpperCase() })}
+                                    maxLength={5}
+                                    required
+                                    placeholder="CTH01"
+                                    className="font-mono uppercase"
+                                />
+                                <FormInput
+                                    label="Nama Mapel"
+                                    value={formData.nama}
+                                    onChange={e => setFormData({ ...formData, nama: e.target.value })}
+                                    required
+                                    placeholder="Contoh: Matematika"
+                                />
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-gray-700">Kategori <span className="text-red-500">*</span></label>
+                                    <select
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
+                                        value={formData.kategori}
+                                        onChange={e => setFormData({ ...formData, kategori: e.target.value })}
+                                    >
                                         <option value="Tahfizhiyah">Tahfizhiyah (Hafalan/Quran)</option>
                                         <option value="Madrosiyah">Madrosiyah (Formal/Umum)</option>
                                     </select>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Deskripsi</label>
-                                    <textarea className="form-control" rows={3} value={formData.deskripsi || ''} onChange={e => setFormData({ ...formData, deskripsi: e.target.value })} />
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-gray-700">Deskripsi</label>
+                                    <textarea
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all custom-scrollbar"
+                                        rows={3}
+                                        value={formData.deskripsi || ''}
+                                        onChange={e => setFormData({ ...formData, deskripsi: e.target.value })}
+                                    />
                                 </div>
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                                <button type="submit" className="btn btn-primary" disabled={saving}>
-                                    {saving ? <><RefreshCw size={16} className="spin" /> Menyimpan...</> : 'Simpan'}
-                                </button>
+                            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-xl">
+                                <Button variant="secondary" onClick={() => setShowModal(false)} type="button">Batal</Button>
+                                <Button type="submit" loading={saving}>
+                                    {saving ? 'Menyimpan...' : 'Simpan'}
+                                </Button>
                             </div>
                         </form>
                     </div>

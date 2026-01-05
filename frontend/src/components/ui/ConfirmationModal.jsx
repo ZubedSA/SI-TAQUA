@@ -1,5 +1,6 @@
-import React from 'react'
-import { X } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react'
+import Button from './Button'
 
 const ConfirmationModal = ({
     isOpen,
@@ -13,107 +14,116 @@ const ConfirmationModal = ({
     variant = 'primary', // primary, success, danger, warning
     isLoading = false
 }) => {
-    if (!isOpen) return null
+    const [isVisible, setIsVisible] = useState(false)
+    const [shouldRender, setShouldRender] = useState(false)
 
-    const getButtonClass = () => {
+    useEffect(() => {
+        if (isOpen) {
+            setShouldRender(true)
+            // Small timeout to allow render before adding animation class
+            setTimeout(() => setIsVisible(true), 10)
+        } else {
+            setIsVisible(false)
+            // Wait for animation to finish before unmounting
+            setTimeout(() => setShouldRender(false), 300)
+        }
+    }, [isOpen])
+
+    if (!shouldRender) return null
+
+    const getIcon = () => {
         switch (variant) {
-            case 'danger': return 'btn-danger' // Assumes css class exists or style it inline
-            case 'success': return 'bg-emerald-600 hover:bg-emerald-700 text-white' // Tailwind classes or inline
-            case 'warning': return 'bg-amber-500 hover:bg-amber-600 text-white'
-            default: return 'btn-primary' // Standard blue/primary
+            case 'danger': return <div className="p-2 bg-red-100 text-red-600 rounded-full"><AlertTriangle size={24} /></div>
+            case 'warning': return <div className="p-2 bg-amber-100 text-amber-600 rounded-full"><AlertCircle size={24} /></div>
+            case 'success': return <div className="p-2 bg-emerald-100 text-emerald-600 rounded-full"><CheckCircle size={24} /></div>
+            default: return <div className="p-2 bg-blue-100 text-blue-600 rounded-full"><Info size={24} /></div>
         }
     }
 
-    const getButtonStyle = () => {
-        // Fallback if classes aren't available globally
+    const getConfirmButtonVariant = () => {
         switch (variant) {
-            case 'danger': return {} // handled by btn-danger class usually
-            case 'success': return { backgroundColor: '#10b981', color: 'white', border: 'none' }
-            case 'warning': return { backgroundColor: '#f59e0b', color: 'white', border: 'none' }
-            case 'primary': return { backgroundColor: '#3b82f6', color: 'white', border: 'none' }
-            default: return {}
+            case 'danger': return 'dangerPrimary'
+            case 'warning': return 'primary' // styling warning as primary usually works or add warning variant to Button if needed. Using primary for now or generic style? Button has valid variants.
+            // Let's check Button variants again. It has 'dangerPrimary'. It doesn't have explicit 'warning' or 'success' button styles in the snippet I saw, 
+            // but I can use 'primary' for general or class overrides.
+            // Actually, for semantic meaning, if Button doesn't support 'warning' yet, I'll stick to 'primary' or custom className. 
+            // The user wanted premium. Let's stick to Safe defaults from Button.jsx: primary, dangerPrimary.
+            // If variant is success, maybe primary is fine (usually blue/green overlap in some designs) or I should add specific coloring?
+            // "primary" is defined as blue. "success" implies green. 
+            // I'll stick to 'primary' for success/default, and 'dangerPrimary' for danger.
+            default: return 'primary'
         }
+    }
+
+    // Custom button styling for success/warning if not in Button component
+    const customConfirmClass = () => {
+        if (variant === 'success') return '!bg-emerald-600 hover:!bg-emerald-700 focus:!ring-emerald-500'
+        if (variant === 'warning') return '!bg-amber-500 hover:!bg-amber-600 focus:!ring-amber-500' // amber for warning
+        return ''
     }
 
     return (
-        <div className="modal-overlay active" style={{ zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="modal" style={{
-                background: 'white',
-                borderRadius: '0.75rem',
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                width: '100%',
-                maxWidth: '32rem', // max-w-lg
-                margin: '1rem',
-                overflow: 'hidden'
-            }}>
-                <div className="modal-header" style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '1.25rem 1.5rem',
-                    borderBottom: '1px solid #e5e7eb'
-                }}>
-                    <h3 className="modal-title" style={{ fontSize: '1.25rem', fontWeight: 600, color: '#111827', margin: 0 }}>{title}</h3>
-                    <button onClick={onClose} disabled={isLoading} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}>
-                        <X size={24} />
-                    </button>
-                </div>
+        <div
+            className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${isVisible ? 'visible opacity-100' : 'invisible opacity-0'}`}
+        >
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+                onClick={!isLoading ? onClose : undefined}
+            />
 
-                <div className="modal-body" style={{ padding: '1.5rem' }}>
-                    <div style={{ fontSize: '1rem', color: '#374151', lineHeight: '1.5' }}>
-                        {message}
-                    </div>
-                    {description && (
-                        <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: '#6b7280' }}>
-                            {description}
-                        </p>
-                    )}
-                </div>
-
-                <div className="modal-footer" style={{
-                    padding: '1.25rem 1.5rem',
-                    backgroundColor: '#f9fafb',
-                    borderTop: '1px solid #e5e7eb',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '0.75rem'
-                }}>
+            {/* Modal */}
+            <div
+                className={`relative bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
                     <button
-                        className="btn btn-secondary"
                         onClick={onClose}
                         disabled={isLoading}
-                        style={{
-                            padding: '0.5rem 1rem',
-                            borderRadius: '0.375rem',
-                            fontWeight: 500,
-                            border: '1px solid #d1d5db',
-                            background: 'white',
-                            color: '#374151',
-                            cursor: 'pointer'
-                        }}
+                        className="text-gray-400 hover:text-gray-600 transition-colors rounded-lg p-1 hover:bg-gray-100"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-6">
+                    <div className="flex gap-4">
+                        <div className="flex-shrink-0">
+                            {getIcon()}
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-base font-medium text-gray-900 mb-2">
+                                {message}
+                            </p>
+                            {description && (
+                                <p className="text-sm text-gray-500 leading-relaxed">
+                                    {description}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-100">
+                    <Button
+                        variant="secondary"
+                        onClick={onClose}
+                        disabled={isLoading}
                     >
                         {cancelLabel}
-                    </button>
-                    <button
-                        className={`btn ${getButtonClass()}`}
+                    </Button>
+                    <Button
+                        variant={getConfirmButtonVariant()}
+                        className={customConfirmClass()}
                         onClick={onConfirm}
-                        disabled={isLoading}
-                        style={{
-                            padding: '0.5rem 1rem',
-                            borderRadius: '0.375rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            ...getButtonStyle()
-                        }}
+                        isLoading={isLoading}
                     >
-                        {isLoading && (
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        )}
                         {confirmLabel}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

@@ -2,20 +2,24 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
     ChevronLeft, User, Phone, Mail, Save, Loader,
-    GraduationCap, BookOpen, LogOut
+    GraduationCap, BookOpen, LogOut, Shield
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
-import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
+import Badge from '../../../components/ui/Badge'
+import EmptyState from '../../../components/ui/EmptyState'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * ProfilWaliPage - Halaman profil wali santri
- * Wali bisa edit no HP dan email, tidak bisa edit data santri
+ * Refactored to use Global Layout System (Phase 2)
  */
 const ProfilWaliPage = () => {
-    const { user, userProfile, signOut } = useAuth()
+    const { user, signOut } = useAuth()
     const showToast = useToast()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
@@ -108,307 +112,181 @@ const ProfilWaliPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-profil-page">
-            {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/beranda" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Profil Saya</h1>
-                <p className="wali-page-subtitle">Kelola data profil Anda</p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Profil Saya"
+                description="Kelola data pibadi dan informasi santri"
+                icon={User}
+                backUrl="/wali/beranda"
+            />
 
-            {/* Profil Wali Form */}
-            <form onSubmit={handleSubmit} className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '20px' }}>
-                    <User size={18} />
-                    Data Wali
-                </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Profil Wali Form */}
+                <div className="lg:col-span-1 space-y-6">
+                    <Card title="Data Wali Santri" icon={User}>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Nama (Read Only) */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                                <input
+                                    type="text"
+                                    value={formData.nama}
+                                    className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed"
+                                    disabled
+                                />
+                                <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+                                    <Shield size={10} />
+                                    Nama tidak dapat diubah
+                                </p>
+                            </div>
 
-                {/* Nama (Read Only) */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">Nama Lengkap</label>
-                    <input
-                        type="text"
-                        value={formData.nama}
-                        className="wali-form-input"
-                        disabled
-                    />
-                    <small className="wali-form-hint">
-                        Nama tidak dapat diubah. Hubungi admin jika perlu perubahan.
-                    </small>
-                </div>
-
-                {/* No HP (Editable) */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">
-                        <Phone size={14} />
-                        Nomor HP
-                    </label>
-                    <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="wali-form-input"
-                        placeholder="08xxxxxxxxxx"
-                    />
-                </div>
-
-                {/* Email (Editable) */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">
-                        <Mail size={14} />
-                        Email
-                    </label>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="wali-form-input"
-                        placeholder="email@example.com"
-                    />
-                </div>
-
-                {/* Save Button */}
-                <button
-                    type="submit"
-                    className="wali-btn wali-btn-primary"
-                    style={{ width: '100%' }}
-                    disabled={saving}
-                >
-                    {saving ? (
-                        <>
-                            <Loader size={18} className="spin" />
-                            Menyimpan...
-                        </>
-                    ) : (
-                        <>
-                            <Save size={18} />
-                            Simpan Perubahan
-                        </>
-                    )}
-                </button>
-            </form>
-
-            {/* Data Santri (Read Only) */}
-            <div className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
-                    <GraduationCap size={18} />
-                    Data Santri ({santriList.length})
-                </h3>
-
-                {santriList.length > 0 ? (
-                    <div className="wali-santri-list">
-                        {santriList.map(santri => (
-                            <div key={santri.id} className="wali-santri-profil-card">
-                                <div className="wali-santri-profil-header">
-                                    <div className="wali-santri-avatar-lg">
-                                        {santri.foto_url ? (
-                                            <img src={santri.foto_url} alt={santri.nama} />
-                                        ) : (
-                                            <User size={40} />
-                                        )}
+                            {/* No HP */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nomor HP</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Phone size={16} className="text-gray-400" />
                                     </div>
-                                    <div className="wali-santri-profil-info">
-                                        <h4>{santri.nama}</h4>
-                                        <p>NIS: {santri.nis}</p>
-                                    </div>
-                                </div>
-                                <div className="wali-santri-profil-details">
-                                    <div className="wali-profil-detail-row">
-                                        <span className="wali-profil-detail-label">Kelas</span>
-                                        <span className="wali-profil-detail-value">{santri.kelas?.nama || '-'}</span>
-                                    </div>
-                                    <div className="wali-profil-detail-row">
-                                        <span className="wali-profil-detail-label">Halaqoh</span>
-                                        <span className="wali-profil-detail-value">{santri.halaqoh?.nama || '-'}</span>
-                                    </div>
-                                    <div className="wali-profil-detail-row">
-                                        <span className="wali-profil-detail-label">Status</span>
-                                        <span className={`wali-profil-status ${santri.status === 'Aktif' ? 'aktif' : 'tidak-aktif'}`}>
-                                            {santri.status}
-                                        </span>
-                                    </div>
-                                    <div className="wali-profil-detail-row">
-                                        <span className="wali-profil-detail-label">Jenis Kelamin</span>
-                                        <span className="wali-profil-detail-value">{santri.jenis_kelamin}</span>
-                                    </div>
-                                    {santri.tempat_lahir && santri.tanggal_lahir && (
-                                        <div className="wali-profil-detail-row">
-                                            <span className="wali-profil-detail-label">TTL</span>
-                                            <span className="wali-profil-detail-value">
-                                                {santri.tempat_lahir}, {new Date(santri.tanggal_lahir).toLocaleDateString('id-ID')}
-                                            </span>
-                                        </div>
-                                    )}
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={formData.phone}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="08xxxxxxxxxx"
+                                    />
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                        Belum ada data santri yang terhubung.
-                    </p>
-                )}
 
-                <div className="wali-info-box" style={{ marginTop: '16px' }}>
-                    <BookOpen size={18} />
-                    <span>Data santri tidak dapat diubah melalui portal ini. Hubungi admin jika ada perubahan data.</span>
+                            {/* Email */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Mail size={16} className="text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                        placeholder="email@example.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <Button type="submit" isLoading={saving} className="w-full">
+                                <Save size={18} className="mr-2" />
+                                Simpan Perubahan
+                            </Button>
+                        </form>
+                    </Card>
+
+                    <Card className="bg-red-50 border-red-100">
+                        <h4 className="font-semibold text-red-800 mb-2">Zona Bahaya</h4>
+                        <p className="text-sm text-red-600 mb-4">
+                            Keluar dari sesi akun Anda saat ini.
+                        </p>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await signOut()
+                                    navigate('/login')
+                                } catch (error) {
+                                    console.error('Logout error:', error)
+                                    showToast('Gagal keluar: ' + error.message, 'error')
+                                }
+                            }}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm"
+                        >
+                            <LogOut size={16} />
+                            Kp
+                            Keluar Akun
+                        </button>
+                    </Card>
+                </div>
+
+                {/* Data Santri List */}
+                <div className="lg:col-span-2">
+                    <Card title={`Data Santri Terhubung (${santriList.length})`} icon={GraduationCap}>
+                        {santriList.length > 0 ? (
+                            <div className="space-y-4">
+                                {santriList.map(santri => (
+                                    <div key={santri.id} className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 hover:shadow-md transition-shadow">
+                                        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+                                            {/* Avatar */}
+                                            <div className="flex-shrink-0">
+                                                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+                                                    {santri.foto_url ? (
+                                                        <img src={santri.foto_url} alt={santri.nama} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User size={32} className="text-gray-400" />
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Info */}
+                                            <div className="flex-1 w-full">
+                                                <div className="flex flex-col md:flex-row justify-between md:items-start mb-4 gap-2">
+                                                    <div>
+                                                        <h3 className="text-lg font-bold text-gray-900">{santri.nama}</h3>
+                                                        <p className="text-sm text-gray-500">NIS: <span className="font-mono font-medium text-gray-700">{santri.nis}</span></p>
+                                                    </div>
+                                                    <Badge variant={santri.status === 'Aktif' ? 'success' : 'danger'}>
+                                                        {santri.status}
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 mb-1">Kelas</p>
+                                                        <p className="text-sm font-medium text-gray-900">{santri.kelas?.nama || '-'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 mb-1">Halaqoh</p>
+                                                        <p className="text-sm font-medium text-gray-900">{santri.halaqoh?.nama || '-'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 mb-1">Jenis Kelamin</p>
+                                                        <p className="text-sm font-medium text-gray-900">{santri.jenis_kelamin}</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 mb-1">TTL</p>
+                                                        <p className="text-sm font-medium text-gray-900">
+                                                            {santri.tempat_lahir}, {santri.tanggal_lahir ? new Date(santri.tanggal_lahir).toLocaleDateString('id-ID') : '-'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <EmptyState
+                                icon={GraduationCap}
+                                title="Belum Ada Santri"
+                                description="Akun Anda belum terhubung dengan data santri manapun."
+                            />
+                        )}
+
+                        <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm">
+                            <BookOpen size={20} className="shrink-0 mt-0.5" />
+                            <p>
+                                Data santri ditampilkan berdasarkan relasi wali murid. Jika ada kesalahan data atau santri yang belum muncul, silakan hubungi bagian administrasi pondok.
+                            </p>
+                        </div>
+                    </Card>
                 </div>
             </div>
-
-            {/* Logout Section */}
-            <div className="wali-section" style={{ marginTop: '16px' }}>
-                <button
-                    onClick={async () => {
-                        try {
-                            await signOut()
-                            navigate('/login')
-                        } catch (error) {
-                            console.error('Logout error:', error)
-                            showToast('Gagal keluar: ' + error.message, 'error')
-                        }
-                    }}
-                    className="wali-btn wali-btn-logout"
-                    style={{ width: '100%' }}
-                >
-                    <LogOut size={18} />
-                    Keluar dari Akun
-                </button>
-            </div>
-
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-section-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .wali-form-label {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .wali-form-hint {
-          display: block;
-          margin-top: 6px;
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-        .wali-santri-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .wali-santri-profil-card {
-          background: var(--bg-secondary);
-          border-radius: 16px;
-          padding: 16px;
-          border: 1px solid var(--border-color);
-        }
-        .wali-santri-profil-header {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          margin-bottom: 16px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--border-color);
-        }
-        .wali-santri-avatar-lg {
-          width: 70px;
-          height: 70px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--text-secondary);
-          overflow: hidden;
-        }
-        .wali-santri-avatar-lg img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .wali-santri-profil-info h4 {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin: 0 0 4px;
-        }
-        .wali-santri-profil-info p {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin: 0;
-        }
-        .wali-santri-profil-details {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .wali-profil-detail-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .wali-profil-detail-label {
-          font-size: 13px;
-          color: var(--text-secondary);
-        }
-        .wali-profil-detail-value {
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-primary);
-        }
-        .wali-profil-status {
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-        .wali-profil-status.aktif {
-          background: #dcfce7;
-          color: #166534;
-        }
-        .wali-profil-status.tidak-aktif {
-          background: #fee2e2;
-          color: #991b1b;
-        }
-        .wali-info-box {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 14px;
-          background: #dbeafe;
-          border-radius: 10px;
-          font-size: 13px;
-          color: #1e40af;
-        }
-        .spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
         </div>
     )
 }

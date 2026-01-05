@@ -1,215 +1,271 @@
 /* =====================================================
-   Akademik Dashboard Styles - PREMIUM
+   Akademik Dashboard - Enterprise Premium
+   Accent Color: Sky Blue (#0284C7)
    ===================================================== */
+
+[data-dashboard="akademik"] {
+    --dashboard-accent: var(--accent-akademik);
+    --dashboard-accent-hover: var(--accent-akademik-hover);
+}
 
 .akademik-dashboard {
     padding: 0;
-    padding-bottom: 2rem;
 }
 
-/* Welcome Section - PREMIUM */
+/* === WELCOME HEADER === */
 .dashboard-welcome.akademik {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-    box-shadow:
-        0 10px 40px -10px rgba(59, 130, 246, 0.5),
-        0 4px 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-8) var(--space-8);
+    background: var(--dashboard-accent);
+    border-radius: var(--radius-xl);
+    color: white;
+    margin-bottom: var(--space-6);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-welcome.akademik::after {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .dashboard-welcome.akademik .welcome-content h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    margin: 0 0 var(--space-1) 0;
     color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .dashboard-welcome.akademik .welcome-content p {
     margin: 0;
-    opacity: 1;
     color: rgba(255, 255, 255, 0.95);
-    font-size: 0.95rem;
+    font-size: var(--font-size-sm);
 }
 
-/* Stats Grid */
+/* === STATS GRID === */
 .akademik-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 .akademik-stat-card {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px;
-    background: var(--bg-secondary, white);
-    border-radius: 16px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.05),
-        0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.akademik-stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #3b82f6, #60a5fa);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    padding: var(--space-6);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
 }
 
 .akademik-stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow:
-        0 10px 20px -5px rgba(0, 0, 0, 0.1),
-        0 20px 40px -10px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
-.akademik-stat-card:hover::before {
-    opacity: 1;
+.akademik-stat-card .stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
 }
 
-.stat-icon-box.teal {
-    background: linear-gradient(135deg, #14b8a6, #0d9488);
-    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+.akademik-stat-card .stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
 
-/* Row Layout */
-.akademik-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 24px;
-    margin-bottom: 24px;
+.akademik-stat-card .stat-value {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--text-heading);
 }
 
-/* Card - PREMIUM */
-.akademik-card {
-    background: var(--bg-secondary, white);
-    border-radius: 16px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    padding: 24px;
-    box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.05),
-        0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+.akademik-stat-card .stat-value.green {
+    color: var(--color-success);
 }
 
-.akademik-card:hover {
-    box-shadow:
-        0 10px 20px -5px rgba(0, 0, 0, 0.1),
-        0 20px 40px -10px rgba(0, 0, 0, 0.08);
+.akademik-stat-card .stat-value.teal {
+    color: #14b8a6;
 }
 
-.akademik-card.chart-card {
-    min-height: 300px;
+.akademik-stat-card .stat-value.purple {
+    color: #8b5cf6;
 }
 
-.akademik-card.chart-card.small {
-    min-height: auto;
+.akademik-stat-card .stat-value.blue {
+    color: var(--color-info);
 }
 
-.chart-container {
-    height: 220px;
-    position: relative;
-}
-
-.chart-container.donut {
-    height: 200px;
+.akademik-stat-card .stat-icon-box {
+    width: 56px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
 }
 
-/* Quick Actions */
-.akademik-card .quick-actions {
+.akademik-stat-card .stat-icon-box.green {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.akademik-stat-card .stat-icon-box.teal {
+    background: rgba(20, 184, 166, 0.1);
+    color: #14b8a6;
+}
+
+.akademik-stat-card .stat-icon-box.purple {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.akademik-stat-card .stat-icon-box.blue {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+/* === ROW LAYOUT === */
+.akademik-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+/* === CARD === */
+.akademik-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.akademik-card.chart-card {
+    min-height: 320px;
+}
+
+.akademik-card.chart-card.small {
+    min-height: 320px;
+}
+
+.akademik-card .chart-container {
+    height: 250px;
+    margin-top: var(--space-4);
+}
+
+.akademik-card .chart-container.donut {
+    max-width: 280px;
+    margin: var(--space-4) auto 0;
+}
+
+/* === QUICK ACTIONS === */
+.quick-actions {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    gap: var(--space-3);
 }
 
-.akademik-card .quick-action-btn {
+.quick-action-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    padding: 20px 10px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    color: #64748b;
+    gap: var(--space-2);
+    padding: var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    color: var(--text-body);
     text-decoration: none;
+    font-size: var(--font-size-sm);
     font-weight: 500;
-    font-size: 0.9rem;
     transition: all 0.2s ease;
     text-align: center;
 }
 
-.akademik-card .quick-action-btn:hover {
-    background: #3b82f6;
-    border-color: #3b82f6;
+.quick-action-btn:hover {
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: var(--shadow-md);
 }
 
-/* Responsive */
+.quick-action-btn svg {
+    flex-shrink: 0;
+}
+
+/* === RESPONSIVE === */
 @media (max-width: 1200px) {
     .akademik-stats-grid {
         grid-template-columns: repeat(2, 1fr);
-    }
-
-    .akademik-card .quick-actions {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .akademik-stats-grid {
-        grid-template-columns: 1fr;
     }
 
     .akademik-row {
         grid-template-columns: 1fr;
     }
 
-    .akademik-card .quick-actions {
+    .quick-actions {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* ================================
-   Dark Mode Overrides
-   ================================ */
-[data-theme="dark"] .akademik-stat-card {
-    background: #1e293b;
-    border-color: #334155;
+@media (max-width: 768px) {
+    .dashboard-welcome.akademik {
+        flex-direction: column;
+        gap: var(--space-3);
+        text-align: center;
+        padding: var(--space-6);
+    }
+
+    .akademik-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .akademik-stat-card .stat-value {
+        font-size: var(--font-size-2xl);
+    }
 }
 
-[data-theme="dark"] .akademik-stat-card .stat-label {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .akademik-stat-card .stat-value.teal {
-    color: #2dd4bf;
-}
-
+/* === DARK MODE === */
+[data-theme="dark"] .akademik-stat-card,
 [data-theme="dark"] .akademik-card {
-    background: #1e293b;
-    border-color: #334155;
+    background: var(--bg-card);
+    border-color: var(--border-default);
 }
 
-[data-theme="dark"] .akademik-card .card-header h3 {
-    color: #f1f5f9;
+[data-theme="dark"] .quick-action-btn {
+    background: var(--bg-card);
+    border-color: var(--border-default);
+    color: var(--text-body);
 }
 
-[data-theme="dark"] .akademik-card .quick-action-btn {
-    background: #0f172a;
-    border-color: #334155;
-    color: #e2e8f0;
+[data-theme="dark"] .quick-action-btn:hover {
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
+    color: white;
 }

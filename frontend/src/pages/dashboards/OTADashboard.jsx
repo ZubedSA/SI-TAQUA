@@ -137,7 +137,7 @@ const OTADashboard = () => {
     const progressPercent = stats.totalDonasi > 0 ? Math.min(Math.round((stats.pengeluaran / stats.totalDonasi) * 100), 100) : 0
 
     return (
-        <div className="ota-dashboard">
+        <div className="ota-dashboard" data-dashboard="ota">
             <div className="ota-dashboard-inner">
 
                 {/* === WELCOME HEADER === */}
@@ -165,40 +165,40 @@ const OTADashboard = () => {
 
                 {/* === STATS GRID === */}
                 <div className="ota-stats-grid">
-                    <div className="ota-stat-card blue">
+                    <div className="ota-stat-card">
                         <div className="ota-stat-info">
                             <span className="ota-stat-label">Total OTA Aktif</span>
-                            <span className="ota-stat-value">{stats.otaCount}</span>
+                            <span className="ota-stat-value blue">{stats.otaCount}</span>
                         </div>
-                        <div className="ota-stat-icon-box">
+                        <div className="ota-stat-icon-box blue">
                             <Users size={24} />
                         </div>
                     </div>
-                    <div className="ota-stat-card purple">
+                    <div className="ota-stat-card">
                         <div className="ota-stat-info">
                             <span className="ota-stat-label">Santri Penerima</span>
-                            <span className="ota-stat-value">{stats.santriCount}</span>
+                            <span className="ota-stat-value purple">{stats.santriCount}</span>
                         </div>
-                        <div className="ota-stat-icon-box">
+                        <div className="ota-stat-icon-box purple">
                             <Target size={24} />
                         </div>
                     </div>
-                    <div className="ota-stat-card green">
+                    <div className="ota-stat-card">
                         <div className="ota-stat-info">
                             <span className="ota-stat-label">Total Donasi</span>
-                            <span className="ota-stat-value">{formatRupiah(stats.totalDonasi)}</span>
+                            <span className="ota-stat-value green">{formatRupiah(stats.totalDonasi)}</span>
                             <span className="ota-stat-subvalue">+{formatRupiah(stats.donasiThisMonth)} bulan ini</span>
                         </div>
-                        <div className="ota-stat-icon-box">
+                        <div className="ota-stat-icon-box green">
                             <ArrowUpCircle size={24} />
                         </div>
                     </div>
-                    <div className={`ota-stat-card ${stats.saldo >= 0 ? 'emerald' : 'red'}`}>
+                    <div className="ota-stat-card">
                         <div className="ota-stat-info">
                             <span className="ota-stat-label">Saldo Tersedia</span>
-                            <span className="ota-stat-value">{formatRupiah(stats.saldo)}</span>
+                            <span className="ota-stat-value emerald">{formatRupiah(stats.saldo)}</span>
                         </div>
-                        <div className="ota-stat-icon-box">
+                        <div className="ota-stat-icon-box emerald">
                             <Wallet size={24} />
                         </div>
                     </div>

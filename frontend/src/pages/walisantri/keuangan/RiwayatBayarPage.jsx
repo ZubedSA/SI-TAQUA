@@ -2,17 +2,22 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
     ChevronLeft, Receipt, Calendar, CheckCircle, Clock,
-    Filter, CreditCard
+    Filter, CreditCard, Banknote
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
 import DownloadButton from '../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../utils/exportUtils'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import Badge from '../../../components/ui/Badge'
+import EmptyState from '../../../components/ui/EmptyState'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * RiwayatBayarPage - Halaman untuk melihat riwayat pembayaran santri
+ * Refactored to use Global Layout System (Phase 2)
  */
 const RiwayatBayarPage = () => {
     const { user } = useAuth()
@@ -130,12 +135,9 @@ const RiwayatBayarPage = () => {
 
     const getMetodeIcon = (metode) => {
         switch (metode) {
-            case 'Transfer':
-                return <CreditCard size={16} />
-            case 'QRIS':
-                return <Receipt size={16} />
-            default:
-                return <Receipt size={16} />
+            case 'Transfer': return <CreditCard size={14} className="mr-1" />
+            case 'QRIS': return <Receipt size={14} className="mr-1" />
+            default: return <Banknote size={14} className="mr-1" />
         }
     }
 
@@ -168,27 +170,24 @@ const RiwayatBayarPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-riwayat-page">
-            {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/keuangan" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Riwayat Pembayaran</h1>
-                <p className="wali-page-subtitle">Daftar pembayaran yang sudah dilakukan</p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Riwayat Pembayaran"
+                description="Arsip lengkap transaksi pembayaran santri"
+                icon={Receipt}
+                backUrl="/wali/keuangan"
+            />
 
             {/* Santri Selector */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {santriList.map(santri => (
                         <SantriCard
                             key={santri.id}
@@ -200,178 +199,95 @@ const RiwayatBayarPage = () => {
                 </div>
             )}
 
-            {/* Filter */}
-            <div className="wali-section" style={{ marginTop: santriList.length > 1 ? 0 : '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
-                        <Filter size={18} style={{ color: 'var(--text-secondary)' }} />
-                        <select
-                            value={filterBulan}
-                            onChange={(e) => setFilterBulan(e.target.value)}
-                            className="wali-form-select"
-                            style={{ flex: 1 }}
-                        >
-                            <option value="">Semua Waktu</option>
-                            {getMonthOptions().map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                        </select>
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="relative w-full md:w-64">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Filter size={18} className="text-gray-400" />
                     </div>
-                    {pembayaranData.length > 0 && (
-                        <div style={{ flexShrink: 0 }}>
-                            <DownloadButton
-                                onDownloadExcel={handleDownloadExcel}
-                                onDownloadCSV={handleDownloadCSV}
-                            />
-                        </div>
-                    )}
+                    <select
+                        value={filterBulan}
+                        onChange={(e) => setFilterBulan(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 appearance-none"
+                    >
+                        <option value="">Semua Waktu</option>
+                        {getMonthOptions().map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
                 </div>
+
+                {pembayaranData.length > 0 && (
+                    <DownloadButton
+                        onDownloadExcel={handleDownloadExcel}
+                        onDownloadCSV={handleDownloadCSV}
+                    />
+                )}
             </div>
 
             {/* Total Summary */}
             {pembayaranData.length > 0 && (
-                <div className="wali-summary-card">
-                    <Receipt size={20} />
-                    <div>
-                        <p className="wali-summary-label">Total {filterBulan ? 'Bulan Ini' : 'Pembayaran'}</p>
-                        <p className="wali-summary-value">{formatCurrency(totalPembayaran)}</p>
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-xl p-4 flex items-center gap-4">
+                    <div className="p-3 bg-emerald-100 rounded-lg text-emerald-600">
+                        <Receipt size={24} />
                     </div>
-                    <span className="wali-summary-count">{pembayaranData.length} transaksi</span>
+                    <div>
+                        <p className="text-sm text-emerald-800 opacity-80">Total {filterBulan ? 'Bulan Ini' : 'Pembayaran'}</p>
+                        <p className="text-2xl font-bold text-emerald-700">{formatCurrency(totalPembayaran)}</p>
+                    </div>
+                    <div className="ml-auto px-3 py-1 bg-white/60 rounded-full text-xs font-medium text-emerald-800">
+                        {pembayaranData.length} transaksi
+                    </div>
                 </div>
             )}
 
             {/* Pembayaran List */}
-            <div className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
-                    Daftar Pembayaran
-                </h3>
+            <Card>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-800">Daftar Transaksi</h3>
+                    </div>
 
-                {pembayaranData.length > 0 ? (
-                    <div className="wali-data-list">
-                        {pembayaranData.map(pembayaran => (
-                            <div key={pembayaran.id} className="wali-pembayaran-item">
-                                <div className="wali-pembayaran-icon">
-                                    <CheckCircle size={20} />
-                                </div>
-                                <div className="wali-pembayaran-info">
-                                    <p className="wali-pembayaran-kategori">
-                                        {pembayaran.tagihan?.kategori?.nama || 'Pembayaran'}
-                                    </p>
-                                    <p className="wali-pembayaran-date">
-                                        <Calendar size={12} />
-                                        {formatDate(pembayaran.tanggal)}
-                                    </p>
-                                    <div className="wali-pembayaran-meta">
-                                        {getMetodeIcon(pembayaran.metode)}
-                                        <span>{pembayaran.metode || 'Tunai'}</span>
+                    {pembayaranData.length > 0 ? (
+                        <div className="space-y-3">
+                            {pembayaranData.map(pembayaran => (
+                                <div key={pembayaran.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                                            <CheckCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900">
+                                                {pembayaran.tagihan?.kategori?.nama || 'Pembayaran'}
+                                            </h4>
+                                            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar size={12} />
+                                                    {formatDate(pembayaran.tanggal)}
+                                                </span>
+                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 rounded text-gray-700">
+                                                    {getMetodeIcon(pembayaran.metode)}
+                                                    {pembayaran.metode || 'Tunai'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right w-full sm:w-auto pl-14 sm:pl-0">
+                                        <div className="font-bold text-lg text-emerald-600">
+                                            {formatCurrency(pembayaran.jumlah)}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="wali-pembayaran-amount">
-                                    {formatCurrency(pembayaran.jumlah)}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="wali-empty-state">
-                        <div className="wali-empty-icon">
-                            <Receipt size={40} />
+                            ))}
                         </div>
-                        <h3 className="wali-empty-title">Belum Ada Pembayaran</h3>
-                        <p className="wali-empty-text">
-                            Belum ada riwayat pembayaran untuk periode ini.
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-summary-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px;
-          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-          border: 1px solid #86efac;
-          border-radius: 12px;
-          margin-bottom: 20px;
-          color: #166534;
-        }
-        .wali-summary-label {
-          font-size: 12px;
-          margin: 0;
-          opacity: 0.8;
-        }
-        .wali-summary-value {
-          font-size: 18px;
-          font-weight: 700;
-          margin: 2px 0 0;
-        }
-        .wali-summary-count {
-          margin-left: auto;
-          font-size: 12px;
-          background: rgba(255,255,255,0.5);
-          padding: 4px 10px;
-          border-radius: 20px;
-        }
-        .wali-pembayaran-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px;
-          background: var(--bg-secondary);
-          border-radius: 12px;
-          margin-bottom: 10px;
-        }
-        .wali-pembayaran-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          background: #dcfce7;
-          color: #16a34a;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .wali-pembayaran-info {
-          flex: 1;
-        }
-        .wali-pembayaran-kategori {
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-primary);
-          margin: 0 0 4px;
-        }
-        .wali-pembayaran-date {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          color: var(--text-secondary);
-          margin: 0 0 4px;
-        }
-        .wali-pembayaran-meta {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 11px;
-          color: var(--text-secondary);
-        }
-        .wali-pembayaran-amount {
-          font-size: 16px;
-          font-weight: 700;
-          color: #16a34a;
-        }
-      `}</style>
+                    ) : (
+                        <EmptyState
+                            icon={Receipt}
+                            title="Belum Ada Pembayaran"
+                            description="Belum ada riwayat pembayaran yang tercatat untuk periode ini."
+                        />
+                    )}
+                </div>
+            </Card>
         </div>
     )
 }

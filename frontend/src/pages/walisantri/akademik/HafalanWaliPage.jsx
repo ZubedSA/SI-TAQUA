@@ -7,11 +7,15 @@ import {
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import EmptyState from '../../../components/ui/EmptyState'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * HafalanWaliPage - Halaman untuk melihat riwayat hafalan santri
  * Read-only - wali hanya bisa melihat, tidak bisa mengedit
+ * Refactored to use Global Layout System (Phase 2)
  */
 const HafalanWaliPage = () => {
     const { user } = useAuth()
@@ -94,22 +98,22 @@ const HafalanWaliPage = () => {
     const getStatusIcon = (status) => {
         switch (status) {
             case 'Mutqin':
-                return <CheckCircle size={16} className="text-green" />
+                return <CheckCircle size={16} className="text-emerald-500" />
             case 'Proses':
-                return <Clock size={16} className="text-yellow" />
+                return <Clock size={16} className="text-amber-500" />
             default:
-                return <RotateCcw size={16} className="text-blue" />
+                return <RotateCcw size={16} className="text-blue-500" />
         }
     }
 
     const getStatusClass = (status) => {
         switch (status) {
             case 'Mutqin':
-                return 'status-aktif'
+                return 'bg-emerald-100 text-emerald-700'
             case 'Proses':
-                return 'status-pindah'
+                return 'bg-amber-100 text-amber-700'
             default:
-                return 'status-lulus'
+                return 'bg-blue-100 text-blue-700'
         }
     }
 
@@ -121,27 +125,24 @@ const HafalanWaliPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-hafalan-page">
-            {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/beranda" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Hafalan Al-Qur'an</h1>
-                <p className="wali-page-subtitle">Riwayat setoran hafalan santri</p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Hafalan Al-Qur'an"
+                description="Riwayat setoran hafalan santri"
+                icon={BookOpen}
+                backUrl="/wali/beranda"
+            />
 
             {/* Santri Selector */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {santriList.map(santri => (
                         <SantriCard
                             key={santri.id}
@@ -153,43 +154,33 @@ const HafalanWaliPage = () => {
                 </div>
             )}
 
-            {/* Selected Santri Info */}
+            {/* Selected Santri Info (if only 1) */}
             {selectedSantri && santriList.length === 1 && (
-                <div style={{ marginBottom: '20px' }}>
+                <div className="mb-4">
                     <SantriCard santri={selectedSantri} />
                 </div>
             )}
 
             {/* Search & Filter */}
-            <div className="wali-section" style={{ marginTop: 0 }}>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1', minWidth: '200px' }}>
-                        <div style={{ position: 'relative' }}>
-                            <Search
-                                size={18}
-                                style={{
-                                    position: 'absolute',
-                                    left: '14px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    color: 'var(--text-secondary)'
-                                }}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Cari surat..."
-                                value={searchSurah}
-                                onChange={(e) => setSearchSurah(e.target.value)}
-                                className="wali-form-input"
-                                style={{ paddingLeft: '42px' }}
-                            />
-                        </div>
-                    </div>
+            <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                    <Search
+                        size={18}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Cari surat..."
+                        value={searchSurah}
+                        onChange={(e) => setSearchSurah(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+                    />
+                </div>
+                <div className="w-full md:w-48">
                     <select
                         value={filterJenis}
                         onChange={(e) => setFilterJenis(e.target.value)}
-                        className="wali-form-select"
-                        style={{ minWidth: '150px' }}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     >
                         <option value="semua">Semua Jenis</option>
                         <option value="Setoran">Setoran</option>
@@ -200,43 +191,48 @@ const HafalanWaliPage = () => {
             </div>
 
             {/* Hafalan List */}
-            <div className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '16px' }}>
+            <Card>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 px-2">
                     Riwayat Hafalan ({filteredHafalan.length})
                 </h3>
 
                 {filteredHafalan.length > 0 ? (
-                    <div className="wali-data-list">
+                    <div className="space-y-3">
                         {filteredHafalan.map(hafalan => (
-                            <div key={hafalan.id} className="wali-hafalan-item">
-                                <div className="wali-hafalan-header">
-                                    <div className="wali-hafalan-date">
+                            <div key={hafalan.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
                                         <Calendar size={14} />
                                         {formatDate(hafalan.tanggal)}
                                     </div>
-                                    <span className={`santri-status-badge ${getStatusClass(hafalan.status)}`}>
+                                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(hafalan.status)}`}>
                                         {getStatusIcon(hafalan.status)}
                                         {hafalan.status}
                                     </span>
                                 </div>
-                                <div className="wali-hafalan-content">
-                                    <h4 className="wali-hafalan-surah">
-                                        <BookOpen size={16} />
+
+                                <div className="mb-3">
+                                    <h4 className="flex items-center gap-2 text-base font-semibold text-gray-900 mb-1">
+                                        <BookOpen size={16} className="text-primary-600" />
                                         {hafalan.surah}
                                     </h4>
-                                    <p className="wali-hafalan-ayat">
+                                    <p className="text-sm text-gray-600 pl-6">
                                         Juz {hafalan.juz} • Ayat {hafalan.ayat_mulai || 1} - {hafalan.ayat_selesai || 'selesai'}
                                     </p>
                                     {hafalan.jenis && (
-                                        <span className="wali-hafalan-jenis">{hafalan.jenis}</span>
+                                        <span className="inline-block mt-2 ml-6 px-2 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-md font-medium">
+                                            {hafalan.jenis}
+                                        </span>
                                     )}
                                 </div>
+
                                 {hafalan.catatan && (
-                                    <div className="wali-hafalan-catatan">
-                                        <strong>Catatan Ustadz:</strong> {hafalan.catatan}
+                                    <div className="mt-3 ml-6 p-3 bg-white rounded-lg border border-gray-100 text-sm text-gray-600 italic">
+                                        "{hafalan.catatan}"
                                     </div>
                                 )}
-                                <div className="wali-hafalan-footer">
+
+                                <div className="mt-3 ml-6 flex items-center gap-2 text-xs text-gray-500">
                                     <User size={14} />
                                     <span>Penguji: {hafalan.guru?.nama || '-'}</span>
                                 </div>
@@ -244,95 +240,13 @@ const HafalanWaliPage = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="wali-empty-state">
-                        <div className="wali-empty-icon">
-                            <BookOpen size={40} />
-                        </div>
-                        <h3 className="wali-empty-title">Belum Ada Data Hafalan</h3>
-                        <p className="wali-empty-text">
-                            Data hafalan santri belum tersedia atau belum diinput oleh guru.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon={BookOpen}
+                        title="Belum Ada Data Hafalan"
+                        description="Data hafalan santri belum tersedia atau belum diinput oleh guru."
+                    />
                 )}
-            </div>
-
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-back-link:hover {
-          color: var(--primary-color);
-        }
-        .wali-hafalan-item {
-          padding: 16px;
-          background: var(--bg-secondary, #f8fafc);
-          border-radius: 12px;
-          margin-bottom: 12px;
-        }
-        .wali-hafalan-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
-        }
-        .wali-hafalan-date {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: var(--text-secondary);
-        }
-        .wali-hafalan-content {
-          margin-bottom: 8px;
-        }
-        .wali-hafalan-surah {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin: 0 0 4px 0;
-        }
-        .wali-hafalan-ayat {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin: 0 0 8px 0;
-        }
-        .wali-hafalan-jenis {
-          display: inline-block;
-          padding: 4px 10px;
-          background: var(--primary-color);
-          color: #fff;
-          font-size: 11px;
-          font-weight: 500;
-          border-radius: 20px;
-        }
-        .wali-hafalan-catatan {
-          padding: 10px;
-          background: #fff;
-          border-radius: 8px;
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin-bottom: 8px;
-        }
-        .wali-hafalan-footer {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: var(--text-secondary);
-        }
-        .text-green { color: #16a34a; }
-        .text-yellow { color: #d97706; }
-        .text-blue { color: #2563eb; }
-      `}</style>
+            </Card>
         </div>
     )
 }

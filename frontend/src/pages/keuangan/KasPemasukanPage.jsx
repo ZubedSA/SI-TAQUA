@@ -15,7 +15,10 @@ import { useKas, useKategoriPembayaran } from '../../hooks/useKeuangan'
 import { useKasPemasukan } from '../../hooks/features/useKasPemasukan'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import PageHeader from '../../components/layout/PageHeader'
+import StatsCard from '../../components/ui/StatsCard'
 import './Keuangan.css'
+
 
 const KasPemasukanPage = () => {
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
@@ -305,7 +308,6 @@ const KasPemasukanPage = () => {
                 </div>
             </div>
 
-            {/* Summary Card */}
             <div className="summary-card green">
                 <div className="summary-content">
                     <span className="summary-label">Total Pemasukan</span>
@@ -314,7 +316,6 @@ const KasPemasukanPage = () => {
                 <ArrowUpCircle size={40} className="summary-icon" />
             </div>
 
-            {/* Filters */}
             <div className="filters-bar">
                 <div className="search-box">
                     <Search size={18} />
@@ -355,104 +356,153 @@ const KasPemasukanPage = () => {
                     onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
                     disabled={filters.dateFrom || filters.dateTo}
                 >
-                    {[2024, 2025, 2026].map(y => (
-                        <option key={y} value={y}>{y}</option>
-                    ))}
+                    {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
-                <button className="btn btn-icon" onClick={refetch}>
-                    <RefreshCw size={18} />
-                </button>
+                <button className="btn btn-icon" onClick={refetch}><RefreshCw size={18} /></button>
             </div>
 
-            {/* Data Table */}
             <div className="table-container">
-                {loading ? (
-                    <Spinner className="py-8" label="Memuat data pemasukan..." />
-                ) : filteredData.length === 0 ? (
-                    <EmptyState
-                        icon={FileText}
-                        title="Belum ada data pemasukan"
-                        message={filters.search || filters.dateFrom ? "Tidak ditemukan data yang sesuai filter." : "Belum ada data pemasukan kas yang tercatat."}
-                        actionLabel={canEditKas ? "Tambah Pemasukan" : null}
-                        onAction={canEditKas ? () => { resetForm(); setShowModal(true) } : null}
-                    />
-                ) : (
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <thead>
+                {/* Filters */}
+                <div className="p-4 border-b border-gray-200 space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Cari sumber atau keterangan..."
+                                value={filters.search}
+                                onChange={e => setFilters({ ...filters, search: e.target.value })}
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                            />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <span className="text-gray-500 text-sm">Periode:</span>
+                                <input
+                                    type="date"
+                                    value={filters.dateFrom}
+                                    onChange={e => setFilters({ ...filters, dateFrom: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                                    className="border-none p-0 text-sm focus:ring-0 text-gray-700 w-auto"
+                                    title="Dari Tanggal"
+                                />
+                                <span className="text-gray-400">-</span>
+                                <input
+                                    type="date"
+                                    value={filters.dateTo}
+                                    onChange={e => setFilters({ ...filters, dateTo: e.target.value, bulan: '', tahun: new Date().getFullYear() })}
+                                    className="border-none p-0 text-sm focus:ring-0 text-gray-700 w-auto"
+                                    title="Sampai Tanggal"
+                                />
+                            </div>
+                            <select
+                                value={filters.bulan}
+                                onChange={e => setFilters({ ...filters, bulan: e.target.value, dateFrom: '', dateTo: '' })}
+                                disabled={filters.dateFrom || filters.dateTo}
+                                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
+                            >
+                                <option value="">Semua Bulan</option>
+                                {[...Array(12)].map((_, i) => (
+                                    <option key={i} value={i + 1}>{new Date(2000, i).toLocaleString('id-ID', { month: 'long' })}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={filters.tahun}
+                                onChange={e => setFilters({ ...filters, tahun: e.target.value, dateFrom: '', dateTo: '' })}
+                                disabled={filters.dateFrom || filters.dateTo}
+                                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
+                            >
+                                {[2024, 2025, 2026].map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                            <button
+                                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                onClick={refetch}
+                                title="Refresh Data"
+                            >
+                                <RefreshCw size={18} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Data Table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                            <tr>
+                                <th className="px-6 py-3 w-16">No</th>
+                                <th className="px-6 py-3">Tanggal</th>
+                                <th className="px-6 py-3">Sumber</th>
+                                <th className="px-6 py-3">Kategori</th>
+                                <th className="px-6 py-3">Jumlah</th>
+                                <th className="px-6 py-3">Keterangan</th>
+                                {canEditKas && <th className="px-6 py-3 text-right">Aksi</th>}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {loading ? (
+                                <tr><td colSpan={canEditKas ? 7 : 6}><Spinner className="py-12" label="Memuat data pemasukan..." /></td></tr>
+                            ) : filteredData.length === 0 ? (
                                 <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>Sumber</th>
-                                    <th>Kategori</th>
-                                    <th>Jumlah</th>
-                                    <th>Keterangan</th>
-                                    {canEditKas && <th>Aksi</th>}
+                                    <td colSpan={canEditKas ? 7 : 6} className="p-8">
+                                        <EmptyState
+                                            icon={FileText}
+                                            title="Belum ada data pemasukan"
+                                            message={filters.search || filters.dateFrom ? "Tidak ditemukan data yang sesuai filter." : "Belum ada data pemasukan kas yang tercatat."}
+                                            actionLabel={canEditKas ? "Tambah Pemasukan" : null}
+                                            onAction={canEditKas ? () => { resetForm(); setShowModal(true) } : null}
+                                        />
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((item, i) => (
-                                    <tr key={item.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                        <td>{item.sumber}</td>
-                                        <td><span className="badge green">{item.kategori || '-'}</span></td>
-                                        <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                        <td>{item.keterangan || '-'}</td>
+                            ) : (
+                                filteredData.map((item, i) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 text-gray-500">{i + 1}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-gray-700">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">{item.sumber}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                {item.kategori || '-'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 font-mono font-medium text-emerald-600 whitespace-nowrap">
+                                            Rp {Number(item.jumlah).toLocaleString('id-ID')}
+                                        </td>
+                                        <td className="px-6 py-4 text-gray-500 truncate max-w-xs" title={item.keterangan}>{item.keterangan || '-'}</td>
                                         {canEditKas && (
-                                            <td>
+                                            <td className="px-6 py-4 text-right">
                                                 <MobileActionMenu
                                                     actions={[
                                                         { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
                                                         { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
                                                     ]}
                                                 >
-                                                    <button
-                                                        onClick={() => openEdit(item)}
-                                                        title="Edit"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fef3c7',
-                                                            color: '#d97706',
-                                                            border: 'none',
-                                                            cursor: 'pointer',
-                                                            marginRight: '4px'
-                                                        }}
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => confirmDelete(item)}
-                                                        title="Hapus"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '32px',
-                                                            height: '32px',
-                                                            borderRadius: '6px',
-                                                            background: '#fee2e2',
-                                                            color: '#dc2626',
-                                                            border: 'none',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button
+                                                            onClick={() => openEdit(item)}
+                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Edit"
+                                                        >
+                                                            <Edit2 size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => confirmDelete(item)}
+                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Hapus"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </MobileActionMenu>
                                             </td>
                                         )}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Modal */}

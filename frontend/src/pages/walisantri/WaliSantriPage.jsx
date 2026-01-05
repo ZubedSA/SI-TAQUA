@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Book, Award, Calendar, FileText, ArrowLeft, RefreshCw, Download, CheckCircle, Clock, AlertCircle, X } from 'lucide-react'
+import { Book, Award, Calendar, FileText, ArrowLeft, RefreshCw, Eye, CheckCircle, Clock, AlertCircle, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import './WaliSantri.css'
+import PageHeader from '../../components/layout/PageHeader'
+import { Card } from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
+import EmptyState from '../../components/ui/EmptyState'
+import Spinner from '../../components/ui/Spinner'
 
 const WaliSantriPage = () => {
     const showToast = useToast()
@@ -215,10 +218,14 @@ const WaliSantriPage = () => {
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'Mutqin': return <span className="wali-badge hadir">Mutqin</span>
-            case 'Lancar': return <span className="wali-badge izin">Lancar</span>
-            case 'Perbaikan': return <span className="wali-badge sakit">Perbaikan</span>
-            default: return <span className="wali-badge">{status}</span>
+            case 'Mutqin': return <Badge variant="success">Mutqin</Badge>
+            case 'Lancar': return <Badge variant="info">Lancar</Badge>
+            case 'Perbaikan': return <Badge variant="warning">Perbaikan</Badge>
+            case 'hadir': return <Badge variant="success">Hadir</Badge>
+            case 'izin': return <Badge variant="info">Izin</Badge>
+            case 'sakit': return <Badge variant="warning">Sakit</Badge>
+            case 'alpha': return <Badge variant="danger">Alpha</Badge>
+            default: return <Badge variant="neutral">{status}</Badge>
         }
     }
 
@@ -232,376 +239,391 @@ const WaliSantriPage = () => {
     }
 
     const menuItems = [
-        { id: 'hafalan', title: 'Laporan Hafalan', desc: 'Lihat riwayat setoran dan muroja\'ah', icon: Book },
-        { id: 'nilai', title: 'Laporan Nilai', desc: 'Lihat nilai akademik per semester', icon: Award },
-        { id: 'presensi', title: 'Laporan Presensi', desc: 'Lihat rekap kehadiran santri', icon: Calendar },
-        { id: 'raport', title: 'Laporan Raport', desc: 'Lihat raport lengkap semester', icon: FileText }
+        { id: 'hafalan', title: 'Laporan Hafalan', desc: 'Lihat riwayat setoran dan muroja\'ah', icon: Book, color: 'bg-emerald-100 text-emerald-600' },
+        { id: 'nilai', title: 'Laporan Nilai', desc: 'Lihat nilai akademik per semester', icon: Award, color: 'bg-blue-100 text-blue-600' },
+        { id: 'presensi', title: 'Laporan Presensi', desc: 'Lihat rekap kehadiran santri', icon: Calendar, color: 'bg-amber-100 text-amber-600' },
+        { id: 'raport', title: 'Laporan Raport', desc: 'Lihat raport lengkap semester', icon: FileText, color: 'bg-violet-100 text-violet-600' }
     ]
 
+    const inputClass = "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+    const labelClass = "block text-sm font-medium text-gray-700 mb-1"
+
     return (
-        <div className="wali-santri-page">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">Menu Wali Santri</h1>
-                    <p className="page-subtitle">Portal informasi akademik dan kegiatan santri</p>
-                </div>
-            </div>
+            <PageHeader
+                title="Menu Wali Santri"
+                description="Portal informasi akademik dan kegiatan santri"
+                icon={Book}
+            />
 
             {/* Menu Grid */}
             {!activeMenu && (
-                <div className="wali-menu-grid">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {menuItems.map(item => (
-                        <div
+                        <Card
                             key={item.id}
-                            className="wali-menu-card"
+                            className="cursor-pointer hover:-translate-y-1 transition-transform border-gray-200 hover:shadow-md"
                             onClick={() => handleMenuClick(item.id)}
                         >
-                            <div className={`wali-menu-icon ${item.id}`}>
-                                <item.icon size={28} />
+                            <div className="p-6 text-center flex flex-col items-center">
+                                <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 ${item.color}`}>
+                                    <item.icon size={28} />
+                                </div>
+                                <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
+                                <p className="text-gray-500 text-sm">{item.desc}</p>
                             </div>
-                            <div className="wali-menu-content">
-                                <h3>{item.title}</h3>
-                                <p>{item.desc}</p>
-                            </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
             )}
 
             {/* ==================== LAPORAN HAFALAN ==================== */}
             {activeMenu === 'hafalan' && (
-                <div className="wali-report-section">
-                    <div className="wali-report-header">
-                        <h2><Book size={22} /> Laporan Hafalan</h2>
-                        <button className="btn-back" onClick={handleBack}><ArrowLeft size={16} /> Kembali</button>
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold flex items-center gap-2"><Book size={22} className="text-emerald-600" /> Laporan Hafalan</h2>
+                        <Button variant="secondary" onClick={handleBack}><ArrowLeft size={16} /> Kembali</Button>
                     </div>
 
-                    <div className="wali-filter-bar">
-                        <div className="wali-filter-group">
-                            <label>Santri</label>
-                            <select value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
-                                <option value="">-- Pilih Santri --</option>
-                                {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
-                            </select>
+                    <Card className="p-4 border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label className={labelClass}>Santri</label>
+                                <select className={inputClass} value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
+                                    <option value="">-- Pilih Santri --</option>
+                                    {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Dari Tanggal</label>
+                                <input type="date" className={inputClass} value={dateRange.dari} onChange={(e) => setDateRange({ ...dateRange, dari: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Sampai Tanggal</label>
+                                <input type="date" className={inputClass} value={dateRange.sampai} onChange={(e) => setDateRange({ ...dateRange, sampai: e.target.value })} />
+                            </div>
+                            <Button onClick={fetchHafalan} disabled={loading} isLoading={loading}>
+                                <RefreshCw size={16} /> Tampilkan
+                            </Button>
                         </div>
-                        <div className="wali-filter-group">
-                            <label>Dari Tanggal</label>
-                            <input type="date" value={dateRange.dari} onChange={(e) => setDateRange({ ...dateRange, dari: e.target.value })} />
-                        </div>
-                        <div className="wali-filter-group">
-                            <label>Sampai Tanggal</label>
-                            <input type="date" value={dateRange.sampai} onChange={(e) => setDateRange({ ...dateRange, sampai: e.target.value })} />
-                        </div>
-                        <div className="wali-filter-group" style={{ alignSelf: 'flex-end' }}>
-                            <button className="btn btn-primary" onClick={fetchHafalan} disabled={loading}>
-                                {loading ? <RefreshCw size={16} className="spin" /> : <RefreshCw size={16} />} Tampilkan
-                            </button>
-                        </div>
-                    </div>
+                    </Card>
 
                     {hafalanData.length > 0 ? (
                         <>
-                            <div className="wali-summary-cards">
-                                <div className="wali-summary-card success">
-                                    <div className="value">{hafalanData.filter(h => h.status === 'Mutqin').length}</div>
-                                    <div className="label">Mutqin</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-emerald-700">{hafalanData.filter(h => h.status === 'Mutqin').length}</div>
+                                    <div className="text-xs text-emerald-600 font-medium uppercase tracking-wide">Mutqin</div>
                                 </div>
-                                <div className="wali-summary-card info">
-                                    <div className="value">{hafalanData.filter(h => h.status === 'Lancar').length}</div>
-                                    <div className="label">Lancar</div>
+                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-blue-700">{hafalanData.filter(h => h.status === 'Lancar').length}</div>
+                                    <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">Lancar</div>
                                 </div>
-                                <div className="wali-summary-card warning">
-                                    <div className="value">{hafalanData.filter(h => h.status === 'Perbaikan').length}</div>
-                                    <div className="label">Perbaikan</div>
+                                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-amber-700">{hafalanData.filter(h => h.status === 'Perbaikan').length}</div>
+                                    <div className="text-xs text-amber-600 font-medium uppercase tracking-wide">Perbaikan</div>
                                 </div>
-                                <div className="wali-summary-card">
-                                    <div className="value">{hafalanData.length}</div>
-                                    <div className="label">Total Setoran</div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-gray-700">{hafalanData.length}</div>
+                                    <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">Total Setoran</div>
                                 </div>
                             </div>
 
-                            <div className="table-wrapper">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>Tanggal</th>
-                                            <th>Juz</th>
-                                            <th>Surat</th>
-                                            <th>Ayat</th>
-                                            <th>Jenis</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {hafalanData.map((h, i) => (
-                                            <tr key={h.id}>
-                                                <td>{i + 1}</td>
-                                                <td>{new Date(h.tanggal).toLocaleDateString('id-ID')}</td>
-                                                <td>Juz {h.juz_mulai || h.juz || '-'}{(h.juz_selesai && h.juz_selesai !== h.juz_mulai) ? ` - ${h.juz_selesai}` : ''}</td>
-                                                <td>{h.surah_mulai || h.surah || '-'}{(h.surah_selesai && h.surah_selesai !== h.surah_mulai) ? ` s/d ${h.surah_selesai}` : ''}</td>
-                                                <td>{h.ayat_mulai || 1} - {h.ayat_selesai || 1}</td>
-                                                <td>{h.jenis || 'Setoran'}</td>
-                                                <td>{getStatusBadge(h.status)}</td>
+                            <Card className="overflow-hidden border-gray-200">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                                            <tr>
+                                                <th className="px-6 py-4 w-12 text-center">No</th>
+                                                <th className="px-6 py-4">Tanggal</th>
+                                                <th className="px-6 py-4">Juz</th>
+                                                <th className="px-6 py-4">Surat</th>
+                                                <th className="px-6 py-4">Ayat</th>
+                                                <th className="px-6 py-4">Jenis</th>
+                                                <th className="px-6 py-4">Status</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {hafalanData.map((h, i) => (
+                                                <tr key={h.id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 text-center">{i + 1}</td>
+                                                    <td className="px-6 py-4">{new Date(h.tanggal).toLocaleDateString('id-ID')}</td>
+                                                    <td className="px-6 py-4">Juz {h.juz_mulai || h.juz || '-'}{(h.juz_selesai && h.juz_selesai !== h.juz_mulai) ? ` - ${h.juz_selesai}` : ''}</td>
+                                                    <td className="px-6 py-4">{h.surah_mulai || h.surah || '-'}{(h.surah_selesai && h.surah_selesai !== h.surah_mulai) ? ` s/d ${h.surah_selesai}` : ''}</td>
+                                                    <td className="px-6 py-4">{h.ayat_mulai || 1} - {h.ayat_selesai || 1}</td>
+                                                    <td className="px-6 py-4 text-gray-500">{h.jenis || 'Setoran'}</td>
+                                                    <td className="px-6 py-4">{getStatusBadge(h.status)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
                         </>
                     ) : (
-                        <div className="wali-empty-state">
-                            <Book size={48} />
-                            <p>Pilih santri dan klik Tampilkan untuk melihat data hafalan</p>
-                        </div>
+                        <EmptyState
+                            icon={Book}
+                            title="Belum ada data hafalan"
+                            message="Pilih santri dan klik Tampilkan untuk melihat data hafalan"
+                        />
                     )}
                 </div>
             )}
 
             {/* ==================== LAPORAN NILAI ==================== */}
             {activeMenu === 'nilai' && (
-                <div className="wali-report-section">
-                    <div className="wali-report-header">
-                        <h2><Award size={22} /> Laporan Nilai</h2>
-                        <button className="btn-back" onClick={handleBack}><ArrowLeft size={16} /> Kembali</button>
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold flex items-center gap-2"><Award size={22} className="text-blue-600" /> Laporan Nilai</h2>
+                        <Button variant="secondary" onClick={handleBack}><ArrowLeft size={16} /> Kembali</Button>
                     </div>
 
-                    <div className="wali-filter-bar">
-                        <div className="wali-filter-group">
-                            <label>Santri</label>
-                            <select value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
-                                <option value="">-- Pilih Santri --</option>
-                                {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
-                            </select>
+                    <Card className="p-4 border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label className={labelClass}>Santri</label>
+                                <select className={inputClass} value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
+                                    <option value="">-- Pilih Santri --</option>
+                                    {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Semester</label>
+                                <select className={inputClass} value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
+                                    <option value="">-- Pilih Semester --</option>
+                                    {semesterList.map(s => <option key={s.id} value={s.id}>{s.nama} - {s.tahun_ajaran}</option>)}
+                                </select>
+                            </div>
+                            <Button onClick={fetchNilai} disabled={loading} isLoading={loading}>
+                                <RefreshCw size={16} /> Tampilkan
+                            </Button>
                         </div>
-                        <div className="wali-filter-group">
-                            <label>Semester</label>
-                            <select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
-                                <option value="">-- Pilih Semester --</option>
-                                {semesterList.map(s => <option key={s.id} value={s.id}>{s.nama} - {s.tahun_ajaran}</option>)}
-                            </select>
-                        </div>
-                        <div className="wali-filter-group" style={{ alignSelf: 'flex-end' }}>
-                            <button className="btn btn-primary" onClick={fetchNilai} disabled={loading}>
-                                {loading ? <RefreshCw size={16} className="spin" /> : <RefreshCw size={16} />} Tampilkan
-                            </button>
-                        </div>
-                    </div>
+                    </Card>
 
                     {nilaiData.length > 0 ? (
                         <>
-                            <div className="wali-summary-cards">
-                                <div className="wali-summary-card success">
-                                    <div className="value">{(nilaiData.reduce((s, n) => s + (n.nilai_akhir || 0), 0) / nilaiData.length).toFixed(1)}</div>
-                                    <div className="label">Rata-rata</div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-indigo-700">{(nilaiData.reduce((s, n) => s + (n.nilai_akhir || 0), 0) / nilaiData.length).toFixed(1)}</div>
+                                    <div className="text-xs text-indigo-600 font-medium uppercase tracking-wide">Rata-rata</div>
                                 </div>
-                                <div className="wali-summary-card info">
-                                    <div className="value">{nilaiData.length}</div>
-                                    <div className="label">Mata Pelajaran</div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-gray-700">{nilaiData.length}</div>
+                                    <div className="text-xs text-gray-600 font-medium uppercase tracking-wide">Mata Pelajaran</div>
                                 </div>
                             </div>
 
-                            <div className="table-wrapper">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>Mata Pelajaran</th>
-                                            <th>Kategori</th>
-                                            <th>Tugas</th>
-                                            <th>UTS</th>
-                                            <th>UAS</th>
-                                            <th>Nilai Akhir</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {nilaiData.map((n, i) => (
-                                            <tr key={i}>
-                                                <td>{i + 1}</td>
-                                                <td>{n.mapel?.nama}</td>
-                                                <td>{n.mapel?.kategori}</td>
-                                                <td>{n.nilai_tugas || '-'}</td>
-                                                <td>{n.nilai_uts || '-'}</td>
-                                                <td>{n.nilai_uas || '-'}</td>
-                                                <td><strong>{n.nilai_akhir?.toFixed(0) || '-'}</strong></td>
+                            <Card className="overflow-hidden border-gray-200">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                                            <tr>
+                                                <th className="px-6 py-4 w-12 text-center">No</th>
+                                                <th className="px-6 py-4">Mata Pelajaran</th>
+                                                <th className="px-6 py-4">Kategori</th>
+                                                <th className="px-6 py-4 text-center">Tugas</th>
+                                                <th className="px-6 py-4 text-center">UTS</th>
+                                                <th className="px-6 py-4 text-center">UAS</th>
+                                                <th className="px-6 py-4 text-center">Nilai Akhir</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {nilaiData.map((n, i) => (
+                                                <tr key={i} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 text-center">{i + 1}</td>
+                                                    <td className="px-6 py-4 font-medium text-gray-900">{n.mapel?.nama}</td>
+                                                    <td className="px-6 py-4 text-gray-500">{n.mapel?.kategori}</td>
+                                                    <td className="px-6 py-4 text-center">{n.nilai_tugas || '-'}</td>
+                                                    <td className="px-6 py-4 text-center">{n.nilai_uts || '-'}</td>
+                                                    <td className="px-6 py-4 text-center">{n.nilai_uas || '-'}</td>
+                                                    <td className="px-6 py-4 text-center font-bold text-primary-600">{n.nilai_akhir?.toFixed(0) || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
                         </>
                     ) : (
-                        <div className="wali-empty-state">
-                            <Award size={48} />
-                            <p>Pilih santri dan semester untuk melihat data nilai</p>
-                        </div>
+                        <EmptyState
+                            icon={Award}
+                            title="Belum ada data nilai"
+                            message="Pilih santri dan semester untuk melihat data nilai"
+                        />
                     )}
                 </div>
             )}
 
             {/* ==================== LAPORAN PRESENSI ==================== */}
             {activeMenu === 'presensi' && (
-                <div className="wali-report-section">
-                    <div className="wali-report-header">
-                        <h2><Calendar size={22} /> Laporan Presensi</h2>
-                        <button className="btn-back" onClick={handleBack}><ArrowLeft size={16} /> Kembali</button>
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold flex items-center gap-2"><Calendar size={22} className="text-amber-600" /> Laporan Presensi</h2>
+                        <Button variant="secondary" onClick={handleBack}><ArrowLeft size={16} /> Kembali</Button>
                     </div>
 
-                    <div className="wali-filter-bar">
-                        <div className="wali-filter-group">
-                            <label>Santri</label>
-                            <select value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
-                                <option value="">-- Pilih Santri --</option>
-                                {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
-                            </select>
+                    <Card className="p-4 border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label className={labelClass}>Santri</label>
+                                <select className={inputClass} value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
+                                    <option value="">-- Pilih Santri --</option>
+                                    {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Dari Tanggal</label>
+                                <input type="date" className={inputClass} value={dateRange.dari} onChange={(e) => setDateRange({ ...dateRange, dari: e.target.value })} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Sampai Tanggal</label>
+                                <input type="date" className={inputClass} value={dateRange.sampai} onChange={(e) => setDateRange({ ...dateRange, sampai: e.target.value })} />
+                            </div>
+                            <Button onClick={fetchPresensi} disabled={loading} isLoading={loading}>
+                                <RefreshCw size={16} /> Tampilkan
+                            </Button>
                         </div>
-                        <div className="wali-filter-group">
-                            <label>Dari Tanggal</label>
-                            <input type="date" value={dateRange.dari} onChange={(e) => setDateRange({ ...dateRange, dari: e.target.value })} />
-                        </div>
-                        <div className="wali-filter-group">
-                            <label>Sampai Tanggal</label>
-                            <input type="date" value={dateRange.sampai} onChange={(e) => setDateRange({ ...dateRange, sampai: e.target.value })} />
-                        </div>
-                        <div className="wali-filter-group" style={{ alignSelf: 'flex-end' }}>
-                            <button className="btn btn-primary" onClick={fetchPresensi} disabled={loading}>
-                                {loading ? <RefreshCw size={16} className="spin" /> : <RefreshCw size={16} />} Tampilkan
-                            </button>
-                        </div>
-                    </div>
+                    </Card>
 
                     {presensiData.length > 0 ? (
                         <>
-                            <div className="wali-summary-cards">
-                                <div className="wali-summary-card success">
-                                    <div className="value">{getPresensiStats().hadir}</div>
-                                    <div className="label">Hadir</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-green-50 border border-green-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-green-700">{getPresensiStats().hadir}</div>
+                                    <div className="text-xs text-green-600 font-medium uppercase tracking-wide">Hadir</div>
                                 </div>
-                                <div className="wali-summary-card info">
-                                    <div className="value">{getPresensiStats().izin}</div>
-                                    <div className="label">Izin</div>
+                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-blue-700">{getPresensiStats().izin}</div>
+                                    <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">Izin</div>
                                 </div>
-                                <div className="wali-summary-card warning">
-                                    <div className="value">{getPresensiStats().sakit}</div>
-                                    <div className="label">Sakit</div>
+                                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-amber-700">{getPresensiStats().sakit}</div>
+                                    <div className="text-xs text-amber-600 font-medium uppercase tracking-wide">Sakit</div>
                                 </div>
-                                <div className="wali-summary-card danger">
-                                    <div className="value">{getPresensiStats().alpha}</div>
-                                    <div className="label">Alpha</div>
+                                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                                    <div className="text-2xl font-bold text-red-700">{getPresensiStats().alpha}</div>
+                                    <div className="text-xs text-red-600 font-medium uppercase tracking-wide">Alpha</div>
                                 </div>
                             </div>
 
-                            <div className="table-wrapper">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>No</th>
-                                            <th>Tanggal</th>
-                                            <th>Hari</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {presensiData.map((p, i) => {
-                                            const date = new Date(p.tanggal)
-                                            const hari = date.toLocaleDateString('id-ID', { weekday: 'long' })
-                                            return (
-                                                <tr key={p.id}>
-                                                    <td>{i + 1}</td>
-                                                    <td>{date.toLocaleDateString('id-ID')}</td>
-                                                    <td>{hari}</td>
-                                                    <td><span className={`wali-badge ${p.status}`}>{p.status.charAt(0).toUpperCase() + p.status.slice(1)}</span></td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <Card className="overflow-hidden border-gray-200">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+                                            <tr>
+                                                <th className="px-6 py-4 w-12 text-center">No</th>
+                                                <th className="px-6 py-4">Tanggal</th>
+                                                <th className="px-6 py-4">Hari</th>
+                                                <th className="px-6 py-4">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {presensiData.map((p, i) => {
+                                                const date = new Date(p.tanggal)
+                                                const hari = date.toLocaleDateString('id-ID', { weekday: 'long' })
+                                                return (
+                                                    <tr key={p.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 text-center">{i + 1}</td>
+                                                        <td className="px-6 py-4">{date.toLocaleDateString('id-ID')}</td>
+                                                        <td className="px-6 py-4">{hari}</td>
+                                                        <td className="px-6 py-4">{getStatusBadge(p.status)}</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
                         </>
                     ) : (
-                        <div className="wali-empty-state">
-                            <Calendar size={48} />
-                            <p>Pilih santri dan klik Tampilkan untuk melihat data presensi</p>
-                        </div>
+                        <EmptyState
+                            icon={Calendar}
+                            title="Belum ada data presensi"
+                            message="Pilih santri dan klik Tampilkan untuk melihat data presensi"
+                        />
                     )}
                 </div>
             )}
 
             {/* ==================== LAPORAN RAPORT ==================== */}
             {activeMenu === 'raport' && (
-                <div className="wali-report-section">
-                    <div className="wali-report-header">
-                        <h2><FileText size={22} /> Laporan Raport</h2>
-                        <button className="btn-back" onClick={handleBack}><ArrowLeft size={16} /> Kembali</button>
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold flex items-center gap-2"><FileText size={22} className="text-violet-600" /> Laporan Raport</h2>
+                        <Button variant="secondary" onClick={handleBack}><ArrowLeft size={16} /> Kembali</Button>
                     </div>
 
-                    <div className="wali-filter-bar">
-                        <div className="wali-filter-group">
-                            <label>Santri</label>
-                            <select value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
-                                <option value="">-- Pilih Santri --</option>
-                                {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
-                            </select>
+                    <Card className="p-4 border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label className={labelClass}>Santri</label>
+                                <select className={inputClass} value={selectedSantri} onChange={(e) => setSelectedSantri(e.target.value)}>
+                                    <option value="">-- Pilih Santri --</option>
+                                    {santriList.map(s => <option key={s.id} value={s.id}>{s.nama}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Semester</label>
+                                <select className={inputClass} value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
+                                    <option value="">-- Pilih Semester --</option>
+                                    {semesterList.map(s => <option key={s.id} value={s.id}>{s.nama} - {s.tahun_ajaran}</option>)}
+                                </select>
+                            </div>
+                            <Button onClick={fetchRaport} disabled={loading} isLoading={loading}>
+                                <RefreshCw size={16} /> Lihat Raport
+                            </Button>
                         </div>
-                        <div className="wali-filter-group">
-                            <label>Semester</label>
-                            <select value={selectedSemester} onChange={(e) => setSelectedSemester(e.target.value)}>
-                                <option value="">-- Pilih Semester --</option>
-                                {semesterList.map(s => <option key={s.id} value={s.id}>{s.nama} - {s.tahun_ajaran}</option>)}
-                            </select>
-                        </div>
-                        <div className="wali-filter-group" style={{ alignSelf: 'flex-end' }}>
-                            <button className="btn btn-primary" onClick={fetchRaport} disabled={loading}>
-                                {loading ? <RefreshCw size={16} className="spin" /> : <RefreshCw size={16} />} Lihat Raport
-                            </button>
-                        </div>
-                    </div>
+                    </Card>
 
                     {raportData ? (
-                        <div className="raport-preview-content">
+                        <Card className="p-6 border-gray-200">
                             {/* Biodata */}
-                            <div className="wali-summary-cards mb-4">
-                                <div className="wali-summary-card">
-                                    <div className="label">Nama</div>
-                                    <div className="value" style={{ fontSize: '1rem' }}>{raportData.santri?.nama}</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Nama</div>
+                                    <div className="font-semibold text-gray-900">{raportData.santri?.nama}</div>
                                 </div>
-                                <div className="wali-summary-card">
-                                    <div className="label">Kelas</div>
-                                    <div className="value" style={{ fontSize: '1rem' }}>{raportData.santri?.kelas?.nama || '-'}</div>
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Kelas</div>
+                                    <div className="font-semibold text-gray-900">{raportData.santri?.kelas?.nama || '-'}</div>
                                 </div>
-                                <div className="wali-summary-card">
-                                    <div className="label">Semester</div>
-                                    <div className="value" style={{ fontSize: '1rem' }}>{raportData.semester?.nama}</div>
+                                <div className="bg-gray-50 p-3 rounded-lg">
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Semester</div>
+                                    <div className="font-semibold text-gray-900">{raportData.semester?.nama}</div>
                                 </div>
-                                <div className="wali-summary-card success">
-                                    <div className="label">Rata-rata Nilai</div>
-                                    <div className="value">{raportData.stats.rataRata.toFixed(1)}</div>
+                                <div className="bg-primary-50 p-3 rounded-lg border border-primary-100">
+                                    <div className="text-xs text-primary-600 uppercase tracking-wider font-semibold mb-1">Rata-rata Nilai</div>
+                                    <div className="font-bold text-primary-700 text-lg">{raportData.stats.rataRata.toFixed(1)}</div>
                                 </div>
                             </div>
 
                             {/* Nilai */}
-                            <h4 style={{ marginBottom: '12px', color: 'var(--text-dark)' }}>📚 Nilai Akademik</h4>
-                            <div className="table-wrapper mb-4">
-                                <table className="table">
-                                    <thead>
+                            <h4 className="flex items-center gap-2 font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">
+                                <Award size={18} className="text-blue-600" /> Nilai Akademik
+                            </h4>
+                            <div className="overflow-x-auto mb-8 rounded-lg border border-gray-200">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-gray-50 text-gray-600 font-medium">
                                         <tr>
-                                            <th>No</th>
-                                            <th>Mata Pelajaran</th>
-                                            <th>Nilai</th>
-                                            <th>Predikat</th>
+                                            <th className="px-4 py-3 w-10 text-center">No</th>
+                                            <th className="px-4 py-3">Mata Pelajaran</th>
+                                            <th className="px-4 py-3 text-center">Nilai</th>
+                                            <th className="px-4 py-3 text-center">Predikat</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-gray-100">
                                         {raportData.nilai.map((n, i) => {
                                             const nilai = n.nilai_akhir || 0
                                             const predikat = nilai >= 90 ? 'A' : nilai >= 80 ? 'B' : nilai >= 70 ? 'C' : 'D'
                                             return (
                                                 <tr key={i}>
-                                                    <td>{i + 1}</td>
-                                                    <td>{n.mapel?.nama}</td>
-                                                    <td><strong>{nilai.toFixed(0)}</strong></td>
-                                                    <td><span className={`wali-badge ${predikat === 'A' ? 'hadir' : predikat === 'B' ? 'izin' : 'sakit'}`}>{predikat}</span></td>
+                                                    <td className="px-4 py-3 text-center">{i + 1}</td>
+                                                    <td className="px-4 py-3">{n.mapel?.nama}</td>
+                                                    <td className="px-4 py-3 text-center font-bold text-gray-900">{nilai.toFixed(0)}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <Badge variant={predikat === 'A' ? 'success' : predikat === 'B' ? 'info' : 'warning'}>{predikat}</Badge>
+                                                    </td>
                                                 </tr>
                                             )
                                         })}
@@ -610,31 +632,57 @@ const WaliSantriPage = () => {
                             </div>
 
                             {/* Pencapaian Hafalan & Perilaku */}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
-                                    <h4 style={{ marginBottom: '12px', color: 'var(--text-dark)' }}>📖 Pencapaian Tahfizh</h4>
-                                    <div className="wali-summary-card" style={{ textAlign: 'left', padding: '16px' }}>
-                                        <p><strong>Jumlah Hafalan:</strong> {raportData.hafalan.jumlahHafalan}</p>
-                                        <p><strong>Predikat:</strong> {raportData.hafalan.predikat}</p>
-                                        <p><strong>Total Hafalan:</strong> {raportData.hafalan.totalHafalan}</p>
+                                    <h4 className="flex items-center gap-2 font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">
+                                        <Book size={18} className="text-emerald-600" /> Pencapaian Tahfizh
+                                    </h4>
+                                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                                            <span className="text-gray-600">Jumlah Hafalan</span>
+                                            <span className="font-semibold text-gray-900">{raportData.hafalan.jumlahHafalan}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                                            <span className="text-gray-600">Predikat</span>
+                                            <span className="font-semibold text-gray-900">{raportData.hafalan.predikat}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Total Hafalan</span>
+                                            <span className="font-semibold text-gray-900">{raportData.hafalan.totalHafalan}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 style={{ marginBottom: '12px', color: 'var(--text-dark)' }}>🧑‍🎓 Perilaku</h4>
-                                    <div className="wali-summary-card" style={{ textAlign: 'left', padding: '16px' }}>
-                                        <p><strong>Ketekunan:</strong> {raportData.perilaku.ketekunan}</p>
-                                        <p><strong>Kedisiplinan:</strong> {raportData.perilaku.kedisiplinan}</p>
-                                        <p><strong>Kebersihan:</strong> {raportData.perilaku.kebersihan}</p>
-                                        <p><strong>Kerapian:</strong> {raportData.perilaku.kerapian}</p>
+                                    <h4 className="flex items-center gap-2 font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">
+                                        <User size={18} className="text-amber-600" /> Perilaku
+                                    </h4>
+                                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                                            <span className="text-gray-600">Ketekunan</span>
+                                            <span className="font-semibold text-gray-900">{raportData.perilaku.ketekunan}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                                            <span className="text-gray-600">Kedisiplinan</span>
+                                            <span className="font-semibold text-gray-900">{raportData.perilaku.kedisiplinan}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-gray-200 pb-2">
+                                            <span className="text-gray-600">Kebersihan</span>
+                                            <span className="font-semibold text-gray-900">{raportData.perilaku.kebersihan}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Kerapian</span>
+                                            <span className="font-semibold text-gray-900">{raportData.perilaku.kerapian}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </Card>
                     ) : (
-                        <div className="wali-empty-state">
-                            <FileText size={48} />
-                            <p>Pilih santri dan semester untuk melihat raport</p>
-                        </div>
+                        <EmptyState
+                            icon={FileText}
+                            title="Belum ada data raport"
+                            message="Pilih santri dan semester untuk melihat raport"
+                        />
                     )}
                 </div>
             )}

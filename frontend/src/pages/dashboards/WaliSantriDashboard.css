@@ -1,388 +1,362 @@
 /* =====================================================
-   Wali Santri Dashboard Styles - PREMIUM
+   Wali Santri Dashboard - Enterprise Premium
+   Accent Color: Amber (#D97706)
    ===================================================== */
+
+[data-dashboard="walisantri"] {
+    --dashboard-accent: var(--accent-walisantri);
+    --dashboard-accent-hover: var(--accent-walisantri-hover);
+}
 
 .walisantri-dashboard {
     padding: 0;
 }
 
-/* Welcome Section - PREMIUM */
+/* === WELCOME HEADER === */
 .dashboard-welcome.walisantri {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
-    box-shadow:
-        0 10px 40px -10px rgba(139, 92, 246, 0.5),
-        0 4px 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-8) var(--space-8);
+    background: var(--dashboard-accent);
+    border-radius: var(--radius-xl);
+    color: white;
+    margin-bottom: var(--space-6);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-welcome.walisantri::after {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
 }
 
 .dashboard-welcome.walisantri .welcome-content h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    margin: 0 0 var(--space-1) 0;
     color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .dashboard-welcome.walisantri .welcome-content p {
     margin: 0;
-    opacity: 1;
     color: rgba(255, 255, 255, 0.95);
-    font-size: 0.95rem;
+    font-size: var(--font-size-sm);
 }
 
-/* Santri Selector - Enhanced */
+/* === SANTRI SELECTOR === */
 .santri-selector {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    padding: 20px;
-    background: var(--bg-secondary, white);
-    border-radius: 16px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.05),
-        0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    background: var(--bg-card);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
 }
 
 .selector-label {
-    font-weight: 600;
-    color: var(--text-secondary, #6b7280);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: var(--space-3);
 }
 
 .santri-tabs {
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .santri-tab {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 18px;
-    background: var(--bg-tertiary, #f9fafb);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 10px;
-    font-size: 0.9rem;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-section);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-body);
+    font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--text-primary, #1f2937);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .santri-tab:hover {
-    background: rgba(139, 92, 246, 0.1);
-    border-color: #8b5cf6;
-    color: #8b5cf6;
-    transform: translateY(-2px);
+    background: var(--bg-card);
+    border-color: var(--dashboard-accent);
 }
 
 .santri-tab.active {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-    border-color: transparent;
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
     color: white;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
-/* Profile Card */
+/* === PROFILE CARD === */
 .wali-card.profile-card {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 24px;
-    margin-bottom: 24px;
+    gap: var(--space-6);
+    padding: var(--space-8);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
 }
 
 .profile-avatar {
     width: 80px;
     height: 80px;
+    border-radius: 50%;
+    background: var(--bg-section);
+    border: 3px solid var(--dashboard-accent);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-    border-radius: 50%;
-    color: white;
+    color: var(--dashboard-accent);
+    flex-shrink: 0;
 }
 
 .profile-info h2 {
-    margin: 0 0 8px 0;
-    font-size: 1.5rem;
-    color: var(--text-primary, #1f2937);
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-heading);
+    margin: 0 0 var(--space-2) 0;
 }
 
 .profile-details {
     display: flex;
-    gap: 20px;
+    gap: var(--space-6);
+    flex-wrap: wrap;
 }
 
 .profile-details span {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--text-secondary, #6b7280);
-    font-size: 0.9rem;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
 }
 
-/* Stats Grid */
+/* === STATS GRID === */
 .wali-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 .wali-stat-card {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 20px;
-    background: var(--bg-secondary, white);
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #e5e7eb);
+    gap: var(--space-4);
+    padding: var(--space-6);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.wali-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .wali-stat-card .stat-icon {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
-    color: white;
+    flex-shrink: 0;
 }
 
-.stat-icon.hafalan {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+.wali-stat-card .stat-icon.hafalan {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
 }
 
-.stat-icon.lancar {
-    background: linear-gradient(135deg, #10b981, #059669);
+.wali-stat-card .stat-icon.lancar {
+    background: var(--color-success-bg);
+    color: var(--color-success);
 }
 
-.stat-icon.tagihan {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+.wali-stat-card .stat-icon.tagihan {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
 }
 
-.stat-icon.lunas {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+.wali-stat-card .stat-icon.lunas {
+    background: var(--color-info-bg);
+    color: var(--color-info);
 }
 
 .wali-stat-card .stat-info {
-    display: flex;
-    flex-direction: column;
+    flex: 1;
 }
 
 .wali-stat-card .stat-value {
-    font-size: 1.75rem;
+    font-size: var(--font-size-2xl);
     font-weight: 700;
-    color: var(--text-primary, #1f2937);
+    color: var(--text-heading);
+    display: block;
+    margin-bottom: var(--space-1);
 }
 
 .wali-stat-card .stat-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary, #6b7280);
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
-/* Cards Grid */
+/* === CARDS GRID === */
 .wali-cards-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 .wali-card {
-    background: var(--bg-secondary, white);
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #e5e7eb);
-    padding: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
 }
 
 .wali-card .card-header {
-    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
 }
 
 .wali-card .card-header h3 {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 1rem;
+    gap: var(--space-2);
+    font-size: var(--font-size-lg);
     font-weight: 600;
+    color: var(--text-heading);
     margin: 0;
-    color: var(--text-primary, #1f2937);
+}
+
+.wali-card .card-body {
+    color: var(--text-body);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
 }
 
 .wali-card .card-body.placeholder {
-    color: var(--text-secondary, #6b7280);
-    font-size: 0.9rem;
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-muted);
 }
 
-.wali-card .card-body.placeholder p {
-    margin: 0;
-}
-
-/* Notice */
+/* === NOTICE === */
 .wali-notice {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px 20px;
-    background: rgba(139, 92, 246, 0.1);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 12px;
-    color: #7c3aed;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-info-bg);
+    border: 1px solid var(--color-info);
+    border-radius: var(--radius-lg);
+    color: var(--color-info);
 }
 
 .wali-notice strong {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: var(--space-1);
+    font-weight: 600;
 }
 
 .wali-notice p {
+    font-size: var(--font-size-sm);
     margin: 0;
-    font-size: 0.85rem;
-    opacity: 0.9;
 }
 
-/* Loading State */
-.loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    color: var(--text-secondary, #6b7280);
-}
-
-.loading-state .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #e5e7eb;
-    border-top-color: #8b5cf6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 12px;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Empty State */
+/* === STATES === */
+.loading-state,
 .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 20px;
+    padding: var(--space-12);
     text-align: center;
-    color: var(--text-secondary, #6b7280);
+    color: var(--text-muted);
 }
 
-.empty-state h3 {
-    margin: 16px 0 8px;
-    color: var(--text-primary, #1f2937);
+.loading-state .spinner {
+    margin-bottom: var(--space-4);
 }
 
-.empty-state p {
-    margin: 0;
-    max-width: 400px;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-    .wali-stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
+/* === RESPONSIVE === */
 @media (max-width: 768px) {
-
-    .wali-stats-grid,
-    .wali-cards-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .santri-selector {
+    .dashboard-welcome.walisantri {
         flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .santri-tabs {
-        flex-wrap: wrap;
+        gap: var(--space-3);
+        text-align: center;
+        padding: var(--space-6);
     }
 
     .wali-card.profile-card {
         flex-direction: column;
         text-align: center;
+        padding: var(--space-6);
     }
 
-    .profile-details {
+    .wali-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wali-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .santri-tabs {
         flex-direction: column;
-        gap: 8px;
+        align-items: stretch;
+    }
+
+    .santri-tab {
+        justify-content: center;
     }
 }
 
-/* ================================
-   Dark Mode Overrides
-   ================================ */
+/* === DARK MODE === */
+[data-theme="dark"] .wali-stat-card,
+[data-theme="dark"] .wali-card,
 [data-theme="dark"] .santri-selector {
-    background: #1e293b;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .selector-label {
-    color: #94a3b8;
+    background: var(--bg-card);
+    border-color: var(--border-default);
 }
 
 [data-theme="dark"] .santri-tab {
-    background: #0f172a;
-    border-color: #334155;
-    color: #e2e8f0;
+    background: var(--bg-section);
+    border-color: var(--border-default);
+    color: var(--text-body);
 }
 
-[data-theme="dark"] .wali-card {
-    background: #1e293b;
-    border-color: #334155;
+[data-theme="dark"] .santri-tab:hover {
+    border-color: var(--dashboard-accent);
 }
 
-[data-theme="dark"] .wali-card .card-header h3 {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .wali-card .card-body.placeholder {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .profile-info h2 {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .profile-details span {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .wali-stat-card {
-    background: #1e293b;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .wali-stat-card .stat-value {
-    color: #f1f5f9;
-}
-
-[data-theme="dark"] .wali-stat-card .stat-label {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .wali-notice {
-    background: rgba(139, 92, 246, 0.15);
-    border-color: rgba(139, 92, 246, 0.4);
-    color: #a78bfa;
-}
-
-[data-theme="dark"] .empty-state {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .empty-state h3 {
-    color: #e2e8f0;
+[data-theme="dark"] .santri-tab.active {
+    background: var(--dashboard-accent);
+    color: white;
 }

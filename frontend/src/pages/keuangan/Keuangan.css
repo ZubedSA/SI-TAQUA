@@ -2,44 +2,14 @@
    KEUANGAN MODULE STYLES - PROFESSIONAL
    ======================================== */
 
-/* Page Container */
+/* Page Container - Uses global standard from index.css */
 .keuangan-page {
-    /* Padding removed to avoid double padding with .content */
-    padding: 0;
     width: 100%;
-    max-width: 100%;
     margin: 0 auto;
 }
 
-/* Force Full Width for Tables - Desktop (Counteract .content padding: 32px) */
-/* Force Full Width for Tables - Desktop */
-.keuangan-page .table-container {
-    margin: 0;
-    width: 100%;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-}
+/* Table styles inherit from index.css */
 
-@media screen and (max-width: 768px) {
-    .keuangan-page {
-        padding: 0;
-    }
-
-    /* Full bleed for tables on mobile */
-    .keuangan-page .table-container,
-    .keuangan-page .data-card {
-        margin: 0;
-        width: 100%;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
-
-    .keuangan-page .table-wrapper {
-        padding: 0;
-    }
-}
 
 
 /* Page Header */
@@ -938,8 +908,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(71, 85, 105, 0.5);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1736,8 +1706,8 @@
 
 /* Payment Info Card */
 .payment-info-card {
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-    border: 1px solid #a7f3d0;
+    background: var(--bg-white);
+    border: 1px solid var(--border-color);
     border-radius: 14px;
     padding: 18px;
     margin-bottom: 20px;
@@ -1748,7 +1718,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(5, 150, 105, 0.1);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .payment-info-row:last-child {
@@ -1768,7 +1738,10 @@
 .payment-info-row.highlight {
     margin-top: 8px;
     padding-top: 12px;
-    border-top: 2px solid #a7f3d0;
+    border-top: 2px dashed var(--border-color);
+    background: var(--bg-light);
+    padding: 12px;
+    border-radius: 8px;
 }
 
 .payment-info-row.highlight strong {

@@ -28,7 +28,6 @@ import {
     RefreshCw
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useTheme } from '../../context/ThemeContext'
 import './KeuanganDashboard.css'
 
 // Register ChartJS
@@ -46,7 +45,6 @@ ChartJS.register(
  * Fokus pada kas, pembayaran, dan penyaluran dana
  */
 const KeuanganDashboard = () => {
-    const { isDark } = useTheme()
     const [keuanganStats, setKeuanganStats] = useState({
         pemasukan: 0,
         pengeluaran: 0,
@@ -210,7 +208,7 @@ const KeuanganDashboard = () => {
                 display: true,
                 position: 'top',
                 labels: {
-                    color: isDark ? '#e2e8f0' : '#4b5563',
+                    color: '#4b5563',
                     font: {
                         family: "'Inter', sans-serif",
                         size: 12
@@ -218,10 +216,10 @@ const KeuanganDashboard = () => {
                 }
             },
             tooltip: {
-                backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                titleColor: isDark ? '#f1f5f9' : '#1f2937',
-                bodyColor: isDark ? '#cbd5e1' : '#4b5563',
-                borderColor: isDark ? '#334155' : '#e5e7eb',
+                backgroundColor: '#ffffff',
+                titleColor: '#1f2937',
+                bodyColor: '#4b5563',
+                borderColor: '#e5e7eb',
                 borderWidth: 1,
                 padding: 12,
                 titleFont: { family: "'Inter', sans-serif", size: 14, weight: 'bold' },
@@ -233,11 +231,11 @@ const KeuanganDashboard = () => {
                 beginAtZero: true,
                 border: { display: false },
                 grid: {
-                    color: isDark ? '#334155' : '#f3f4f6',
+                    color: '#f3f4f6',
                 },
                 ticks: {
                     callback: (value) => formatCurrency(value, true),
-                    color: isDark ? '#94a3b8' : '#6b7280',
+                    color: '#6b7280',
                     font: {
                         family: "'Inter', sans-serif",
                         size: 11
@@ -250,7 +248,7 @@ const KeuanganDashboard = () => {
                     display: false
                 },
                 ticks: {
-                    color: isDark ? '#94a3b8' : '#6b7280',
+                    color: '#6b7280',
                     font: {
                         family: "'Inter', sans-serif",
                         size: 11
@@ -261,7 +259,7 @@ const KeuanganDashboard = () => {
     }
 
     return (
-        <div className="keuangan-dashboard">
+        <div className="keuangan-dashboard" data-dashboard="bendahara">
             {/* Welcome Header */}
             <div className="dashboard-welcome keuangan">
                 <div className="welcome-content">
@@ -276,39 +274,39 @@ const KeuanganDashboard = () => {
 
             {/* Financial Stats */}
             <div className="keuangan-stats-grid">
-                <div className="keuangan-stat-card income">
+                <div className="keuangan-stat-card">
                     <div className="stat-info">
                         <span className="stat-label">Total Pemasukan</span>
-                        <span className="stat-value">{loading ? '...' : formatCurrency(keuanganStats.pemasukan)}</span>
+                        <span className="stat-value green">{loading ? '...' : formatCurrency(keuanganStats.pemasukan, true)}</span>
                     </div>
-                    <div className="stat-icon-box">
+                    <div className="stat-icon-box green">
                         <ArrowUpCircle size={24} />
                     </div>
                 </div>
-                <div className="keuangan-stat-card expense">
+                <div className="keuangan-stat-card">
                     <div className="stat-info">
                         <span className="stat-label">Total Pengeluaran</span>
-                        <span className="stat-value">{loading ? '...' : formatCurrency(keuanganStats.pengeluaran)}</span>
+                        <span className="stat-value red">{loading ? '...' : formatCurrency(keuanganStats.pengeluaran, true)}</span>
                     </div>
-                    <div className="stat-icon-box">
+                    <div className="stat-icon-box red">
                         <ArrowDownCircle size={24} />
                     </div>
                 </div>
-                <div className="keuangan-stat-card payment">
+                <div className="keuangan-stat-card">
                     <div className="stat-info">
                         <span className="stat-label">Pembayaran Santri</span>
-                        <span className="stat-value">{loading ? '...' : formatCurrency(keuanganStats.pembayaran)}</span>
+                        <span className="stat-value blue">{loading ? '...' : formatCurrency(keuanganStats.pembayaran, true)}</span>
                     </div>
-                    <div className="stat-icon-box">
+                    <div className="stat-icon-box blue">
                         <CreditCard size={24} />
                     </div>
                 </div>
-                <div className={`keuangan-stat-card balance ${keuanganStats.saldo >= 0 ? 'positive' : 'negative'}`}>
+                <div className="keuangan-stat-card">
                     <div className="stat-info">
                         <span className="stat-label">Saldo Kas</span>
-                        <span className="stat-value">{loading ? '...' : formatCurrency(keuanganStats.saldo)}</span>
+                        <span className="stat-value purple">{loading ? '...' : formatCurrency(keuanganStats.saldo, true)}</span>
                     </div>
-                    <div className="stat-icon-box">
+                    <div className="stat-icon-box purple">
                         <Wallet size={24} />
                     </div>
                 </div>

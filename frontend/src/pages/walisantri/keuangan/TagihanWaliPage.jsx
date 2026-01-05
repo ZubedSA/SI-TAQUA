@@ -2,18 +2,23 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
     ChevronLeft, Wallet, Calendar, AlertCircle, CheckCircle,
-    Clock, CreditCard, ChevronRight
+    Clock, CreditCard, ChevronRight, Download
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import SantriCard from '../components/SantriCard'
 import DownloadButton from '../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../utils/exportUtils'
-import '../WaliPortal.css'
+
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
+import Badge from '../../../components/ui/Badge'
+import EmptyState from '../../../components/ui/EmptyState'
 
 /**
  * TagihanWaliPage - Halaman untuk melihat tagihan santri
- * Menampilkan tagihan yang belum lunas dan yang sudah lunas
+ * Refactored to use Global Layout System (Phase 2)
  */
 const TagihanWaliPage = () => {
     const { user } = useAuth()
@@ -153,339 +158,198 @@ const TagihanWaliPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-tagihan-page">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/beranda" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Tagihan & Pembayaran</h1>
-                <p className="wali-page-subtitle">Daftar tagihan dan riwayat pembayaran</p>
-            </div>
+            <PageHeader
+                title="Tagihan & Pembayaran"
+                description="Daftar tagihan dan riwayat pembayaran santri"
+                icon={Wallet}
+                backUrl="/wali/beranda"
+            />
 
             {/* Santri Selector */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
+                <div className="flex overflow-x-auto gap-4 pb-2">
                     {santriList.map(santri => (
-                        <SantriCard
-                            key={santri.id}
-                            santri={santri}
-                            selected={selectedSantri?.id === santri.id}
-                            onClick={() => setSelectedSantri(santri)}
-                        />
+                        <div key={santri.id} className="min-w-[300px]">
+                            <SantriCard
+                                santri={santri}
+                                selected={selectedSantri?.id === santri.id}
+                                onClick={() => setSelectedSantri(santri)}
+                            />
+                        </div>
                     ))}
                 </div>
             )}
 
             {/* Total Tunggakan Card */}
-            <div className={`wali-tunggakan-card ${totalTunggakan > 0 ? 'has-tunggakan' : 'lunas'}`}>
-                <div className="wali-tunggakan-icon">
-                    {totalTunggakan > 0 ? <AlertCircle size={24} /> : <CheckCircle size={24} />}
+            <div className={`p-6 rounded-xl border flex items-center gap-6 ${totalTunggakan > 0
+                ? 'bg-gradient-to-r from-red-50 to-white border-red-100'
+                : 'bg-gradient-to-r from-emerald-50 to-white border-emerald-100'
+                }`}>
+                <div className={`p-4 rounded-xl ${totalTunggakan > 0 ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    {totalTunggakan > 0 ? <AlertCircle size={32} /> : <CheckCircle size={32} />}
                 </div>
-                <div className="wali-tunggakan-info">
-                    <p className="wali-tunggakan-label">
+                <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-500 mb-1">
                         {totalTunggakan > 0 ? 'Total Tunggakan' : 'Status Pembayaran'}
                     </p>
-                    <p className="wali-tunggakan-value">
-                        {totalTunggakan > 0 ? formatCurrency(totalTunggakan) : 'Semua Lunas ✓'}
+                    <p className={`text-3xl font-bold ${totalTunggakan > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {totalTunggakan > 0 ? formatCurrency(totalTunggakan) : 'Lunas'}
                     </p>
                 </div>
                 {totalTunggakan > 0 && (
-                    <Link to="/wali/keuangan/upload" className="wali-btn wali-btn-primary" style={{ padding: '10px 16px' }}>
-                        <CreditCard size={16} />
-                        Konfirmasi Bayar
+                    <Link to="/wali/keuangan/upload">
+                        <Button>
+                            <CreditCard size={18} className="mr-2" />
+                            Konfirmasi Bayar
+                        </Button>
                     </Link>
                 )}
             </div>
 
-            {/* Tabs */}
-            <div className="wali-tabs">
-                <button
-                    className={`wali-tab ${activeTab === 'belum' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('belum')}
-                >
-                    Belum Lunas ({tagihanBelumLunas.length})
-                </button>
-                <button
-                    className={`wali-tab ${activeTab === 'lunas' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('lunas')}
-                >
-                    Sudah Lunas ({tagihanLunas.length})
-                </button>
-            </div>
+            {/* Main Content */}
+            <Card>
+                {/* Tabs */}
+                <div className="border-b border-gray-200 px-6 pt-6">
+                    <nav className="flex gap-6" aria-label="Tabs">
+                        <button
+                            onClick={() => setActiveTab('belum')}
+                            className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'belum'
+                                ? 'border-primary-600 text-primary-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            Belum Lunas ({tagihanBelumLunas.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('lunas')}
+                            className={`pb-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'lunas'
+                                ? 'border-primary-600 text-primary-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                        >
+                            Sudah Lunas ({tagihanLunas.length})
+                        </button>
+                    </nav>
+                </div>
 
-            {/* Tagihan List */}
-            <div className="wali-section" style={{ marginTop: 0 }}>
-                {(tagihanBelumLunas.length > 0 || tagihanLunas.length > 0) && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                        <DownloadButton
-                            onDownloadExcel={handleDownloadExcel}
-                            onDownloadCSV={handleDownloadCSV}
-                        />
-                    </div>
-                )}
-                {activeTab === 'belum' && (
-                    <>
-                        {tagihanBelumLunas.length > 0 ? (
-                            <div className="wali-data-list">
-                                {tagihanBelumLunas.map(tagihan => (
-                                    <div key={tagihan.id} className={`wali-tagihan-item ${isOverdue(tagihan.jatuh_tempo) ? 'overdue' : ''}`}>
-                                        <div className="wali-tagihan-header">
-                                            <div className="wali-tagihan-kategori">
-                                                <Wallet size={16} />
-                                                {tagihan.kategori?.nama || 'Pembayaran'}
+                <div className="p-6">
+                    {/* Actions */}
+                    {(tagihanBelumLunas.length > 0 || tagihanLunas.length > 0) && (
+                        <div className="flex justify-end mb-6">
+                            <DownloadButton
+                                onDownloadExcel={handleDownloadExcel}
+                                onDownloadCSV={handleDownloadCSV}
+                            />
+                        </div>
+                    )}
+
+                    {activeTab === 'belum' && (
+                        <>
+                            {tagihanBelumLunas.length > 0 ? (
+                                <div className="space-y-4">
+                                    {tagihanBelumLunas.map(tagihan => (
+                                        <div key={tagihan.id} className={`p-4 rounded-xl border ${isOverdue(tagihan.jatuh_tempo) ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Wallet size={16} className="text-gray-400" />
+                                                    <span className="font-semibold text-gray-900">{tagihan.kategori?.nama || 'Pembayaran'}</span>
+                                                </div>
+                                                {isOverdue(tagihan.jatuh_tempo) && (
+                                                    <Badge variant="danger">Jatuh Tempo</Badge>
+                                                )}
                                             </div>
-                                            {isOverdue(tagihan.jatuh_tempo) && (
-                                                <span className="wali-tagihan-badge overdue">Jatuh Tempo</span>
+                                            <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
+                                                <div className="space-y-1">
+                                                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(tagihan.jumlah)}</p>
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Calendar size={14} />
+                                                        <span>Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}</span>
+                                                    </div>
+                                                </div>
+                                                {/* Optional: Action button per item if needed */}
+                                            </div>
+                                            {tagihan.keterangan && (
+                                                <p className="mt-3 text-sm text-gray-500 border-t border-gray-200/50 pt-2">
+                                                    {tagihan.keterangan}
+                                                </p>
                                             )}
                                         </div>
-                                        <div className="wali-tagihan-body">
-                                            <div className="wali-tagihan-amount">
-                                                {formatCurrency(tagihan.jumlah)}
-                                            </div>
-                                            <div className="wali-tagihan-due">
-                                                <Calendar size={14} />
-                                                Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}
-                                            </div>
-                                        </div>
-                                        {tagihan.keterangan && (
-                                            <p className="wali-tagihan-note">{tagihan.keterangan}</p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="wali-empty-state">
-                                <div className="wali-empty-icon">
-                                    <CheckCircle size={40} />
+                                    ))}
                                 </div>
-                                <h3 className="wali-empty-title">Tidak Ada Tunggakan</h3>
-                                <p className="wali-empty-text">
-                                    Semua tagihan sudah lunas. Terima kasih! 🎉
-                                </p>
-                            </div>
-                        )}
-                    </>
-                )}
+                            ) : (
+                                <EmptyState
+                                    icon={CheckCircle}
+                                    title="Tidak Ada Tunggakan"
+                                    description="Semua tagihan sudah lunas. Terima kasih! 🎉"
+                                />
+                            )}
+                        </>
+                    )}
 
-                {activeTab === 'lunas' && (
-                    <>
-                        {tagihanLunas.length > 0 ? (
-                            <div className="wali-data-list">
-                                {tagihanLunas.map(tagihan => (
-                                    <div key={tagihan.id} className="wali-tagihan-item lunas">
-                                        <div className="wali-tagihan-header">
-                                            <div className="wali-tagihan-kategori">
-                                                <Wallet size={16} />
-                                                {tagihan.kategori?.nama || 'Pembayaran'}
+                    {activeTab === 'lunas' && (
+                        <>
+                            {tagihanLunas.length > 0 ? (
+                                <div className="space-y-4">
+                                    {tagihanLunas.map(tagihan => (
+                                        <div key={tagihan.id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 opacity-75 hover:opacity-100 transition-opacity">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Wallet size={16} className="text-gray-400" />
+                                                    <span className="font-semibold text-gray-900">{tagihan.kategori?.nama || 'Pembayaran'}</span>
+                                                </div>
+                                                <Badge variant="success" icon={CheckCircle}>Lunas</Badge>
                                             </div>
-                                            <span className="wali-tagihan-badge lunas">
-                                                <CheckCircle size={12} />
-                                                Lunas
-                                            </span>
-                                        </div>
-                                        <div className="wali-tagihan-body">
-                                            <div className="wali-tagihan-amount lunas">
-                                                {formatCurrency(tagihan.jumlah)}
+                                            <div className="space-y-1">
+                                                <p className="text-xl font-bold text-green-600">{formatCurrency(tagihan.jumlah)}</p>
+                                                <p className="text-xs text-gray-400">
+                                                    Dibayar pada: {formatDate(tagihan.updated_at)}
+                                                </p>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="wali-empty-state">
-                                <div className="wali-empty-icon">
-                                    <Wallet size={40} />
+                                    ))}
                                 </div>
-                                <h3 className="wali-empty-title">Belum Ada Riwayat</h3>
-                                <p className="wali-empty-text">
-                                    Belum ada pembayaran yang tercatat.
-                                </p>
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
+                            ) : (
+                                <EmptyState
+                                    icon={Wallet}
+                                    title="Belum Ada Riwayat"
+                                    description="Belum ada pembayaran yang tercatat."
+                                />
+                            )}
+                        </>
+                    )}
+                </div>
+            </Card>
 
-            {/* Quick Links */}
-            <div className="wali-section">
-                <h3 className="wali-section-title" style={{ marginBottom: '12px' }}>Menu Lainnya</h3>
-                <Link to="/wali/keuangan/riwayat" className="wali-quick-link">
-                    <Clock size={20} />
-                    <span>Riwayat Pembayaran</span>
-                    <ChevronRight size={18} />
+            {/* Quick Links Footer */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Link to="/wali/keuangan/riwayat" className="p-4 bg-white rounded-xl border border-gray-200 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100">
+                            <Clock size={20} />
+                        </div>
+                        <span className="font-medium text-gray-900">Riwayat Pembayaran Lengkap</span>
+                    </div>
+                    <ChevronRight size={18} className="text-gray-400 group-hover:text-gray-600" />
                 </Link>
-                <Link to="/wali/keuangan/upload" className="wali-quick-link">
-                    <CreditCard size={20} />
-                    <span>Konfirmasi Pembayaran</span>
-                    <ChevronRight size={18} />
+                <Link to="/wali/keuangan/upload" className="p-4 bg-white rounded-xl border border-gray-200 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary-50 text-primary-600 rounded-lg group-hover:bg-primary-100">
+                            <CreditCard size={20} />
+                        </div>
+                        <span className="font-medium text-gray-900">Konfirmasi Pembayaran Baru</span>
+                    </div>
+                    <ChevronRight size={18} className="text-gray-400 group-hover:text-gray-600" />
                 </Link>
             </div>
-
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-tunggakan-card {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 20px;
-          border-radius: 16px;
-          margin-bottom: 20px;
-        }
-        .wali-tunggakan-card.has-tunggakan {
-          background: linear-gradient(135deg, #fee2e2, #fecaca);
-          border: 1px solid #fca5a5;
-        }
-        .wali-tunggakan-card.lunas {
-          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-          border: 1px solid #86efac;
-        }
-        .wali-tunggakan-icon {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .wali-tunggakan-card.has-tunggakan .wali-tunggakan-icon {
-          background: #dc2626;
-          color: #fff;
-        }
-        .wali-tunggakan-card.lunas .wali-tunggakan-icon {
-          background: #16a34a;
-          color: #fff;
-        }
-        .wali-tunggakan-info {
-          flex: 1;
-        }
-        .wali-tunggakan-label {
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin: 0;
-        }
-        .wali-tunggakan-value {
-          font-size: 22px;
-          font-weight: 700;
-          margin: 4px 0 0;
-        }
-        .wali-tunggakan-card.has-tunggakan .wali-tunggakan-value {
-          color: #dc2626;
-        }
-        .wali-tunggakan-card.lunas .wali-tunggakan-value {
-          color: #16a34a;
-        }
-        .wali-tagihan-item {
-          padding: 16px;
-          background: var(--bg-secondary);
-          border-radius: 12px;
-          margin-bottom: 12px;
-          border-left: 4px solid var(--border-color);
-        }
-        .wali-tagihan-item.overdue {
-          border-left-color: #dc2626;
-          background: #fff5f5;
-        }
-        .wali-tagihan-item.lunas {
-          border-left-color: #16a34a;
-        }
-        .wali-tagihan-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-        .wali-tagihan-kategori {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-primary);
-        }
-        .wali-tagihan-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 10px;
-          font-size: 11px;
-          font-weight: 500;
-          border-radius: 20px;
-        }
-        .wali-tagihan-badge.overdue {
-          background: #fee2e2;
-          color: #dc2626;
-        }
-        .wali-tagihan-badge.lunas {
-          background: #dcfce7;
-          color: #16a34a;
-        }
-        .wali-tagihan-body {
-          margin-top: 8px;
-        }
-        .wali-tagihan-amount {
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--text-primary);
-        }
-        .wali-tagihan-amount.lunas {
-          color: #16a34a;
-        }
-        .wali-tagihan-due {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin-top: 4px;
-        }
-        .wali-tagihan-note {
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin: 8px 0 0;
-          padding-top: 8px;
-          border-top: 1px solid var(--border-color);
-        }
-        .wali-quick-link {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px;
-          background: var(--bg-secondary);
-          border-radius: 12px;
-          text-decoration: none;
-          color: var(--text-primary);
-          margin-bottom: 8px;
-          transition: all 0.2s ease;
-        }
-        .wali-quick-link:hover {
-          background: var(--bg-hover);
-        }
-        .wali-quick-link span {
-          flex: 1;
-          font-size: 14px;
-          font-weight: 500;
-        }
-        .wali-quick-link svg:last-child {
-          color: var(--text-secondary);
-        }
-      `}</style>
         </div>
     )
 }

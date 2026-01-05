@@ -6,10 +6,16 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
+import Badge from '../../../components/ui/Badge'
+import EmptyState from '../../../components/ui/EmptyState'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * InboxPesanPage - Halaman untuk melihat pesan wali ke pondok
+ * Refactored to use Global Layout System (Phase 2)
  */
 const InboxPesanPage = () => {
     const { user } = useAuth()
@@ -65,328 +71,197 @@ const InboxPesanPage = () => {
         }
     }
 
-    const getStatusIcon = (status) => {
+    const getStatusVariant = (status) => {
         switch (status) {
-            case 'Terkirim':
-                return <Send size={14} />
-            case 'Dibaca':
-                return <Eye size={14} />
-            case 'Diproses':
-                return <Clock size={14} />
+            case 'Terkirim': return 'default'
+            case 'Dibaca': return 'primary'
+            case 'Diproses': return 'warning'
             case 'Dibalas':
-            case 'Selesai':
-                return <CheckCircle size={14} />
-            default:
-                return <Send size={14} />
+            case 'Selesai': return 'success'
+            default: return 'default'
         }
     }
 
-    const getStatusClass = (status) => {
+    const getStatusIcon = (status) => {
         switch (status) {
-            case 'Terkirim':
-                return 'terkirim'
-            case 'Dibaca':
-                return 'dibaca'
-            case 'Diproses':
-                return 'diproses'
+            case 'Dibaca': return <Eye size={12} className="mr-1" />
+            case 'Diproses': return <Clock size={12} className="mr-1" />
             case 'Dibalas':
-            case 'Selesai':
-                return 'dibalas'
-            default:
-                return 'terkirim'
+            case 'Selesai': return <CheckCircle size={12} className="mr-1" />
+            default: return <Send size={12} className="mr-1" />
         }
     }
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-pesan-page">
+        <div className="space-y-6">
             {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/beranda" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Pesan</h1>
-                <p className="wali-page-subtitle">Komunikasi dengan pihak pondok</p>
-            </div>
+            <PageHeader
+                title="Pesan & Konsultasi"
+                description="Komunikasi langsung dengan pengurus pondok"
+                icon={MessageCircle}
+                backUrl="/wali/beranda"
+                actions={
+                    <Link to="/wali/pesan/kirim">
+                        <Button>
+                            <Plus size={18} className="mr-2" />
+                            Tulis Pesan
+                        </Button>
+                    </Link>
+                }
+            />
 
-            {/* New Message Button */}
-            <Link to="/wali/pesan/kirim" className="wali-btn wali-btn-primary" style={{ width: '100%', marginBottom: '20px' }}>
-                <Plus size={18} />
-                Tulis Pesan Baru
-            </Link>
-
-            {/* Filter */}
-            <div className="wali-filter-chips" style={{ marginBottom: '16px' }}>
-                {[
-                    { value: 'semua', label: 'Semua' },
-                    { value: 'Terkirim', label: 'Terkirim' },
-                    { value: 'Dibalas', label: 'Dibalas' }
-                ].map(opt => (
-                    <button
-                        key={opt.value}
-                        className={`wali-chip ${filterStatus === opt.value ? 'active' : ''}`}
-                        onClick={() => setFilterStatus(opt.value)}
-                    >
-                        {opt.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Pesan List or Detail */}
-            <div className="wali-section" style={{ marginTop: 0 }}>
-                {selectedPesan ? (
-                    // Detail View
-                    <div className="wali-pesan-detail">
-                        <button
-                            className="wali-back-link"
-                            onClick={() => setSelectedPesan(null)}
-                            style={{ marginBottom: '16px' }}
-                        >
-                            <ChevronLeft size={18} />
-                            Kembali ke daftar
-                        </button>
-
-                        <div className="wali-pesan-detail-header">
-                            <h3 className="wali-pesan-detail-title">{selectedPesan.judul}</h3>
-                            <span className={`wali-pesan-status ${getStatusClass(selectedPesan.status)}`}>
-                                {getStatusIcon(selectedPesan.status)}
-                                {selectedPesan.status}
-                            </span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)] min-h-[500px]">
+                {/* Conversations List */}
+                <Card className={`lg:col-span-1 flex flex-col h-full ${selectedPesan ? 'hidden lg:flex' : 'flex'}`}>
+                    <div className="p-4 border-b border-gray-100 space-y-4">
+                        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                            {[
+                                { value: 'semua', label: 'Semua' },
+                                { value: 'Terkirim', label: 'Terkirim' },
+                                { value: 'Dibalas', label: 'Dibalas' }
+                            ].map(opt => (
+                                <button
+                                    key={opt.value}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${filterStatus === opt.value
+                                        ? 'bg-primary-600 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    onClick={() => setFilterStatus(opt.value)}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
                         </div>
-
-                        <p className="wali-pesan-detail-date">
-                            Dikirim pada {new Date(selectedPesan.created_at).toLocaleDateString('id-ID', {
-                                weekday: 'long',
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })}
-                        </p>
-
-                        <div className="wali-pesan-bubble sent">
-                            <p>{selectedPesan.isi}</p>
-                        </div>
-
-                        {selectedPesan.balasan && (
-                            <div className="wali-pesan-bubble reply">
-                                <p className="wali-pesan-reply-label">Balasan dari Pondok:</p>
-                                <p>{selectedPesan.balasan}</p>
-                                {selectedPesan.dibalas_pada && (
-                                    <span className="wali-pesan-reply-date">
-                                        {new Date(selectedPesan.dibalas_pada).toLocaleDateString('id-ID', {
-                                            day: 'numeric',
-                                            month: 'short',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        })}
-                                    </span>
-                                )}
-                            </div>
-                        )}
                     </div>
-                ) : (
-                    // List View
-                    <>
+
+                    <div className="flex-1 overflow-y-auto p-2">
                         {pesanData.length > 0 ? (
-                            <div className="wali-pesan-list">
+                            <div className="space-y-2">
                                 {pesanData.map(pesan => (
                                     <div
                                         key={pesan.id}
-                                        className={`wali-pesan-item ${pesan.balasan ? 'has-reply' : ''}`}
                                         onClick={() => setSelectedPesan(pesan)}
+                                        className={`p-3 rounded-xl cursor-pointer transition-all border ${selectedPesan?.id === pesan.id
+                                            ? 'bg-primary-50 border-primary-200'
+                                            : 'bg-white border-transparent hover:bg-gray-50'
+                                            } ${pesan.balasan ? 'border-l-4 border-l-emerald-500' : ''}`}
                                     >
-                                        <div className="wali-pesan-item-header">
-                                            <h4 className="wali-pesan-item-title">{pesan.judul}</h4>
-                                            <span className="wali-pesan-item-date">{formatDate(pesan.created_at)}</span>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h4 className={`text-sm font-semibold truncate ${selectedPesan?.id === pesan.id ? 'text-primary-900' : 'text-gray-900'}`}>
+                                                {pesan.judul}
+                                            </h4>
+                                            <span className="text-xs text-gray-400 shrink-0 ml-2">{formatDate(pesan.created_at)}</span>
                                         </div>
-                                        <p className="wali-pesan-item-preview">
-                                            {pesan.isi.length > 80 ? pesan.isi.substring(0, 80) + '...' : pesan.isi}
+                                        <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                                            {pesan.isi}
                                         </p>
-                                        <div className="wali-pesan-item-footer">
-                                            <span className={`wali-pesan-status ${getStatusClass(pesan.status)}`}>
-                                                {getStatusIcon(pesan.status)}
-                                                {pesan.status}
-                                            </span>
-                                            <ChevronRight size={16} />
-                                        </div>
+                                        <Badge variant={getStatusVariant(pesan.status)} size="sm">
+                                            {getStatusIcon(pesan.status)}
+                                            {pesan.status}
+                                        </Badge>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="wali-empty-state">
-                                <div className="wali-empty-icon">
-                                    <MessageCircle size={40} />
-                                </div>
-                                <h3 className="wali-empty-title">Belum Ada Pesan</h3>
-                                <p className="wali-empty-text">
-                                    Anda belum pernah mengirim pesan ke pondok.
-                                </p>
-                                <Link to="/wali/pesan/kirim" className="wali-btn wali-btn-primary" style={{ marginTop: '16px' }}>
-                                    <Send size={16} />
-                                    Kirim Pesan Pertama
-                                </Link>
-                            </div>
+                            <EmptyState
+                                icon={MessageCircle}
+                                title="Belum Ada Pesan"
+                                description="Kotak masuk Anda masih kosong."
+                                compact
+                            />
                         )}
-                    </>
-                )}
-            </div>
+                    </div>
+                </Card>
 
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 0;
-        }
-        .wali-filter-chips {
-          display: flex;
-          gap: 8px;
-        }
-        .wali-chip {
-          padding: 8px 16px;
-          background: var(--bg-secondary);
-          border: 1px solid var(--border-color);
-          border-radius: 20px;
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--text-secondary);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .wali-chip.active {
-          background: var(--primary-color);
-          border-color: var(--primary-color);
-          color: #fff;
-        }
-        .wali-pesan-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .wali-pesan-item {
-          padding: 16px;
-          background: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .wali-pesan-item:hover {
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .wali-pesan-item.has-reply {
-          border-left: 4px solid #16a34a;
-        }
-        .wali-pesan-item-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 8px;
-        }
-        .wali-pesan-item-title {
-          font-size: 15px;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin: 0;
-        }
-        .wali-pesan-item-date {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-        .wali-pesan-item-preview {
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin: 0 0 12px;
-          line-height: 1.5;
-        }
-        .wali-pesan-item-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .wali-pesan-status {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 4px 10px;
-          font-size: 11px;
-          font-weight: 500;
-          border-radius: 12px;
-        }
-        .wali-pesan-status.terkirim { background: #e2e8f0; color: #475569; }
-        .wali-pesan-status.dibaca { background: #dbeafe; color: #1e40af; }
-        .wali-pesan-status.diproses { background: #fef3c7; color: #92400e; }
-        .wali-pesan-status.dibalas { background: #dcfce7; color: #166534; }
-        
-        /* Detail View */
-        .wali-pesan-detail-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 8px;
-        }
-        .wali-pesan-detail-title {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin: 0;
-        }
-        .wali-pesan-detail-date {
-          font-size: 13px;
-          color: var(--text-secondary);
-          margin: 0 0 20px;
-        }
-        .wali-pesan-bubble {
-          padding: 16px;
-          border-radius: 16px;
-          margin-bottom: 12px;
-        }
-        .wali-pesan-bubble.sent {
-          background: var(--primary-color);
-          color: #fff;
-          border-bottom-right-radius: 4px;
-          margin-left: 20px;
-        }
-        .wali-pesan-bubble.reply {
-          background: var(--bg-secondary);
-          border: 1px solid var(--border-color);
-          border-bottom-left-radius: 4px;
-          margin-right: 20px;
-        }
-        .wali-pesan-bubble p {
-          margin: 0;
-          font-size: 14px;
-          line-height: 1.6;
-        }
-        .wali-pesan-reply-label {
-          font-size: 12px !important;
-          font-weight: 600;
-          color: var(--text-secondary) !important;
-          margin-bottom: 8px !important;
-        }
-        .wali-pesan-reply-date {
-          display: block;
-          margin-top: 8px;
-          font-size: 11px;
-          color: var(--text-secondary);
-        }
-      `}</style>
+                {/* Message Detail */}
+                <Card className={`lg:col-span-2 flex flex-col h-full overflow-hidden ${!selectedPesan ? 'hidden lg:flex' : 'flex'}`}>
+                    {selectedPesan ? (
+                        <>
+                            {/* Detail Header */}
+                            <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
+                                <button
+                                    className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-gray-600"
+                                    onClick={() => setSelectedPesan(null)}
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-gray-900 leading-tight">{selectedPesan.judul}</h3>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {new Date(selectedPesan.created_at).toLocaleDateString('id-ID', {
+                                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                                            hour: '2-digit', minute: '2-digit'
+                                        })}
+                                    </p>
+                                </div>
+                                <Badge variant={getStatusVariant(selectedPesan.status)}>
+                                    {selectedPesan.status}
+                                </Badge>
+                            </div>
+
+                            {/* Chat Content */}
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30 space-y-6">
+                                {/* User Message */}
+                                <div className="flex justify-end">
+                                    <div className="max-w-[80%] space-y-1">
+                                        <div className="bg-primary-600 text-white p-4 rounded-2xl rounded-tr-sm shadow-sm">
+                                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedPesan.isi}</p>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 text-right">Anda</p>
+                                    </div>
+                                </div>
+
+                                {/* Reply */}
+                                {selectedPesan.balasan ? (
+                                    <div className="flex justify-start">
+                                        <div className="max-w-[80%] space-y-1">
+                                            <div className="bg-white border border-gray-200 p-4 rounded-2xl rounded-tl-sm shadow-sm relative">
+                                                <p className="text-xs font-bold text-primary-600 mb-2">Balasan dari Pondok</p>
+                                                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{selectedPesan.balasan}</p>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400">
+                                                {selectedPesan.dibalas_pada && new Date(selectedPesan.dibalas_pada).toLocaleDateString('id-ID', {
+                                                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-center py-8">
+                                        <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                                            Menunggu balasan dari admin...
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-gray-400">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                <MessageCircle size={32} />
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900">Pilih Pesan</h3>
+                            <p className="max-w-xs mx-auto mt-2 text-sm">
+                                Pilih salah satu pesan dari daftar di samping untuk melihat detail atau balasan.
+                            </p>
+                            <Link to="/wali/pesan/kirim" className="mt-6">
+                                <Button>
+                                    <Plus size={16} className="mr-2" />
+                                    Tulis Pesan Baru
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
+                </Card>
+            </div>
         </div>
     )
 }

@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-    ChevronLeft, Send, Loader, MessageCircle
+    ChevronLeft, Send, Loader, MessageCircle, AlertCircle
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
 import SantriCard from '../components/SantriCard'
-import '../WaliPortal.css'
+import PageHeader from '../../../components/layout/PageHeader'
+import Card from '../../../components/ui/Card'
+import Button from '../../../components/ui/Button'
+import FormInput from '../../../components/ui/FormInput'
+// import '../WaliPortal.css' // REMOVED
 
 /**
  * KirimPesanPage - Halaman untuk mengirim pesan ke pondok
+ * Refactored to use Global Layout System (Phase 2)
  */
 const KirimPesanPage = () => {
     const { user } = useAuth()
@@ -106,152 +111,103 @@ const KirimPesanPage = () => {
 
     if (loading) {
         return (
-            <div className="wali-loading">
-                <div className="wali-loading-spinner"></div>
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
         )
     }
 
     return (
-        <div className="wali-kirim-pesan-page">
-            {/* Header */}
-            <div className="wali-page-header">
-                <Link to="/wali/pesan" className="wali-back-link">
-                    <ChevronLeft size={20} />
-                    <span>Kembali</span>
-                </Link>
-                <h1 className="wali-page-title">Kirim Pesan</h1>
-                <p className="wali-page-subtitle">Sampaikan pesan Anda ke pihak pondok</p>
-            </div>
+        <div className="space-y-6">
+            <PageHeader
+                title="Kirim Pesan"
+                description="Sampaikan pertanyaan, izin, atau keluhan ke pihak pondok"
+                icon={Send}
+                backUrl="/wali/pesan"
+            />
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="wali-section">
-                {/* Pilih Santri (jika lebih dari 1) */}
-                {santriList.length > 1 && (
-                    <div className="wali-form-group">
-                        <label className="wali-form-label">Terkait Santri</label>
-                        <div className="wali-santri-selector" style={{ marginBottom: 0, padding: 0 }}>
-                            {santriList.map(santri => (
-                                <SantriCard
-                                    key={santri.id}
-                                    santri={santri}
-                                    selected={selectedSantri?.id === santri.id}
-                                    onClick={() => setSelectedSantri(santri)}
-                                />
-                            ))}
+            <div className="max-w-3xl mx-auto">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Pilih Santri (jika lebih dari 1) */}
+                    {santriList.length > 1 && (
+                        <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">Terkait Santri</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {santriList.map(santri => (
+                                    <SantriCard
+                                        key={santri.id}
+                                        santri={santri}
+                                        selected={selectedSantri?.id === santri.id}
+                                        onClick={() => setSelectedSantri(santri)}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-
-                {/* Judul */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">Judul Pesan *</label>
-                    <input
-                        type="text"
-                        name="judul"
-                        value={formData.judul}
-                        onChange={handleChange}
-                        className="wali-form-input"
-                        placeholder="Contoh: Izin tidak masuk"
-                        required
-                    />
-                </div>
-
-                {/* Kategori */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">Kategori</label>
-                    <select
-                        name="kategori"
-                        value={formData.kategori}
-                        onChange={handleChange}
-                        className="wali-form-select"
-                    >
-                        <option value="Umum">Umum</option>
-                        <option value="Akademik">Akademik</option>
-                        <option value="Keuangan">Keuangan</option>
-                        <option value="Izin">Izin</option>
-                        <option value="Keluhan">Keluhan</option>
-                        <option value="Lainnya">Lainnya</option>
-                    </select>
-                </div>
-
-                {/* Isi Pesan */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">Isi Pesan *</label>
-                    <textarea
-                        name="isi"
-                        value={formData.isi}
-                        onChange={handleChange}
-                        className="wali-form-textarea"
-                        placeholder="Tuliskan pesan Anda di sini..."
-                        rows={6}
-                        required
-                    />
-                    <small className="wali-form-hint">
-                        {formData.isi.length}/1000 karakter
-                    </small>
-                </div>
-
-                {/* Info */}
-                <div className="wali-info-box">
-                    <MessageCircle size={18} />
-                    <span>Pesan akan dibalas oleh admin pondok. Anda akan menerima balasan di halaman pesan.</span>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                    type="submit"
-                    className="wali-btn wali-btn-primary"
-                    style={{ width: '100%', marginTop: '16px' }}
-                    disabled={submitting}
-                >
-                    {submitting ? (
-                        <>
-                            <Loader size={18} className="spin" />
-                            Mengirim...
-                        </>
-                    ) : (
-                        <>
-                            <Send size={18} />
-                            Kirim Pesan
-                        </>
                     )}
-                </button>
-            </form>
 
-            <style>{`
-        .wali-back-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-secondary);
-          text-decoration: none;
-          font-size: 14px;
-          margin-bottom: 16px;
-        }
-        .wali-form-hint {
-          display: block;
-          margin-top: 6px;
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-        .wali-info-box {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 14px;
-          background: #dbeafe;
-          border-radius: 10px;
-          font-size: 13px;
-          color: #1e40af;
-        }
-        .spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+                    <Card>
+                        <div className="space-y-4">
+                            {/* Judul */}
+                            <FormInput
+                                label="Judul Pesan"
+                                name="judul"
+                                value={formData.judul}
+                                onChange={handleChange}
+                                placeholder="Contoh: Izin tidak masuk karena sakit"
+                                required
+                            />
+
+                            {/* Kategori */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                                <select
+                                    name="kategori"
+                                    value={formData.kategori}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 transition-shadow"
+                                >
+                                    <option value="Umum">Umum</option>
+                                    <option value="Akademik">Akademik</option>
+                                    <option value="Keuangan">Keuangan</option>
+                                    <option value="Izin">Izin</option>
+                                    <option value="Keluhan">Keluhan</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+
+                            {/* Isi Pesan */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Isi Pesan</label>
+                                <textarea
+                                    name="isi"
+                                    value={formData.isi}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 min-h-[150px] transition-shadow"
+                                    placeholder="Tuliskan detail pesan Anda di sini secara jelas dan sopan..."
+                                    required
+                                />
+                                <div className="flex justify-between mt-1">
+                                    <p className="text-xs text-gray-500">Minimal 10 karakter.</p>
+                                    <p className="text-xs text-gray-500">{formData.isi.length}/1000</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm mb-6">
+                            <MessageCircle size={20} className="shrink-0 mt-0.5" />
+                            <p>
+                                Pesan Anda akan diterima oleh admin pondok. Mohon gunakan bahasa yang sopan.
+                                Balasan akan muncul di halaman <strong>Inbox Pesan</strong>.
+                            </p>
+                        </div>
+
+                        <Button type="submit" isLoading={submitting} className="w-full">
+                            <Send size={18} className="mr-2" />
+                            Kirim Pesan Sekarang
+                        </Button>
+                    </Card>
+                </form>
+            </div>
         </div>
     )
 }

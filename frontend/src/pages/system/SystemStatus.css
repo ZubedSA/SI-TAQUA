@@ -1,7 +1,7 @@
 /* System Status Page Styles */
 
 .system-status-page {
-    padding: 0;
+    /* Padding handled globally */
 }
 
 .status-section {
