@@ -85,7 +85,6 @@ const MobileActionMenu = ({ children, actions }) => {
                                 key={index}
                                 className={`mobile-action-item ${action.danger ? 'danger' : ''}`}
                                 onClick={(e) => handleActionClick(action, e)}
-                                onTouchEnd={(e) => handleActionClick(action, e)}
                                 type="button"
                                 role="menuitem"
                             >
