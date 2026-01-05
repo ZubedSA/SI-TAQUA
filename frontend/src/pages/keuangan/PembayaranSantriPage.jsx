@@ -376,7 +376,6 @@ Jazakumullah khairan.
             filename: `rekap_lunas_${selectedSantri?.nis}`,
             showTotal: true,
             totalLabel: 'Total Lunas',
-            totalLabel: 'Total Lunas',
             totalValue: sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0),
             printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         })
@@ -477,7 +476,6 @@ Jazakumullah khairan.
             ]),
             filename: `riwayat_pembayaran_${selectedSantri?.nis}`,
             showTotal: true,
-            totalLabel: 'Total Pembayaran',
             totalLabel: 'Total Pembayaran',
             totalValue: pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0),
             printedAt: formatDate(new Date(), { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })

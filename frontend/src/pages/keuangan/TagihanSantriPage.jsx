@@ -281,9 +281,6 @@ const TagihanSantriPage = () => {
             namaSantri: item.santri?.nama,
             kategori: item.kategori?.nama,
             jumlah: item.jumlah,
-            namaSantri: item.santri?.nama,
-            kategori: item.kategori?.nama,
-            jumlah: item.jumlah,
             jatuhTempo: item.jatuh_tempo,
             formattedJatuhTempo: formatDate(item.jatuh_tempo)
         })
