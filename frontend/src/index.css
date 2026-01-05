@@ -1860,73 +1860,16 @@ select option:hover {
     padding: 16px;
   }
 
-  /* UNIVERSAL MOBILE EDGE-TO-EDGE BREAKOUT RULES */
-  /* All tables, cards, and panels break out of content padding for edge-to-edge display */
+  /* ============================================
+     MOBILE EDGE-TO-EDGE BREAKOUT RULES
+     Hanya TABEL yang edge-to-edge
+     CARD tetap dengan padding kiri-kanan
+     ============================================ */
 
-  /* Common Elements - apply to ALL pages */
+  /* TABEL - Edge-to-edge (breakout dari padding .content) */
   .content .table-container,
   .content .table-wrapper,
-  .content .card,
-  .content .stat-card,
-  .content .chart-card,
-  .content .data-card,
-  .content .panel,
-  .content .dashboard-welcome,
-  .content .welcome-header,
-
-  /* Akademik Dashboard */
-  .content .hafalan-stat-card,
-  .content .hafalan-tab,
-
-  /* Keuangan/Bendahara Dashboard & Pages */
-  .content .keuangan-stat-card,
-  .content .keuangan-card,
-  .content .keuangan-stats-grid,
-  .content .summary-grid,
-  .content .payment-section,
-
-  /* OTA Dashboard & Pages */
-  .content .ota-stat-card,
-  .content .ota-panel,
-  .content .ota-welcome-header,
-  .content .ota-quick-links,
-  .content .ota-announcements,
-  .content .ota-table-container,
-  .content .ota-container,
-
-  /* Admin Dashboard & Pages */
-  .content .admin-stat-card,
-  .content .admin-card,
-  .content .admin-stats-grid,
-  .content .admin-table-container,
-  .content .users-table-container,
-
-  /* Pengurus Dashboard & Pages */
-  .content .pengurus-stat-card,
-  .content .secondary-stat-card,
-  .content .pengurus-card,
-  .content .pengurus-welcome,
-  .content .pelanggaran-list,
-
-  /* Wali Santri Pages */
-  .content .wali-table-container,
-  .content .wali-report-section,
-
-  /* Guru Pages */
-  .content .guru-table-container,
-
-  /* Laporan Pages */
-  .content .laporan-card,
-  .content .report-card,
-
-  /* System Status */
-  .content .system-card,
-  .content .health-section,
-
-  /* Generic page containers */
-  .content [class*="-table-container"],
-  .content [class*="-stat-card"],
-  .content [class*="-panel"] {
+  .content [class*="-table-container"] {
     margin-left: -16px;
     margin-right: -16px;
     width: calc(100% + 32px);
@@ -1935,36 +1878,34 @@ select option:hover {
     border-right: none;
   }
 
-  /* OTA Dashboard specific - inner wrapper */
+  /* OTA Dashboard - table breakout */
   .ota-dashboard-inner {
     padding: 16px;
   }
 
-  .ota-dashboard-inner .ota-stat-card,
-  .ota-dashboard-inner .ota-panel,
-  .ota-dashboard-inner .ota-welcome-header,
-  .ota-dashboard-inner .ota-quick-links,
-  .ota-dashboard-inner .ota-announcements {
+  .ota-dashboard-inner .ota-table-container,
+  .ota-dashboard-inner [class*="-table-container"] {
     margin-left: -16px;
     margin-right: -16px;
     width: calc(100% + 32px);
     border-radius: 0 !important;
   }
 
-  /* Pengurus Dashboard specific */
+  /* Pengurus Dashboard - table breakout */
   .pengurus-dashboard {
     padding: 16px;
   }
 
-  .pengurus-dashboard .pengurus-stat-card,
-  .pengurus-dashboard .secondary-stat-card,
-  .pengurus-dashboard .pengurus-card,
-  .pengurus-dashboard .pengurus-welcome {
+  .pengurus-dashboard .table-container,
+  .pengurus-dashboard [class*="-table-container"] {
     margin-left: -16px;
     margin-right: -16px;
     width: calc(100% + 32px);
     border-radius: 0 !important;
   }
+
+  /* CARD - Tetap dengan padding (tidak breakout) */
+  /* Card mengikuti padding dari .content (16px) */
 
   /* Stats */
   .stats-grid {
