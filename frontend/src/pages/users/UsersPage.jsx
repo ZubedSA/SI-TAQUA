@@ -219,6 +219,9 @@ const UsersPage = () => {
 
             if (error) throw error
 
+            // DEBUG: Log what we get from database
+            console.log('🔍 fetchUsers result:', { dataCount: data?.length, data })
+
             // Normalize roles data for users who might not have it yet
             // Ensure we handle various data shapes from legacy/migrated stats
             const normalizedUsers = (data || []).map(u => {
