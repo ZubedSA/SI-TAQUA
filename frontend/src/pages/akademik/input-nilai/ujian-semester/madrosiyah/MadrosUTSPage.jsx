@@ -141,7 +141,7 @@ const MadrosUTSPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <BookOpen className="title-icon blue" /> Input Nilai UTS
+                        Input Nilai UTS
                     </h1>
                     <p className="page-subtitle">Madrosiyah - Ujian Tengah Semester</p>
                 </div>

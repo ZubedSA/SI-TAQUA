@@ -738,7 +738,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                         <img
                             src={logoFile}
                             alt="Logo PTQA"
-                            className="w-8 h-8 object-contain"
+                            className="w-16 h-16 object-contain"
                         />
                         <span className="text-lg font-bold text-gray-900 tracking-tight">Si-Taqua</span>
                     </div>

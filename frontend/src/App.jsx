@@ -143,11 +143,14 @@ const queryClient = new QueryClient({
 })
 
 
+import VersionChecker from './components/system/VersionChecker'
+
 import { CalendarProvider } from './context/CalendarContext'
 
 function App() {
   return (
     <ErrorBoundary>
+      <VersionChecker />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>

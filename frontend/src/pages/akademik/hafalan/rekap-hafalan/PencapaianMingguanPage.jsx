@@ -91,7 +91,7 @@ const PencapaianMingguanPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <Trophy className="title-icon green" /> Pencapaian Hafalan Mingguan
+                        Pencapaian Hafalan Mingguan
                     </h1>
                     <p className="page-subtitle">Rekap pencapaian hafalan per minggu</p>
                 </div>

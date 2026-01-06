@@ -221,112 +221,143 @@ export const generateKwitansiPDF = async (data) => {
     doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep', 45, y + 19)
 
     y += 32
+    // Decorative line
+    doc.setDrawColor(5, 150, 105)
+    doc.setLineWidth(1)
+    doc.line(14, y, pageWidth - 14, y)
+    doc.setLineWidth(0.5)
 
-    // Title bar
-    doc.setFillColor(5, 150, 105)
-    doc.rect(14, y, pageWidth - 28, 12, 'F')
-    doc.setTextColor(255)
-    doc.setFontSize(12)
+    y += 15
+
+    // Title
+    doc.setTextColor(5, 150, 105)
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.text('KWITANSI PEMBAYARAN', pageWidth / 2, y + 8, { align: 'center' })
+    doc.text('BUKTI PEMBAYARAN', pageWidth / 2, y, { align: 'center' })
 
-    y += 20
+    y += 8
+    doc.setFontSize(10)
+    doc.setTextColor(120)
+    doc.setFont('helvetica', 'normal')
+    doc.text(nomorKwitansi, pageWidth / 2, y, { align: 'center' })
+
+    y += 15
     doc.setTextColor(0)
 
-    // ========== CONTENT ROWS (with borders) ==========
+    // ========== CONTENT ROWS (Clean Design) ==========
     const startY = y
-    const rowHeight = 10
-    const labelWidth = 50
+    const rowHeight = 11 // More spacing
+    const labelWidth = 60
     const valueX = 14 + labelWidth
     const contentWidth = pageWidth - 28
     let currentRow = 0
 
-    const drawRow = (label, value) => {
+    const drawRow = (label, value, isTotal = false) => {
         const rowY = startY + (currentRow * rowHeight)
-        // Draw border
-        doc.setDrawColor(180)
-        doc.rect(14, rowY, contentWidth, rowHeight)
-        // Label background
-        doc.setFillColor(245, 245, 245)
-        doc.rect(14, rowY, labelWidth, rowHeight, 'F')
-        // Label border
-        doc.line(14 + labelWidth, rowY, 14 + labelWidth, rowY + rowHeight)
-        // Text
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.text(label, 18, rowY + 7)
-        doc.text(value || '-', valueX + 4, rowY + 7)
+
+        if (isTotal) {
+            // Highlight Total Row
+            doc.setFillColor(240, 253, 244) // Light green
+            doc.setDrawColor(5, 150, 105)
+            doc.rect(14, rowY - 6, contentWidth, rowHeight, 'FD')
+
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(11)
+            doc.setTextColor(5, 150, 105)
+            doc.text(label, 18, rowY + 1)
+            doc.text(value || '-', 18 + labelWidth, rowY + 1)
+            doc.setTextColor(0) // Reset
+        } else {
+            // Normal Row - Just bottom line
+            doc.setDrawColor(240) // Very light gray line
+            doc.line(14, rowY + 4, pageWidth - 14, rowY + 4)
+
+            // Label
+            doc.setFont('helvetica', 'bold')
+            doc.setFontSize(9)
+            doc.setTextColor(100)
+            doc.text(label, 14, rowY)
+
+            // Value
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(10)
+            doc.setTextColor(0)
+            doc.text(value || '-', 14 + labelWidth, rowY)
+        }
+
         currentRow++
     }
 
-    // Row 1: No. Kwitansi
-    drawRow('No. Kwitansi', nomorKwitansi)
-
-    // Row 2: Tanggal
+    // Row 1: Tanggal
     const displayTanggal = formattedTanggal || new Date(tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-    drawRow('Tanggal', displayTanggal)
+    drawRow('Tanggal Pembayaran', displayTanggal)
 
-    // Row 3: Nama Santri
+    // Row 2: Nama Santri
     drawRow('Nama Santri', namaSantri)
 
-    // Row 4: Nama Wali Santri
+    // Row 3: Nama Wali
     drawRow('Nama Wali Santri', namaWali || '-')
 
-    // Row 5: Jenis Pembayaran
-    drawRow('Jenis Pembayaran', kategori)
+    // Row 4: Jenis Pembayaran
+    drawRow('Untuk Pembayaran', kategori)
 
-    // Row 6: Periode
+    // Row 5: Periode
     drawRow('Periode', periode || '-')
 
-    // Row 7: Jumlah (bold)
-    const jumlahRowY = startY + (currentRow * rowHeight)
-    doc.setDrawColor(180)
-    doc.rect(14, jumlahRowY, contentWidth, rowHeight)
-    doc.setFillColor(240, 253, 244) // light green
-    doc.rect(14, jumlahRowY, labelWidth, rowHeight, 'F')
-    doc.line(14 + labelWidth, jumlahRowY, 14 + labelWidth, jumlahRowY + rowHeight)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.text('Jumlah', 18, jumlahRowY + 7)
-    doc.setFontSize(11)
-    doc.text(`Rp ${Number(jumlah).toLocaleString('id-ID')}`, valueX + 4, jumlahRowY + 7)
-    currentRow++
-
-    // Row 8: Metode Pembayaran
+    // Row 6: Metode
     drawRow('Metode Pembayaran', metode)
 
-    y = startY + (currentRow * rowHeight) + 20
+    y = startY + (currentRow * rowHeight) + 10
 
-    // ========== LUNAS BADGE - CENTERED & BIG ==========
-    doc.setTextColor(5, 150, 105)
+    // Row 7: Jumlah (Highlighted)
+    // Manually putting it separate for better layout control
+    doc.setFillColor(5, 150, 105)
+    doc.rect(14, y, contentWidth, 14, 'F')
+    doc.setTextColor(255)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(28)
-    doc.text('LUNAS', pageWidth / 2, y, { align: 'center' })
+    doc.setFontSize(11)
+    doc.text('TOTAL JUMLAH', 20, y + 9)
+    doc.setFontSize(12)
+    doc.text(`Rp ${Number(jumlah).toLocaleString('id-ID')}`, pageWidth - 20, y + 9, { align: 'right' })
 
-    y += 20
+    y += 35
 
-    // ========== SIGNATURE SECTION - CENTERED ==========
+    // ========== LUNAS BADGE - STAMP EFFECT ==========
+    doc.setDrawColor(5, 150, 105)
+    doc.setLineWidth(2)
+    doc.setTextColor(5, 150, 105)
+    doc.setFontSize(24)
+    doc.setFont('helvetica', 'bold')
+
+    // Rotate context for stamp
+    // jsPDF rotation is complex, keeping it simple horizontal for now
+    doc.text('LUNAS', pageWidth / 2, y - 10, { align: 'center' })
+    // doc.rect((pageWidth / 2) - 25, y - 19, 50, 14) // Box around LUNAS
+    doc.setLineWidth(0.5) // Reset
+
+    y += 10
+
+    // ========== SIGNATURE ==========
     doc.setTextColor(0)
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.text('Hormat Kami,', pageWidth / 2, y, { align: 'center' })
+    doc.setFontSize(9)
 
-    y += 25
-    // Signature line - centered
-    doc.line(pageWidth / 2 - 30, y, pageWidth / 2 + 30, y)
+    const signatureY = y
+    doc.text('Sumenep, ' + (formattedTanggal || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })), pageWidth - 50, signatureY, { align: 'center' })
+    doc.text('Bendahara', pageWidth - 50, signatureY + 5, { align: 'center' })
 
-    y += 5
+    // Space for signature
+    doc.line(pageWidth - 70, signatureY + 25, pageWidth - 30, signatureY + 25)
+
     doc.setFont('helvetica', 'bold')
-    doc.text(kasir || 'Bendahara PTQA', pageWidth / 2, y, { align: 'center' })
+    doc.text(kasir || 'Admin Keuangan', pageWidth - 50, signatureY + 30, { align: 'center' })
 
     // ========== FOOTER ==========
-    y += 20
+    const finalY = 280
     doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(100)
-    doc.text('PTQA Batuan - Pondok Pesantren Tahfizh Qur\'an Al-Usymuni Batuan', pageWidth / 2, y, { align: 'center' })
-    const printDate = printedAt || new Date().toLocaleDateString('id-ID')
-    doc.text(`Dicetak: ${printDate}`, pageWidth / 2, y + 5, { align: 'center' })
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(150)
+    doc.text('Simpan kwitansi ini sebagai bukti pembayaran yang sah.', pageWidth / 2, finalY, { align: 'center' })
 
     // Save
     doc.save(`Kwitansi_${nomorKwitansi}_${namaSantri?.replace(/\s/g, '_') || 'santri'}.pdf`)

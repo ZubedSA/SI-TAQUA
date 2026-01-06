@@ -282,7 +282,7 @@ const PembayaranSantriPage = () => {
         // Get periode from payment date
         // Use formatDate to respect mode for Month representation if desired, 
         // or just standard Hijri/Masehi string
-        const periodeStr = formatDate(lastPayment.tanggal, { month: 'long', year: 'numeric' })
+        const periodeStr = formatDate(lastPayment.tanggal, { day: undefined, month: 'long', year: 'numeric' })
 
         generateKwitansiPDF({
             nomorKwitansi: `KW-${Date.now().toString().slice(-8)}`,
@@ -315,7 +315,7 @@ const PembayaranSantriPage = () => {
                 `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
                 `Konfirmasi tagihan yang SUDAH LUNAS:`,
                 ...sudahLunas.map(t => `✅ ${t.kategori?.nama} (Rp ${Number(t.jumlah).toLocaleString('id-ID')})`),
-                { label: 'Total Lunas', value: `Rp ${total.toLocaleString('id-ID')}` }
+                { label: 'Total Lunas', value: `Rp ${sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0).toLocaleString('id-ID')}` }
             ]
         })
 
@@ -368,7 +368,7 @@ const PembayaranSantriPage = () => {
     // Print kwitansi for single lunas
     const handlePrintLunasSingle = (tagihan) => {
         // Get periode from jatuh_tempo
-        const periodeStr = formatDate(tagihan.jatuh_tempo, { month: 'long', year: 'numeric' }) // Still depends on mode, but usually periode is Masehi? "Desember 2024". useCalendar formatDate handles full string.
+        const periodeStr = formatDate(tagihan.jatuh_tempo, { day: undefined, month: 'long', year: 'numeric' }) // Still depends on mode, but usually periode is Masehi? "Desember 2024". useCalendar formatDate handles full string.
         // Actually for Periode string like "Desember 2024", formatDate returns full date.
         // Let's stick to Masehi for Periode grouping label if database is monthly based?
         // But the code used `toLocaleDateString`.
@@ -407,7 +407,7 @@ const PembayaranSantriPage = () => {
                 `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
                 `Berikut riwayat pembayaran yang tercatat:`,
                 ...pembayaranHistory.map(p => `• ${formatDate(p.tanggal)}: ${p.tagihan?.kategori?.nama || '-'} (${Number(p.jumlah).toLocaleString('id-ID')})`),
-                { label: 'Total Tercatat', value: `Rp ${total.toLocaleString('id-ID')}` }
+                { label: 'Total Tercatat', value: `Rp ${pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0).toLocaleString('id-ID')}` }
             ]
         })
 
@@ -462,7 +462,7 @@ const PembayaranSantriPage = () => {
     // Print kwitansi for single history
     const handlePrintHistorySingle = (pembayaran) => {
         // Get periode from payment date
-        const periodeStr = formatDate(pembayaran.tanggal, { month: 'long', year: 'numeric' })
+        const periodeStr = formatDate(pembayaran.tanggal, { day: undefined, month: 'long', year: 'numeric' })
 
         generateKwitansiPDF({
             nomorKwitansi: `KW-${pembayaran.id.slice(-8)}`,

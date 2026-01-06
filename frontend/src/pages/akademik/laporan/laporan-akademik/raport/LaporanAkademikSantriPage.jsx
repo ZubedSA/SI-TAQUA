@@ -375,7 +375,7 @@ const LaporanAkademikSantriPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <Users className="title-icon purple" /> Laporan Akademik Santri
+                        Laporan Akademik Santri
                     </h1>
                     <p className="page-subtitle">Laporan lengkap per santri</p>
                 </div>

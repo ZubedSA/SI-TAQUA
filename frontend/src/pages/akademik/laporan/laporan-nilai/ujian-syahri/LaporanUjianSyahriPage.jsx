@@ -259,7 +259,7 @@ const LaporanUjianSyahriPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <FileText className="title-icon green" /> Laporan Ujian Syahri
+                        Laporan Ujian Syahri
                     </h1>
                     <p className="page-subtitle">Laporan hasil ujian bulanan (Syahri) - Tahfizhiyah</p>
                 </div>

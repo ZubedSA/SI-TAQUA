@@ -187,7 +187,7 @@ const LaporanHafalanHarianPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <BookMarked className="title-icon green" /> Laporan Hafalan Harian
+                        Laporan Hafalan Harian
                     </h1>
                     <p className="page-subtitle">Kirim laporan hafalan harian via WhatsApp</p>
                 </div>

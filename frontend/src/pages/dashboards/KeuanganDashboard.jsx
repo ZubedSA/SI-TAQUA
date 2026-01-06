@@ -283,7 +283,7 @@ const KeuanganDashboard = () => {
                 <div className="keuangan-stat-card">
                     <div className="stat-info">
                         <span className="stat-label">Total Pemasukan</span>
-                        <span className="stat-value green">{loading ? '...' : formatCurrency(keuanganStats.pemasukan, true)}</span>
+                        <span className="stat-value green">{loading ? '...' : formatCurrency(keuanganStats.pemasukan)}</span>
                     </div>
                     <div className="stat-icon-box green">
                         <ArrowUpCircle size={24} />
@@ -292,7 +292,7 @@ const KeuanganDashboard = () => {
                 <div className="keuangan-stat-card">
                     <div className="stat-info">
                         <span className="stat-label">Total Pengeluaran</span>
-                        <span className="stat-value red">{loading ? '...' : formatCurrency(keuanganStats.pengeluaran, true)}</span>
+                        <span className="stat-value red">{loading ? '...' : formatCurrency(keuanganStats.pengeluaran)}</span>
                     </div>
                     <div className="stat-icon-box red">
                         <ArrowDownCircle size={24} />
@@ -300,17 +300,8 @@ const KeuanganDashboard = () => {
                 </div>
                 <div className="keuangan-stat-card">
                     <div className="stat-info">
-                        <span className="stat-label">Pembayaran Santri</span>
-                        <span className="stat-value blue">{loading ? '...' : formatCurrency(keuanganStats.pembayaran, true)}</span>
-                    </div>
-                    <div className="stat-icon-box blue">
-                        <CreditCard size={24} />
-                    </div>
-                </div>
-                <div className="keuangan-stat-card">
-                    <div className="stat-info">
                         <span className="stat-label">Saldo Kas</span>
-                        <span className="stat-value purple">{loading ? '...' : formatCurrency(keuanganStats.saldo, true)}</span>
+                        <span className="stat-value purple">{loading ? '...' : formatCurrency(keuanganStats.saldo)}</span>
                     </div>
                     <div className="stat-icon-box purple">
                         <Wallet size={24} />

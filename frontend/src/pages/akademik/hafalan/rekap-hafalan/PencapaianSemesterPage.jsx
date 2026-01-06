@@ -48,7 +48,7 @@ const PencapaianSemesterPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <Trophy className="title-icon purple" /> Pencapaian Hafalan Semester
+                        Pencapaian Hafalan Semester
                     </h1>
                     <p className="page-subtitle">Rekap pencapaian hafalan per semester</p>
                 </div>

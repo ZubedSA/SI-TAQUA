@@ -264,7 +264,7 @@ const LaporanRekapMingguanPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <Calendar className="title-icon blue" /> Laporan Rekap Mingguan
+                        Laporan Rekap Mingguan
                     </h1>
                     <p className="page-subtitle">Rekap hafalan per rentang tanggal</p>
                 </div>

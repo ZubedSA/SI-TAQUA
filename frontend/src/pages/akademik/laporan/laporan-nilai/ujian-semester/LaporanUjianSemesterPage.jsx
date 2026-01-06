@@ -181,7 +181,7 @@ const LaporanUjianSemesterPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <FileText className="title-icon blue" /> Laporan Ujian Semester
+                        Laporan Ujian Semester
                     </h1>
                     <p className="page-subtitle">Laporan hasil ujian semester - Tahfizhiyah</p>
                 </div>

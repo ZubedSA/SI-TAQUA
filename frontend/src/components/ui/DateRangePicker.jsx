@@ -124,30 +124,43 @@ const DateRangePicker = ({ startDate, endDate, onChange, className = '', singleD
 
     // Helper to render Hijri Inputs
     const renderHijriInput = (label, state, updater) => (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</label>
-            <div className="flex gap-2">
-                <select
-                    className="w-16 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                    value={state.day}
-                    onChange={e => updater('day', e.target.value)}
-                >
-                    {[...Array(30)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
-                </select>
-                <select
-                    className="flex-1 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                    value={state.month}
-                    onChange={e => updater('month', e.target.value)}
-                >
-                    {hijriMonths.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                </select>
-                <input
-                    type="number"
-                    className="w-20 px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500"
-                    value={state.year}
-                    onChange={e => updater('year', e.target.value)}
-                    min="1400" max="1500"
-                />
+            <div className="grid grid-cols-12 gap-2">
+                {/* Tanggal */}
+                <div className="col-span-3">
+                    <select
+                        className="w-full px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-colors"
+                        value={state.day}
+                        onChange={e => updater('day', e.target.value)}
+                    >
+                        {[...Array(30)].map((_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+                    </select>
+                </div>
+
+                {/* Bulan */}
+                <div className="col-span-5">
+                    <select
+                        className="w-full px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-colors"
+                        value={state.month}
+                        onChange={e => updater('month', e.target.value)}
+                        style={{ textOverflow: 'ellipsis' }}
+                    >
+                        {hijriMonths.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                    </select>
+                </div>
+
+                {/* Tahun */}
+                <div className="col-span-4">
+                    <input
+                        type="number"
+                        className="w-full px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-colors text-center"
+                        value={state.year}
+                        onChange={e => updater('year', e.target.value)}
+                        min="1400" max="1500"
+                        placeholder="Tahun"
+                    />
+                </div>
             </div>
         </div>
     )
@@ -157,7 +170,7 @@ const DateRangePicker = ({ startDate, endDate, onChange, className = '', singleD
             {/* Trigger Button */}
             <button
                 type="button"
-                className={`flex items-center gap-2 px-3 py-2 bg-white border rounded-lg text-sm transition-all w-full md:w-auto min-w-[200px] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${isActive ? 'border-primary-500 text-primary-700 bg-primary-50/30' : 'border-gray-200 text-gray-600'}`}
+                className={`flex items-center gap-2 px-3 py-2.5 bg-white border rounded-lg text-sm transition-all w-full md:w-auto min-w-[200px] hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20 ${isActive ? 'border-primary-500 text-primary-700 bg-primary-50/30' : 'border-gray-200 text-gray-600'}`}
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <Calendar size={18} className={isActive ? 'text-primary-500' : 'text-gray-400'} />
@@ -174,55 +187,74 @@ const DateRangePicker = ({ startDate, endDate, onChange, className = '', singleD
                 )}
             </button>
 
-            {/* Popover */}
+            {/* Adaptive Content Wrapper */}
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="space-y-4">
-                        {mode === 'hijriyah' ? (
-                            <>
-                                {renderHijriInput(singleDate ? 'Tanggal (Hijriyah)' : 'Dari Tanggal (Hijriyah)', hijriStart, handleHijriStartUpdate)}
-                                {!singleDate && renderHijriInput('Sampai Tanggal (Hijriyah)', hijriEnd, handleHijriEndUpdate)}
-                            </>
-                        ) : (
-                            <>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{singleDate ? 'Tanggal' : 'Dari Tanggal'}</label>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={handleStartChange}
-                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:bg-white transition-colors"
-                                    />
-                                </div>
-                                {!singleDate && (
-                                    <div className="space-y-1.5">
-                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sampai Tanggal</label>
-                                        <input
-                                            type="date"
-                                            value={endDate}
-                                            onChange={handleEndChange}
-                                            min={startDate}
-                                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:bg-white transition-colors"
-                                        />
-                                    </div>
-                                )}
-                            </>
-                        )}
+                <>
+                    {/* Mobile Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+                        onClick={() => setIsOpen(false)}
+                    />
 
-                        <div className="pt-2 border-t border-gray-100 flex justify-end">
-                            <button
-                                onClick={() => setIsOpen(false)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
-                            >
-                                <Check size={14} />
-                                Selesai
+                    {/* Content Container: Modal on Mobile, Popover on Desktop */}
+                    <div className="fixed inset-x-4 top-[20%] md:top-full md:left-0 md:inset-x-auto z-50 
+                                  w-auto md:w-[32rem] bg-white rounded-xl shadow-2xl md:shadow-xl border border-gray-100 
+                                  p-5 md:p-4 mt-0 md:mt-2 animate-in fade-in zoom-in-95 duration-200">
+
+                        <div className="flex justify-between items-center mb-4 md:hidden">
+                            <h3 className="font-semibold text-gray-900">Pilih Periode</h3>
+                            <button onClick={() => setIsOpen(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                                <X size={20} />
                             </button>
                         </div>
-                    </div>
 
-                    {/* Arrow Pointer */}
-                    <div className="absolute -top-2 left-6 w-4 h-4 bg-white border-t border-l border-gray-100 transform rotate-45"></div>
-                </div>
+                        <div className="space-y-5 md:space-y-4">
+                            {mode === 'hijriyah' ? (
+                                <>
+                                    {renderHijriInput(singleDate ? 'Tanggal (Hijriyah)' : 'Dari Tanggal (Hijriyah)', hijriStart, handleHijriStartUpdate)}
+                                    {!singleDate && renderHijriInput('Sampai Tanggal (Hijriyah)', hijriEnd, handleHijriEndUpdate)}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{singleDate ? 'Tanggal' : 'Dari Tanggal'}</label>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={handleStartChange}
+                                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:bg-white transition-colors"
+                                        />
+                                    </div>
+                                    {!singleDate && (
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sampai Tanggal</label>
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={handleEndChange}
+                                                min={startDate}
+                                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:bg-white transition-colors"
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            <div className="pt-4 border-t border-gray-100 flex justify-end">
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors shadow-sm active:scale-95 transform"
+                                >
+                                    <Check size={16} />
+                                    Terapkan Filter
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Arrow Pointer (Desktop Only) */}
+                        <div className="hidden md:block absolute -top-2 left-6 w-4 h-4 bg-white border-t border-l border-gray-100 transform rotate-45"></div>
+                    </div>
+                </>
             )}
         </div>
     )

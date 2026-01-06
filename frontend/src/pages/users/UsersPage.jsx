@@ -759,6 +759,7 @@ const UsersPage = () => {
                                 <option value="pengurus">Pengurus</option>
                                 <option value="ota">OTA</option>
                                 <option value="wali">Wali</option>
+                                <option value="musyrif">Musyrif</option>
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                         </div>

@@ -157,7 +157,7 @@ const TahfizhSemesterPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <BookMarked className="title-icon blue" /> Input Nilai Ujian Semester
+                        Input Nilai Ujian Semester
                     </h1>
                     <p className="page-subtitle">Tahfizhiyah - Ujian Semester</p>
                 </div>

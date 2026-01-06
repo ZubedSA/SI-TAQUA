@@ -77,7 +77,7 @@ const PencapaianBulananPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <Trophy className="title-icon blue" /> Pencapaian Hafalan Bulanan
+                        Pencapaian Hafalan Bulanan
                     </h1>
                     <p className="page-subtitle">Rekap pencapaian hafalan per bulan</p>
                 </div>

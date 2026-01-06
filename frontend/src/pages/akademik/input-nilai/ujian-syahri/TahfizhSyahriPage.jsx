@@ -201,7 +201,7 @@ const TahfizhSyahriPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <BookMarked className="title-icon green" /> Input Nilai Ujian Syahri
+                        Input Nilai Ujian Syahri
                     </h1>
                     <p className="page-subtitle">Tahfizhiyah - Ujian Bulanan</p>
                 </div>

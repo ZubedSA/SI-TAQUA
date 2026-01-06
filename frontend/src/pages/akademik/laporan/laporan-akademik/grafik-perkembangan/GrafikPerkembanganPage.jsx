@@ -36,7 +36,7 @@ const GrafikPerkembanganPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <BarChart3 className="title-icon purple" /> Grafik Perkembangan
+                        Grafik Perkembangan
                     </h1>
                     <p className="page-subtitle">Grafik perkembangan nilai santri</p>
                 </div>

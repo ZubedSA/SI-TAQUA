@@ -156,7 +156,7 @@ const MadrosHarianPage = () => {
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        <BookOpen className="title-icon green" /> Input Nilai Ujian Harian
+                        Input Nilai Ujian Harian
                     </h1>
                     <p className="page-subtitle">Madrosiyah - Ujian Harian</p>
                 </div>
