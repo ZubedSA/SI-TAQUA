@@ -6,9 +6,14 @@ import { logCreate, logUpdate } from '../../../../lib/auditLog'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import ConfirmationModal from '../../../../components/ui/ConfirmationModal'
 import DateRangePicker from '../../../../components/ui/DateRangePicker'
+import { createMessage, sendWhatsApp } from '../../../../utils/whatsapp'
+import { useCalendar } from '../../../../context/CalendarContext'
+import { useToast } from '../../../../context/ToastContext'
 import './Hafalan.css'
 
 const HafalanForm = () => {
+    const { formatDate } = useCalendar()
+    const showToast = useToast()
     const navigate = useNavigate()
     const { id } = useParams()
     const [searchParams] = useSearchParams()
@@ -216,8 +221,6 @@ const HafalanForm = () => {
         try {
             if (santri) {
                 let phone = santri.no_telp_wali || ''
-                phone = phone.replace(/\D/g, '')
-                if (phone.startsWith('0')) phone = '62' + phone.substring(1)
 
                 if (!phone) {
                     showToast.error('Nomor WhatsApp wali tidak tersedia. Mohon update data santri.')
@@ -225,11 +228,26 @@ const HafalanForm = () => {
                     return
                 }
 
-                if (phone) {
-                    const message = `Assalamu'alaikum Wr. Wb.\n\n*LAPORAN HAFALAN SANTRI*\n━━━━━━━━━━━━━━━━━━━━\n\nKepada Yth. *${santri.nama_wali || 'Wali Santri'}*\n\n📌 *Nama:* ${santri.nama}\n📅 *Tanggal:* ${data.tanggal}\n📖 *Jenis:* ${data.jenis}\n📊 *Kadar:* ${data.kadar_setoran}\n👤 *Musyrif:* ${musyrifInfo?.nama || '-'}\n\n*Detail:*\n• Mulai: Juz ${data.juz_mulai}, ${data.surah_mulai} ayat ${data.ayat_mulai}\n• Selesai: Juz ${data.juz_selesai}, ${data.surah_selesai} ayat ${data.ayat_selesai}\n\n*Status:* ${data.status}\n${data.catatan ? `*Catatan:* ${data.catatan}` : ''}\n\nJazakumullah khairan.\n_PTQA Batuan_`
-                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                    showToast.success('WhatsApp terbuka!')
-                }
+                const message = createMessage({
+                    intro: `LAPORAN HAFALAN SANTRI`,
+                    data: [
+                        `Kepada Yth. *${santri.nama_wali || 'Wali Santri'}*`,
+                        { label: 'Nama', value: santri.nama },
+                        { label: 'Tanggal', value: formatDate(data.tanggal) },
+                        { label: 'Jenis', value: data.jenis },
+                        { label: 'Kadar', value: data.kadar_setoran },
+                        { label: 'Musyrif', value: musyrifInfo?.nama || '-' },
+                        `--- Detail Hafalan ---`,
+                        { label: 'Mulai', value: `Juz ${data.juz_mulai}, ${data.surah_mulai} ayat ${data.ayat_mulai}` },
+                        { label: 'Selesai', value: `Juz ${data.juz_selesai}, ${data.surah_selesai} ayat ${data.ayat_selesai}` },
+                        { label: 'Status', value: data.status },
+                        data.catatan ? { label: 'Catatan', value: data.catatan } : null
+                    ],
+                    closing: "Jazakumullah khairan."
+                })
+
+                sendWhatsApp(phone, message)
+                showToast.success('WhatsApp terbuka!')
             }
         } catch (waError) {
             console.error('WhatsApp error:', waError)

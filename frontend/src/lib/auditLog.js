@@ -35,13 +35,13 @@ export const logActivity = async (action, tableName, recordName, description, op
 
         console.log('📝 Log data:', logData)
 
-        const { data, error } = await supabase.from('audit_log').insert([logData]).select()
+        const { data, error } = await supabase.from('audit_logs').insert([logData]).select()
 
         if (error) {
             console.error('❌ Audit log insert error:', error.message, error.details, error.hint)
             // Jika tabel tidak ada, berikan instruksi
             if (error.message.includes('does not exist') || error.code === '42P01') {
-                console.error('⚠️ Tabel audit_log belum ada! Jalankan SQL di Supabase Dashboard.')
+                console.error('⚠️ Tabel audit_logs belum ada! Jalankan SQL di Supabase Dashboard.')
             }
             return false
         }

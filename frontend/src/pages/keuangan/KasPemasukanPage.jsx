@@ -133,7 +133,7 @@ const KasPemasukanPage = () => {
     }
 
     const executeSave = async () => {
-        setSaving(true)
+        // Optimistic UI: Don't show loading, just close efficiently
         try {
             const payload = {
                 ...form,
@@ -141,6 +141,14 @@ const KasPemasukanPage = () => {
                 created_by: user?.id
             }
 
+            // 1. Close Modals IMMEDIATELY
+            setSaveModal({ isOpen: false })
+            setShowModal(false)
+
+            // 2. Reset form AFTER ensuring payload is captured
+            resetForm()
+
+            // 3. Perform Background Operations
             if (editItem) {
                 const { error } = await supabase
                     .from('kas_pemasukan')
@@ -148,39 +156,45 @@ const KasPemasukanPage = () => {
                     .eq('id', editItem.id)
                 if (error) throw error
 
-                // Audit Log - UPDATE
-                await logUpdate(
-                    'kas_pemasukan',
-                    payload.sumber,
-                    `Update pemasukan: ${payload.sumber} - Rp ${Number(payload.jumlah).toLocaleString('id-ID')}`,
-                    { sumber: editItem.sumber, jumlah: editItem.jumlah, kategori: editItem.kategori },
-                    { sumber: payload.sumber, jumlah: payload.jumlah, kategori: payload.kategori }
-                )
                 showToast.success('Pemasukan berhasil diperbarui')
+
+                // Audit Log - UPDATE
+                try {
+                    await logUpdate(
+                        'kas_pemasukan',
+                        payload.sumber,
+                        `Update pemasukan: ${payload.sumber} - Rp ${Number(payload.jumlah).toLocaleString('id-ID')}`,
+                        { sumber: editItem.sumber, jumlah: editItem.jumlah, kategori: editItem.kategori },
+                        { sumber: payload.sumber, jumlah: payload.jumlah, kategori: payload.kategori }
+                    )
+                } catch (auditErr) { console.error('Audit log failed', auditErr) }
+
             } else {
                 const { error } = await supabase
                     .from('kas_pemasukan')
                     .insert([payload])
                 if (error) throw error
 
-                // Audit Log - CREATE
-                await logCreate(
-                    'kas_pemasukan',
-                    payload.sumber,
-                    `Tambah pemasukan: ${payload.sumber} - Rp ${Number(payload.jumlah).toLocaleString('id-ID')}`
-                )
                 showToast.success('Pemasukan baru berhasil ditambahkan')
+
+                // Audit Log - CREATE
+                try {
+                    await logCreate(
+                        'kas_pemasukan',
+                        payload.sumber,
+                        `Tambah pemasukan: ${payload.sumber} - Rp ${Number(payload.jumlah).toLocaleString('id-ID')}`
+                    )
+                } catch (auditErr) { console.error('Audit log failed', auditErr) }
             }
 
-            setSaveModal({ isOpen: false })
-            setShowModal(false)
-            resetForm()
-            await refetch() // Updated: Use hook refetch instead of fetchData
+            // 4. Refresh Data (Background)
+            if (refetch) await refetch()
+
         } catch (err) {
             console.error('Submit error:', err)
             showToast.error('Gagal menyimpan: ' + err.message)
-        } finally {
-            setSaving(false)
+            // Form is already closed, so user just sees error toast. 
+            // They can re-open form if needed.
         }
     }
 
@@ -517,6 +531,7 @@ const KasPemasukanPage = () => {
                 message={`Yakin ingin menghapus pemasukan ini?`}
             />
 
+            {/* Save Confirmation Modal Restored */}
             <ConfirmationModal
                 isOpen={saveModal.isOpen}
                 onClose={() => setSaveModal({ isOpen: false })}

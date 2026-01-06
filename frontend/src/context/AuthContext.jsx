@@ -347,11 +347,23 @@ export const AuthProvider = ({ children }) => {
     }
 
     const signOut = async () => {
-        const { error } = await supabase.auth.signOut()
-        if (error) throw error
-        logAuthEvent('LOGOUT', { reason: 'USER_ACTION' })
-        setUser(null)
-        setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
+        // 1. Log audit BEFORE signing out (so we have the user_id)
+        await logAuthEvent('LOGOUT', { reason: 'USER_ACTION' })
+
+        try {
+            // 2. Perform Supabase SignOut
+            const { error } = await supabase.auth.signOut()
+            if (error) {
+                console.error('Supabase signOut error (ignored):', error.message)
+            }
+        } catch (err) {
+            console.error('SignOut Exception:', err)
+        } finally {
+            // 3. ALWAYS clear local state and redirect
+            setUser(null)
+            setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
+            localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token')
+        }
     }
 
     // Role checking helpers

@@ -16,10 +16,11 @@ import { generateLaporanPDF } from '../../../../utils/pdfGenerator'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import DateRangePicker from '../../../../components/ui/DateRangePicker'
 import { useCalendar } from '../../../../context/CalendarContext'
+import { createMessage, sendWhatsApp as sendWhatsAppGlobal } from '../../../../utils/whatsapp'
 
 
 const HafalanList = () => {
-    const { mode } = useCalendar()
+    const { mode, formatDate } = useCalendar()
     // Read initial tab from URL param
     const [searchParams] = useSearchParams()
     const initialTab = searchParams.get('tab') || 'list'
@@ -379,6 +380,7 @@ const HafalanList = () => {
     })
 
     // Fungsi kirim WhatsApp
+    // Fungsi kirim WhatsApp
     const sendWhatsApp = (item) => {
         // Gunakan nomor dari database, atau minta input jika tidak ada
         let phone = item.no_telp_wali || ''
@@ -402,34 +404,26 @@ const HafalanList = () => {
         const juzDisplay = (item.juz_mulai || item.juz || '-') + ((item.juz_selesai && item.juz_selesai !== item.juz_mulai) ? ` - ${item.juz_selesai} ` : '')
         const surahDisplay = (item.surah_mulai || item.surah || '-') + ((item.surah_selesai && item.surah_selesai !== item.surah_mulai) ? ` s / d ${item.surah_selesai} ` : '')
 
-        const message = `Assalamu'alaikum Wr. Wb.
+        const message = createMessage({
+            intro: `LAPORAN HAFALAN SANTRI`,
+            data: [
+                `Kepada Yth. Bapak/Ibu *${item.nama_wali || 'Wali Santri'}*`,
+                { label: 'Nama Santri', value: item.santri_nama },
+                { label: 'Tanggal', value: formatDate(item.tanggal) },
+                { label: 'Jenis', value: item.jenis || 'Setoran' },
+                `--- Detail Hafalan ---`,
+                { label: 'Juz', value: juzDisplay },
+                { label: 'Surah', value: surahDisplay },
+                { label: 'Ayat', value: `${item.ayat_mulai || 1} - ${item.ayat_selesai || 1}` },
+                { label: 'Kadar', value: item.kadar_setoran || '-' },
+                { label: 'Status', value: item.status },
+                { label: 'Penguji', value: item.penguji_nama || '-' },
+                item.catatan ? { label: 'Catatan', value: item.catatan } : null
+            ],
+            closing: "Demikian laporan hafalan ananda."
+        })
 
-    * LAPORAN HAFALAN SANTRI *
-━━━━━━━━━━━━━━━━━━━━
-
-Kepada Yth.Bapak / Ibu * ${item.nama_wali || 'Wali Santri'}*
-
-📌 * Nama Santri:* ${item.santri_nama}
-📅 * Tanggal:* ${item.tanggal}
-📖 * Jenis:* ${item.jenis || 'Setoran'}
-
-* Detail Hafalan:*
-• Juz: ${juzDisplay}
-• Surah: ${surahDisplay}
-• Ayat: ${item.ayat_mulai || 1} - ${item.ayat_selesai || 1}
-• Kadar: ${item.kadar_setoran || '-'}
-
-* Status:* ${item.status}
-* Penguji:* ${item.penguji_nama || '-'}
-
-${item.catatan ? `*Catatan:* ${item.catatan}` : ''}
-
-Demikian laporan hafalan ananda.Jazakumullah khairan.
-
-_PTQA Batuan_`
-
-        const encoded = encodeURIComponent(message)
-        window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank')
+        sendWhatsAppGlobal(phone, message)
     }
 
     // Fungsi kirim massal (looping)

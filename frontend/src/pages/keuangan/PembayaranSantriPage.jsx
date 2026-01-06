@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { generateLaporanPDF, generateKwitansiPDF } from '../../utils/pdfGenerator'
-import { sendWhatsApp, templateKonfirmasiPembayaran, templateTagihanSantri } from '../../utils/whatsapp'
+import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
 import { logCreate } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
@@ -238,21 +238,16 @@ const PembayaranSantriPage = () => {
             return
         }
 
-        const items = belumLunas.map(t =>
-            `• ${t.kategori?.nama}: Rp ${Number(t.jumlah).toLocaleString('id-ID')} (jatuh tempo: ${formatDate(t.jatuh_tempo)})`
-        ).join('\n')
-
-        const message = `Assalamu'alaikum,
-
-Berikut tagihan santri *${selectedSantri.nama}* (${selectedSantri.nis}):
-
-${items}
-
-*Total: Rp ${totalBelumLunas.toLocaleString('id-ID')}*
-
-Mohon untuk segera melakukan pembayaran. Jazakumullah khairan.
-
-- PTQA Batuan`
+        const message = createMessage({
+            intro: `TAGIHAN SANTRI`,
+            data: [
+                `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
+                `Berikut daftar tagihan yang harus dibayar:`,
+                ...belumLunas.map(t => `• ${t.kategori?.nama}: Rp ${Number(t.jumlah).toLocaleString('id-ID')}`),
+                { label: 'Total Tagihan', value: `Rp ${totalBelumLunas.toLocaleString('id-ID')}` }
+            ],
+            closing: "Mohon untuk segera melakukan pembayaran."
+        })
 
         sendWhatsApp(phone, message)
         showToast.success('WhatsApp siap dikirim')
@@ -266,20 +261,17 @@ Mohon untuk segera melakukan pembayaran. Jazakumullah khairan.
             return
         }
 
-        const items = lastPayment.items.map(t => `• ${t.kategori?.nama}`).join('\n')
-        const message = `Assalamu'alaikum,
-
-Konfirmasi pembayaran santri *${selectedSantri.nama}*:
-
-${items}
-
-*Total: Rp ${Number(lastPayment.jumlah).toLocaleString('id-ID')}*
-Metode: ${lastPayment.metode}
-Tanggal: ${formatDate(lastPayment.tanggal)}
-
-Jazakumullah khairan atas pembayarannya.
-
-- PTQA Batuan`
+        const message = createMessage({
+            intro: `KONFIRMASI PEMBAYARAN`,
+            data: [
+                `Santri: *${selectedSantri.nama}*`,
+                `Pembayaran telah kami terima untuk:`,
+                ...lastPayment.items.map(t => `• ${t.kategori?.nama}`),
+                { label: 'Total Nominal', value: `Rp ${Number(lastPayment.jumlah).toLocaleString('id-ID')}` },
+                { label: 'Metode', value: lastPayment.metode },
+                { label: 'Tanggal', value: formatDate(lastPayment.tanggal) }
+            ]
+        })
 
         sendWhatsApp(phone, message)
         showToast.success('WhatsApp konfirmasi siap dikirim')
@@ -317,22 +309,15 @@ Jazakumullah khairan atas pembayarannya.
             return
         }
 
-        const items = sudahLunas.map(t =>
-            `✅ ${t.kategori?.nama}: Rp ${Number(t.jumlah).toLocaleString('id-ID')}`
-        ).join('\n')
-
-        const total = sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0)
-        const message = `Assalamu'alaikum,
-
-Konfirmasi tagihan LUNAS santri *${selectedSantri.nama}* (${selectedSantri.nis}):
-
-${items}
-
-*Total Lunas: Rp ${total.toLocaleString('id-ID')}*
-
-Jazakumullah khairan atas pembayarannya.
-
-- PTQA Batuan`
+        const message = createMessage({
+            intro: `STATUS LUNAS`,
+            data: [
+                `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
+                `Konfirmasi tagihan yang SUDAH LUNAS:`,
+                ...sudahLunas.map(t => `✅ ${t.kategori?.nama} (Rp ${Number(t.jumlah).toLocaleString('id-ID')})`),
+                { label: 'Total Lunas', value: `Rp ${total.toLocaleString('id-ID')}` }
+            ]
+        })
 
         sendWhatsApp(phone, message)
         showToast.success('WhatsApp konfirmasi lunas siap dikirim')
@@ -346,17 +331,15 @@ Jazakumullah khairan atas pembayarannya.
             return
         }
 
-        const message = `Assalamu'alaikum,
-
-Konfirmasi pembayaran santri *${selectedSantri.nama}*:
-
-✅ ${tagihan.kategori?.nama}: Rp ${Number(tagihan.jumlah).toLocaleString('id-ID')}
-
-Status: LUNAS
-
-Jazakumullah khairan.
-
-- PTQA Batuan`
+        const message = createMessage({
+            intro: `KONFIRMASI LUNAS`,
+            data: [
+                `Santri: *${selectedSantri.nama}*`,
+                { label: 'Item', value: tagihan.kategori?.nama },
+                { label: 'Nominal', value: `Rp ${Number(tagihan.jumlah).toLocaleString('id-ID')}` },
+                { label: 'Status', value: 'LUNAS ✅' }
+            ]
+        })
 
         sendWhatsApp(phone, message)
         showToast.success('WhatsApp konfirmasi lunas siap dikirim')
@@ -418,20 +401,15 @@ Jazakumullah khairan.
             return
         }
 
-        const items = pembayaranHistory.map(p =>
-            `• ${formatDate(p.tanggal)} - ${p.tagihan?.kategori?.nama || '-'}: Rp ${Number(p.jumlah).toLocaleString('id-ID')} (${p.metode})`
-        ).join('\n')
-
-        const total = pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0)
-        const message = `Assalamu'alaikum,
-
-Riwayat pembayaran santri *${selectedSantri.nama}* (${selectedSantri.nis}):
-
-${items}
-
-*Total Pembayaran: Rp ${total.toLocaleString('id-ID')}*
-
-- PTQA Batuan`
+        const message = createMessage({
+            intro: `RIWAYAT PEMBAYARAN`,
+            data: [
+                `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
+                `Berikut riwayat pembayaran yang tercatat:`,
+                ...pembayaranHistory.map(p => `• ${formatDate(p.tanggal)}: ${p.tagihan?.kategori?.nama || '-'} (${Number(p.jumlah).toLocaleString('id-ID')})`),
+                { label: 'Total Tercatat', value: `Rp ${total.toLocaleString('id-ID')}` }
+            ]
+        })
 
         sendWhatsApp(phone, message)
         showToast.success('WhatsApp riwayat siap dikirim')
@@ -445,18 +423,16 @@ ${items}
             return
         }
 
-        const message = `Assalamu'alaikum,
-
-Konfirmasi pembayaran santri *${selectedSantri.nama}*:
-
-📅 Tanggal: ${formatDate(pembayaran.tanggal)}
-📋 Kategori: ${pembayaran.tagihan?.kategori?.nama || '-'}
-💰 Jumlah: Rp ${Number(pembayaran.jumlah).toLocaleString('id-ID')}
-💳 Metode: ${pembayaran.metode}
-
-Jazakumullah khairan.
-
-- PTQA Batuan`
+        const message = createMessage({
+            intro: `BUKTI PEMBAYARAN`,
+            data: [
+                `Santri: *${selectedSantri.nama}*`,
+                { label: 'Tanggal', value: formatDate(pembayaran.tanggal) },
+                { label: 'Kategori', value: pembayaran.tagihan?.kategori?.nama || '-' },
+                { label: 'Jumlah', value: `Rp ${Number(pembayaran.jumlah).toLocaleString('id-ID')}` },
+                { label: 'Metode', value: pembayaran.metode }
+            ]
+        })
 
         sendWhatsApp(phone, message)
         showToast.success('WhatsApp riwayat siap dikirim')

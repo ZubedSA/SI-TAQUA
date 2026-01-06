@@ -13,6 +13,7 @@ import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
 import './OTA.css'
 
 /**
@@ -136,28 +137,22 @@ const OTAPemasukanPage = () => {
     const sendWhatsAppConfirmation = (ota, nominal, tanggal) => {
         if (!ota?.no_hp) return
 
-        const phone = ota.no_hp.replace(/\D/g, '')
-        const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone
         const formattedDate = new Date(tanggal).toLocaleDateString('id-ID', {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
         })
         const formattedNominal = formatRupiah(nominal)
 
-        const message = `*Konfirmasi Donasi OTA*
+        const message = createMessage({
+            intro: `KONFIRMASI DONASI OTA`,
+            data: [
+                `Terima kasih atas donasi Bapak/Ibu *${ota.nama}* untuk program Orang Tua Asuh.`,
+                { label: 'Tanggal', value: formattedDate },
+                { label: 'Nominal', value: formattedNominal }
+            ],
+            closing: "Semoga menjadi amal jariyah yang diterima Allah SWT."
+        })
 
-Assalamu'alaikum Wr. Wb.
-
-Terima kasih atas donasi Bapak/Ibu *${ota.nama}* untuk program Orang Tua Asuh.
-
-📅 Tanggal: ${formattedDate}
-💰 Nominal: ${formattedNominal}
-
-Semoga menjadi amal jariyah yang diterima Allah SWT.
-
-_PTQ Al-Usymuni Batuan_`
-
-        const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
-        window.open(waUrl, '_blank')
+        sendWhatsApp(ota.no_hp, message)
     }
 
     // Save Confirmation State

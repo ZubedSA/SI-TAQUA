@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { usePermissions } from '../../hooks/usePermissions'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
-import { sendWhatsApp, templateTagihanSantri } from '../../utils/whatsapp'
+import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import DownloadButton from '../../components/ui/DownloadButton'
@@ -277,12 +277,15 @@ const TagihanSantriPage = () => {
             return
         }
 
-        const message = templateTagihanSantri({
-            namaSantri: item.santri?.nama,
-            kategori: item.kategori?.nama,
-            jumlah: item.jumlah,
-            jatuhTempo: item.jatuh_tempo,
-            formattedJatuhTempo: formatDate(item.jatuh_tempo)
+        const message = createMessage({
+            intro: `PEMBERITAHUAN TAGIHAN`,
+            data: [
+                `Kepada Yth. Wali Santri *${item.santri?.nama}*`,
+                { label: 'Kategori', value: item.kategori?.nama },
+                { label: 'Jumlah', value: `Rp ${Number(item.jumlah).toLocaleString('id-ID')}` },
+                { label: 'Jatuh Tempo', value: formatDate(item.jatuh_tempo) }
+            ],
+            closing: "Mohon untuk melakukan pembayaran sebelum jatuh tempo."
         })
 
         sendWhatsApp(phone, message)

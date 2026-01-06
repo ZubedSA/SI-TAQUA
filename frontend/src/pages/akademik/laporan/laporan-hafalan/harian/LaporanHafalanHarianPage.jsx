@@ -7,6 +7,7 @@ import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import DateRangePicker from '../../../../../components/ui/DateRangePicker'
 import { useCalendar } from '../../../../../context/CalendarContext'
+import { createMessage, sendWhatsApp as sendWhatsAppGlobal } from '../../../../../utils/whatsapp'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanHafalanHarianPage = () => {
@@ -86,31 +87,24 @@ const LaporanHafalanHarianPage = () => {
             return
         }
 
-        let phone = santri.no_telp_wali.replace(/\D/g, '')
-        if (phone.startsWith('0')) phone = '62' + phone.substring(1)
+        const message = createMessage({
+            intro: `LAPORAN HAFALAN HARIAN`,
+            data: [
+                `Kepada Yth. *${santri.nama_wali || 'Wali Santri'}*`,
+                { label: 'Nama', value: santri.nama },
+                { label: 'Tanggal', value: formatDate(item.tanggal, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) },
+                `--- Detail Hafalan ---`,
+                { label: 'Juz', value: item.juz_mulai || item.juz },
+                { label: 'Surah', value: item.surah_mulai || item.surah },
+                { label: 'Ayat', value: `${item.ayat_mulai} - ${item.ayat_selesai}` },
+                { label: 'Jenis', value: item.jenis },
+                { label: 'Status', value: item.status },
+                item.catatan ? { label: 'Catatan', value: item.catatan } : null
+            ],
+            closing: "Jazakumullah khairan."
+        })
 
-        const message = `Assalamu'alaikum Wr. Wb.
-
-*LAPORAN HAFALAN HARIAN*
-━━━━━━━━━━━━━━━━━━━━
-
-Kepada Yth. *${santri.nama_wali || 'Wali Santri'}*
-
-📌 *Nama:* ${santri.nama}
-📅 *Tanggal:* ${formatDate(item.tanggal, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-
-📖 *Detail:*
-• Juz: ${item.juz_mulai || item.juz}
-• Surah: ${item.surah_mulai || item.surah}
-• Ayat: ${item.ayat_mulai} - ${item.ayat_selesai}
-• Jenis: ${item.jenis}
-• Status: ${item.status}
-${item.catatan ? `• Catatan: ${item.catatan}` : ''}
-
-Jazakumullah khairan.
-_PTQA Batuan_`
-
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+        sendWhatsAppGlobal(santri.no_telp_wali, message)
     }
 
     const sendAllWhatsApp = () => {

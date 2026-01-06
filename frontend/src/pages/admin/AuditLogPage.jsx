@@ -70,7 +70,7 @@ const AuditLogPage = () => {
                 .from('audit_logs') // New table
                 .select(`
                     *,
-                    user:user_id(username, full_name, role)
+                    user:user_id(username, nama, role)
                 `)
                 .order('timestamp', { ascending: false }) // timestamp column
                 .limit(100);
