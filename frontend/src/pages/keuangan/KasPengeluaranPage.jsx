@@ -21,7 +21,7 @@ import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 const KasPengeluaranPage = () => {
-    const { mode } = useCalendar()
+    const { mode, formatDate } = useCalendar()
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const { canCreate, canUpdate, canDelete } = usePermissions()
     const showToast = useToast() // showToast is returned directly from context, not destructured
