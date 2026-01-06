@@ -298,8 +298,8 @@ const OTAPengeluaranPage = () => {
                 borderRadius: '16px',
                 padding: '24px',
                 color: 'white',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-                boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
                 marginBottom: '24px'
             }}>
                 <div style={{ position: 'absolute', top: 0, right: 0, width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', transform: 'translate(30%, -50%)' }} />
@@ -311,7 +311,7 @@ const OTAPengeluaranPage = () => {
                             <ArrowDownCircle size={26} />
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Pengeluaran OTA</h1>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'white' }}>Pengeluaran OTA</h1>
                             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0 0' }}>Kelola data pengeluaran dana Orang Tua Asuh</p>
                         </div>
                     </div>
@@ -324,7 +324,7 @@ const OTAPengeluaranPage = () => {
                         </button>
                         <button
                             onClick={openAdd}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 500, border: 'none', background: 'white', color: '#059669', cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 500, border: 'none', background: 'white', color: '#4f46e5', cursor: 'pointer' }}
                         >
                             <Plus size={18} /> Tambah Pengeluaran
                         </button>
@@ -341,7 +341,7 @@ const OTAPengeluaranPage = () => {
                     </div>
                     <div className="ota-summary-content">
                         <h3>Total Pengeluaran</h3>
-                        <p>{formatRupiah(totalPengeluaran)}</p>
+                        <p style={{ color: '#d97706' }}>{formatRupiah(totalPengeluaran)}</p>
                     </div>
                 </div>
                 <div className="ota-summary-card">
@@ -350,7 +350,7 @@ const OTAPengeluaranPage = () => {
                     </div>
                     <div className="ota-summary-content">
                         <h3>Saldo Tersisa</h3>
-                        <p style={{ color: saldoAkhir < 0 ? '#dc2626' : '#16a34a' }}>{formatRupiah(saldoAkhir)}</p>
+                        <p style={{ color: '#7c3aed' }}>{formatRupiah(saldoAkhir)}</p>
                     </div>
                 </div>
                 <div className="ota-summary-card">
@@ -359,7 +359,7 @@ const OTAPengeluaranPage = () => {
                     </div>
                     <div className="ota-summary-content">
                         <h3>Transaksi Periode Ini</h3>
-                        <p>{filteredData.length}</p>
+                        <p style={{ color: '#2563eb' }}>{filteredData.length}</p>
                     </div>
                 </div>
             </div>

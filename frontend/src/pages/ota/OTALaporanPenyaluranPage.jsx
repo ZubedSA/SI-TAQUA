@@ -20,8 +20,8 @@ const styles = {
         borderRadius: '16px',
         padding: '24px',
         color: 'white',
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-        boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
         marginBottom: '24px'
     },
     headerContent: {
@@ -91,7 +91,7 @@ const styles = {
     summaryValue: {
         fontSize: '1.25rem',
         fontWeight: 700,
-        color: '#1f2937'
+        color: '#312e81'
     },
     card: {
         background: 'white',
@@ -374,8 +374,8 @@ const OTALaporanPenyaluranPage = () => {
                 borderRadius: '16px',
                 padding: '24px',
                 color: 'white',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-                boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
                 marginBottom: '24px'
             }}>
                 <div style={{ position: 'absolute', top: 0, right: 0, width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', transform: 'translate(30%, -50%)' }} />
@@ -387,7 +387,7 @@ const OTALaporanPenyaluranPage = () => {
                             <FileBarChart size={26} />
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Laporan Penyaluran OTA</h1>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'white' }}>Laporan Penyaluran OTA</h1>
                             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0 0' }}>Rekap penyaluran dana OTA ke santri penerima</p>
                         </div>
                     </div>
@@ -408,7 +408,7 @@ const OTALaporanPenyaluranPage = () => {
                     </div>
                     <div className="ota-summary-content">
                         <h3>Total Pemasukan {filterTahun}</h3>
-                        <p>{formatCurrency(summary.totalPemasukan)}</p>
+                        <p style={{ color: '#059669' }}>{formatCurrency(summary.totalPemasukan)}</p>
                     </div>
                 </div>
                 <div className="ota-summary-card">
@@ -417,7 +417,7 @@ const OTALaporanPenyaluranPage = () => {
                     </div>
                     <div className="ota-summary-content">
                         <h3>Total Disalurkan</h3>
-                        <p>{formatCurrency(summary.totalPenyaluran)}</p>
+                        <p style={{ color: '#7c3aed' }}>{formatCurrency(summary.totalPenyaluran)}</p>
                     </div>
                 </div>
                 <div className="ota-summary-card">
@@ -439,7 +439,7 @@ const OTALaporanPenyaluranPage = () => {
                     </div>
                     <div className="ota-summary-content">
                         <h3>Penerima Aktif</h3>
-                        <p>{summary.totalPenerima}</p>
+                        <p style={{ color: '#d97706' }}>{summary.totalPenerima}</p>
                     </div>
                 </div>
             </div>

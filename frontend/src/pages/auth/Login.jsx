@@ -1,248 +1,146 @@
-import { useState, useEffect, useLayoutEffect } from 'react'
+import { useState, useLayoutEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, LogIn, UserPlus, RefreshCw } from 'lucide-react'
+import { Eye, EyeOff, LogIn, RefreshCw, AlertCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { translateError } from '../../utils/errorUtils'
-import { supabase } from '../../lib/supabase'
-import SecurityChallengeModal from '../../components/ui/SecurityChallengeModal'
 import logoFile from '../../assets/Logo_PTQA_075759.png'
 import './Login.css'
 
 const Login = () => {
     const navigate = useNavigate()
-    const { signIn, signUp } = useAuth()
+    const { signIn } = useAuth()
 
-    // Force light mode on login page - PERMANEN, tidak restore
-    useLayoutEffect(() => {
-        // Set light mode langsung
-        document.documentElement.setAttribute('data-theme', 'light')
-        // Hapus saved theme untuk mencegah flash dark mode
-        localStorage.setItem('ptqa-theme', 'light')
-    }, [])
-
-    const [emailOrPhone, setEmailOrPhone] = useState('')
+    // UI State
+    const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const [showChallenge, setShowChallenge] = useState(false)
-    const [challengeError, setChallengeError] = useState('')
-    const [tempUserId, setTempUserId] = useState(null)
-    const [blockedUntil, setBlockedUntil] = useState(null)
-    const [blockedMessage, setBlockedMessage] = useState('')
-
-    // Check restrictions on load/email change
-    const checkRestriction = async () => {
-        if (!emailOrPhone || !emailOrPhone.includes('@')) return
-
-        try {
-            const { data, error } = await supabase.rpc('check_login_restriction', {
-                p_email: emailOrPhone
-            })
-
-            if (data?.restricted) {
-                setBlockedUntil(Date.now() + (data.remaining_seconds * 1000))
-                setBlockedMessage(data.message)
-                setError(data.message)
-            } else {
-                setBlockedUntil(null)
-                setBlockedMessage('')
-            }
-        } catch (err) {
-            console.error('Restriction check failed:', err)
-        }
-    }
-
-    const handleChallengeVerify = async (answer) => {
-        setChallengeError('')
-        try {
-            const { data, error } = await supabase.rpc('verify_security_challenge', {
-                p_user_id: tempUserId,
-                p_answer: answer
-            })
-
-            if (error) throw error
-
-            if (data.success) {
-                setShowChallenge(false)
-                // Proceed to dashboard logic manually since signIn was half-done
-                // But signIn actually returns session, so we need to know where to go.
-                // Re-running signIn might trigger challenge again? 
-                // No, challenge log success allows next login? 
-                // Actually, the best way: if challenge success, just redirect.
-                // Because we are already authenticated by signIn internally before challenge intercept?
-                // Wait, if signIn succeeds, we get session. So we are logged in.
-
-                // Fetch role to redirect
-                const { data: profile } = await supabase
-                    .from('user_profiles')
-                    .select('role')
-                    .eq('user_id', tempUserId)
-                    .single()
-
-                const role = profile?.role || 'guest'
-                if (role === 'wali') navigate('/wali-santri')
-                else navigate('/')
-
-            } else {
-                setChallengeError(data.message || 'Jawaban salah.')
-            }
-        } catch (err) {
-            setChallengeError('Gagal verifikasi: ' + err.message)
-        }
-    }
+    // Force light mode
+    useLayoutEffect(() => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        localStorage.setItem('ptqa-theme', 'light')
+    }, [])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
-        setChallengeError('')
-
-        if (blockedUntil && Date.now() < blockedUntil) {
-            setError(blockedMessage)
-            return
-        }
-
         setLoading(true)
 
         try {
-            if (!emailOrPhone) throw new Error('Username harus diisi')
+            if (!username) throw new Error('Username harus diisi')
             if (!password) throw new Error('Password harus diisi')
 
-            // 1. Attempt Login
-            const loginResult = await signIn(emailOrPhone, password)
-            const userId = loginResult.user.id
+            const result = await signIn(username, password)
 
-            // 2. Log Success
-            await supabase.rpc('log_login_activity', {
-                p_email: loginResult.user.email,
-                p_status: 'SUCCESS',
-                p_ip: 'unknown', // Client side can't get IP easily without edge function
-                p_user_agent: navigator.userAgent,
-                p_device_id: localStorage.getItem('ptqa_device_id')
-            })
-
-            // 3. Security Challenge Check (Client Side Heuristic)
-            // If device ID is missing, trigger challenge
-            const deviceId = localStorage.getItem('ptqa_device_id')
-            if (!deviceId) {
-                // New device detected!
-                setTempUserId(userId)
-                setShowChallenge(true)
-
-                // Generate new device ID
-                const newDeviceId = crypto.randomUUID()
-                localStorage.setItem('ptqa_device_id', newDeviceId)
-                setLoading(false)
-                return // Stop redirect until challenge verified
-            }
-
-            // Normal Redirect
-            if (loginResult.role === 'wali') {
-                navigate('/wali-santri')
+            if (result.requiresSelection) {
+                navigate('/role-selection')
             } else {
+                // Auto redirect handled by RoleBasedRedirect or context
+                // But context.signIn returns role info, so we can manual redirect if needed
+                // App.jsx RoleBasedRedirect handles '/'
                 navigate('/')
             }
 
         } catch (err) {
-            console.error('Login error:', err)
-            const translatedMsg = translateError(err)
-            setError(translatedMsg)
-
-            // Log Failure
-            try {
-                let targetEmail = emailOrPhone
-                // Resolve if username
-                if (!targetEmail.includes('@')) {
-                    const { data } = await supabase.rpc('get_email_by_username', { p_username: targetEmail })
-                    if (data) targetEmail = data
-                }
-
-                if (targetEmail && targetEmail.includes('@')) {
-                    const { data } = await supabase.rpc('log_login_activity', {
-                        p_email: targetEmail,
-                        p_status: 'FAILED',
-                        p_ip: 'unknown',
-                        p_user_agent: navigator.userAgent
-                    })
-
-                    // Check if blocked
-                    if (data?.blocked) {
-                        setBlockedUntil(Date.now() + (data.cooldown_seconds * 1000))
-                        setBlockedMessage(data.reason + '. ' + Math.ceil(data.cooldown_seconds / 60) + ' menit.')
-                        setError(translatedMsg + ' (Akun dibatasi sementara)')
-                    }
-                }
-            } catch (logErr) {
-                console.error('Logging failed:', logErr)
-            }
+            console.error('Login Error:', err)
+            // Error handling user friendly
+            let msg = err.message
+            if (msg.includes('Invalid login credentials')) msg = 'Username atau password salah.'
+            setError(msg)
         } finally {
-            if (!showChallenge) setLoading(false)
+            setLoading(false)
         }
     }
 
     return (
-        <div className="login-page">
-            <div className="login-card">
-                {/* Header with Logo */}
-                <div className="login-header">
-                    <img src={logoFile} alt="Logo PTQA Batuan" className="login-logo" />
-                    <p className="system-title">Sistem Informasi PTQA Batuan</p>
+        <div className="login-page bg-gray-50 flex items-center justify-center min-h-screen p-4">
+            <div className="login-card w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+
+                {/* Header */}
+                <div className="login-header p-8 text-center bg-white border-b border-gray-100">
+                    <img src={logoFile} alt="Logo PTQA Batuan" className="mx-auto h-20 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800">Selamat Datang</h2>
+                    <p className="text-gray-500 mt-2 text-sm">Masuk untuk mengakses Sistem Informasi</p>
                 </div>
 
-                {/* Alerts */}
-                {error && <div className="alert error">{error}</div>}
-
-
-                {/* Form */}
-                <form onSubmit={handleSubmit}>
-                    <div className="input-group">
-                        <label>Username</label>
-                        <input
-                            type="text"
-                            placeholder="Masukkan username"
-                            value={emailOrPhone}
-                            onChange={(e) => setEmailOrPhone(e.target.value)}
-                            required
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <label>Password</label>
-                        <div className="password-field">
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                placeholder="Masukkan password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                            <button type="button" className="toggle-pw" onClick={() => setShowPassword(!showPassword)}>
-                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                            </button>
+                {/* Body */}
+                <div className="p-8 space-y-6">
+                    {/* Error Alert */}
+                    {error && (
+                        <div className="flex items-start gap-3 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm animate-shake">
+                            <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
+                            <span>{error}</span>
                         </div>
-                    </div>
+                    )}
 
-                    <button type="submit" className="btn-primary" disabled={loading}>
-                        {loading ? <RefreshCw size={18} className="spin" /> : <LogIn size={18} />}
-                        <span>{loading ? 'Memproses...' : 'Masuk'}</span>
-                    </button>
-                </form>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700 ml-1">Username</label>
+                            <input
+                                type="text"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none"
+                                placeholder="Masukkan username Anda"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                disabled={loading}
+                                autoFocus
+                            />
+                        </div>
 
-                {/* Footer - Copyright only now since registration is disabled */}
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700 ml-1">Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none pr-12"
+                                    placeholder="Masukkan password Anda"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    disabled={loading}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className={`w-full py-3.5 px-6 rounded-lg font-bold text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 ${loading
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 hover:shadow-green-500/30'
+                                }`}
+                        >
+                            {loading ? (
+                                <>
+                                    <RefreshCw size={20} className="animate-spin" />
+                                    <span>Memproses...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <LogIn size={20} />
+                                    <span>Masuk ke Sistem</span>
+                                </>
+                            )}
+                        </button>
+                    </form>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 bg-gray-50 border-t border-gray-100 text-center">
+                    <p className="text-xs text-gray-400 font-medium">
+                        © 2026 PTQA Batuan. All rights reserved.
+                    </p>
+                </div>
             </div>
-
-            {/* Copyright */}
-            <p className="copyright">© 2025 PTQA Batuan. All rights reserved.</p>
-
-            <SecurityChallengeModal
-                isOpen={showChallenge}
-                onVerify={handleChallengeVerify}
-                error={challengeError}
-            />
         </div>
     )
 }
 
 export default Login
-

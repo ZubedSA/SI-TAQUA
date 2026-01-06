@@ -310,26 +310,33 @@ const KeuanganDashboard = () => {
             </div>
 
             {/* Filters Bar */}
-            <div className="filters-bar" style={{ marginTop: '20px', marginBottom: '20px' }}>
-                <DateRangePicker
-                    startDate={filters.dateFrom}
-                    endDate={filters.dateTo}
-                    onChange={(start, end) => setFilters({
-                        ...filters,
-                        dateFrom: start,
-                        dateTo: end,
-                        bulan: '',
-                        tahun: new Date().getFullYear()
-                    })}
-                />
-
-                <div style={{ opacity: (filters.dateFrom || filters.dateTo) ? 0.5 : 1, pointerEvents: (filters.dateFrom || filters.dateTo) ? 'none' : 'auto' }}>
-                    <SmartMonthYearFilter
-                        filters={filters}
-                        onFilterChange={setFilters}
+            <div className="filters-bar">
+                <div className="filter-group-date">
+                    <DateRangePicker
+                        startDate={filters.dateFrom}
+                        endDate={filters.dateTo}
+                        onChange={(start, end) => setFilters({
+                            ...filters,
+                            dateFrom: start,
+                            dateTo: end,
+                            bulan: '',
+                            tahun: new Date().getFullYear()
+                        })}
                     />
                 </div>
-                <button className="btn btn-icon" onClick={() => { fetchKeuanganStats(); fetchMonthlyData(); }}>
+
+                <div className="filter-group-period">
+                    <SmartMonthYearFilter
+                        filters={filters}
+                        onFilterChange={(newFilters) => setFilters({
+                            ...newFilters,
+                            dateFrom: '', // Clear custom dates when using period filter
+                            dateTo: ''
+                        })}
+                    />
+                </div>
+
+                <button className="btn-refresh" onClick={() => { fetchKeuanganStats(); fetchMonthlyData(); }} title="Refresh Data">
                     <RefreshCw size={18} />
                 </button>
             </div>

@@ -61,6 +61,9 @@ const HafalanList = () => {
     const [rekapData, setRekapData] = useState([])
     const [rekapStats, setRekapStats] = useState({ totalData: 0, lancar: 0, sedang: 0, lemah: 0, bacaNazhor: 0 })
 
+    // State untuk filter rekap (Global)
+    const [allHalaqohList, setAllHalaqohList] = useState([])
+
     // Pencapaian state
     const [semesterList, setSemesterList] = useState([])
     const [santriList, setSantriList] = useState([])
@@ -113,6 +116,26 @@ const HafalanList = () => {
         fetchSemester()
         fetchSantriList()
     }, [])
+
+    // Fetch ALL halaqohs for Rekap Tab (ignoring user role/assignment)
+    useEffect(() => {
+        if (activeTab === 'rekap' && allHalaqohList.length === 0) {
+            const fetchAllHalaqoh = async () => {
+                try {
+                    const { data, error } = await supabase
+                        .from('halaqoh')
+                        .select('id, nama')
+                        .order('nama')
+
+                    if (error) throw error
+                    setAllHalaqohList(data || [])
+                } catch (err) {
+                    console.error('Error fetching all halaqohs:', err.message)
+                }
+            }
+            fetchAllHalaqoh()
+        }
+    }, [activeTab])
 
     // Sync activeTab with URL when navigating via sidebar
     useEffect(() => {
@@ -869,7 +892,7 @@ const HafalanList = () => {
                                 onChange={(e) => setRekapFilters({ ...rekapFilters, halaqoh_id: e.target.value })}
                             >
                                 <option value="">Semua Halaqoh</option>
-                                {halaqohList.map(h => <option key={h.id} value={h.id}>{h.nama}</option>)}
+                                {allHalaqohList.map(h => <option key={h.id} value={h.id}>{h.nama}</option>)}
                             </select>
 
                             {(rekapFilters.tanggalMulai || rekapFilters.tanggalSelesai || rekapFilters.halaqoh_id || rekapFilters.santri_nama) && (

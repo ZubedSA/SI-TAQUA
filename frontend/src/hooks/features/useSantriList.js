@@ -47,7 +47,7 @@ export const useSantriList = (status = 'Aktif') => {
             }))
         },
         {
-            staleTime: 5 * 60 * 1000, // 5 minutes cache
+            staleTime: 0, // Disable cache to ensure fresh data after updates
         }
     )
 }

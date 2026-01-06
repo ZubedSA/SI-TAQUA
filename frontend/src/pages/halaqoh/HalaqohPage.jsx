@@ -239,18 +239,22 @@ const HalaqohPage = () => {
 
     const executeAddMember = async () => {
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('santri')
                 .update({ halaqoh_id: selectedHalaqoh.id })
                 .eq('id', memberModal.santriId)
+                .select()
 
             if (error) throw error
+            if (!data || data.length === 0) {
+                throw new Error('Gagal update: Data tidak ditemukan atau Anda tidak memiliki akses.')
+            }
 
             showToast.success('Santri berhasil ditambahkan ke halaqoh')
             setSelectedSantriToAdd('')
             setSearchSantriTerm('')
             setAvailableSantri([])
-            fetchMembers(selectedHalaqoh.id)
+            await fetchMembers(selectedHalaqoh.id)
             setMemberModal({ isOpen: false, type: null, santriId: null })
         } catch (err) {
             console.error('Error adding member:', err)
@@ -260,15 +264,19 @@ const HalaqohPage = () => {
 
     const executeRemoveMember = async () => {
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('santri')
                 .update({ halaqoh_id: null })
                 .eq('id', memberModal.santriId)
+                .select()
 
             if (error) throw error
+            if (!data || data.length === 0) {
+                throw new Error('Gagal update: Data tidak ditemukan atau Anda tidak memiliki akses.')
+            }
 
             showToast.success('Santri berhasil dikeluarkan dari halaqoh')
-            fetchMembers(selectedHalaqoh.id)
+            await fetchMembers(selectedHalaqoh.id)
             setMemberModal({ isOpen: false, type: null, santriId: null })
         } catch (err) {
             console.error('Error removing member:', err)
@@ -513,8 +521,8 @@ const HalaqohPage = () => {
                                         <input
                                             type="text"
                                             className={`w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all ${selectedSantriToAdd
-                                                    ? 'bg-green-50 border-green-500 text-green-700'
-                                                    : 'bg-white border-gray-200 focus:border-primary-500'
+                                                ? 'bg-green-50 border-green-500 text-green-700'
+                                                : 'bg-white border-gray-200 focus:border-primary-500'
                                                 }`}
                                             placeholder="Ketik nama santri..."
                                             value={searchSantriTerm}

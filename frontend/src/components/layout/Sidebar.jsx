@@ -518,10 +518,65 @@ const operatorMenuItems = [
 
 
 const Sidebar = ({ mobileOpen, onClose }) => {
-    const { signOut, activeRole, roles } = useAuth()
+    const { signOut, activeRole, roles, switchRole } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
     const [openMenus, setOpenMenus] = useState({})
+
+    // Auto-switch role based on path (Smart Context Switching)
+    // Helps multi-role users see the correct sidebar menu when navigating
+    useEffect(() => {
+        const path = location.pathname
+        const trySwitch = (targetRole) => {
+            if (activeRole !== targetRole && roles?.includes(targetRole)) {
+                switchRole(targetRole)
+            }
+        }
+
+        // 0. Admin Context - Prioritas
+        if (
+            path.startsWith('/dashboard/admin') ||
+            path.startsWith('/users') ||
+            path.startsWith('/roles') ||
+            path.startsWith('/security') ||
+            path.startsWith('/audit-log') ||
+            path.startsWith('/system-status') ||
+            path.startsWith('/pengaturan')
+        ) {
+            trySwitch('admin')
+        }
+        // 1. Keuangan / Bendahara Context
+        else if (path.startsWith('/keuangan') || path.startsWith('/dashboard/keuangan')) {
+            trySwitch('bendahara')
+        }
+        // 2. Pengurus Context
+        else if (path.startsWith('/pengurus') || path.startsWith('/dashboard/pengurus')) {
+            trySwitch('pengurus')
+        }
+        // 3. OTA Context
+        else if (path.startsWith('/ota') || path.startsWith('/dashboard/ota')) {
+            trySwitch('ota')
+        }
+        // 4. Akademik / Guru / Musyrif Context
+        else if (
+            path.startsWith('/akademik') ||
+            path.startsWith('/dashboard/akademik') ||
+            path.startsWith('/hafalan') ||
+            path.startsWith('/presensi') ||
+            path.startsWith('/laporan/') || // Most reports are academic
+            // Core academic data paths (check if not explicitly finance)
+            ((path.startsWith('/santri') || path.startsWith('/guru') || path.startsWith('/kelas') || path.startsWith('/halaqoh') || path.startsWith('/mapel') || path.startsWith('/semester')) && !path.startsWith('/keuangan'))
+        ) {
+            // Prioritize Guru, then Musyrif
+            if (roles?.includes('guru')) trySwitch('guru')
+            else if (roles?.includes('musyrif')) trySwitch('musyrif')
+        }
+        // 5. Wali Context
+        else if (path.startsWith('/wali')) {
+            trySwitch('wali')
+        }
+
+    }, [location.pathname]) // Only run when path changes to prevent race conditions with RoleSwitcher
 
     // Check if user is effectively an admin (even if activeRole is different)
     const isRealAdmin = roles?.includes('admin')
@@ -769,6 +824,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                     <div className="mt-2 text-xs text-center text-gray-400 font-mono">
                         v.2025.01.02.1
                     </div>
+
                 </div>
             </aside>
 

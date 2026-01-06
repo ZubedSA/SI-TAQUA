@@ -1,15 +1,32 @@
 /* =====================================================
-   OTA Dashboard - Enterprise Premium
-   Accent Color: Purple (#7C3AED)
+   OTA Dashboard - Premium Enterprise Theme
+   Theme: Deep Violet / Indigo Gradient
    ========================================================================== */
 
 [data-dashboard="ota"] {
-    --dashboard-accent: var(--accent-ota);
-    --dashboard-accent-hover: var(--accent-ota-hover);
+    /* Primary Gradient */
+    --ota-gradient-primary: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    --ota-gradient-hover: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+
+    /* Secondary/Accent Gradients */
+    --ota-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --ota-gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --ota-gradient-info: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    --ota-gradient-purple: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+
+    /* Colors */
+    --ota-primary: #4f46e5;
+    --ota-primary-light: #e0e7ff;
+    --ota-text-heading: #312e81;
+    /* Indigo 900 - Elegant Dark */
+    --ota-text-body: #475569;
+    /* Slate 600 - Elegant Gray */
+    --ota-text-on-primary: #ffffff;
 }
 
 .ota-dashboard {
     padding: 0;
+    color: var(--ota-text-body);
 }
 
 .ota-dashboard-inner {
@@ -17,20 +34,49 @@
     margin: 0 auto;
 }
 
-/* === WELCOME HEADER === */
+/* === PREMIUM WELCOME HEADER === */
 .ota-welcome-header {
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
-    margin-bottom: var(--space-6);
-    box-shadow: var(--shadow-sm);
+    background: var(--ota-gradient-primary);
+    border-radius: 24px;
+    padding: 2.5rem;
+    margin-bottom: var(--space-8);
+    box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.2), 0 10px 10px -5px rgba(79, 70, 229, 0.1);
+    position: relative;
+    overflow: hidden;
+    color: white;
+}
+
+/* Decorative Circles */
+.ota-welcome-header::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    z-index: 0;
+}
+
+.ota-welcome-header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    left: 40px;
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    z-index: 0;
 }
 
 .ota-welcome-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+    z-index: 1;
     gap: var(--space-6);
     flex-wrap: wrap;
 }
@@ -38,199 +84,203 @@
 .ota-welcome-info {
     display: flex;
     align-items: center;
-    gap: var(--space-4);
+    gap: var(--space-5);
     flex: 1;
 }
 
 .ota-welcome-icon {
     width: 64px;
     height: 64px;
-    background: rgba(124, 58, 237, 0.1);
-    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--dashboard-accent);
+    color: white;
     flex-shrink: 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ota-welcome-text h1 {
-    font-size: var(--font-size-2xl);
-    font-weight: 700;
-    color: var(--text-heading);
-    margin: 0 0 var(--space-1) 0;
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: white;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.025em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .ota-welcome-text p {
-    font-size: var(--font-size-sm);
-    color: var(--text-muted);
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.9);
     margin: 0;
+    font-weight: 500;
 }
 
 .ota-welcome-actions {
     display: flex;
     gap: var(--space-3);
-    flex-wrap: wrap;
 }
 
 .ota-welcome-btn {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-5);
-    border-radius: var(--radius-md);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
     cursor: pointer;
     border: none;
     transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ota-welcome-btn.primary {
-    background: var(--dashboard-accent);
-    color: white;
+    background: white;
+    color: var(--ota-primary);
 }
 
 .ota-welcome-btn.primary:hover {
-    background: var(--dashboard-accent-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    background: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .ota-welcome-btn.secondary {
-    background: var(--bg-section);
-    color: var(--text-body);
-    border: 1px solid var(--border-default);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .ota-welcome-btn.secondary:hover {
-    background: var(--bg-card);
-    border-color: var(--dashboard-accent);
-    color: var(--dashboard-accent);
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
 }
 
 /* === STATS GRID === */
 .ota-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
+    gap: var(--space-5);
+    margin-bottom: var(--space-8);
 }
 
 .ota-stat-card {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: var(--space-6);
-    background: var(--bg-card);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-sm);
-    transition: all 0.2s ease;
+    align-items: flex-start;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 18px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s ease;
 }
 
 .ota-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-/* Color variants - match Admin Dashboard */
-.ota-stat-value.blue {
-    color: var(--color-info);
-}
-
-.ota-stat-value.purple {
-    color: #8b5cf6;
-}
-
-.ota-stat-value.green {
-    color: var(--color-success);
-}
-
-.ota-stat-value.emerald {
-    color: #10b981;
-}
-
-.ota-stat-value.red {
-    color: var(--color-danger);
-}
-
-.ota-stat-icon-box.blue {
-    background: var(--color-info-bg);
-    color: var(--color-info);
-}
-
-.ota-stat-icon-box.purple {
-    background: rgba(124, 58, 237, 0.1);
-    color: var(--dashboard-accent);
-}
-
-.ota-stat-icon-box.green {
-    background: var(--color-success-bg);
-    color: var(--color-success);
-}
-
-.ota-stat-icon-box.emerald {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.ota-stat-icon-box.red {
-    background: var(--color-danger-bg);
-    color: var(--color-danger);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .ota-stat-info {
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: 0.5rem;
 }
 
 .ota-stat-label {
-    font-size: var(--font-size-xs);
-    color: var(--text-muted);
-    font-weight: 500;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.05em;
 }
 
 .ota-stat-value {
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
-    color: var(--text-heading);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--ota-text-heading);
+    /* Fallback */
+    line-height: 1.2;
+}
+
+.ota-stat-value.blue {
+    color: #2563eb !important;
+}
+
+.ota-stat-value.purple {
+    color: #7c3aed !important;
+}
+
+.ota-stat-value.green {
+    color: #059669 !important;
+}
+
+.ota-stat-value.emerald {
+    color: #10b981 !important;
+}
+
+.ota-stat-value.orange {
+    color: #d97706 !important;
 }
 
 .ota-stat-subvalue {
-    font-size: var(--font-size-xs);
-    color: var(--color-success);
-    font-weight: 500;
-    display: block;
-    margin-top: var(--space-1);
+    font-size: 0.75rem;
+    color: #10b981;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 .ota-stat-icon-box {
-    width: 56px;
-    height: 56px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-lg);
-    flex-shrink: 0;
+    border-radius: 14px;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* === CONTENT GRID === */
+.ota-stat-icon-box.blue {
+    background: var(--ota-gradient-info);
+}
+
+.ota-stat-icon-box.purple {
+    background: var(--ota-gradient-primary);
+}
+
+.ota-stat-icon-box.green {
+    background: var(--ota-gradient-success);
+}
+
+.ota-stat-icon-box.emerald {
+    background: var(--ota-gradient-success);
+}
+
+/* Using success for now or define custom emerald gradient */
+.ota-stat-icon-box.orange {
+    background: var(--ota-gradient-warning);
+}
+
+/* === CONTENT LAYOUT === */
 .ota-content-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1.2fr;
     gap: var(--space-6);
 }
 
-/* === PANEL === */
+/* === PANEL STYLES === */
 .ota-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    padding: var(--space-6);
+    background: white;
+    border: 1px solid #f1f5f9;
+    border-radius: 20px;
+    padding: 1.5rem;
     box-shadow: var(--shadow-sm);
     margin-bottom: var(--space-6);
 }
@@ -239,19 +289,21 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-5);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #f8fafc;
 }
 
 .ota-panel-title {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: 1rem;
 }
 
 .ota-panel-title-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -259,366 +311,222 @@
 }
 
 .ota-panel-title-icon.green {
-    background: var(--color-success-bg);
-    color: var(--color-success);
+    background: #ecfdf5;
+    color: #059669;
 }
 
 .ota-panel-title-icon.orange {
-    background: var(--color-warning-bg);
-    color: var(--color-warning);
+    background: #fffbeb;
+    color: #d97706;
 }
 
 .ota-panel-title-icon.emerald {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
+    background: #f0fdf4;
+    color: #16a34a;
 }
 
 .ota-panel-title-icon.amber {
-    background: var(--color-warning-bg);
-    color: var(--color-warning);
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.ota-panel-title-icon.blue {
+    background: #eff6ff;
+    color: #2563eb;
 }
 
 .ota-panel-title h3 {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--text-heading);
-    margin: 0 0 var(--space-1) 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--ota-text-heading);
+    margin: 0;
 }
 
 .ota-panel-title p {
-    font-size: var(--font-size-xs);
-    color: var(--text-muted);
-    margin: 0;
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin: 4px 0 0 0;
 }
 
 .ota-panel-link {
     display: flex;
     align-items: center;
-    gap: var(--space-1);
-    font-size: var(--font-size-sm);
-    color: var(--dashboard-accent);
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--ota-primary);
     background: none;
     border: none;
     cursor: pointer;
-    font-weight: 500;
-    transition: color 0.2s ease;
+    font-weight: 600;
+    transition: all 0.2s ease;
 }
 
 .ota-panel-link:hover {
-    color: var(--dashboard-accent-hover);
+    gap: 0.5rem;
+    color: #4338ca;
 }
 
 /* === TRANSACTION LIST === */
 .ota-transaction-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: 0.75rem;
 }
 
 .ota-transaction-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-4);
-    background: var(--bg-section);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 14px;
+    border: 1px solid transparent;
     transition: all 0.2s ease;
 }
 
 .ota-transaction-item:hover {
-    background: var(--bg-card);
+    background: white;
+    border-color: #e2e8f0;
     box-shadow: var(--shadow-sm);
-}
-
-.ota-transaction-info {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex: 1;
-    min-width: 0;
+    transform: translateX(4px);
 }
 
 .ota-transaction-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--font-size-xs);
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 700;
     flex-shrink: 0;
 }
 
 .ota-transaction-avatar.income {
-    background: var(--color-success-bg);
-    color: var(--color-success);
+    background: #dcfce7;
+    color: #166534;
 }
 
 .ota-transaction-avatar.expense {
-    background: var(--color-danger-bg);
-    color: var(--color-danger);
-}
-
-.ota-transaction-details {
-    flex: 1;
-    min-width: 0;
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 .ota-transaction-details h4 {
-    font-size: var(--font-size-sm);
+    font-size: 0.9375rem;
     font-weight: 600;
-    color: var(--text-heading);
-    margin: 0 0 var(--space-1) 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.ota-transaction-details p {
-    font-size: var(--font-size-xs);
-    color: var(--text-muted);
+    color: var(--ota-text-heading);
     margin: 0;
 }
 
 .ota-transaction-amount {
-    font-size: var(--font-size-base);
     font-weight: 700;
-    flex-shrink: 0;
-}
-
-.ota-transaction-amount.income {
-    color: var(--color-success);
-}
-
-.ota-transaction-amount.expense {
-    color: var(--color-danger);
+    font-size: 0.9375rem;
 }
 
 /* === SUMMARY PANEL === */
-.ota-summary-panel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
-}
-
 .ota-summary-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-3) 0;
+    padding: 0.75rem 0;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.ota-summary-row:last-child {
+    border-bottom: none;
 }
 
 .ota-summary-row.total {
-    padding-top: var(--space-4);
-    border-top: 2px solid var(--border-default);
-}
-
-.ota-summary-label {
-    font-size: var(--font-size-sm);
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.ota-summary-value {
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-    color: var(--text-heading);
-}
-
-.ota-summary-value.income {
-    color: var(--color-success);
-}
-
-.ota-summary-value.expense {
-    color: var(--color-danger);
+    border-top: 2px solid #f1f5f9;
+    border-bottom: none;
+    padding-top: 1rem;
+    margin-top: 0.5rem;
 }
 
 .ota-summary-value.balance {
-    font-size: var(--font-size-xl);
-    color: var(--color-success);
+    font-size: 1.25rem;
+    font-weight: 800;
 }
 
-.ota-summary-value.balance.negative {
-    color: var(--color-danger);
-}
-
-/* === PROGRESS === */
-.ota-progress-wrapper {
-    margin-top: var(--space-4);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--border-default);
-}
-
-.ota-progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-2);
-    font-size: var(--font-size-sm);
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-.ota-progress-bar {
-    height: 8px;
-    background: var(--bg-section);
-    border-radius: var(--radius-full);
-    overflow: hidden;
-}
-
-.ota-progress-fill {
-    height: 100%;
-    background: var(--dashboard-accent);
-    transition: width 0.3s ease;
-    border-radius: var(--radius-full);
-}
-
-/* === DONOR ITEM === */
+/* === DONOR RANK === */
 .ota-donor-item {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-3);
-    border-bottom: 1px solid var(--border-default);
-}
-
-.ota-donor-item:last-child {
-    border-bottom: none;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .ota-donor-rank {
     width: 32px;
     height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-sm);
+    border-radius: 8px;
     font-weight: 700;
-    flex-shrink: 0;
-}
-
-.ota-donor-rank.gold {
-    background: rgba(251, 191, 36, 0.2);
-    color: #f59e0b;
-}
-
-.ota-donor-rank.silver {
-    background: rgba(156, 163, 175, 0.2);
-    color: #6b7280;
-}
-
-.ota-donor-rank.bronze {
-    background: rgba(217, 119, 6, 0.2);
-    color: #d97706;
-}
-
-.ota-donor-rank.default {
-    background: var(--bg-section);
-    color: var(--text-muted);
-}
-
-.ota-donor-name {
-    flex: 1;
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--text-heading);
-}
-
-.ota-donor-amount {
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-/* === ANNOUNCEMENTS === */
-.ota-announcement-item {
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--border-default);
-}
-
-.ota-announcement-item:last-child {
-    border-bottom: none;
-}
-
-.ota-announcement-item h4 {
-    font-size: var(--font-size-sm);
-    font-weight: 600;
-    color: var(--text-heading);
-    margin: 0 0 var(--space-2) 0;
-}
-
-.ota-announcement-item p {
-    font-size: var(--font-size-sm);
-    color: var(--text-body);
-    margin: 0 0 var(--space-2) 0;
-    line-height: 1.5;
-}
-
-.ota-announcement-item time {
-    font-size: var(--font-size-xs);
-    color: var(--text-muted);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* === QUICK LINKS === */
-.ota-quick-links {
-    background: var(--bg-card);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-lg);
-    padding: var(--space-5);
-    box-shadow: var(--shadow-sm);
-}
-
 .ota-quick-links h4 {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    font-size: var(--font-size-base);
-    font-weight: 600;
-    color: var(--text-heading);
-    margin: 0 0 var(--space-4) 0;
+    gap: 0.75rem;
+    color: var(--ota-primary);
+    margin-bottom: 1.25rem;
 }
 
 .ota-quick-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     width: 100%;
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-section);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-body);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    margin-bottom: var(--space-2);
-    cursor: pointer;
-    transition: all 0.2s ease;
+    padding: 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s;
 }
 
 .ota-quick-link:hover {
-    background: var(--dashboard-accent);
-    border-color: var(--dashboard-accent);
+    background: #f8fafc;
+    border-color: var(--ota-primary);
+    color: var(--ota-primary);
+    transform: translateX(4px);
+}
+
+/* === DARK MODE OVERRIDES === */
+[data-theme="dark"] .ota-panel,
+[data-theme="dark"] .ota-stat-card,
+[data-theme="dark"] .ota-quick-link {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .ota-welcome-btn.primary {
+    background: #334155;
     color: white;
-    transform: translateX(2px);
 }
 
-/* === EMPTY STATE === */
-.ota-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-12);
-    text-align: center;
-    color: var(--text-muted);
+[data-theme="dark"] .ota-stat-value {
+    color: #f8fafc;
 }
 
-.ota-empty-state p {
-    font-size: var(--font-size-sm);
-    margin: 0;
+[data-theme="dark"] .ota-panel-title h3 {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .ota-transaction-item {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .ota-transaction-details h4 {
+    color: #e2e8f0;
 }
 
 /* === RESPONSIVE === */
@@ -650,29 +558,4 @@
     .ota-stats-grid {
         grid-template-columns: 1fr;
     }
-
-    .ota-stat-value {
-        font-size: var(--font-size-2xl);
-    }
-}
-
-/* === DARK MODE === */
-[data-theme="dark"] .ota-welcome-header,
-[data-theme="dark"] .ota-panel,
-[data-theme="dark"] .ota-stat-card,
-[data-theme="dark"] .ota-quick-links {
-    background: var(--bg-card);
-    border-color: var(--border-default);
-}
-
-[data-theme="dark"] .ota-welcome-btn.secondary {
-    background: var(--bg-section);
-    border-color: var(--border-default);
-    color: var(--text-body);
-}
-
-[data-theme="dark"] .ota-transaction-item,
-[data-theme="dark"] .ota-quick-link {
-    background: var(--bg-section);
-    border-color: var(--border-default);
 }

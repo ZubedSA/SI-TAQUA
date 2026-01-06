@@ -21,8 +21,8 @@ const styles = {
         borderRadius: '16px',
         padding: '24px 28px',
         color: 'white',
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-        boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.4)',
+        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
         marginBottom: '24px'
     },
     headerContent: {
@@ -52,7 +52,8 @@ const styles = {
     headerTitle: {
         fontSize: '1.5rem',
         fontWeight: 700,
-        margin: 0
+        margin: 0,
+        color: 'white'
     },
     headerSubtitle: {
         fontSize: '0.9rem',
@@ -82,7 +83,7 @@ const styles = {
     },
     topBar: {
         height: '4px',
-        background: 'linear-gradient(90deg, #10b981 0%, #059669 50%, #0d9488 100%)'
+        background: 'linear-gradient(90deg, #6366f1 0%, #4f46e5 50%, #4338ca 100%)'
     },
     formBody: {
         padding: '32px'
@@ -109,7 +110,7 @@ const styles = {
     sectionTitle: {
         fontSize: '0.95rem',
         fontWeight: 600,
-        color: '#1f2937',
+        color: '#312e81',
         margin: 0,
         textTransform: 'uppercase',
         letterSpacing: '0.03em'
@@ -129,7 +130,7 @@ const styles = {
         display: 'block',
         fontSize: '0.875rem',
         fontWeight: 500,
-        color: '#374151',
+        color: '#475569',
         marginBottom: '8px'
     },
     required: {
@@ -230,11 +231,11 @@ const styles = {
         borderRadius: '10px',
         fontWeight: 600,
         fontSize: '0.9rem',
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
         color: 'white',
         border: 'none',
         cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
         transition: 'all 0.2s'
     },
     loadingCenter: {
@@ -342,9 +343,9 @@ const OTAForm = () => {
     }
 
     const handleInputFocus = (e) => {
-        e.target.style.borderColor = '#10b981'
+        e.target.style.borderColor = '#6366f1'
         e.target.style.background = '#ffffff'
-        e.target.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.1)'
+        e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.25)'
     }
 
     const handleInputBlur = (e) => {
@@ -402,7 +403,7 @@ const OTAForm = () => {
                         {/* Section: Informasi Pribadi */}
                         <div style={styles.section}>
                             <div style={styles.sectionHeader}>
-                                <div style={{ ...styles.sectionIcon, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}>
+                                <div style={{ ...styles.sectionIcon, background: 'linear-gradient(135deg, #e0e7ff, #c7d2fe)' }}>
                                     <User size={18} color="#059669" />
                                 </div>
                                 <h3 style={styles.sectionTitle}>Informasi Pribadi</h3>
@@ -539,8 +540,8 @@ const OTAForm = () => {
                                 type="submit"
                                 disabled={loading}
                                 style={{ ...styles.submitBtn, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
-                                onMouseEnter={e => { if (!loading) { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)' } }}
-                                onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)' }}
+                                onMouseEnter={e => { if (!loading) { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 6px 16px rgba(79, 70, 229, 0.4)' } }}
+                                onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)' }}
                             >
                                 {loading ? <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={18} />}
                                 {isEdit ? 'Simpan Perubahan' : 'Simpan Data Baru'}

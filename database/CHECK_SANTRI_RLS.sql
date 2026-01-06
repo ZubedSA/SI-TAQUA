@@ -1,8 +1,13 @@
--- CHECK SANTRI RLS
-SELECT 
-    policyname, 
-    cmd,
+SELECT
+    schemaname,
+    tablename,
+    policyname,
     permissive,
-    qual
-FROM pg_policies 
-WHERE tablename = 'santri';
+    roles,
+    cmd,
+    qual,
+    with_check
+FROM
+    pg_policies
+WHERE
+    tablename = 'santri';

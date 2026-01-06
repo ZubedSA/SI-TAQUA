@@ -191,6 +191,39 @@
     gap: var(--space-2);
 }
 
+/* Filters Bar Children */
+.filter-group-date,
+.filter-group-period {
+    display: flex;
+    align-items: center;
+}
+
+.btn-refresh {
+    margin-left: auto;
+    /* Push to the right */
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-refresh:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+    transform: rotate(180deg);
+}
+
+.btn-refresh:active {
+    background: #e2e8f0;
+}
+
 .filters-bar .btn-icon {
     padding: var(--space-2);
     background: var(--bg-card);

@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Login from './pages/auth/Login'
+import RoleSelectionPage from './pages/auth/RoleSelectionPage'
 // New Dashboard Components
 import { AdminDashboard, AkademikDashboard, KeuanganDashboard, WaliSantriDashboard, PengurusDashboard, OTADashboard } from './pages/dashboards'
 import SantriList from './pages/santri/SantriList'
@@ -159,6 +160,11 @@ function App() {
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/login" element={<Login />} />
+                  <Route path="/role-selection" element={
+                    <ProtectedRoute>
+                      <RoleSelectionPage />
+                    </ProtectedRoute>
+                  } />
 
                   {/* Protected Routes - Require Authentication */}
                   <Route element={<Layout />}>

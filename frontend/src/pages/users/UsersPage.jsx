@@ -220,10 +220,24 @@ const UsersPage = () => {
             if (error) throw error
 
             // Normalize roles data for users who might not have it yet
-            const normalizedUsers = (data || []).map(u => ({
-                ...u,
-                roles: u.roles || (u.role ? [u.role] : ['guest'])
-            }))
+            // Ensure we handle various data shapes from legacy/migrated stats
+            const normalizedUsers = (data || []).map(u => {
+                let safeRoles = u.roles || [];
+                if (!Array.isArray(safeRoles)) {
+                    // Handle if it comes as string or null
+                    safeRoles = u.role ? [u.role] : ['guest'];
+                }
+                if (safeRoles.length === 0 && u.role) {
+                    safeRoles = [u.role];
+                }
+
+                return {
+                    ...u,
+                    roles: safeRoles.length > 0 ? safeRoles : ['guest'],
+                    // Ensure active_role is set
+                    active_role: u.active_role || (safeRoles.length > 0 ? safeRoles[0] : 'guest')
+                };
+            })
 
             setUsers(normalizedUsers)
         } catch (error) {
@@ -386,7 +400,7 @@ const UsersPage = () => {
     }
 
     const executeSaveUser = async () => {
-        console.log('🚀 executeSaveUser V2 - START', new Date().toISOString())
+        console.log('🚀 executeSaveUser V3 - RPC MODE', new Date().toISOString())
         setSaving(true)
 
         // Determine primary role for legacy compatibility
@@ -422,51 +436,12 @@ const UsersPage = () => {
 
                 // Link santri if wali role
                 if (formData.roles.includes('wali')) {
-                    console.log('🔗 Linking Santri for Wali:', editingUser.user_id, 'Selected:', selectedSantriIds)
-
-                    // 1. Reset old links
-                    const { error: resetError } = await supabase
-                        .from('santri')
-                        .update({ wali_id: null })
-                        .eq('wali_id', editingUser.user_id)
-
-                    if (resetError) console.error('❌ Error resetting santri links:', resetError)
-
-                    // 2. Set new links
-                    if (selectedSantriIds.length > 0) {
-                        const { error: linkError } = await supabase
-                            .from('santri')
-                            .update({ wali_id: editingUser.user_id })
-                            .in('id', selectedSantriIds)
-
-                        if (linkError) console.error('❌ Error linking santri:', linkError)
-                    }
+                    await handleWaliLinking(editingUser.user_id, selectedSantriIds)
                 }
 
                 // Link halaqoh if musyrif role
                 if (formData.roles.includes('musyrif')) {
-                    console.log('🔗 Linking Halaqoh for Musyrif:', editingUser.user_id, 'Selected:', selectedHalaqohIds)
-
-                    // 1. Reset old links
-                    const { error: resetHalaqohError } = await supabase
-                        .from('musyrif_halaqoh')
-                        .delete()
-                        .eq('user_id', editingUser.user_id)
-
-                    if (resetHalaqohError) console.error('❌ Error resetting halaqoh links:', resetHalaqohError)
-
-                    // 2. Insert new links
-                    if (selectedHalaqohIds.length > 0) {
-                        const halaqohLinks = selectedHalaqohIds.map(hid => ({
-                            user_id: editingUser.user_id,
-                            halaqoh_id: hid
-                        }))
-                        const { error: linkHalaqohError } = await supabase
-                            .from('musyrif_halaqoh')
-                            .insert(halaqohLinks)
-
-                        if (linkHalaqohError) console.error('❌ Error linking halaqoh:', linkHalaqohError)
-                    }
+                    await handleHalaqohLinking(editingUser.user_id, selectedHalaqohIds)
                 }
 
                 // Update local state
@@ -477,53 +452,52 @@ const UsersPage = () => {
                 }
                 fetchUsers()
                 closeModal()
+                setActionModal({ isOpen: false, type: null })
 
             } else {
-                // ============ CREATE USER ============
-                const signUpRes = await supabase.auth.signUp({
-                    email: formData.email,
-                    password: formData.password,
-                    options: { data: { nama: formData.nama, role: primaryRole } }
-                })
+                // ============ CREATE USER (VIA RPC) ============
+                // Using RPC to bypass Client-side Rate Limits
+                console.log('✨ MODE: CREATE USER (RPC)')
 
-                if (signUpRes.error) {
-                    throw new Error('Signup failed: ' + signUpRes.error.message)
+                // Persiapkan data untuk RPC yang AMAN (p_ prefix)
+                const createPayload = {
+                    p_email: formData.email,
+                    p_password: formData.password,
+                    p_nama: formData.nama,
+                    p_role: primaryRole,
+                    p_roles: formData.roles,
+                    p_phone: formData.phone || null,
+                    p_username: formData.username
                 }
 
-                if (!signUpRes.data || !signUpRes.data.user) {
-                    throw new Error('User creation failed - no user returned')
+                console.log('📡 Calling SAFE RPC admin_create_user_safe:', { ...createPayload, p_password: '***' })
+
+                // Panggil RPC Baru
+                const { data: rpcData, error: rpcError } = await supabase.rpc('admin_create_user_safe', createPayload)
+
+                if (rpcError) {
+                    console.error('RPC Error:', rpcError)
+                    throw new Error('Gagal membuat user: ' + rpcError.message)
                 }
 
-                const newUser = signUpRes.data.user
-
-                // Insert profile
-                const insertRes = await supabase.from('user_profiles').insert({
-                    user_id: newUser.id,
-                    email: formData.email,
-                    nama: formData.nama,
-                    username: formData.username,
-                    roles: formData.roles,
-                    role: primaryRole,
-                    active_role: primaryRole,
-                    phone: formData.phone || null
-                })
-
-                if (insertRes.error) {
-                    throw new Error('Profile creation failed: ' + insertRes.error.message)
+                if (!rpcData?.success) {
+                    throw new Error('Gagal: ' + (rpcData?.message || 'Unknown server error'))
                 }
+
+                const newUserId = rpcData.data.user_id
+                console.log('✅ User created via SAFE RPC, ID:', newUserId)
+
+                // Profile is now created automatically by database trigger (on_auth_user_created)
+                // No need for manual insertion here
 
                 // Link santri if wali role
                 if (formData.roles.includes('wali') && selectedSantriIds.length > 0) {
-                    await supabase.from('santri').update({ wali_id: newUser.id }).in('id', selectedSantriIds)
+                    await handleWaliLinking(newUserId, selectedSantriIds)
                 }
 
                 // Link halaqoh if musyrif role
                 if (formData.roles.includes('musyrif') && selectedHalaqohIds.length > 0) {
-                    const halaqohLinks = selectedHalaqohIds.map(hid => ({
-                        user_id: newUser.id,
-                        halaqoh_id: hid
-                    }))
-                    await supabase.from('musyrif_halaqoh').insert(halaqohLinks)
+                    await handleHalaqohLinking(newUserId, selectedHalaqohIds)
                 }
 
                 if (showToast?.success) {
@@ -531,16 +505,66 @@ const UsersPage = () => {
                 }
                 fetchUsers()
                 closeModal()
+                setActionModal({ isOpen: false, type: null })
             }
         } catch (err) {
             console.error('Save error:', err)
             if (showToast?.error) {
-                showToast?.error('Gagal menyimpan: ' + (err.message || 'Unknown error'))
+                showToast?.error(err.message || 'Gagal menyimpan user')
             } else {
                 alert('Gagal menyimpan: ' + (err.message || 'Unknown error'))
             }
         } finally {
             setSaving(false)
+        }
+    }
+
+    // Helper for linking Wali
+    const handleWaliLinking = async (userId, santriIds) => {
+        console.log('🔗 Linking Santri for Wali:', userId, 'Selected:', santriIds)
+
+        // 1. Reset old links
+        const { error: resetError } = await supabase
+            .from('santri')
+            .update({ wali_id: null })
+            .eq('wali_id', userId)
+
+        if (resetError) console.error('❌ Error resetting santri links:', resetError)
+
+        // 2. Set new links
+        if (santriIds.length > 0) {
+            const { error: linkError } = await supabase
+                .from('santri')
+                .update({ wali_id: userId })
+                .in('id', santriIds)
+
+            if (linkError) console.error('❌ Error linking santri:', linkError)
+        }
+    }
+
+    // Helper for linking Halaqoh
+    const handleHalaqohLinking = async (userId, halaqohIds) => {
+        console.log('🔗 Linking Halaqoh for Musyrif:', userId, 'Selected:', halaqohIds)
+
+        // 1. Reset old links
+        const { error: resetHalaqohError } = await supabase
+            .from('musyrif_halaqoh')
+            .delete()
+            .eq('user_id', userId)
+
+        if (resetHalaqohError) console.error('❌ Error resetting halaqoh links:', resetHalaqohError)
+
+        // 2. Insert new links
+        if (halaqohIds.length > 0) {
+            const halaqohLinks = halaqohIds.map(hid => ({
+                user_id: userId,
+                halaqoh_id: hid
+            }))
+            const { error: linkHalaqohError } = await supabase
+                .from('musyrif_halaqoh')
+                .insert(halaqohLinks)
+
+            if (linkHalaqohError) console.error('❌ Error linking halaqoh:', linkHalaqohError)
         }
     }
 

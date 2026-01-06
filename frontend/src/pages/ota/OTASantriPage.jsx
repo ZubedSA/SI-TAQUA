@@ -179,8 +179,8 @@ const OTASantriPage = () => {
                 borderRadius: '16px',
                 padding: '24px',
                 color: 'white',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-                boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
                 marginBottom: '24px'
             }}>
                 <div style={{ position: 'absolute', top: 0, right: 0, width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', transform: 'translate(30%, -50%)' }} />
@@ -192,7 +192,7 @@ const OTASantriPage = () => {
                             <Users size={26} />
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Data Santri OTA</h1>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'white' }}>Data Santri OTA</h1>
                             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0 0' }}>Manajemen penerima dana Pool Orang Tua Asuh</p>
                         </div>
                     </div>
@@ -208,7 +208,7 @@ const OTASantriPage = () => {
                         </button>
                         <button
                             onClick={() => setShowModal(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 500, border: 'none', background: 'white', color: '#059669', cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 500, border: 'none', background: 'white', color: '#4f46e5', cursor: 'pointer' }}
                         >
                             <Plus size={18} /> Tambah Penerima
                         </button>
@@ -225,7 +225,7 @@ const OTASantriPage = () => {
                     </div>
                     <div>
                         <div className="ota-stat-label">Total Penerima</div>
-                        <div className="ota-stat-value">{data.length}</div>
+                        <div className="ota-stat-value" style={{ color: '#10b981' }}>{data.length}</div>
                     </div>
                 </div>
                 <div className="ota-stat-card">
@@ -234,7 +234,7 @@ const OTASantriPage = () => {
                     </div>
                     <div>
                         <div className="ota-stat-label">Penerima Aktif</div>
-                        <div className="ota-stat-value">{activeCount}</div>
+                        <div className="ota-stat-value" style={{ color: '#2563eb' }}>{activeCount}</div>
                     </div>
                 </div>
                 <div className="ota-stat-card">
@@ -243,7 +243,7 @@ const OTASantriPage = () => {
                     </div>
                     <div>
                         <div className="ota-stat-label">Non-Aktif</div>
-                        <div className="ota-stat-value">{inactiveCount}</div>
+                        <div className="ota-stat-value" style={{ color: '#d97706' }}>{inactiveCount}</div>
                     </div>
                 </div>
             </div>

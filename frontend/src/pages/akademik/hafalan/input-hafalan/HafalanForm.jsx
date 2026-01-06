@@ -479,6 +479,8 @@ const HafalanForm = () => {
                                 <option value="3 Halaman">3 Halaman</option>
                                 <option value="4 Halaman">4 Halaman</option>
                                 <option value="5 Halaman">5 Halaman</option>
+                                <option value="10 Halaman">10 Halaman (½ Juz)</option>
+                                <option value="20 Halaman">20 Halaman (1 Juz)</option>
                             </select>
                         </div>
                     </div>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { authService } from '../services/authService'
 
 const AuthContext = createContext({})
 
@@ -222,116 +223,51 @@ export const AuthProvider = ({ children }) => {
 
     // Switch active role (for multi-role users)
     const switchRole = async (newRole) => {
-        // Check if user has this role
-        if (!userProfile.roles || !userProfile.roles.includes(newRole)) {
-            throw new Error('User tidak memiliki role ini')
-        }
-
-        // Update local state first (always works)
-        setUserProfile(prev => ({
-            ...prev,
-            activeRole: newRole,
-            role: newRole // Legacy support
-        }))
-
-        // Try to persist to database (may fail due to RLS, that's OK)
         try {
-            if (user?.id) {
-                await supabase
-                    .from('user_profiles')
-                    .update({ active_role: newRole })
-                    .update({ active_role: newRole })
-                    .eq('user_id', user.id)
-            }
-            logAuthEvent('ROLE_SWITCH', { old_role: userProfile.activeRole, new_role: newRole })
-        } catch (dbError) {
-            // Ignore database errors - local state is already updated
-            console.log('DB update skipped (RLS), using local state only')
-        }
+            if (!user) throw new Error('User not authenticated')
 
-        return { success: true, activeRole: newRole }
+            const { scopeId } = await authService.switchRole(user.id, newRole)
+
+            setUserProfile(prev => ({
+                ...prev,
+                activeRole: newRole,
+                role: newRole, // Legacy
+                scopeId: scopeId
+            }))
+
+            return { success: true, activeRole: newRole, scopeId }
+        } catch (error) {
+            console.error('Switch role failed:', error)
+            throw error
+        }
     }
 
     const signIn = async (input, password) => {
-        let authEmail = input.trim()
+        try {
+            const result = await authService.login(input, password)
 
-        // ================================================================
-        // LANGKAH 1: USERNAME LOOKUP (jika bukan email)
-        // ================================================================
-        // Input yang tidak mengandung @ dianggap sebagai USERNAME
-        // Kita lookup email dari database via RPC
-        if (!authEmail.includes('@')) {
-            // console.log('🔍 Looking up username:', authEmail)
+            // Set basic user info locally immediately
+            setUser(result.user)
 
-            try {
-                const { data: foundEmail, error: rpcError } = await supabase
-                    .rpc('get_email_by_username', { p_username: authEmail })
+            // If internal logic in authService didn't set everything yet, we can do it here
+            // but authService returns { user, profile, roles, requiresSelection }
 
-                if (rpcError) {
-                    console.error('❌ RPC Error:', rpcError)
-                    // Cek apakah function belum ada
-                    if (rpcError.message.includes('function') || rpcError.code === '42883') {
-                        throw new Error('Database perlu diupdate. Jalankan REBUILD_AUTH_SYSTEM.sql')
-                    }
-                    throw new Error('Gagal mencari username: ' + rpcError.message)
-                }
+            const activeRole = result.requiresSelection ? null : result.roles[0]
 
-                if (!foundEmail) {
-                    throw new Error('Username tidak ditemukan!')
-                }
+            setUserProfile({
+                ...result.profile,
+                roles: result.roles,
+                activeRole: activeRole || 'guest',
+                role: activeRole || 'guest'
+            })
 
-                authEmail = foundEmail
-                // console.log('✅ Username found, using email:', authEmail)
-            } catch (err) {
-                // Re-throw jika sudah Error object
-                if (err instanceof Error) throw err
-                throw new Error('Gagal mencari username')
+            return {
+                ...result,
+                user: result.user
             }
+        } catch (error) {
+            throw error // bubbling up to UI
         }
-
-        // ================================================================
-        // LANGKAH 2: AUTH LOGIN (Supabase Auth API)
-        // ================================================================
-        // Login menggunakan email + password via Supabase Auth
-        // TIDAK ADA DATABASE QUERY DI SINI - murni auth API
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: authEmail,
-            password,
-        })
-        if (error) throw error
-
-        // ================================================================
-        // LANGKAH 3: FETCH PROFILE (setelah auth sukses)
-        // ================================================================
-        // Ambil profile lengkap dari user_profiles
-        // PENTING: Tidak query wali-santri di sini!
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('user_id', data.user.id)
-            .single()
-
-        // ================================================================
-        // LANGKAH 4: NORMALIZE ROLES
-        // ================================================================
-        let roles = profile?.roles || (profile?.role ? [profile.role] : ['guest'])
-        const activeRole = profile?.active_role || profile?.role || (roles.length > 0 ? roles[0] : 'guest')
-
-        // Admin dapat akses ke semua dashboard
-        if (roles.includes('admin') || profile?.role === 'admin') {
-            roles = ['admin', 'guru', 'bendahara', 'wali', 'pengurus', 'ota']
-        }
-
-        setUserProfile({
-            ...profile,
-            roles: roles,
-            activeRole: activeRole,
-            role: activeRole
-        })
-
-        // console.log('✅ Login successful. Role:', activeRole)
-        logAuthEvent('LOGIN', { email: authEmail, role: activeRole })
-        return { ...data, roles, activeRole, role: activeRole }
     }
 
     const signUp = async (email, password, metadata = {}) => {

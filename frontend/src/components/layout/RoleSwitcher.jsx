@@ -93,9 +93,20 @@ const RoleSwitcher = ({ inDropdown = false, onSwitch }) => {
     const navigate = useNavigate()
     const [switching, setSwitching] = useState(false)
 
-    // Don't render if user has only one role
-    if (!hasMultipleRoles()) {
+    // Customize: Admin always sees switcher (even if roles array is small, 
+    // we might want to let them switch to view other dashboards) 
+    // BUT normally admin should have all roles in their array if we want this to work.
+    // For now, let's stick to checking if they actually have roles to switch TO.
+    if (!hasMultipleRoles() && activeRole !== 'admin') {
         return null
+    }
+
+    // If admin is active but roles array is just ['admin'], we fake the roles list
+    // so they can see all options (GOD MODE)
+    let displayRoles = roles
+    if (activeRole === 'admin') {
+        // Show all available roles for admin to switch into
+        displayRoles = ['admin', 'guru', 'bendahara', 'pengurus', 'wali', 'ota', 'musyrif']
     }
 
     const handleSwitch = async (role) => {
@@ -130,7 +141,7 @@ const RoleSwitcher = ({ inDropdown = false, onSwitch }) => {
                     <span>Ganti Role</span>
                 </div>
                 <div className="role-switcher-list-inline">
-                    {roles.map(role => {
+                    {displayRoles.map(role => {
                         const config = roleConfig[role]
                         if (!config) return null
 

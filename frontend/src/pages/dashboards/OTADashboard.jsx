@@ -148,8 +148,8 @@ const OTADashboard = () => {
                                 <HeartHandshake size={28} />
                             </div>
                             <div className="ota-welcome-text">
-                                <h1>Dashboard Orang Tua Asuh</h1>
-                                <p>Kelola program donasi dan monitoring santri penerima</p>
+                                <h1 style={{ color: 'white' }}>Dashboard Orang Tua Asuh</h1>
+                                <p style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Kelola program donasi dan monitoring santri penerima</p>
                             </div>
                         </div>
                         <div className="ota-welcome-actions">

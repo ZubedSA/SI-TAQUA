@@ -26,8 +26,8 @@
     /* More rounded */
     padding: 32px;
     color: white;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    box-shadow: 0 20px 40px -10px rgba(79, 70, 229, 0.4);
     margin-bottom: 24px;
 }
 
@@ -185,8 +185,8 @@
 .ota-stat-value {
     font-size: 1.75rem;
     font-weight: 800;
-    color: #0f172a !important;
-    /* Explicitly dark for light mode */
+    color: #312e81 !important;
+    /* Elegant Indigo Dark */
     line-height: 1;
 }
 
@@ -314,7 +314,7 @@
 
 .ota-user-info div:first-child {
     font-weight: 700;
-    color: #1e293b;
+    color: #312e81;
     font-size: 0.95rem;
     margin-bottom: 2px;
 }

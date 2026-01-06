@@ -125,15 +125,18 @@ export const usePermissions = () => {
     const isMusyrif = () => role === 'musyrif'
     const isAuthenticated = () => !!user
 
-    // Check if user has any of the specified roles
-    // Check both activeRole/role AND the roles array (for admins who switched roles)
+    // Check if user has any of the specified roles (Strict Active Role)
     const hasRole = (roles) => {
-        const userRoles = userProfile?.roles || []
         if (typeof roles === 'string') {
-            return role === roles || userRoles.includes(roles)
+            return role === roles
         }
-        // Check if current role matches OR if any role in userRoles matches
-        return roles.includes(role) || roles.some(r => userRoles.includes(r))
+        return roles.includes(role)
+    }
+
+    // Check if user actually possesses the role (regardless of active state)
+    const hasAssignedRole = (targetRole) => {
+        const userRoles = userProfile?.roles || []
+        return userRoles.includes(targetRole)
     }
 
     // Check if user can access a specific route/module
@@ -157,6 +160,7 @@ export const usePermissions = () => {
         isMusyrif,
         isAuthenticated,
         hasRole,
+        hasAssignedRole,
     }
 }
 

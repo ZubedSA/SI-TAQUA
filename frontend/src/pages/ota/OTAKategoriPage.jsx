@@ -17,8 +17,8 @@ const styles = {
         borderRadius: '16px',
         padding: '24px',
         color: 'white',
-        background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-        boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+        background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
         marginBottom: '24px'
     },
     headerContent: {
@@ -48,7 +48,8 @@ const styles = {
     headerTitle: {
         fontSize: '1.5rem',
         fontWeight: 700,
-        margin: 0
+        margin: 0,
+        color: 'white'
     },
     headerSubtitle: {
         fontSize: '0.9rem',
@@ -73,7 +74,7 @@ const styles = {
         borderRadius: '12px',
         fontWeight: 600,
         background: 'white',
-        color: '#059669',
+        color: '#4f46e5',
         border: 'none',
         cursor: 'pointer',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -99,7 +100,7 @@ const styles = {
     cardTitle: {
         fontSize: '1.125rem',
         fontWeight: 600,
-        color: '#1f2937',
+        color: '#312e81',
         margin: 0,
         display: 'flex',
         alignItems: 'center',
@@ -143,7 +144,7 @@ const styles = {
         width: '36px',
         height: '36px',
         borderRadius: '10px',
-        background: 'linear-gradient(135deg, #10b981, #059669)',
+        background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -181,7 +182,7 @@ const styles = {
     },
     modalHeader: {
         padding: '20px 24px',
-        background: 'linear-gradient(135deg, #10b981, #059669)',
+        background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
         color: 'white',
         display: 'flex',
         justifyContent: 'space-between',
@@ -400,7 +401,7 @@ const OTAKategoriPage = () => {
                             style={styles.searchInput}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            onFocus={e => e.target.style.borderColor = '#10b981'}
+                            onFocus={e => e.target.style.borderColor = '#6366f1'}
                             onBlur={e => e.target.style.borderColor = '#e5e7eb'}
                         />
                     </div>
@@ -432,7 +433,7 @@ const OTAKategoriPage = () => {
                                                 <div style={styles.categoryIcon}>
                                                     <Tag size={16} />
                                                 </div>
-                                                <span style={{ fontWeight: 600, color: '#1f2937' }}>{item.nama}</span>
+                                                <span style={{ fontWeight: 600, color: '#312e81' }}>{item.nama}</span>
                                             </div>
                                         </td>
                                         <td style={{ ...styles.td, color: '#6b7280' }}>
@@ -470,7 +471,7 @@ const OTAKategoriPage = () => {
                         <div style={styles.emptyIcon}>
                             <Tag size={36} color="#9ca3af" />
                         </div>
-                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1f2937', margin: '0 0 8px' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#312e81', margin: '0 0 8px' }}>
                             {search ? 'Kategori tidak ditemukan' : 'Belum ada kategori'}
                         </h3>
                         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
@@ -544,7 +545,7 @@ const OTAKategoriPage = () => {
                                     padding: '10px 24px',
                                     borderRadius: '10px',
                                     border: 'none',
-                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
                                     color: 'white',
                                     fontWeight: 600,
                                     cursor: 'pointer',

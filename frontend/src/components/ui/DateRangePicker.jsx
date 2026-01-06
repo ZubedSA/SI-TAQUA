@@ -197,7 +197,7 @@ const DateRangePicker = ({ startDate, endDate, onChange, className = '', singleD
                     />
 
                     {/* Content Container: Modal on Mobile, Popover on Desktop */}
-                    <div className="fixed inset-x-4 top-[20%] md:top-full md:left-0 md:inset-x-auto z-50 
+                    <div className="fixed inset-x-4 top-[20%] md:absolute md:top-full md:left-0 md:inset-x-auto z-50 
                                   w-auto md:w-[32rem] bg-white rounded-xl shadow-2xl md:shadow-xl border border-gray-100 
                                   p-5 md:p-4 mt-0 md:mt-2 animate-in fade-in zoom-in-95 duration-200">
 

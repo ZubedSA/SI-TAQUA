@@ -328,8 +328,8 @@ const OTAPenyaluranPage = () => {
                 borderRadius: '16px',
                 padding: '24px',
                 color: 'white',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-                boxShadow: '0 10px 40px -10px rgba(16, 185, 129, 0.5)',
+                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                boxShadow: '0 10px 40px -10px rgba(79, 70, 229, 0.5)',
                 marginBottom: '24px'
             }}>
                 <div style={{ position: 'absolute', top: 0, right: 0, width: '180px', height: '180px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', transform: 'translate(30%, -50%)' }} />
@@ -341,7 +341,7 @@ const OTAPenyaluranPage = () => {
                             <Send size={26} />
                         </div>
                         <div>
-                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Penyaluran Dana OTA</h1>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'white' }}>Penyaluran Dana OTA</h1>
                             <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0 0' }}>Distribusi dana langsung ke santri penerima</p>
                         </div>
                     </div>
@@ -354,7 +354,7 @@ const OTAPenyaluranPage = () => {
                         </button>
                         <button
                             onClick={openAdd}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 500, border: 'none', background: 'white', color: '#059669', cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 500, border: 'none', background: 'white', color: '#4f46e5', cursor: 'pointer' }}
                         >
                             <Send size={18} /> Salurkan Dana
                         </button>
