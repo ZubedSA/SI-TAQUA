@@ -119,22 +119,22 @@ const UploadBuktiPage = () => {
         e.preventDefault()
 
         if (!selectedSantri) {
-            showToast('Pilih santri terlebih dahulu', 'error')
+            showToast.error('Pilih santri terlebih dahulu')
             return
         }
 
         if (!formData.tagihan_id) {
-            showToast('Pilih tagihan yang akan dibayar', 'error')
+            showToast.error('Pilih tagihan yang akan dibayar')
             return
         }
 
         if (!formData.jumlah) {
-            showToast('Masukkan jumlah pembayaran', 'error')
+            showToast.error('Masukkan jumlah pembayaran')
             return
         }
 
         if (!formData.bukti_file) {
-            showToast('Upload bukti transfer terlebih dahulu', 'error')
+            showToast.error('Upload bukti transfer terlebih dahulu')
             return
         }
 
@@ -173,12 +173,61 @@ const UploadBuktiPage = () => {
 
             if (insertError) throw insertError
 
-            showToast('Bukti pembayaran berhasil dikirim! Menunggu verifikasi admin.', 'success')
+            // === SEND CHAT NOTIFICATION TO BENDAHARA ===
+            try {
+                // Get tagihan info for the message
+                const selectedTagihan = tagihanBelumLunas.find(t => t.id === formData.tagihan_id)
+                const tagihanNama = selectedTagihan?.kategori?.nama || 'Tagihan'
+                const jumlahFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(formData.jumlah)
+
+                // Find all Bendahara users
+                const { data: bendaharaUsers } = await supabase
+                    .from('user_profiles')
+                    .select('user_id')
+                    .or('role.eq.bendahara,roles.cs.{bendahara}')
+
+                if (bendaharaUsers && bendaharaUsers.length > 0) {
+                    // Compose message
+                    const chatMessage = `📝 *Konfirmasi Pembayaran Baru*\n\n` +
+                        `👨‍👦 Santri: ${selectedSantri.nama}\n` +
+                        `📋 Tagihan: ${tagihanNama}\n` +
+                        `💰 Jumlah: ${jumlahFormatted}\n` +
+                        `📅 Tanggal Transfer: ${formData.tanggal_transfer}\n` +
+                        (formData.catatan ? `📝 Catatan: ${formData.catatan}\n\n` : '\n') +
+                        `Mohon segera diverifikasi. Terima kasih 🙏`
+
+                    // Send to each Bendahara
+                    for (const bendahara of bendaharaUsers) {
+                        // Get or create conversation
+                        const { data: conversationId } = await supabase.rpc('get_or_create_conversation', {
+                            p_other_user_id: bendahara.user_id
+                        })
+
+                        if (conversationId) {
+                            // Send message with image attachment
+                            await supabase.rpc('send_message', {
+                                p_conversation_id: conversationId,
+                                p_message: chatMessage,
+                                p_type: 'image',
+                                p_file_url: publicUrl,
+                                p_file_name: formData.bukti_file.name,
+                                p_file_type: formData.bukti_file.type,
+                                p_file_size: formData.bukti_file.size
+                            })
+                        }
+                    }
+                }
+            } catch (chatError) {
+                console.error('Error sending chat to bendahara:', chatError)
+                // Don't fail the whole process if chat fails
+            }
+
+            showToast.success('Bukti pembayaran berhasil dikirim! Menunggu verifikasi admin.')
             navigate('/wali/keuangan')
 
         } catch (error) {
             console.error('Error submitting:', error)
-            showToast('Gagal mengirim bukti pembayaran: ' + error.message, 'error')
+            showToast.error('Gagal mengirim bukti pembayaran: ' + error.message)
         } finally {
             setSubmitting(false)
         }

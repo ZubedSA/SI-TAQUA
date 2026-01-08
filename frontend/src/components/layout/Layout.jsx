@@ -3,6 +3,7 @@ import { Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import FloatingChatButton from '../chat/FloatingChatButton'
 import { Loader2 } from 'lucide-react'
 import { useAutoAudit } from '../../hooks/useAutoAudit'
 
@@ -44,9 +45,13 @@ const Layout = () => {
                     <Outlet />
                 </div>
             </main>
+
+            {/* Floating Chat Button */}
+            <FloatingChatButton />
         </div>
     )
 }
 
 export default Layout
+
 

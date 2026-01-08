@@ -60,7 +60,7 @@ const Login = () => {
                 {/* Header */}
                 <div className="login-header p-8 text-center bg-white border-b border-gray-100">
                     <img src={logoFile} alt="Logo PTQA Batuan" className="mx-auto h-20 mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-800">Selamat Datang</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Assalamualaikum</h2>
                     <p className="text-gray-500 mt-2 text-sm">Masuk untuk mengakses Sistem Informasi</p>
                 </div>
 
@@ -113,8 +113,8 @@ const Login = () => {
                             type="submit"
                             disabled={loading}
                             className={`w-full py-3.5 px-6 rounded-lg font-bold text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 ${loading
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 hover:shadow-green-500/30'
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 hover:shadow-green-500/30'
                                 }`}
                         >
                             {loading ? (

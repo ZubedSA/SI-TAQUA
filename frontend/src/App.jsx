@@ -37,8 +37,6 @@ import TagihanWaliPage from './pages/walisantri/keuangan/TagihanWaliPage'
 import RiwayatBayarPage from './pages/walisantri/keuangan/RiwayatBayarPage'
 import UploadBuktiPage from './pages/walisantri/keuangan/UploadBuktiPage'
 import PengumumanPage from './pages/walisantri/informasi/PengumumanPage'
-import InboxPesanPage from './pages/walisantri/pesan/InboxPesanPage'
-import KirimPesanPage from './pages/walisantri/pesan/KirimPesanPage'
 import ProfilWaliPage from './pages/walisantri/profil/ProfilWaliPage'
 import BackupPage from './pages/backup/BackupPage'
 import SystemStatusPage from './pages/system/SystemStatusPage'
@@ -103,6 +101,8 @@ import BuletinPage from './pages/pengurus/buletin/BuletinPage'
 import ArsipPage from './pages/pengurus/arsip/ArsipPage'
 import './index.css'
 import './components/common/ErrorBoundary.css'
+// Messages/Chat
+import MessagesPage from './pages/messages/MessagesPage'
 
 
 // Dashboard redirect mapping based on active role
@@ -217,6 +217,13 @@ function App() {
                     <Route path="/dashboard/ota" element={
                       <ProtectedRoute roles={['admin', 'ota']}>
                         <OTADashboard />
+                      </ProtectedRoute>
+                    } />
+
+                    {/* ============ MESSAGES/CHAT ============ */}
+                    <Route path="/messages" element={
+                      <ProtectedRoute>
+                        <MessagesPage />
                       </ProtectedRoute>
                     } />
 
@@ -729,10 +736,6 @@ function App() {
 
                     {/* Informasi */}
                     <Route path="informasi" element={<PengumumanPage />} />
-
-                    {/* Pesan Routes */}
-                    <Route path="pesan" element={<InboxPesanPage />} />
-                    <Route path="pesan/kirim" element={<KirimPesanPage />} />
 
                     {/* Profil */}
                     <Route path="profil" element={<ProfilWaliPage />} />

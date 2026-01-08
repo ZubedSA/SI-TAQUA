@@ -31,6 +31,178 @@
     margin-bottom: 24px;
 }
 
+/* Page Header - Used in OTASantriPage */
+.ota-page-header {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    padding: 24px;
+    color: white;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    box-shadow: 0 10px 40px -10px rgba(79, 70, 229, 0.5);
+    margin-bottom: 20px;
+}
+
+.ota-page-header .ota-header-content {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 10;
+}
+
+.ota-page-header .ota-header-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ota-page-header .ota-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.ota-page-header .ota-header-title h1 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+}
+
+.ota-page-header .ota-header-title p {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 4px 0 0 0;
+}
+
+.ota-page-header .ota-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ota-page-header .ota-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: white;
+}
+
+.ota-refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ota-refresh-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.ota-page-header .ota-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: white;
+    color: #4f46e5;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.ota-page-header .ota-add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile header adjustments */
+@media (max-width: 768px) {
+    .ota-page-header {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .ota-page-header .ota-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .ota-page-header .ota-header-info {
+        gap: 12px;
+    }
+
+    .ota-page-header .ota-header-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .ota-page-header .ota-header-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .ota-page-header .ota-header-title h1 {
+        font-size: 1.1rem;
+    }
+
+    .ota-page-header .ota-header-title p {
+        font-size: 0.75rem;
+    }
+
+    .ota-page-header .ota-header-actions {
+        width: 100%;
+        gap: 8px;
+    }
+
+    .ota-page-header .ota-badge {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+    }
+
+    .ota-refresh-btn {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
+
+    .ota-page-header .ota-add-btn {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 0.85rem;
+    }
+}
+
 .ota-header-bg-1,
 .ota-header-bg-2 {
     position: absolute;
@@ -86,6 +258,7 @@
     font-weight: 800;
     margin: 0;
     line-height: 1.2;
+    color: white;
 }
 
 .ota-header-title p {
@@ -434,56 +607,76 @@
 
 @media (max-width: 768px) {
     .ota-container {
-        padding: 16px;
+        padding: 12px;
     }
 
-    .ota-header {
-        padding: 24px;
-        border-radius: 20px;
-    }
-
-    .ota-header-content {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 20px;
-    }
-
-    .ota-header-actions {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .ota-header-title h1 {
-        font-size: 1.5rem;
-    }
-
+    /* Stats Grid - Horizontal Scroll on Mobile */
     .ota-stats-grid {
-        grid-template-columns: 1fr;
-        /* Stack vertically on mobile */
+        display: flex;
         gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .ota-stats-grid::-webkit-scrollbar {
+        display: none;
     }
 
     .ota-stat-card {
+        min-width: 160px;
+        flex-shrink: 0;
         padding: 16px;
-        gap: 16px;
+        gap: 12px;
+        flex-direction: row;
+        border-radius: 16px;
+    }
+
+    .ota-stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+    }
+
+    .ota-stat-label {
+        font-size: 0.7rem;
+        margin-bottom: 2px;
+    }
+
+    .ota-stat-value {
+        font-size: 1.5rem;
+    }
+
+    /* Main Card */
+    .ota-main-card {
+        border-radius: 16px;
     }
 
     .ota-filter-bar {
-        padding: 16px;
+        padding: 12px;
         flex-direction: column;
         align-items: stretch;
+        gap: 10px;
     }
 
     .ota-search-box {
         min-width: 100%;
     }
 
+    .ota-search-input {
+        padding: 10px 14px 10px 40px;
+        font-size: 0.85rem;
+    }
+
     .ota-select {
         width: 100%;
+        padding: 10px 14px;
+        font-size: 0.85rem;
     }
 
     /* Hide Table, Show Mobile Cards - OTA Santri Page Only */
-    .ota-santri-page .ota-table-container {
+    .ota-santri-page .table-container {
         display: none;
     }
 
@@ -491,15 +684,122 @@
         display: flex;
         flex-direction: column;
     }
+
+    /* Mobile Cards */
+    .ota-mobile-list {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .ota-mobile-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .ota-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .ota-mobile-header .ota-user-cell {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .ota-mobile-header .ota-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 0.8rem;
+        border-radius: 10px;
+    }
+
+    .ota-mobile-header .ota-user-info div:first-child {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ota-mobile-header .ota-user-details {
+        font-size: 0.75rem;
+    }
+
+    .ota-mobile-header .ota-status-badge {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+        flex-shrink: 0;
+    }
+
+    .ota-mobile-footer {
+        padding-top: 10px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        gap: 8px;
+    }
+
+    .ota-mobile-footer .ota-action-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: 0.8rem;
+        border-radius: 10px;
+    }
+
+    .ota-mobile-footer .ota-btn-delete {
+        flex: none;
+        width: auto;
+        padding: 10px 14px;
+    }
+
+    .ota-mobile-footer .ota-btn-toggle {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
 }
 
 @media (max-width: 480px) {
-    .ota-header-icon {
-        width: 48px;
-        height: 48px;
+    .ota-container {
+        padding: 8px;
     }
 
-    .ota-header-title h1 {
+    .ota-stat-card {
+        min-width: 140px;
+        padding: 12px;
+    }
+
+    .ota-stat-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .ota-stat-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .ota-stat-value {
         font-size: 1.25rem;
+    }
+
+    .ota-mobile-card {
+        padding: 12px;
+    }
+
+    .ota-mobile-header .ota-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .ota-mobile-header .ota-user-cell {
+        gap: 10px;
     }
 }

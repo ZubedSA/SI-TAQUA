@@ -92,37 +92,62 @@ const OTAList = () => {
     return (
         <div className="min-h-screen bg-slate-50 p-2 md:p-6 lg:p-8 font-sans text-slate-800">
             {/* HEADER */}
-            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 p-5 md:p-8 text-white shadow-xl mb-4 md:mb-8">
+            <div className="ota-page-header" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)' }}>
                 {/* Decorative Circles */}
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
-                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                <div className="ota-header-bg-1"></div>
+                <div className="ota-header-bg-2"></div>
 
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                    <div className="flex items-center gap-4 md:gap-6">
-                        <div className="p-3 md:p-4 bg-white/20 backdrop-blur-md rounded-2xl shadow-inner border border-white/10">
-                            <HeartHandshake size={28} className="text-white md:w-8 md:h-8" />
+                <div className="ota-header-content">
+                    <div className="ota-header-info">
+                        <div className="ota-header-icon">
+                            <HeartHandshake size={24} />
                         </div>
-                        <div>
-                            <h1 className="text-xl md:text-3xl font-bold tracking-tight text-white mb-1">
-                                Data Orang Tua Asuh
-                            </h1>
-                            <p className="text-emerald-100/90 text-sm md:text-base font-medium">
-                                Kelola profil donatur
-                            </p>
+                        <div className="ota-header-title">
+                            <h1>Data Orang Tua Asuh</h1>
+                            <p>Kelola data profil donatur dan orang tua asuh</p>
                         </div>
                     </div>
 
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <div className="flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 bg-white/15 backdrop-blur-sm rounded-xl border border-white/10 text-xs md:text-sm font-medium">
-                            <Users size={16} />
-                            <span>{activeCount} Aktif</span>
-                        </div>
+                    <div className="ota-header-actions">
+                        <button
+                            onClick={() => fetchData()}
+                            className="ota-refresh-btn"
+                            style={{
+                                background: 'rgba(255,255,255,0.15)',
+                                color: 'white',
+                                border: '1px solid rgba(255,255,255,0.3)',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                            }}
+                        >
+                            ↻ Refresh
+                        </button>
                         <button
                             onClick={() => navigate('/admin/ota/create')}
-                            className="flex-1 md:flex-none group flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-emerald-700 rounded-xl font-bold text-xs md:text-sm shadow-lg hover:shadow-xl hover:translate-y-[-2px] hover:bg-emerald-50 transition-all duration-300"
+                            className="ota-add-btn"
+                            style={{
+                                background: 'white',
+                                color: '#7c3aed',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                border: 'none',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                            }}
                         >
                             <Plus size={16} />
-                            <span>Tambah</span>
+                            <span>Tambah OTA</span>
                         </button>
                     </div>
                 </div>

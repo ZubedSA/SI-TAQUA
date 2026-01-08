@@ -1,7 +1,8 @@
 import { Outlet } from 'react-router-dom'
 import { useLayoutEffect } from 'react'
 import WaliNavbar from './components/WaliNavbar'
-// import './WaliPortal.css' // REMOVED
+import FloatingChatButton from '../../components/chat/FloatingChatButton'
+import './WaliPortal.css'
 
 /**
  * WaliLayout - Layout khusus untuk Portal Wali Santri
@@ -22,8 +23,12 @@ const WaliLayout = () => {
             <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in">
                 <Outlet />
             </main>
+
+            {/* Floating Chat Button - konsisten dengan layout admin */}
+            <FloatingChatButton />
         </div>
     )
 }
 
 export default WaliLayout
+

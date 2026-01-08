@@ -298,7 +298,7 @@ const WaliDashboardPage = () => {
 
                     {/* Quick Access Grid */}
                     <Card title="Akses Cepat">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <Link to="/wali/akademik/hafalan" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
                                 <BookOpen size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
                                 <span className="text-sm font-medium">Hafalan</span>
@@ -310,10 +310,6 @@ const WaliDashboardPage = () => {
                             <Link to="/wali/akademik/kehadiran" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
                                 <Calendar size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
                                 <span className="text-sm font-medium">Kehadiran</span>
-                            </Link>
-                            <Link to="/wali/pesan/kirim" className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all border border-gray-100 group">
-                                <Bell size={24} className="text-gray-400 group-hover:text-primary-600 mb-2" />
-                                <span className="text-sm font-medium">Pesan</span>
                             </Link>
                         </div>
                     </Card>

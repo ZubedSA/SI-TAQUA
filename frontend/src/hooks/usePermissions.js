@@ -125,12 +125,17 @@ export const usePermissions = () => {
     const isMusyrif = () => role === 'musyrif'
     const isAuthenticated = () => !!user
 
-    // Check if user has any of the specified roles (Strict Active Role)
+    // Check if user has any of the specified roles
+    // Now checks both active role AND roles array for flexibility
     const hasRole = (roles) => {
+        const userRoles = userProfile?.roles || []
+        const currentRole = userProfile?.activeRole || userProfile?.role || 'guest'
+
         if (typeof roles === 'string') {
-            return role === roles
+            return currentRole === roles || userRoles.includes(roles)
         }
-        return roles.includes(role)
+        // Check if current active role is in allowed roles OR any roles array item is allowed
+        return roles.includes(currentRole) || roles.some(r => userRoles.includes(r))
     }
 
     // Check if user actually possesses the role (regardless of active state)

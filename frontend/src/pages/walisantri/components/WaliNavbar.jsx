@@ -33,7 +33,6 @@ const WaliNavbar = () => {
         { path: '/wali/akademik', icon: BookOpen, label: 'Akademik' },
         { path: '/wali/keuangan', icon: Wallet, label: 'Keuangan' },
         { path: '/wali/informasi', icon: Bell, label: 'Info' },
-        { path: '/wali/pesan', icon: MessageCircle, label: 'Pesan' },
     ]
 
     return (
