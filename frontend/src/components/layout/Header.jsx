@@ -177,10 +177,14 @@ const Header = ({ onMenuClick }) => {
                             className="flex items-center gap-3 py-1 pl-1 pr-2 rounded-full hover:bg-gray-50 transition-colors group focus:outline-none"
                             onClick={() => setShowDropdown(!showDropdown)}
                         >
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-500 to-emerald-400 p-[2px] shadow-sm group-hover:shadow-md transition-shadow">
-                                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                                    <User size={16} className="text-primary-600" />
-                                </div>
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary-500 to-emerald-400 p-[2px] shadow-sm group-hover:shadow-md transition-shadow overflow-hidden">
+                                {userProfile?.avatar_url ? (
+                                    <img src={userProfile.avatar_url} alt={getUserName()} className="w-full h-full rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                                        <User size={16} className="text-primary-600" />
+                                    </div>
+                                )}
                             </div>
                             <div className="hidden md:block text-left">
                                 <p className="text-sm font-semibold text-gray-800 leading-tight group-hover:text-primary-700">{getUserName()}</p>
@@ -241,8 +245,12 @@ const Header = ({ onMenuClick }) => {
                         </div>
                         <div className="p-6">
                             <div className="flex flex-col items-center mb-6">
-                                <div className="w-20 h-20 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center mb-3">
-                                    <User size={40} />
+                                <div className="w-20 h-20 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center mb-3 overflow-hidden">
+                                    {userProfile?.avatar_url ? (
+                                        <img src={userProfile.avatar_url} alt={getUserName()} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User size={40} />
+                                    )}
                                 </div>
                                 <h4 className="text-xl font-bold text-gray-900">{getUserName()}</h4>
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200 mt-1">

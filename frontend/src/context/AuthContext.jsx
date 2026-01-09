@@ -221,6 +221,13 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    // Refresh profile (used after avatar update, etc.)
+    const refreshProfile = async () => {
+        if (user?.id) {
+            await fetchUserProfile(user.id)
+        }
+    }
+
     // Switch active role (for multi-role users)
     const switchRole = async (newRole) => {
         try {
@@ -338,6 +345,7 @@ export const AuthProvider = ({ children }) => {
         signUp,
         signOut,
         switchRole,
+        refreshProfile,
         isAuthenticated: !!user,
         isAdmin,
         isGuru,

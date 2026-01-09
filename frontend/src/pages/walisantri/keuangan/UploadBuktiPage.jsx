@@ -20,18 +20,24 @@ const UploadBuktiPage = () => {
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [santriList, setSantriList] = useState([])
-    const [selectedSantri, setSelectedSantri] = useState(null)
+    // Multi-select santri - now an array of selected santri IDs
+    const [selectedSantriIds, setSelectedSantriIds] = useState([])
     const [tagihanBelumLunas, setTagihanBelumLunas] = useState([])
 
-    // Form state
+    // Form state - multi-select tagihan
+    const [selectedTagihan, setSelectedTagihan] = useState([])
     const [formData, setFormData] = useState({
-        tagihan_id: '',
-        jumlah: '',
         tanggal_transfer: new Date().toISOString().split('T')[0],
         catatan: '',
         bukti_file: null
     })
     const [preview, setPreview] = useState(null)
+
+    // Calculate total amount from selected tagihan
+    const totalJumlah = selectedTagihan.reduce((sum, tagihanId) => {
+        const tagihan = tagihanBelumLunas.find(t => t.id === tagihanId)
+        return sum + (tagihan?.jumlah || 0)
+    }, 0)
 
     // Fetch santri list
     const fetchSantriList = async () => {
@@ -48,23 +54,27 @@ const UploadBuktiPage = () => {
             if (error) throw error
 
             setSantriList(data || [])
+            // Auto-select all santri by default
             if (data && data.length > 0) {
-                setSelectedSantri(data[0])
+                setSelectedSantriIds(data.map(s => s.id))
             }
         } catch (error) {
             console.error('Error fetching santri:', error)
         }
     }
 
-    // Fetch tagihan belum lunas
-    const fetchTagihan = async (santriId) => {
-        if (!santriId) return
+    // Fetch tagihan for multiple santri
+    const fetchTagihanMultiple = async (santriIds) => {
+        if (!santriIds || santriIds.length === 0) {
+            setTagihanBelumLunas([])
+            return
+        }
 
         try {
             const { data, error } = await supabase
                 .from('tagihan_santri')
-                .select('*, kategori:kategori_id (nama)')
-                .eq('santri_id', santriId)
+                .select('*, kategori:kategori_id (nama), santri:santri_id (id, nama)')
+                .in('santri_id', santriIds)
                 .neq('status', 'Lunas')
                 .order('jatuh_tempo')
 
@@ -83,12 +93,14 @@ const UploadBuktiPage = () => {
     }, [user])
 
     useEffect(() => {
-        if (selectedSantri) {
-            fetchTagihan(selectedSantri.id)
-            // Reset form when switching santri
-            setFormData(prev => ({ ...prev, tagihan_id: '' }))
+        if (selectedSantriIds.length > 0) {
+            fetchTagihanMultiple(selectedSantriIds)
+        } else {
+            setTagihanBelumLunas([])
         }
-    }, [selectedSantri])
+        // Reset selected tagihan when changing santri selection
+        setSelectedTagihan([])
+    }, [selectedSantriIds])
 
     const handleFileChange = (e) => {
         const file = e.target.files[0]
@@ -118,18 +130,18 @@ const UploadBuktiPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if (!selectedSantri) {
+        if (selectedSantriIds.length === 0) {
             showToast.error('Pilih santri terlebih dahulu')
             return
         }
 
-        if (!formData.tagihan_id) {
-            showToast.error('Pilih tagihan yang akan dibayar')
+        if (selectedTagihan.length === 0) {
+            showToast.error('Pilih minimal satu tagihan yang akan dibayar')
             return
         }
 
-        if (!formData.jumlah) {
-            showToast.error('Masukkan jumlah pembayaran')
+        if (totalJumlah <= 0) {
+            showToast.error('Total jumlah pembayaran tidak valid')
             return
         }
 
@@ -143,7 +155,7 @@ const UploadBuktiPage = () => {
         try {
             // Upload file to storage
             const fileExt = formData.bukti_file.name.split('.').pop()
-            const fileName = `bukti_${selectedSantri.id}_${Date.now()}.${fileExt}`
+            const fileName = `bukti_${user.id}_${Date.now()}.${fileExt}`
             const filePath = `bukti-transfer/${fileName}`
 
             const { error: uploadError } = await supabase.storage
@@ -157,28 +169,71 @@ const UploadBuktiPage = () => {
                 .from('uploads')
                 .getPublicUrl(filePath)
 
-            // Insert bukti_transfer record
-            const { error: insertError } = await supabase
-                .from('bukti_transfer')
-                .insert({
-                    tagihan_id: formData.tagihan_id,
-                    santri_id: selectedSantri.id,
-                    wali_id: user.id,
-                    jumlah: parseFloat(formData.jumlah),
-                    tanggal_transfer: formData.tanggal_transfer,
-                    bukti_url: publicUrl,
-                    catatan: formData.catatan,
-                    status: 'Menunggu'
-                })
+            // Insert bukti_transfer record for each selected tagihan
+            for (const tagihanId of selectedTagihan) {
+                const tagihan = tagihanBelumLunas.find(t => t.id === tagihanId)
+                const { error: insertError } = await supabase
+                    .from('bukti_transfer')
+                    .insert({
+                        tagihan_id: tagihanId,
+                        santri_id: tagihan?.santri?.id || tagihan?.santri_id,
+                        wali_id: user.id,
+                        jumlah: tagihan?.jumlah || 0,
+                        tanggal_transfer: formData.tanggal_transfer,
+                        bukti_url: publicUrl,
+                        catatan: formData.catatan,
+                        status: 'Menunggu'
+                    })
 
-            if (insertError) throw insertError
+                if (insertError) throw insertError
+            }
 
             // === SEND CHAT NOTIFICATION TO BENDAHARA ===
             try {
-                // Get tagihan info for the message
-                const selectedTagihan = tagihanBelumLunas.find(t => t.id === formData.tagihan_id)
-                const tagihanNama = selectedTagihan?.kategori?.nama || 'Tagihan'
-                const jumlahFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(formData.jumlah)
+                // Format currency helper
+                const formatRp = (amount) => new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0
+                }).format(amount)
+
+                // Format date to Indonesian format
+                const formatTanggal = (dateStr) => {
+                    const date = new Date(dateStr)
+                    return date.toLocaleDateString('id-ID', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    })
+                }
+
+                // Group tagihan by santri for detailed breakdown
+                const tagihanBySantri = {}
+                selectedTagihan.forEach(id => {
+                    const t = tagihanBelumLunas.find(tag => tag.id === id)
+                    if (t) {
+                        const santriName = t.santri?.nama || 'Santri'
+                        if (!tagihanBySantri[santriName]) {
+                            tagihanBySantri[santriName] = []
+                        }
+                        tagihanBySantri[santriName].push({
+                            kategori: t.kategori?.nama || 'Tagihan',
+                            jumlah: t.jumlah
+                        })
+                    }
+                })
+
+                // Build detailed breakdown message
+                let detailMessage = ''
+                Object.entries(tagihanBySantri).forEach(([santriName, tagihanList], index) => {
+                    const subtotal = tagihanList.reduce((sum, t) => sum + t.jumlah, 0)
+                    detailMessage += `\n👤 *${santriName}*\n`
+                    tagihanList.forEach(t => {
+                        detailMessage += `   • ${t.kategori}: ${formatRp(t.jumlah)}\n`
+                    })
+                    detailMessage += `   📊 Subtotal: ${formatRp(subtotal)}\n`
+                })
 
                 // Find all Bendahara users
                 const { data: bendaharaUsers } = await supabase
@@ -187,14 +242,24 @@ const UploadBuktiPage = () => {
                     .or('role.eq.bendahara,roles.cs.{bendahara}')
 
                 if (bendaharaUsers && bendaharaUsers.length > 0) {
-                    // Compose message
-                    const chatMessage = `📝 *Konfirmasi Pembayaran Baru*\n\n` +
-                        `👨‍👦 Santri: ${selectedSantri.nama}\n` +
-                        `📋 Tagihan: ${tagihanNama}\n` +
-                        `💰 Jumlah: ${jumlahFormatted}\n` +
-                        `📅 Tanggal Transfer: ${formData.tanggal_transfer}\n` +
-                        (formData.catatan ? `📝 Catatan: ${formData.catatan}\n\n` : '\n') +
-                        `Mohon segera diverifikasi. Terima kasih 🙏`
+                    // Compose professional message
+                    const chatMessage =
+                        `━━━━━━━━━━━━━━━━━━━━━━━━
+📝 *KONFIRMASI PEMBAYARAN*
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+📅 *Tanggal Transfer:*
+${formatTanggal(formData.tanggal_transfer)}
+
+📋 *RINCIAN TAGIHAN:*
+${detailMessage}
+━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *TOTAL PEMBAYARAN:*
+${formatRp(totalJumlah)}
+━━━━━━━━━━━━━━━━━━━━━━━━
+${formData.catatan ? `\n📝 *Catatan:*\n${formData.catatan}\n` : ''}
+🙏 Mohon untuk segera diverifikasi.
+Terima kasih atas kerjasamanya.`
 
                     // Send to each Bendahara
                     for (const bendahara of bendaharaUsers) {
@@ -261,46 +326,93 @@ const UploadBuktiPage = () => {
                 <p className="wali-page-subtitle">Upload bukti transfer untuk diverifikasi</p>
             </div>
 
-            {/* Santri Selector */}
+            {/* Santri Selector - Multi Select */}
             {santriList.length > 1 && (
-                <div className="wali-santri-selector">
-                    {santriList.map(santri => (
-                        <SantriCard
-                            key={santri.id}
-                            santri={santri}
-                            selected={selectedSantri?.id === santri.id}
-                            onClick={() => setSelectedSantri(santri)}
-                        />
-                    ))}
+                <div className="wali-form-group">
+                    <label className="wali-form-label">Pilih Santri * (bisa pilih lebih dari satu)</label>
+                    <div className="santri-checkbox-list">
+                        {/* Select All Toggle */}
+                        <label className="santri-checkbox-item select-all">
+                            <input
+                                type="checkbox"
+                                checked={selectedSantriIds.length === santriList.length && santriList.length > 0}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        setSelectedSantriIds(santriList.map(s => s.id))
+                                    } else {
+                                        setSelectedSantriIds([])
+                                    }
+                                }}
+                            />
+                            <span className="checkbox-label">Pilih Semua Santri</span>
+                        </label>
+                        <div className="santri-divider"></div>
+                        {santriList.map(santri => (
+                            <label key={santri.id} className="santri-checkbox-item">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedSantriIds.includes(santri.id)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedSantriIds(prev => [...prev, santri.id])
+                                        } else {
+                                            setSelectedSantriIds(prev => prev.filter(id => id !== santri.id))
+                                        }
+                                    }}
+                                />
+                                <div className="santri-info">
+                                    <span className="santri-name">{santri.nama}</span>
+                                    <span className="santri-nis">NIS: {santri.nis}</span>
+                                </div>
+                            </label>
+                        ))}
+                    </div>
                 </div>
             )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="wali-section">
-                {/* Pilih Tagihan */}
+                {/* Pilih Tagihan - Multi Select */}
                 <div className="wali-form-group">
-                    <label className="wali-form-label">Pilih Tagihan *</label>
+                    <label className="wali-form-label">Pilih Tagihan * (bisa pilih lebih dari satu)</label>
                     {tagihanBelumLunas.length > 0 ? (
-                        <select
-                            value={formData.tagihan_id}
-                            onChange={(e) => {
-                                const tagihan = tagihanBelumLunas.find(t => t.id === e.target.value)
-                                setFormData(prev => ({
-                                    ...prev,
-                                    tagihan_id: e.target.value,
-                                    jumlah: tagihan ? tagihan.jumlah.toString() : ''
-                                }))
-                            }}
-                            className="wali-form-select"
-                            required
-                        >
-                            <option value="">-- Pilih Tagihan --</option>
+                        <div className="tagihan-checkbox-list">
+                            {/* Select All Toggle */}
+                            <label className="tagihan-checkbox-item select-all">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedTagihan.length === tagihanBelumLunas.length && tagihanBelumLunas.length > 0}
+                                    onChange={(e) => {
+                                        if (e.target.checked) {
+                                            setSelectedTagihan(tagihanBelumLunas.map(t => t.id))
+                                        } else {
+                                            setSelectedTagihan([])
+                                        }
+                                    }}
+                                />
+                                <span className="checkbox-label">Pilih Semua</span>
+                            </label>
+                            <div className="tagihan-divider"></div>
                             {tagihanBelumLunas.map(tagihan => (
-                                <option key={tagihan.id} value={tagihan.id}>
-                                    {tagihan.kategori?.nama || 'Pembayaran'} - {formatCurrency(tagihan.jumlah)}
-                                </option>
+                                <label key={tagihan.id} className="tagihan-checkbox-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedTagihan.includes(tagihan.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedTagihan(prev => [...prev, tagihan.id])
+                                            } else {
+                                                setSelectedTagihan(prev => prev.filter(id => id !== tagihan.id))
+                                            }
+                                        }}
+                                    />
+                                    <span className="checkbox-label">
+                                        <span className="tagihan-santri-name">{tagihan.santri?.nama}</span>
+                                        <span className="tagihan-detail">{tagihan.kategori?.nama || 'Pembayaran'} - {formatCurrency(tagihan.jumlah)}</span>
+                                    </span>
+                                </label>
                             ))}
-                        </select>
+                        </div>
                     ) : (
                         <div className="wali-info-box success">
                             <CheckCircle size={20} />
@@ -309,18 +421,17 @@ const UploadBuktiPage = () => {
                     )}
                 </div>
 
-                {/* Jumlah Pembayaran */}
-                <div className="wali-form-group">
-                    <label className="wali-form-label">Jumlah Pembayaran *</label>
-                    <input
-                        type="number"
-                        value={formData.jumlah}
-                        onChange={(e) => setFormData(prev => ({ ...prev, jumlah: e.target.value }))}
-                        className="wali-form-input"
-                        placeholder="Masukkan jumlah"
-                        required
-                    />
-                </div>
+                {/* Total Jumlah Pembayaran - Display Only */}
+                {selectedTagihan.length > 0 && (
+                    <div className="wali-form-group">
+                        <label className="wali-form-label">Total Jumlah Pembayaran</label>
+                        <div className="total-amount-display">
+                            <CreditCard size={20} />
+                            <span className="total-amount">{formatCurrency(totalJumlah)}</span>
+                            <span className="tagihan-count">({selectedTagihan.length} tagihan dipilih)</span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Tanggal Transfer */}
                 <div className="wali-form-group">
@@ -483,6 +594,139 @@ const UploadBuktiPage = () => {
         .wali-info-box.success {
           background: #dcfce7;
           color: #166534;
+        }
+        /* Multi-select Tagihan Checkbox List */
+        .tagihan-checkbox-list {
+          border: 1px solid var(--border-color);
+          border-radius: 10px;
+          overflow: hidden;
+          background: #fff;
+        }
+        .tagihan-checkbox-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 16px;
+          cursor: pointer;
+          transition: background 0.15s ease;
+          border-bottom: 1px solid var(--border-color);
+        }
+        .tagihan-checkbox-item:last-child {
+          border-bottom: none;
+        }
+        .tagihan-checkbox-item:hover {
+          background: #f8fafc;
+        }
+        .tagihan-checkbox-item.select-all {
+          background: #f1f5f9;
+          font-weight: 600;
+        }
+        .tagihan-checkbox-item.select-all:hover {
+          background: #e2e8f0;
+        }
+        .tagihan-checkbox-item input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          accent-color: var(--primary-color);
+          cursor: pointer;
+        }
+        .checkbox-label {
+          flex: 1;
+          font-size: 14px;
+          color: var(--text-primary);
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .tagihan-santri-name {
+          font-weight: 600;
+          font-size: 12px;
+          color: var(--primary-color);
+        }
+        .tagihan-detail {
+          font-size: 14px;
+          color: var(--text-primary);
+        }
+        .tagihan-divider {
+          height: 1px;
+          background: var(--border-color);
+        }
+        /* Multi-select Santri Checkbox List */
+        .santri-checkbox-list {
+          border: 1px solid var(--border-color);
+          border-radius: 10px;
+          overflow: hidden;
+          background: #fff;
+        }
+        .santri-checkbox-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 16px;
+          cursor: pointer;
+          transition: background 0.15s ease;
+          border-bottom: 1px solid var(--border-color);
+        }
+        .santri-checkbox-item:last-child {
+          border-bottom: none;
+        }
+        .santri-checkbox-item:hover {
+          background: #f8fafc;
+        }
+        .santri-checkbox-item.select-all {
+          background: #f1f5f9;
+          font-weight: 600;
+        }
+        .santri-checkbox-item.select-all:hover {
+          background: #e2e8f0;
+        }
+        .santri-checkbox-item input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          accent-color: var(--primary-color);
+          cursor: pointer;
+        }
+        .santri-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .santri-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .santri-nis {
+          font-size: 12px;
+          color: var(--text-secondary);
+        }
+        .santri-divider {
+          height: 1px;
+          background: var(--border-color);
+        }
+        /* Total Amount Display */
+        .total-amount-display {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          border: 1px solid #86efac;
+          border-radius: 10px;
+        }
+        .total-amount-display svg {
+          color: #16a34a;
+        }
+        .total-amount {
+          font-size: 20px;
+          font-weight: 700;
+          color: #15803d;
+        }
+        .tagihan-count {
+          font-size: 13px;
+          color: #4ade80;
+          margin-left: auto;
         }
         .spin {
           animation: spin 1s linear infinite;

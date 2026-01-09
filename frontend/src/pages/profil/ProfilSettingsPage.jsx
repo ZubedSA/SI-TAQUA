@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { User, Mail, Lock, Save, ArrowLeft, Eye, EyeOff, AtSign } from 'lucide-react'
+import { User, Mail, Lock, Save, ArrowLeft, Eye, EyeOff, AtSign, Camera, Trash2 } from 'lucide-react'
 import './ProfilSettings.css'
 
 const ProfilSettingsPage = () => {
-    const { user, userProfile } = useAuth()
+    const { user, userProfile, refreshProfile } = useAuth()
     const navigate = useNavigate()
+    const avatarInputRef = useRef(null)
 
     const [nama, setNama] = useState('')
     const [username, setUsername] = useState('')
@@ -15,6 +16,11 @@ const ProfilSettingsPage = () => {
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [showNewPassword, setShowNewPassword] = useState(false)
+
+    // Avatar state
+    const [avatarUrl, setAvatarUrl] = useState('')
+    const [previewAvatar, setPreviewAvatar] = useState(null)
+    const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
     const [loading, setLoading] = useState(false)
     const [loadingEmail, setLoadingEmail] = useState(false)
@@ -25,8 +31,128 @@ const ProfilSettingsPage = () => {
     useEffect(() => {
         if (userProfile?.nama) setNama(userProfile.nama)
         if (userProfile?.username) setUsername(userProfile.username)
+        if (userProfile?.avatar_url) setAvatarUrl(userProfile.avatar_url)
         if (user?.email) setEmail(user.email)
     }, [user, userProfile])
+
+    // Handle avatar file selection and upload
+    const handleAvatarChange = async (e) => {
+        const file = e.target.files[0]
+        if (!file) return
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            setError('Hanya file gambar yang diperbolehkan')
+            return
+        }
+
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            setError('Ukuran file maksimal 2MB')
+            return
+        }
+
+        // Show preview
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            setPreviewAvatar(reader.result)
+        }
+        reader.readAsDataURL(file)
+
+        // Upload to Supabase Storage
+        setUploadingAvatar(true)
+        setError('')
+        setSuccess('')
+
+        try {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${user.id}/avatar_${Date.now()}.${fileExt}`
+            const filePath = `avatars/${fileName}`
+
+            // Delete old avatar if exists
+            if (avatarUrl) {
+                const oldPath = avatarUrl.split('/avatars/')[1]
+                if (oldPath) {
+                    await supabase.storage.from('uploads').remove([`avatars/${oldPath}`])
+                }
+            }
+
+            // Upload new avatar
+            const { error: uploadError } = await supabase.storage
+                .from('uploads')
+                .upload(filePath, file, { upsert: true })
+
+            if (uploadError) throw uploadError
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(filePath)
+
+            // Update user_profiles
+            const { error: updateError } = await supabase
+                .from('user_profiles')
+                .update({
+                    avatar_url: publicUrl,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+
+            if (updateError) throw updateError
+
+            setAvatarUrl(publicUrl)
+            setPreviewAvatar(null)
+            setSuccess('Foto profil berhasil diperbarui!')
+
+            // Refresh profile in AuthContext
+            if (refreshProfile) refreshProfile()
+        } catch (err) {
+            setError('Gagal upload foto: ' + err.message)
+            setPreviewAvatar(null)
+        } finally {
+            setUploadingAvatar(false)
+            if (avatarInputRef.current) avatarInputRef.current.value = ''
+        }
+    }
+
+    // Handle remove avatar
+    const handleRemoveAvatar = async () => {
+        if (!avatarUrl) return
+
+        setUploadingAvatar(true)
+        setError('')
+        setSuccess('')
+
+        try {
+            // Delete from storage
+            const oldPath = avatarUrl.split('/avatars/')[1]
+            if (oldPath) {
+                await supabase.storage.from('uploads').remove([`avatars/${oldPath}`])
+            }
+
+            // Update user_profiles to remove avatar_url
+            const { error: updateError } = await supabase
+                .from('user_profiles')
+                .update({
+                    avatar_url: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+
+            if (updateError) throw updateError
+
+            setAvatarUrl('')
+            setSuccess('Foto profil berhasil dihapus!')
+
+            // Refresh profile in AuthContext
+            if (refreshProfile) refreshProfile()
+        } catch (err) {
+            setError('Gagal menghapus foto: ' + err.message)
+        } finally {
+            setUploadingAvatar(false)
+        }
+    }
+
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault()
@@ -160,6 +286,64 @@ const ProfilSettingsPage = () => {
             {success && <div className="alert alert-success">{success}</div>}
 
             <div className="settings-grid">
+                {/* Avatar Upload Card */}
+                <div className="settings-card avatar-card">
+                    <div className="card-header">
+                        <Camera size={24} />
+                        <h3>Foto Profil</h3>
+                    </div>
+                    <div className="avatar-section">
+                        <div className="avatar-preview-container">
+                            {(previewAvatar || avatarUrl) ? (
+                                <img
+                                    src={previewAvatar || avatarUrl}
+                                    alt="Avatar"
+                                    className="avatar-preview-img"
+                                />
+                            ) : (
+                                <div className="avatar-placeholder">
+                                    {nama ? nama.substring(0, 2).toUpperCase() : 'U'}
+                                </div>
+                            )}
+                            {uploadingAvatar && (
+                                <div className="avatar-uploading-overlay">
+                                    <div className="spinner"></div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="avatar-actions">
+                            <input
+                                type="file"
+                                ref={avatarInputRef}
+                                onChange={handleAvatarChange}
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                            />
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => avatarInputRef.current?.click()}
+                                disabled={uploadingAvatar}
+                            >
+                                <Camera size={18} />
+                                <span>{avatarUrl ? 'Ganti Foto' : 'Upload Foto'}</span>
+                            </button>
+                            {avatarUrl && (
+                                <button
+                                    type="button"
+                                    className="btn btn-danger"
+                                    onClick={handleRemoveAvatar}
+                                    disabled={uploadingAvatar}
+                                >
+                                    <Trash2 size={18} />
+                                    <span>Hapus</span>
+                                </button>
+                            )}
+                        </div>
+                        <small className="avatar-hint">Format: JPG, PNG (maks. 2MB)</small>
+                    </div>
+                </div>
+
                 {/* Update Profile Form */}
                 <div className="settings-card">
                     <div className="card-header">

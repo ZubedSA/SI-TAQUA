@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, MessageCircle, Search, Users, Check, CheckCheck, MessageSquare, Paperclip, X, Image, FileText, Download } from 'lucide-react'
+import { ArrowLeft, Send, MessageCircle, Search, Users, Check, CheckCheck, MessageSquare, Paperclip, X, Image, FileText, Download, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Spinner from '../../components/ui/Spinner'
@@ -26,6 +26,11 @@ const MessagesPage = () => {
     const [selectedFile, setSelectedFile] = useState(null)
     const [uploadingFile, setUploadingFile] = useState(false)
     const fileInputRef = useRef(null)
+
+    // Long-press delete message state
+    const [selectedMessageId, setSelectedMessageId] = useState(null)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const longPressTimer = useRef(null)
 
     // Fetch conversations and directory on mount
     useEffect(() => {
@@ -82,7 +87,7 @@ const MessagesPage = () => {
                 const otherId = conv.user_1_id === user.id ? conv.user_2_id : conv.user_1_id
                 const { data: profile } = await supabase
                     .from('user_profiles')
-                    .select('nama, role, roles')
+                    .select('nama, role, roles, avatar_url')
                     .eq('user_id', otherId)
                     .single()
 
@@ -100,7 +105,8 @@ const MessagesPage = () => {
                         id: otherId,
                         nama: profile?.nama || 'User',
                         role: profile?.role || 'user',
-                        roles: profile?.roles || []
+                        roles: profile?.roles || [],
+                        avatar_url: profile?.avatar_url || null
                     },
                     unreadCount: count || 0
                 }
@@ -329,6 +335,54 @@ const MessagesPage = () => {
         }
     }
 
+    // Long-press handlers for message delete
+    const handleMessageLongPressStart = (msgId, senderId) => {
+        // Only allow deleting own messages
+        if (senderId !== user.id) return
+
+        longPressTimer.current = setTimeout(() => {
+            setSelectedMessageId(msgId)
+            setShowDeleteModal(true)
+            // Vibrate if supported
+            if (navigator.vibrate) {
+                navigator.vibrate(50)
+            }
+        }, 600) // 600ms long-press
+    }
+
+    const handleMessageLongPressEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current)
+            longPressTimer.current = null
+        }
+    }
+
+    const handleDeleteMessage = async () => {
+        if (!selectedMessageId) return
+
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .update({ is_deleted: true })
+                .eq('id', selectedMessageId)
+                .eq('sender_id', user.id) // Extra safety check
+
+            if (error) throw error
+
+            // Refresh messages
+            fetchMessages(activeConversation.id)
+            setShowDeleteModal(false)
+            setSelectedMessageId(null)
+        } catch (err) {
+            console.error('Error deleting message:', err)
+        }
+    }
+
+    const cancelDeleteModal = () => {
+        setShowDeleteModal(false)
+        setSelectedMessageId(null)
+    }
+
     const handleBack = () => {
         const previousUrl = sessionStorage.getItem('chat_previous_url')
         if (previousUrl) {
@@ -448,17 +502,34 @@ const MessagesPage = () => {
                                     onClick={() => handleSelectConversation(conv)}
                                 >
                                     <div className="conversation-avatar">
-                                        {conv.otherUser.nama?.substring(0, 2).toUpperCase()}
+                                        {conv.otherUser.avatar_url ? (
+                                            <img src={conv.otherUser.avatar_url} alt={conv.otherUser.nama} />
+                                        ) : (
+                                            conv.otherUser.nama?.substring(0, 2).toUpperCase()
+                                        )}
                                     </div>
                                     <div className="conversation-info">
                                         <div className="conversation-name">
                                             {conv.otherUser.nama}
-                                            <span
-                                                className="role-badge"
-                                                style={{ background: getRoleBadge(conv.otherUser.role) }}
-                                            >
-                                                {conv.otherUser.role}
-                                            </span>
+                                            {/* Show all roles if user has multiple roles */}
+                                            {conv.otherUser.roles && conv.otherUser.roles.length > 1 ? (
+                                                conv.otherUser.roles.map((r, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        className="role-badge"
+                                                        style={{ background: getRoleBadge(r) }}
+                                                    >
+                                                        {r}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span
+                                                    className="role-badge"
+                                                    style={{ background: getRoleBadge(conv.otherUser.role) }}
+                                                >
+                                                    {conv.otherUser.role}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="conversation-preview">
                                             {conv.last_message || 'Belum ada pesan'}
@@ -494,17 +565,34 @@ const MessagesPage = () => {
                                     onClick={() => handleSelectContact(contact)}
                                 >
                                     <div className="contact-avatar">
-                                        {contact.nama?.substring(0, 2).toUpperCase()}
+                                        {contact.avatar_url ? (
+                                            <img src={contact.avatar_url} alt={contact.nama} />
+                                        ) : (
+                                            contact.nama?.substring(0, 2).toUpperCase()
+                                        )}
                                     </div>
                                     <div className="contact-info">
                                         <div className="contact-name">{contact.nama}</div>
                                         <div className="contact-meta-row">
-                                            <span
-                                                className="role-badge"
-                                                style={{ background: getRoleBadge(contact.role) }}
-                                            >
-                                                {contact.role}
-                                            </span>
+                                            {/* Show all roles if user has multiple roles */}
+                                            {contact.roles && contact.roles.length > 1 ? (
+                                                contact.roles.map((r, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        className="role-badge"
+                                                        style={{ background: getRoleBadge(r) }}
+                                                    >
+                                                        {r}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span
+                                                    className="role-badge"
+                                                    style={{ background: getRoleBadge(contact.role) }}
+                                                >
+                                                    {contact.role}
+                                                </span>
+                                            )}
                                             {contact.hasConversation ? (
                                                 <span className="has-chat-label">Sudah ada chat</span>
                                             ) : (
@@ -534,16 +622,33 @@ const MessagesPage = () => {
                                 </button>
                                 <div className="chat-user-info">
                                     <div className="chat-avatar">
-                                        {activeConversation.otherUser.nama?.substring(0, 2).toUpperCase()}
+                                        {activeConversation.otherUser.avatar_url ? (
+                                            <img src={activeConversation.otherUser.avatar_url} alt={activeConversation.otherUser.nama} />
+                                        ) : (
+                                            activeConversation.otherUser.nama?.substring(0, 2).toUpperCase()
+                                        )}
                                     </div>
                                     <div>
                                         <div className="chat-user-name">{activeConversation.otherUser.nama}</div>
-                                        <span
-                                            className="role-badge"
-                                            style={{ background: getRoleBadge(activeConversation.otherUser.role) }}
-                                        >
-                                            {activeConversation.otherUser.role}
-                                        </span>
+                                        {/* Show all roles if user has multiple roles */}
+                                        {activeConversation.otherUser.roles && activeConversation.otherUser.roles.length > 1 ? (
+                                            activeConversation.otherUser.roles.map((r, idx) => (
+                                                <span
+                                                    key={idx}
+                                                    className="role-badge"
+                                                    style={{ background: getRoleBadge(r), marginRight: '4px' }}
+                                                >
+                                                    {r}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span
+                                                className="role-badge"
+                                                style={{ background: getRoleBadge(activeConversation.otherUser.role) }}
+                                            >
+                                                {activeConversation.otherUser.role}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -562,7 +667,20 @@ const MessagesPage = () => {
                                     messages.map(msg => (
                                         <div
                                             key={msg.id}
-                                            className={`message-bubble ${msg.sender_id === user.id ? 'sent' : 'received'}`}
+                                            className={`message-bubble ${msg.sender_id === user.id ? 'sent' : 'received'} ${selectedMessageId === msg.id ? 'selected' : ''}`}
+                                            onMouseDown={() => handleMessageLongPressStart(msg.id, msg.sender_id)}
+                                            onMouseUp={handleMessageLongPressEnd}
+                                            onMouseLeave={handleMessageLongPressEnd}
+                                            onTouchStart={() => handleMessageLongPressStart(msg.id, msg.sender_id)}
+                                            onTouchEnd={handleMessageLongPressEnd}
+                                            onTouchCancel={handleMessageLongPressEnd}
+                                            onContextMenu={(e) => {
+                                                if (msg.sender_id === user.id) {
+                                                    e.preventDefault()
+                                                    setSelectedMessageId(msg.id)
+                                                    setShowDeleteModal(true)
+                                                }
+                                            }}
                                         >
                                             {renderMessageContent(msg)}
                                             <div className="message-meta">
@@ -637,6 +755,28 @@ const MessagesPage = () => {
                         </div>
                     )}
             </div >
+
+            {/* Delete Message Modal */}
+            {showDeleteModal && (
+                <div className="delete-modal-overlay" onClick={cancelDeleteModal}>
+                    <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="delete-modal-icon">
+                            <Trash2 size={32} />
+                        </div>
+                        <h3>Hapus Pesan?</h3>
+                        <p>Pesan ini akan dihapus secara permanen.</p>
+                        <div className="delete-modal-actions">
+                            <button className="btn-cancel" onClick={cancelDeleteModal}>
+                                Batal
+                            </button>
+                            <button className="btn-delete" onClick={handleDeleteMessage}>
+                                <Trash2 size={16} />
+                                Hapus
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     )
 }
