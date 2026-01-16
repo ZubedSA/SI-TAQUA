@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS user_activity_logs (
     ip_address TEXT, -- Hashed or partial for privacy if needed, but for security full IP is better usually
     user_agent TEXT,
     risk_level TEXT DEFAULT 'LOW', -- 'LOW', 'MEDIUM', 'HIGH'
-    details JSONB DEFAULT '{}'::jsonb, -- Store device_id, page_url, etc
+    details JSONB DEFAULT '{}'::jsonb, -- Store device_id, page_url, etca
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

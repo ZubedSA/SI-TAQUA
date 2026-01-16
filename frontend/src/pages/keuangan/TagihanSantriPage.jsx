@@ -177,8 +177,30 @@ const TagihanSantriPage = () => {
                     return
                 }
 
-                // Prepare bulk data
-                const bulkData = targetSantris.map(s => ({
+                // DUPLICATE PREVENTION: Check for existing tagihan with same kategori and period
+                const targetSantriIds = targetSantris.map(s => s.id)
+                const { data: existingTagihan, error: checkError } = await supabase
+                    .from('tagihan_santri')
+                    .select('santri_id')
+                    .in('santri_id', targetSantriIds)
+                    .eq('kategori_id', form.kategori_id)
+                    .eq('jatuh_tempo', dueDate)
+
+                if (checkError) throw checkError
+
+                const existingSantriIds = new Set(existingTagihan?.map(t => t.santri_id) || [])
+
+                // Filter out santri that already have this tagihan
+                const santriToInsert = targetSantris.filter(s => !existingSantriIds.has(s.id))
+
+                if (santriToInsert.length === 0) {
+                    showToast.warning(`Semua santri pada angkatan ini sudah memiliki tagihan ${kategori?.nama} untuk periode yang dipilih`)
+                    setSaveModal({ isOpen: false })
+                    return
+                }
+
+                // Prepare bulk data (only for santri without existing tagihan)
+                const bulkData = santriToInsert.map(s => ({
                     ...basePayload,
                     santri_id: s.id
                 }))
@@ -190,10 +212,16 @@ const TagihanSantriPage = () => {
                 await logCreate(
                     'tagihan_santri',
                     `Bulk - ${angkatan?.nama}`,
-                    `Buat tagihan massal: ${targetSantris.length} santri - ${kategori?.nama} - Rp ${Number(basePayload.jumlah).toLocaleString('id-ID')}`
+                    `Buat tagihan massal: ${santriToInsert.length} santri - ${kategori?.nama} - Rp ${Number(basePayload.jumlah).toLocaleString('id-ID')}`
                 )
 
-                showToast.success(`Berhasil membuat tagihan untuk ${targetSantris.length} santri`)
+                // Show appropriate message
+                const skippedCount = targetSantris.length - santriToInsert.length
+                if (skippedCount > 0) {
+                    showToast.success(`Berhasil membuat tagihan untuk ${santriToInsert.length} santri (${skippedCount} santri dilewati karena sudah ada tagihan serupa)`)
+                } else {
+                    showToast.success(`Berhasil membuat tagihan untuk ${santriToInsert.length} santri`)
+                }
             }
 
             setSaveModal({ isOpen: false })

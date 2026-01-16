@@ -14,6 +14,7 @@ DROP POLICY IF EXISTS "Allow all access" ON musyrif_halaqoh;
 
 -- 2. Buat policy SELECT yang pasti bekerja
 CREATE POLICY "allow_all_select" ON musyrif_halaqoh
+
 FOR SELECT
 USING (true);
 
