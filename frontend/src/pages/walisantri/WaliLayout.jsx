@@ -18,9 +18,9 @@ const WaliLayout = () => {
     }, [])
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0 overflow-x-hidden">
             <WaliNavbar />
-            <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in">
+            <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in overflow-hidden">
                 <Outlet />
             </main>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, RefreshCw, BookMarked, Calendar } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
-import '../../../../../pages/nilai/Nilai.css'
+import '../../../shared/styles/Nilai.css'
 
 const TahfizhSemesterPage = () => {
     const [loading, setLoading] = useState(false)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
     ChevronLeft, User, Phone, Mail, Save, Loader,
-    GraduationCap, BookOpen, LogOut, Shield
+    GraduationCap, BookOpen, LogOut, Shield, Lock, Key, Eye, EyeOff
 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
@@ -33,6 +33,20 @@ const ProfilWaliPage = () => {
         phone: '',
         email: ''
     })
+
+    // Password change state
+    const [showPasswordForm, setShowPasswordForm] = useState(false)
+    const [passwordData, setPasswordData] = useState({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    })
+    const [showPasswords, setShowPasswords] = useState({
+        current: false,
+        new: false,
+        confirm: false
+    })
+    const [changingPassword, setChangingPassword] = useState(false)
 
     // Fetch data
     const fetchData = async () => {
@@ -101,13 +115,48 @@ const ProfilWaliPage = () => {
 
             if (error) throw error
 
-            showToast('Profil berhasil diperbarui!', 'success')
+            showToast.success('Profil berhasil diperbarui!')
 
         } catch (error) {
             console.error('Error updating profile:', error)
-            showToast('Gagal memperbarui profil: ' + error.message, 'error')
+            showToast.error('Gagal memperbarui profil: ' + error.message)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handlePasswordChange = async (e) => {
+        e.preventDefault()
+
+        // Validation
+        if (passwordData.newPassword.length < 6) {
+            showToast.error('Password baru minimal 6 karakter')
+            return
+        }
+
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            showToast.error('Konfirmasi password tidak cocok')
+            return
+        }
+
+        setChangingPassword(true)
+
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: passwordData.newPassword
+            })
+
+            if (error) throw error
+
+            showToast.success('Password berhasil diubah!')
+            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+            setShowPasswordForm(false)
+
+        } catch (error) {
+            console.error('Error changing password:', error)
+            showToast.error('Gagal mengubah password: ' + error.message)
+        } finally {
+            setChangingPassword(false)
         }
     }
 
@@ -193,27 +242,113 @@ const ProfilWaliPage = () => {
                         </form>
                     </Card>
 
-                    <Card className="bg-red-50 border-red-100">
-                        <h4 className="font-semibold text-red-800 mb-2">Zona Bahaya</h4>
-                        <p className="text-sm text-red-600 mb-4">
-                            Keluar dari sesi akun Anda saat ini.
-                        </p>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await signOut()
-                                    navigate('/login')
-                                } catch (error) {
-                                    console.error('Logout error:', error)
-                                    showToast('Gagal keluar: ' + error.message, 'error')
-                                }
-                            }}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm"
-                        >
-                            <LogOut size={16} />
-                            Kp
-                            Keluar Akun
-                        </button>
+                    {/* Keamanan Akun */}
+                    <Card title="Keamanan Akun" icon={Lock}>
+                        <div className="space-y-4">
+                            {/* Ubah Password */}
+                            {!showPasswordForm ? (
+                                <button
+                                    onClick={() => setShowPasswordForm(true)}
+                                    className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors text-left"
+                                >
+                                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                                        <Key size={18} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">Ubah Password</p>
+                                        <p className="text-xs text-gray-500">Ganti password login Anda</p>
+                                    </div>
+                                </button>
+                            ) : (
+                                <form onSubmit={handlePasswordChange} className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPasswords.new ? 'text' : 'password'}
+                                                value={passwordData.newPassword}
+                                                onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                                placeholder="Minimal 6 karakter"
+                                                required
+                                                minLength={6}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                                                className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                            >
+                                                {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPasswords.confirm ? 'text' : 'password'}
+                                                value={passwordData.confirmPassword}
+                                                onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                                placeholder="Ulangi password baru"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                                                className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                            >
+                                                {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setShowPasswordForm(false)
+                                                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={changingPassword}
+                                            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {changingPassword && (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            )}
+                                            {changingPassword ? 'Menyimpan...' : 'Simpan Password'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {/* Keluar Akun */}
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await signOut()
+                                        navigate('/login')
+                                    } catch (error) {
+                                        console.error('Logout error:', error)
+                                        showToast.error('Gagal keluar: ' + error.message)
+                                    }
+                                }}
+                                className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-red-50 border border-gray-200 hover:border-red-200 rounded-lg transition-colors text-left group"
+                            >
+                                <div className="p-2 bg-gray-100 group-hover:bg-red-100 text-gray-600 group-hover:text-red-600 rounded-lg transition-colors">
+                                    <LogOut size={18} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-medium text-gray-900 group-hover:text-red-600 transition-colors">Keluar Akun</p>
+                                    <p className="text-xs text-gray-500">Akhiri sesi login Anda</p>
+                                </div>
+                            </button>
+                        </div>
                     </Card>
                 </div>
 

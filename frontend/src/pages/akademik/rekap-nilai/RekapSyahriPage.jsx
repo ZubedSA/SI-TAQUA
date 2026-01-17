@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Calendar } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
-import './Nilai.css'
+import '../shared/styles/Nilai.css'
 
 const RekapSyahriPage = () => {
     const [loading, setLoading] = useState(false)

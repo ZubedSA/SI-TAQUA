@@ -185,24 +185,24 @@ const TagihanWaliPage = () => {
             )}
 
             {/* Total Tunggakan Card */}
-            <div className={`p-6 rounded-xl border flex items-center gap-6 ${totalTunggakan > 0
+            <div className={`p-4 sm:p-6 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 ${totalTunggakan > 0
                 ? 'bg-gradient-to-r from-red-50 to-white border-red-100'
                 : 'bg-gradient-to-r from-emerald-50 to-white border-emerald-100'
                 }`}>
-                <div className={`p-4 rounded-xl ${totalTunggakan > 0 ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}>
-                    {totalTunggakan > 0 ? <AlertCircle size={32} /> : <CheckCircle size={32} />}
+                <div className={`p-3 sm:p-4 rounded-xl ${totalTunggakan > 0 ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    {totalTunggakan > 0 ? <AlertCircle size={24} className="sm:w-8 sm:h-8" /> : <CheckCircle size={24} className="sm:w-8 sm:h-8" />}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-500 mb-1">
                         {totalTunggakan > 0 ? 'Total Tunggakan' : 'Status Pembayaran'}
                     </p>
-                    <p className={`text-3xl font-bold ${totalTunggakan > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    <p className={`text-2xl sm:text-3xl font-bold ${totalTunggakan > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {totalTunggakan > 0 ? formatCurrency(totalTunggakan) : 'Lunas'}
                     </p>
                 </div>
                 {totalTunggakan > 0 && (
-                    <Link to="/wali/keuangan/upload">
-                        <Button>
+                    <Link to="/wali/keuangan/upload" className="w-full sm:w-auto">
+                        <Button className="w-full sm:w-auto justify-center">
                             <CreditCard size={18} className="mr-2" />
                             Konfirmasi Bayar
                         </Button>

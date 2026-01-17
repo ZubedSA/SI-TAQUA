@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import { getRoleConfig } from '../../config/roleConfig'
 import { LogOut, ArrowRight, Shield } from 'lucide-react'
@@ -7,6 +8,7 @@ import logoFile from '../../assets/Logo_PTQA_075759.png'
 
 const RoleSelectionPage = () => {
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const { user, roles, switchRole, signOut } = useAuth()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -23,6 +25,10 @@ const RoleSelectionPage = () => {
         setError('')
         try {
             const { scopeId } = await switchRole(roleId)
+
+            // Clear all cached data saat switch role untuk memastikan data fresh
+            await queryClient.invalidateQueries()
+
             const config = getRoleConfig(roleId)
 
             // Redirect to dashboard

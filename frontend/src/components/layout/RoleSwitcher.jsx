@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import {
     Shield,
@@ -91,6 +92,7 @@ const roleConfig = {
 const RoleSwitcher = ({ inDropdown = false, onSwitch }) => {
     const { roles, activeRole, switchRole, hasMultipleRoles } = useAuth()
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const [switching, setSwitching] = useState(false)
 
     // Customize: Admin always sees switcher (even if roles array is small, 
@@ -115,6 +117,9 @@ const RoleSwitcher = ({ inDropdown = false, onSwitch }) => {
         setSwitching(true)
         try {
             await switchRole(role)
+
+            // Clear all cached data for fresh data after role switch
+            await queryClient.invalidateQueries()
 
             // Call parent callback to close dropdown
             if (onSwitch) onSwitch()

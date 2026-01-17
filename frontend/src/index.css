@@ -180,6 +180,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll on mobile */
   }
 
   body {
@@ -191,6 +193,10 @@
     color: var(--text-body);
     background-color: var(--bg-page);
     transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll on mobile */
+    min-width: 320px;
+    /* Minimum supported width */
   }
 
   /* Headings */
@@ -582,5 +588,234 @@
 @media (min-width: 1441px) {
   :root {
     --content-max-width: 1600px;
+  }
+}
+
+/* ==========================================================================
+   ANIMATIONS - Page Load & Scroll
+   ========================================================================== */
+
+/* Animation Keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Page Enter Animation - applies to main content wrapper */
+.page-enter {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.page-enter-fast {
+  animation: fadeInUp 0.25s ease-out forwards;
+}
+
+/* Staggered Children Animation - for lists and grids */
+.stagger-children>* {
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.stagger-children>*:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.stagger-children>*:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.stagger-children>*:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.stagger-children>*:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.stagger-children>*:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.stagger-children>*:nth-child(6) {
+  animation-delay: 0.3s;
+}
+
+.stagger-children>*:nth-child(7) {
+  animation-delay: 0.35s;
+}
+
+.stagger-children>*:nth-child(8) {
+  animation-delay: 0.4s;
+}
+
+.stagger-children>*:nth-child(n+9) {
+  animation-delay: 0.45s;
+}
+
+/* Scroll Animation - elements animate when entering viewport */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.animate-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Scroll Animation Variants */
+.animate-on-scroll.fade-left {
+  transform: translateX(-30px);
+}
+
+.animate-on-scroll.fade-left.is-visible {
+  transform: translateX(0);
+}
+
+.animate-on-scroll.fade-right {
+  transform: translateX(30px);
+}
+
+.animate-on-scroll.fade-right.is-visible {
+  transform: translateX(0);
+}
+
+.animate-on-scroll.scale {
+  transform: scale(0.95);
+}
+
+.animate-on-scroll.scale.is-visible {
+  transform: scale(1);
+}
+
+/* Animation Delay Utilities */
+.delay-100 {
+  animation-delay: 0.1s;
+  transition-delay: 0.1s;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+  transition-delay: 0.2s;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+  transition-delay: 0.3s;
+}
+
+.delay-400 {
+  animation-delay: 0.4s;
+  transition-delay: 0.4s;
+}
+
+.delay-500 {
+  animation-delay: 0.5s;
+  transition-delay: 0.5s;
+}
+
+/* Animation Duration Utilities */
+.duration-300 {
+  animation-duration: 0.3s;
+  transition-duration: 0.3s;
+}
+
+.duration-500 {
+  animation-duration: 0.5s;
+  transition-duration: 0.5s;
+}
+
+.duration-700 {
+  animation-duration: 0.7s;
+  transition-duration: 0.7s;
+}
+
+/* Hover Lift Effect - subtle lift on hover */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+
+  .page-enter,
+  .page-enter-fast,
+  .stagger-children>*,
+  .animate-on-scroll {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

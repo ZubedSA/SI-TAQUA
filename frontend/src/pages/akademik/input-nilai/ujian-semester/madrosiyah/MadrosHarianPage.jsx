@@ -4,7 +4,7 @@ import DateRangePicker from '../../../../../components/ui/DateRangePicker'
 import { supabase } from '../../../../../lib/supabase'
 import { logCreate, logUpdate } from '../../../../../lib/auditLog'
 import { useCalendar } from '../../../../../context/CalendarContext'
-import '../../../../../pages/nilai/Nilai.css'
+import '../../../shared/styles/Nilai.css'
 
 const MadrosHarianPage = () => {
     const { mode } = useCalendar()

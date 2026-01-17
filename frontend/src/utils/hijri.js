@@ -15,35 +15,34 @@ const HIJRI_MONTHS = [
  * @returns {object} { day, month, year, monthName }
  */
 export const toHijri = (date) => {
-    const adjustment = 0 // Hari penyesuaian jika diperlukan
-    const wdnames = ["Ahad", "Ithnin", "Thulatha", "Arbaa", "Khams", "Jumuah", "Sabt"]
-    const iDate = new Date(date)
-    iDate.setDate(iDate.getDate() + adjustment)
+    try {
+        const adjustment = 0
+        const formatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {
+            day: 'numeric',
+            month: 'numeric',
+            year: 'numeric'
+        })
 
-    let a = Math.floor((10000 * iDate.getFullYear()) + (100 * (iDate.getMonth() + 1)) + iDate.getDate())
-    let cyears = 570
-    let cmonth = 1
-    let cdays = 1
-    let z = iDate.getFullYear() - 570 // years since hegira approx
+        const parts = formatter.formatToParts(new Date(date))
+        const hDay = parseInt(parts.find(p => p.type === 'day')?.value || 1)
+        const hMonth = parseInt(parts.find(p => p.type === 'month')?.value || 1)
+        const hYear = parseInt(parts.find(p => p.type === 'year')?.value || 1445)
 
-    // Fallback simple algorithm or use Intl for accurate display
-    // Since we need structured data (day, month, year), Intl is best source of truth
-    const formatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', {
-        day: 'numeric',
-        month: 'numeric',
-        year: 'numeric'
-    })
-
-    const parts = formatter.formatToParts(date)
-    const hDay = parseInt(parts.find(p => p.type === 'day')?.value || 1)
-    const hMonth = parseInt(parts.find(p => p.type === 'month')?.value || 1)
-    const hYear = parseInt(parts.find(p => p.type === 'year')?.value || 1445)
-
-    return {
-        day: hDay,
-        month: hMonth, // 1-12
-        year: hYear,
-        monthName: HIJRI_MONTHS[hMonth - 1]
+        return {
+            day: hDay,
+            month: hMonth,
+            year: hYear,
+            monthName: HIJRI_MONTHS[hMonth - 1] || 'Bulan ?'
+        }
+    } catch (e) {
+        console.error('Hijri conversion error:', e)
+        // Fallback safety to prevent white screen
+        return {
+            day: 1,
+            month: 1,
+            year: 1445,
+            monthName: HIJRI_MONTHS[0]
+        }
     }
 }
 

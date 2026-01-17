@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../context/AuthContext'
 import logoFile from "../../assets/Logo_PTQA_075759.png";
 import {
@@ -80,6 +81,7 @@ const adminMenuItems = [
             { path: '/kelas', icon: Home, label: 'Kelas' },
             { path: '/mapel', icon: BookOpen, label: 'Mata Pelajaran' },
             { path: '/halaqoh', icon: Circle, label: 'Halaqoh' },
+            { path: '/jadwal', icon: Calendar, label: 'Jadwal Pelajaran' },
             { path: '/semester', icon: Calendar, label: 'Semester' },
             { path: '/admin/ota', icon: HeartHandshake, label: 'Orang Tua Asuh' },
         ]
@@ -96,6 +98,8 @@ const adminMenuItems = [
             { path: '/rekap-nilai/semester', icon: FileText, label: 'Rekap Nilai Semester' },
             { path: '/hafalan', icon: BookMarked, label: 'Progress Hafalan' },
             { path: '/presensi', icon: CalendarCheck, label: 'Kehadiran' },
+            { path: '/presensi', icon: CalendarCheck, label: 'Kehadiran' },
+            { path: '/akademik/kalender', icon: Calendar, label: 'Kalender Akademik' },
             { path: '/laporan/akademik-santri', icon: FileSearch, label: 'Laporan Akademik' },
         ]
     },
@@ -352,6 +356,10 @@ const operatorMenuItems = [
             { path: '/guru', icon: GraduationCap, label: 'Data Guru', roles: ['admin', 'guru'] },
             { path: '/kelas', icon: Home, label: 'Kelas', roles: ['admin', 'guru'] },
             { path: '/mapel', icon: BookOpen, label: 'Mapel', roles: ['admin', 'guru'] },
+
+            { path: '/mapel', icon: BookOpen, label: 'Mapel', roles: ['admin', 'guru'] },
+            { path: '/jadwal', icon: Calendar, label: 'Jadwal Pelajaran', roles: ['admin', 'guru'] },
+            { path: '/akademik/kalender', icon: Calendar, label: 'Kalender Akademik', roles: ['admin', 'guru'] },
             { path: '/halaqoh', icon: Circle, label: 'Halaqoh', roles: ['admin', 'guru'] },
         ]
     },
@@ -363,6 +371,9 @@ const operatorMenuItems = [
         label: 'Akademik',
         roles: ['admin', 'guru'],
         children: [
+            // Agenda Mengajar (Jurnal)
+            { path: '/akademik/jurnal', icon: BookOpen, label: 'Agenda Mengajar', roles: ['admin', 'guru'] },
+
             // Input Nilai - root menu
             {
                 id: 'input-nilai',
@@ -521,15 +532,18 @@ const Sidebar = ({ mobileOpen, onClose }) => {
     const { signOut, activeRole, roles, switchRole } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
+    const queryClient = useQueryClient()
     const [openMenus, setOpenMenus] = useState({})
 
     // Auto-switch role based on path (Smart Context Switching)
     // Helps multi-role users see the correct sidebar menu when navigating
     useEffect(() => {
         const path = location.pathname
-        const trySwitch = (targetRole) => {
+        const trySwitch = async (targetRole) => {
             if (activeRole !== targetRole && roles?.includes(targetRole)) {
-                switchRole(targetRole)
+                await switchRole(targetRole)
+                // Clear cache after auto role switch
+                queryClient.invalidateQueries()
             }
         }
 

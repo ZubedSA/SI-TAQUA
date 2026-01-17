@@ -15,7 +15,7 @@ import { useCalendar } from '../../context/CalendarContext'
 import './Keuangan.css'
 
 const RealisasiDanaPage = () => {
-    const { mode } = useCalendar()
+    const { mode, formatDate } = useCalendar()
     const { user, isAdmin, isBendahara, userProfile, hasRole } = useAuth()
     const showToast = useToast()
     // Multiple checks - admin dan bendahara bisa CRUD

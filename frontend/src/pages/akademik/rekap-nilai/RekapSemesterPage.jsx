@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Calendar } from 'lucide-react'
-import { supabase } from '../../lib/supabase'
-import './Nilai.css'
+import { supabase } from '../../../lib/supabase'
+import '../shared/styles/Nilai.css'
 
 const RekapSemesterPage = () => {
     const [loading, setLoading] = useState(false)

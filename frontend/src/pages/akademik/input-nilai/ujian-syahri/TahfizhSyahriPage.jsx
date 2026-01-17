@@ -4,7 +4,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
 import { useCalendar } from '../../../../context/CalendarContext'
-import '../../../../pages/nilai/Nilai.css'
+import '../../shared/styles/Nilai.css'
 
 const TahfizhSyahriPage = () => {
     const [loading, setLoading] = useState(false)

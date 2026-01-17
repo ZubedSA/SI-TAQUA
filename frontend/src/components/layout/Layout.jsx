@@ -1,18 +1,31 @@
 import { useState, useEffect } from 'react'
-import { Outlet, Navigate } from 'react-router-dom'
+import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import FloatingChatButton from '../chat/FloatingChatButton'
 import { Loader2 } from 'lucide-react'
 import { useAutoAudit } from '../../hooks/useAutoAudit'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 
 const Layout = () => {
     // Auto-log navigation events
     useAutoAudit()
 
+    // Initialize scroll animations
+    useScrollAnimation()
+
+    const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const { loading, isAuthenticated } = useAuth()
+
+    // Key for triggering page animation on route change
+    const [pageKey, setPageKey] = useState(0)
+
+    useEffect(() => {
+        // Trigger new animation on route change
+        setPageKey(prev => prev + 1)
+    }, [location.pathname])
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
     const closeSidebar = () => setSidebarOpen(false)
@@ -41,7 +54,7 @@ const Layout = () => {
             <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 lg:ml-[260px]`}>
                 <Header onMenuClick={toggleSidebar} />
 
-                <div className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
+                <div key={pageKey} className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1600px] w-full mx-auto page-enter">
                     <Outlet />
                 </div>
             </main>

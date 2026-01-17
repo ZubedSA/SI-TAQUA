@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, RefreshCw, BookOpen } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
-import '../../../../../pages/nilai/Nilai.css'
+import '../../../shared/styles/Nilai.css'
 
 const MadrosUASPage = () => {
     const [loading, setLoading] = useState(false)
