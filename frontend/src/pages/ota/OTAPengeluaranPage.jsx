@@ -257,6 +257,9 @@ const OTAPengeluaranPage = () => {
 
     const handleExportPDF = () => {
         const doc = new jsPDF()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const pageWidth = doc.internal.pageSize.getWidth()
+
         doc.setFontSize(16)
         doc.text('Laporan Pengeluaran OTA', 14, 20)
         doc.setFontSize(10)
@@ -268,8 +271,26 @@ const OTAPengeluaranPage = () => {
             head: [['No', 'Tanggal', 'Keperluan', 'Nominal', 'Keterangan']],
             body: getExportData().map(row => [row.No, row.Tanggal, row.Keperluan, formatRupiah(row.Nominal), row.Keterangan]),
             styles: { fontSize: 8 },
-            headStyles: { fillColor: [234, 88, 12] }
+            headStyles: { fillColor: [234, 88, 12] },
+            margin: { bottom: 30 }
         })
+
+        // Global Footer
+        const totalPages = doc.internal.getNumberOfPages()
+        const printDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            const footerY = pageHeight - 15
+
+            doc.setFontSize(8)
+            doc.setFont('helvetica', 'italic')
+            doc.setTextColor(150)
+
+            doc.text(`Dicetak: ${printDate}`, 14, footerY)
+            doc.text('PTQ Al-Usymuni Batuan', pageWidth / 2, footerY, { align: 'center' })
+            doc.text(`Hal ${i} dari ${totalPages}`, pageWidth - 14, footerY, { align: 'right' })
+        }
 
         doc.save(`Pengeluaran_OTA_${filterMonth}_${filterYear}.pdf`)
         setShowDownloadMenu(false)

@@ -158,6 +158,7 @@ const LaporanAkademikSantriPage = () => {
 
         const doc = new jsPDF()
         const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
         let y = 15
 
         // ========== HEADER WITH LOGO ==========
@@ -234,6 +235,11 @@ const LaporanAkademikSantriPage = () => {
 
         // Hafalan Progress
         if (hafalanData.length > 0) {
+            // Check potential page break for header
+            if (y > pageHeight - 40) {
+                doc.addPage()
+                y = 20
+            }
             doc.setFont('helvetica', 'bold')
             doc.text('PROGRESS HAFALAN', 14, y)
             y += 3
@@ -248,13 +254,17 @@ const LaporanAkademikSantriPage = () => {
                 theme: 'grid',
                 headStyles: { fillColor: [5, 150, 105] },
                 styles: { fontSize: 9 },
-                margin: { left: 14, right: 14 }
+                margin: { left: 14, right: 14, bottom: 30 } // Bottom margin for footer
             })
-            y = doc.previousAutoTable.finalY + 10
+            y = doc.lastAutoTable.finalY + 10
         }
 
         // Nilai Tahfizh
         if (nilaiTahfizh) {
+            if (y > pageHeight - 40) {
+                doc.addPage()
+                y = 20
+            }
             doc.setFont('helvetica', 'bold')
             doc.text('NILAI TAHFIZHIYAH', 14, y)
             y += 3
@@ -271,13 +281,17 @@ const LaporanAkademikSantriPage = () => {
                 theme: 'grid',
                 headStyles: { fillColor: [5, 150, 105] },
                 styles: { fontSize: 9 },
-                margin: { left: 14, right: 100 }
+                margin: { left: 14, right: 100, bottom: 30 }
             })
-            y = doc.previousAutoTable.finalY + 10
+            y = doc.lastAutoTable.finalY + 10
         }
 
         // Nilai Madros
         if (nilaiMadros.length > 0) {
+            if (y > pageHeight - 40) {
+                doc.addPage()
+                y = 20
+            }
             doc.setFont('helvetica', 'bold')
             doc.text('NILAI MADROSIYAH', 14, y)
             y += 3
@@ -288,12 +302,16 @@ const LaporanAkademikSantriPage = () => {
                 theme: 'grid',
                 headStyles: { fillColor: [5, 150, 105] },
                 styles: { fontSize: 9 },
-                margin: { left: 14, right: 14 }
+                margin: { left: 14, right: 14, bottom: 30 }
             })
-            y = doc.previousAutoTable.finalY + 10
+            y = doc.lastAutoTable.finalY + 10
         }
 
         // Kehadiran
+        if (y > pageHeight - 40) {
+            doc.addPage()
+            y = 20
+        }
         doc.setFont('helvetica', 'bold')
         doc.text('KEHADIRAN SEMESTER INI', 14, y)
         y += 3
@@ -304,14 +322,30 @@ const LaporanAkademikSantriPage = () => {
             theme: 'grid',
             headStyles: { fillColor: [5, 150, 105] },
             styles: { fontSize: 9, halign: 'center' },
-            margin: { left: 14, right: 100 }
+            margin: { left: 14, right: 100, bottom: 30 }
         })
 
-        // Footer
-        const finalY = doc.previousAutoTable.finalY + 15
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'italic')
-        doc.text(`Dicetak: ${formatDate(new Date())} - Si-Taqua PTQA Batuan`, pageWidth / 2, finalY, { align: 'center' })
+        // Global Footer (Executed at the end for all pages)
+        const totalPages = doc.internal.getNumberOfPages()
+        const printDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            const footerY = pageHeight - 15
+
+            doc.setFontSize(8)
+            doc.setFont('helvetica', 'italic')
+            doc.setTextColor(150)
+
+            // Left
+            doc.text(`Dicetak: ${printDate}`, 14, footerY)
+
+            // Center
+            doc.text(`Si-Taqua PTQA Batuan`, pageWidth / 2, footerY, { align: 'center' })
+
+            // Right (Page Number)
+            doc.text(`Hal ${i} dari ${totalPages}`, pageWidth - 14, footerY, { align: 'right' })
+        }
 
         doc.save(`Laporan_Akademik_${selectedSantri.nama.replace(/\s/g, '_')}.pdf`)
     }

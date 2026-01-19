@@ -159,6 +159,8 @@ const OTALaporanPage = () => {
 
     const handleExportPDF = () => {
         const doc = new jsPDF()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const pageWidth = doc.internal.pageSize.getWidth()
 
         // Header
         doc.setFontSize(18)
@@ -198,14 +200,22 @@ const OTALaporanPage = () => {
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [16, 185, 129] },
                 foot: [[{ content: 'Total', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, formatRupiah(totalPemasukan)]],
-                footStyles: { fillColor: [220, 252, 231] }
+                footStyles: { fillColor: [220, 252, 231] },
+                margin: { bottom: 30 }
             })
         } else {
             doc.text('Tidak ada data pemasukan', 14, 100)
         }
 
         // Pengeluaran Table
-        const pengeluaranStartY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : 110
+        let pengeluaranStartY = (doc.lastAutoTable?.finalY || 100) + 15
+
+        // Check page break for title
+        if (pengeluaranStartY > pageHeight - 40) {
+            doc.addPage()
+            pengeluaranStartY = 20
+        }
+
         doc.text('PENGELUARAN', 14, pengeluaranStartY)
 
         if (filteredPengeluaran.length > 0) {
@@ -221,10 +231,28 @@ const OTALaporanPage = () => {
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [234, 88, 12] },
                 foot: [[{ content: 'Total', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, formatRupiah(totalPengeluaran)]],
-                footStyles: { fillColor: [255, 237, 213] }
+                footStyles: { fillColor: [255, 237, 213] },
+                margin: { bottom: 30 }
             })
         } else {
             doc.text('Tidak ada data pengeluaran', 14, pengeluaranStartY + 8)
+        }
+
+        // Global Footer
+        const totalPages = doc.internal.getNumberOfPages()
+        const printDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            const footerY = pageHeight - 15
+
+            doc.setFontSize(8)
+            doc.setFont('helvetica', 'italic')
+            doc.setTextColor(150)
+
+            doc.text(`Dicetak: ${printDate}`, 14, footerY)
+            doc.text('PTQ Al-Usymuni Batuan', pageWidth / 2, footerY, { align: 'center' })
+            doc.text(`Hal ${i} dari ${totalPages}`, pageWidth - 14, footerY, { align: 'right' })
         }
 
         doc.save(`Laporan_OTA_${getPeriodLabel().replace(' ', '_')}.pdf`)

@@ -212,7 +212,7 @@ const Header = ({ onMenuClick }) => {
                                     </button>
                                 </div>
 
-                                {hasMultipleRoles() && (
+                                {(hasMultipleRoles() || activeRole === 'admin') && (
                                     <>
                                         <div className="h-px bg-gray-100 my-1"></div>
                                         <div className="px-3 py-1">

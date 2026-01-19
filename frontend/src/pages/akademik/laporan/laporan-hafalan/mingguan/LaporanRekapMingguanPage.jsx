@@ -337,7 +337,7 @@ const LaporanRekapMingguanPage = () => {
                     <button
                         className="btn btn-primary"
                         onClick={fetchReportData}
-                        disabled={!filters.halaqoh_id || loading}
+                        disabled={!selectedHalaqohId || loading}
                     >
                         <Search size={18} /> Tampilkan
                     </button>
@@ -345,7 +345,7 @@ const LaporanRekapMingguanPage = () => {
             </div>
 
             {/* PERIOD INFO */}
-            {filters.halaqoh_id && filters.tanggal_mulai && filters.tanggal_akhir && (
+            {selectedHalaqohId && filters.tanggal_mulai && filters.tanggal_akhir && (
                 <div style={{
                     backgroundColor: '#f0fdf4',
                     border: '1px solid #bbf7d0',
@@ -373,7 +373,7 @@ const LaporanRekapMingguanPage = () => {
                         <RefreshCw className="spin" size={24} />
                         <span>Memuat data...</span>
                     </div>
-                ) : !filters.halaqoh_id ? (
+                ) : !selectedHalaqohId ? (
                     <div className="empty-state">
                         <Users size={48} />
                         <p>Pilih halaqoh dan rentang tanggal untuk melihat laporan</p>

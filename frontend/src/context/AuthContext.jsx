@@ -261,15 +261,22 @@ export const AuthProvider = ({ children }) => {
 
             const activeRole = result.requiresSelection ? null : result.roles[0]
 
+            // Admin gets all roles immediately for role switching
+            let finalRoles = result.roles
+            if (result.roles.includes('admin') || result.profile?.role === 'admin') {
+                finalRoles = ['admin', 'guru', 'bendahara', 'pengurus', 'wali', 'ota', 'musyrif']
+            }
+
             setUserProfile({
                 ...result.profile,
-                roles: result.roles,
+                roles: finalRoles,
                 activeRole: activeRole || 'guest',
                 role: activeRole || 'guest'
             })
 
             return {
                 ...result,
+                roles: finalRoles,
                 user: result.user
             }
         } catch (error) {

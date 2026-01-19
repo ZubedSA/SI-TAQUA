@@ -95,10 +95,8 @@ const RoleSwitcher = ({ inDropdown = false, onSwitch }) => {
     const queryClient = useQueryClient()
     const [switching, setSwitching] = useState(false)
 
-    // Customize: Admin always sees switcher (even if roles array is small, 
-    // we might want to let them switch to view other dashboards) 
-    // BUT normally admin should have all roles in their array if we want this to work.
-    // For now, let's stick to checking if they actually have roles to switch TO.
+    // Only hide if user has single role and is not admin
+    // Admin always sees the switcher (handled by parent component)
     if (!hasMultipleRoles() && activeRole !== 'admin') {
         return null
     }
