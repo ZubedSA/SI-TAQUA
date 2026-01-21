@@ -29,6 +29,7 @@ import TahfizhSemesterPage from '../pages/akademik/input-nilai/ujian-semester/ta
 import MadrosHarianPage from '../pages/akademik/input-nilai/ujian-semester/madrosiyah/MadrosHarianPage'
 import MadrosUTSPage from '../pages/akademik/input-nilai/ujian-semester/madrosiyah/MadrosUTSPage'
 import MadrosUASPage from '../pages/akademik/input-nilai/ujian-semester/madrosiyah/MadrosUASPage'
+import InputPerilakuPage from '../pages/akademik/input-nilai/perilaku/InputPerilakuPage'
 
 // Rekap Nilai
 import RekapSyahriPage from '../pages/akademik/rekap-nilai/RekapSyahriPage'
@@ -214,6 +215,11 @@ const AkademikRoutes = () => {
             <Route path="/akademik/nilai/madros/uas" element={
                 <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
                     <MadrosUASPage />
+                </ProtectedRoute>
+            } />
+            <Route path="/akademik/nilai/perilaku" element={
+                <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
+                    <InputPerilakuPage />
                 </ProtectedRoute>
             } />
 

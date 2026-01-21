@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Users, RefreshCw, Eye, X, UserPlus, Check, Search, GraduationCap } from 'lucide-react'
+import { Plus, Edit, Trash2, Users, RefreshCw, Eye, X, UserPlus, Check, Search, GraduationCap, Printer } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
@@ -43,6 +43,16 @@ const KelasPage = () => {
     const [selectedSantriIds, setSelectedSantriIds] = useState([])
     const [savingSantri, setSavingSantri] = useState(false)
     const [searchSantri, setSearchSantri] = useState('')
+    const [currentSemesterId, setCurrentSemesterId] = useState(null)
+
+    useEffect(() => {
+        fetchCurrentSemester()
+    }, [])
+
+    const fetchCurrentSemester = async () => {
+        const { data } = await supabase.from('semester').select('id').eq('is_active', true).single()
+        if (data) setCurrentSemesterId(data.id)
+    }
 
     useEffect(() => {
         fetchKelas()
@@ -424,13 +434,26 @@ const KelasPage = () => {
                                                 </td>
                                                 {canEdit && (
                                                     <td className="px-6 py-3 text-right">
-                                                        <button
-                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Hapus dari kelas"
-                                                            onClick={() => confirmRemoveSantri(s.id)}
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
+                                                        <div className="flex justify-end gap-2">
+                                                            {currentSemesterId && (
+                                                                <a
+                                                                    href={`/raport/cetak/${s.id}/${currentSemesterId}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                                    title="Cetak Raport"
+                                                                >
+                                                                    <Printer size={16} />
+                                                                </a>
+                                                            )}
+                                                            <button
+                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                title="Hapus dari kelas"
+                                                                onClick={() => confirmRemoveSantri(s.id)}
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 )}
                                             </tr>

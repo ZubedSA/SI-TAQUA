@@ -16,6 +16,7 @@ import AkademikRoutes from './routes/AkademikRoutes'
 import KeuanganRoutes from './routes/KeuanganRoutes'
 import PengurusRoutes from './routes/PengurusRoutes'
 import OTARoutes from './routes/OTARoutes'
+import CetakRaport from './pages/akademik/raport/CetakRaport'
 
 // Wali Portal
 import WaliLayout from './pages/walisantri/WaliLayout'
@@ -177,6 +178,14 @@ function App() {
                     <Route path="informasi" element={<PengumumanPage />} />
                     <Route path="profil" element={<ProfilWaliPage />} />
                   </Route>
+
+                  {/* Independent Routes (No Layout) */}
+                  <Route path="/raport/cetak/:santriId/:semesterId" element={
+                    <ProtectedRoute>
+                      <CetakRaport />
+                    </ProtectedRoute>
+                  } />
+
                 </Routes>
               </ToastProvider>
             </CalendarProvider>

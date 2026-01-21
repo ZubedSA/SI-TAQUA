@@ -49,14 +49,13 @@ const LaporanAkademikSantriPage = () => {
             const selected = santriList.find(s => s.id === santriId)
             setSelectedSantri(selected)
 
-            // Fetch Hafalan Progress - group by juz
+            // --- 1. Fetch Hafalan Progress (Keep existing logic) ---
             const { data: hafalan } = await supabase
                 .from('hafalan')
                 .select('juz, juz_mulai, status, tanggal')
                 .eq('santri_id', santriId)
                 .order('tanggal', { ascending: false })
 
-            // Aggregate hafalan by juz
             const juzProgress = {}
             hafalan?.forEach(h => {
                 const juz = h.juz_mulai || h.juz
@@ -70,51 +69,108 @@ const LaporanAkademikSantriPage = () => {
             })
             setHafalanData(Object.values(juzProgress).sort((a, b) => a.juz - b.juz))
 
-            // Fetch Nilai Tahfizh for semester
-            const { data: tahfizhData } = await supabase
-                .from('nilai')
+            // --- 2. Fetch All Mapels (Master List) ---
+            const { data: allMapels } = await supabase
+                .from('mapel')
                 .select('*')
-                .eq('santri_id', santriId)
-                .eq('semester_id', filters.semester_id)
-                .eq('kategori', 'Tahfizhiyah')
-                .eq('jenis_ujian', 'semester')
-                .single()
+                .order('nama', { ascending: true })
+            const expectedMapels = allMapels || []
 
-            setNilaiTahfizh(tahfizhData)
-
-            // Fetch Nilai Madros for semester
-            const { data: madrosData } = await supabase
+            // --- 3. Fetch All Grades for Semester ---
+            const { data: nilaiData } = await supabase
                 .from('nilai')
                 .select(`
-                    id, jenis_ujian, nilai_akhir,
-                    mapel:mapel!mapel_id(id, nama)
+                    *,
+                    mapel:mapel_id(nama, kode)
                 `)
                 .eq('santri_id', santriId)
                 .eq('semester_id', filters.semester_id)
-                .eq('kategori', 'Madrosiyah')
 
-            // Group by mapel
-            const mapelNilai = {}
-            madrosData?.forEach(n => {
-                if (!n.mapel) return
-                const key = n.mapel.id
-                if (!mapelNilai[key]) {
-                    mapelNilai[key] = { nama: n.mapel.nama, harian: '-', uts: '-', uas: '-' }
+            // --- 4. Process Logic (Same as CetakRaport) ---
+            const typePriority = { 'semester': 4, 'uas': 3, 'uts': 2, 'harian': 1 }
+
+            const getBestGrade = (grades) => {
+                if (!grades || grades.length === 0) return null
+                return grades.reduce((prev, current) => {
+                    const prevP = typePriority[prev.jenis_ujian] || 0
+                    const currP = typePriority[current.jenis_ujian] || 0
+                    if (currP > prevP) return current
+                    if (currP === prevP) {
+                        return (current.nilai_akhir || 0) > (prev.nilai_akhir || 0) ? current : prev
+                    }
+                    return prev
+                })
+            }
+
+            // A. Process Madrasah
+            let madrasahList = expectedMapels.map(mapel => {
+                const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id) || []
+                const bestGrade = getBestGrade(mapelGrades)
+
+                // Exclude Tahfizh/Quran from Madrasah list
+                if (mapel.nama.toLowerCase().includes('tahfizh') || mapel.nama.toLowerCase().includes('quran')) {
+                    return null
                 }
-                if (n.jenis_ujian === 'harian') mapelNilai[key].harian = n.nilai_akhir
-                if (n.jenis_ujian === 'uts') mapelNilai[key].uts = n.nilai_akhir
-                if (n.jenis_ujian === 'uas') mapelNilai[key].uas = n.nilai_akhir
-            })
 
-            // Calculate average for each mapel
-            const madrosResult = Object.values(mapelNilai).map(m => {
-                const values = [m.harian, m.uts, m.uas].filter(v => v !== '-').map(Number)
-                const avg = values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '-'
-                return { ...m, rata_rata: avg }
-            })
-            setNilaiMadros(madrosResult)
+                // Format for UI (compatible with existing table if possible, or we update table)
+                return {
+                    id: mapel.id,
+                    nama: mapel.nama,
+                    harian: '-', // Simplified for report view as we focus on "Final"
+                    uts: '-',
+                    uas: '-',
+                    rata_rata: bestGrade ? bestGrade.nilai_akhir : '-', // Main score
+                    predikat: bestGrade ? getPredikat(bestGrade.nilai_akhir) : '-'
+                }
+            }).filter(Boolean)
+            setNilaiMadros(madrasahList)
 
-            // Fetch Presensi for semester
+            // B. Process Tahfizh (Decomposition)
+            const tahfizhRecords = nilaiData?.filter(n => {
+                const isCatTahfizh = n.kategori === 'Tahfizhiyah'
+                const isNameTahfizh = n.mapel?.nama?.toLowerCase().includes('tahfizh') || n.mapel?.nama?.toLowerCase().includes('quran')
+                return isCatTahfizh || isNameTahfizh
+            }) || []
+
+            const bestTahfizhRecord = getBestGrade(tahfizhRecords)
+
+            // Transform for UI - We need to supply 'nilaiTahfizh' state which expects an object or array?
+            // Existing UI expects 'nilaiTahfizh' object with keys like nilai_hafalan. 
+            // BUT we want to show rows. Let's change state structure.
+            // For now, let's keep the single object structure if possible OR update state.
+            // Let's update state to hold the 'rows' directly.
+
+            let tahfizhRows = []
+            if (bestTahfizhRecord) {
+                const components = [
+                    { key: 'nilai_hafalan', label: 'Hafalan' },
+                    { key: 'nilai_tajwid', label: 'Tajwid' },
+                    { key: 'nilai_kelancaran', label: 'Kelancaran' }, // Changed label to match UI
+                    { key: 'nilai_murajaah', label: 'Murajaah' }
+                ]
+
+                components.forEach(comp => {
+                    if (bestTahfizhRecord[comp.key] != null) {
+                        tahfizhRows.push({
+                            komponen: comp.label,
+                            nilai: bestTahfizhRecord[comp.key],
+                            predikat: getPredikat(bestTahfizhRecord[comp.key])
+                        })
+                    }
+                })
+
+                // If empty but has mapel name
+                if (tahfizhRows.length === 0 && bestTahfizhRecord.mapel?.nama) {
+                    tahfizhRows.push({
+                        komponen: bestTahfizhRecord.mapel.nama,
+                        nilai: bestTahfizhRecord.nilai_akhir,
+                        predikat: getPredikat(bestTahfizhRecord.nilai_akhir)
+                    })
+                }
+            }
+            setNilaiTahfizh(tahfizhRows.length > 0 ? tahfizhRows : null) // Modified state usage
+
+            // --- 5. Fetch Presensi ---
             const currentSem = semester.find(s => s.id === filters.semester_id)
             if (currentSem) {
                 const { data: presensi } = await supabase
@@ -130,6 +186,12 @@ const LaporanAkademikSantriPage = () => {
                 })
                 setPresensiData(counts)
             }
+
+            // --- 6. Fetch Perilaku & Taujihad (Extra data for Report) ---
+            // We might just store these in state if we want to display them, 
+            // but for now the user asked to filter -> then PRINT.
+            // The Print button will load CetakRaport which fetches its own data.
+            // So we just need to ensure the "Preview" in Laporan page looks correct.
 
         } catch (err) {
             console.error('Error fetching report:', err.message)
@@ -415,13 +477,18 @@ const LaporanAkademikSantriPage = () => {
                 </div>
                 <div className="header-actions">
                     <DownloadButton
-                        onDownloadPDF={generatePDF}
+                        onDownloadPDF={() => window.open(`/raport/cetak/${filters.santri_id}/${filters.semester_id}`, '_blank')}
                         onDownloadExcel={handleDownloadExcel}
                         onDownloadCSV={handleDownloadCSV}
                         disabled={!selectedSantri}
+                        pdfLabel="Cetak PDF Raport"
                     />
-                    <button className="btn btn-outline" disabled={!selectedSantri} onClick={() => window.print()}>
-                        <Printer size={18} /> Print
+                    <button
+                        className="btn btn-outline"
+                        disabled={!selectedSantri}
+                        onClick={() => window.open(`/raport/cetak/${filters.santri_id}/${filters.semester_id}`, '_blank')}
+                    >
+                        <Printer size={18} /> Preview Print
                     </button>
                 </div>
             </div>
@@ -535,32 +602,16 @@ const LaporanAkademikSantriPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td>Hafalan Baru</td>
-                                            <td style={{ textAlign: 'center' }}>{nilaiTahfizh?.nilai_hafalan || '-'}</td>
-                                            <td style={{ textAlign: 'center' }}>{getPredikat(nilaiTahfizh?.nilai_hafalan)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Murajaah</td>
-                                            <td style={{ textAlign: 'center' }}>{nilaiTahfizh?.nilai_murajaah || '-'}</td>
-                                            <td style={{ textAlign: 'center' }}>{getPredikat(nilaiTahfizh?.nilai_murajaah)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Tajwid</td>
-                                            <td style={{ textAlign: 'center' }}>{nilaiTahfizh?.nilai_tajwid || '-'}</td>
-                                            <td style={{ textAlign: 'center' }}>{getPredikat(nilaiTahfizh?.nilai_tajwid)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Kelancaran</td>
-                                            <td style={{ textAlign: 'center' }}>{nilaiTahfizh?.nilai_kelancaran || '-'}</td>
-                                            <td style={{ textAlign: 'center' }}>{getPredikat(nilaiTahfizh?.nilai_kelancaran)}</td>
-                                        </tr>
-                                        {nilaiTahfizh && (
-                                            <tr style={{ fontWeight: '600', background: 'var(--bg-light)' }}>
-                                                <td>Rata-rata</td>
-                                                <td style={{ textAlign: 'center' }}>{nilaiTahfizh.nilai_akhir?.toFixed(1) || '-'}</td>
-                                                <td style={{ textAlign: 'center' }}>{getPredikat(nilaiTahfizh.nilai_akhir)}</td>
-                                            </tr>
+                                        {(!nilaiTahfizh || nilaiTahfizh.length === 0) ? (
+                                            <tr><td colSpan="3" className="text-center text-gray-500">Belum ada data nilai tahfizh</td></tr>
+                                        ) : (
+                                            nilaiTahfizh.map((row, idx) => (
+                                                <tr key={idx}>
+                                                    <td>{row.komponen}</td>
+                                                    <td style={{ textAlign: 'center' }}>{row.nilai || '-'}</td>
+                                                    <td style={{ textAlign: 'center' }}>{row.predikat}</td>
+                                                </tr>
+                                            ))
                                         )}
                                     </tbody>
                                 </table>
@@ -575,16 +626,14 @@ const LaporanAkademikSantriPage = () => {
                                     <thead>
                                         <tr>
                                             <th>Mapel</th>
-                                            <th style={{ textAlign: 'center' }}>Harian</th>
-                                            <th style={{ textAlign: 'center' }}>UTS</th>
-                                            <th style={{ textAlign: 'center' }}>UAS</th>
-                                            <th style={{ textAlign: 'center' }}>Rata-rata</th>
+                                            <th style={{ textAlign: 'center' }}>Nilai Akhir</th>
+                                            <th style={{ textAlign: 'center' }}>Predikat</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {nilaiMadros.length === 0 ? (
                                             <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                                                <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
                                                     Belum ada data nilai
                                                 </td>
                                             </tr>
@@ -592,10 +641,8 @@ const LaporanAkademikSantriPage = () => {
                                             nilaiMadros.map((m, i) => (
                                                 <tr key={i}>
                                                     <td>{m.nama}</td>
-                                                    <td style={{ textAlign: 'center' }}>{m.harian}</td>
-                                                    <td style={{ textAlign: 'center' }}>{m.uts}</td>
-                                                    <td style={{ textAlign: 'center' }}>{m.uas}</td>
                                                     <td style={{ textAlign: 'center', fontWeight: '600' }}>{m.rata_rata}</td>
+                                                    <td style={{ textAlign: 'center' }}>{m.predikat}</td>
                                                 </tr>
                                             ))
                                         )}

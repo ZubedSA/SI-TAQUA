@@ -286,60 +286,63 @@ const musyrifMenuItems = [
                     },
                 ]
             },
-            // Hafalan Menu
-            {
-                id: 'hafalan-menu',
-                icon: BookMarked,
-                label: 'Hafalan',
-                children: [
-                    { path: '/hafalan', icon: PenLine, label: 'Input Hafalan' },
-                    { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan' },
-                ]
-            },
-            // Laporan Menu
-            {
-                id: 'laporan-akademik',
-                icon: Download,
-                label: 'Laporan',
-                children: [
-                    {
-                        id: 'laporan-nilai',
-                        icon: FileText,
-                        label: 'Laporan Nilai',
-                        children: [
-                            { path: '/laporan/ujian-syahri', icon: Calendar, label: 'Ujian Syahri' },
-                            { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester' },
-                        ]
-                    },
-                    {
-                        id: 'laporan-hafalan',
-                        icon: BookMarked,
-                        label: 'Laporan Hafalan',
-                        children: [
-                            { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian' },
-                            { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan' },
-                            { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan' },
-                            { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester' },
-                        ]
-                    },
-                    {
-                        id: 'laporan-akademik-santri',
-                        icon: Users,
-                        label: 'Laporan Akademik',
-                        children: [
-                            { path: '/laporan/akademik-santri', icon: Users, label: 'Raport' },
-                            { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan' },
-                        ]
-                    },
-                ]
-            },
-            // Presensi
-            { path: '/presensi', icon: CalendarCheck, label: 'Pembinaan Santri' },
-            // Semester
-            { path: '/semester', icon: Calendar, label: 'Semester' },
+            // Perilaku & Catatan (New)
+            { path: '/akademik/nilai/perilaku', icon: PenLine, label: 'Perilaku & Catatan' },
         ]
     },
+    // Hafalan Menu
+    {
+        id: 'hafalan-menu',
+        icon: BookMarked,
+        label: 'Hafalan',
+        children: [
+            { path: '/hafalan', icon: PenLine, label: 'Input Hafalan' },
+            { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan' },
+        ]
+    },
+    // Laporan Menu
+    {
+        id: 'laporan-akademik',
+        icon: Download,
+        label: 'Laporan',
+        children: [
+            {
+                id: 'laporan-nilai',
+                icon: FileText,
+                label: 'Laporan Nilai',
+                children: [
+                    { path: '/laporan/ujian-syahri', icon: Calendar, label: 'Ujian Syahri' },
+                    { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester' },
+                ]
+            },
+            {
+                id: 'laporan-hafalan',
+                icon: BookMarked,
+                label: 'Laporan Hafalan',
+                children: [
+                    { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian' },
+                    { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan' },
+                    { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan' },
+                    { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester' },
+                ]
+            },
+            {
+                id: 'laporan-akademik-santri',
+                icon: Users,
+                label: 'Laporan Akademik',
+                children: [
+                    { path: '/laporan/akademik-santri', icon: Users, label: 'Raport' },
+                    { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan' },
+                ]
+            },
+        ]
+    },
+    // Presensi
+    { path: '/presensi', icon: CalendarCheck, label: 'Pembinaan Santri' },
+    // Semester
+    { path: '/semester', icon: Calendar, label: 'Semester' },
 ]
+
 
 // ============ OPERATOR MENU - Guru/Akademik ============
 const operatorMenuItems = [
@@ -412,6 +415,8 @@ const operatorMenuItems = [
                             },
                         ]
                     },
+                    // Perilaku & Catatan (New)
+                    { path: '/akademik/nilai/perilaku', icon: PenLine, label: 'Perilaku & Catatan', roles: ['admin', 'guru'] },
                 ]
             },
             // Hafalan Menu

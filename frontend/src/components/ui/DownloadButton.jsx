@@ -15,6 +15,9 @@ const DownloadButton = ({
     onDownloadPDF,
     onDownloadExcel,
     onDownloadCSV,
+    pdfLabel = 'Download PDF',
+    excelLabel = 'Download Excel',
+    csvLabel = 'Download CSV',
     disabled = false,
     className = ''
 }) => {
@@ -53,19 +56,19 @@ const DownloadButton = ({
             format: 'PDF',
             icon: <FileText size={16} />,
             handler: onDownloadPDF,
-            label: 'Download PDF'
+            label: pdfLabel
         },
         {
             format: 'Excel',
             icon: <FileSpreadsheet size={16} />,
             handler: onDownloadExcel,
-            label: 'Download Excel'
+            label: excelLabel
         },
         {
             format: 'CSV',
             icon: <File size={16} />,
             handler: onDownloadCSV,
-            label: 'Download CSV'
+            label: csvLabel
         }
     ].filter(opt => opt.handler) // Only show options with handlers
 
