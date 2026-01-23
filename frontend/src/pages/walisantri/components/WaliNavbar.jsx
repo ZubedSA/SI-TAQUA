@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, Link } from 'react-router-dom'
-import { Home, BookOpen, Wallet, Bell, MessageCircle, User, LogOut, ArrowLeft, Shield } from 'lucide-react'
+import { Home, BookOpen, Wallet, Bell, MessageCircle, User, LogOut, ArrowLeft, Shield, FileText } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
 import { useState } from 'react'
 
@@ -33,6 +33,7 @@ const WaliNavbar = () => {
         { path: '/wali/akademik', icon: BookOpen, label: 'Akademik' },
         { path: '/wali/keuangan', icon: Wallet, label: 'Keuangan' },
         { path: '/wali/informasi', icon: Bell, label: 'Info' },
+        { path: '/wali/laporan', icon: FileText, label: 'Laporan' },
     ]
 
     return (

@@ -18,7 +18,7 @@ const LaporanAkademikSantriPage = () => {
     const [hafalanData, setHafalanData] = useState([])
     const [nilaiTahfizh, setNilaiTahfizh] = useState(null)
     const [nilaiMadros, setNilaiMadros] = useState([])
-    const [presensiData, setPresensiData] = useState({ hadir: 0, izin: 0, sakit: 0, alpha: 0 })
+    const [presensiData, setPresensiData] = useState({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
     const [filters, setFilters] = useState({
         semester_id: '',
         santri_id: ''
@@ -170,21 +170,23 @@ const LaporanAkademikSantriPage = () => {
             }
             setNilaiTahfizh(tahfizhRows.length > 0 ? tahfizhRows : null) // Modified state usage
 
-            // --- 5. Fetch Presensi ---
-            const currentSem = semester.find(s => s.id === filters.semester_id)
-            if (currentSem) {
-                const { data: presensi } = await supabase
-                    .from('presensi')
-                    .select('status')
-                    .eq('santri_id', santriId)
-                    .gte('tanggal', currentSem.tanggal_mulai)
-                    .lte('tanggal', currentSem.tanggal_selesai)
+            // --- 5. Fetch Presensi (Now using Manual Input from Perilaku) ---
+            const { data: perilakuData } = await supabase
+                .from('perilaku_semester')
+                .select('sakit, izin, alpha, pulang')
+                .eq('santri_id', santriId)
+                .eq('semester_id', filters.semester_id)
+                .single()
 
-                const counts = { hadir: 0, izin: 0, sakit: 0, alpha: 0 }
-                presensi?.forEach(p => {
-                    if (counts[p.status] !== undefined) counts[p.status]++
+            if (perilakuData) {
+                setPresensiData({
+                    pulang: perilakuData.pulang ?? 0,
+                    sakit: perilakuData.sakit ?? 0,
+                    izin: perilakuData.izin ?? 0,
+                    alpha: perilakuData.alpha ?? 0
                 })
-                setPresensiData(counts)
+            } else {
+                setPresensiData({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
             }
 
             // --- 6. Fetch Perilaku & Taujihad (Extra data for Report) ---
@@ -657,8 +659,8 @@ const LaporanAkademikSantriPage = () => {
                                 </h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                                     <div style={{ padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '8px', textAlign: 'center', color: 'white' }}>
-                                        <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.hadir}</div>
-                                        <div style={{ fontSize: '14px', opacity: 0.9 }}>Hadir</div>
+                                        <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.pulang}</div>
+                                        <div style={{ fontSize: '14px', opacity: 0.9 }}>Pulang</div>
                                     </div>
                                     <div style={{ padding: '16px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderRadius: '8px', textAlign: 'center', color: 'white' }}>
                                         <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.izin}</div>

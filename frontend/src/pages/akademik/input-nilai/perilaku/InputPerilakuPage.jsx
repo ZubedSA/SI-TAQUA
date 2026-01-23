@@ -93,7 +93,10 @@ const InputPerilakuPage = () => {
                         // Presensi Fields
                         sakit: p?.sakit ?? 0,
                         izin: p?.izin ?? 0,
+                        sakit: p?.sakit ?? 0,
+                        izin: p?.izin ?? 0,
                         alpha: p?.alpha ?? 0,
+                        pulang: p?.pulang ?? 0,
 
                         // Taujihad Fields
                         catatan: t?.catatan || t?.isi || ''
@@ -148,7 +151,10 @@ const InputPerilakuPage = () => {
                     total_hafalan: data.total_hafalan,
                     sakit: parseInt(data.sakit) || 0,
                     izin: parseInt(data.izin) || 0,
-                    alpha: parseInt(data.alpha) || 0
+                    sakit: parseInt(data.sakit) || 0,
+                    izin: parseInt(data.izin) || 0,
+                    alpha: parseInt(data.alpha) || 0,
+                    pulang: parseInt(data.pulang) || 0
                 })
 
                 // Prepare Taujihad Data
@@ -289,7 +295,7 @@ const InputPerilakuPage = () => {
                                     <th className="w-32">Predikat</th>
                                     <th className="w-40">Total Hafalan</th>
 
-                                    <th className="w-48 border-l text-center">Ketidakhadiran (S/I/A)</th>
+                                    <th className="w-56 border-l text-center">Ketidakhadiran (S/I/A/P)</th>
 
                                     <th className="w-64 border-l">Catatan Musyrif (Taujihat)</th>
                                 </tr>
@@ -342,6 +348,10 @@ const InputPerilakuPage = () => {
                                                         <input
                                                             type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="A" title="Alpha"
                                                             value={d.alpha} onChange={e => handleInputChange(s.id, 'alpha', e.target.value)}
+                                                        />
+                                                        <input
+                                                            type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="P" title="Pulang"
+                                                            value={d.pulang} onChange={e => handleInputChange(s.id, 'pulang', e.target.value)}
                                                         />
                                                     </div>
                                                 </td>

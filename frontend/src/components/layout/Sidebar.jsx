@@ -264,24 +264,8 @@ const musyrifMenuItems = [
                         icon: CalendarCheck,
                         label: 'Ujian Semester',
                         children: [
-                            {
-                                id: 'nilai-tahfizh',
-                                icon: BookMarked,
-                                label: "Qur'aniyah",
-                                children: [
-                                    { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester' },
-                                ]
-                            },
-                            {
-                                id: 'nilai-madros',
-                                icon: BookOpen,
-                                label: 'Madrasiyah',
-                                children: [
-                                    { path: '/akademik/nilai/madros/harian', icon: PenLine, label: 'Ujian Harian' },
-                                    { path: '/akademik/nilai/madros/uts', icon: FileText, label: 'UTS' },
-                                    { path: '/akademik/nilai/madros/uas', icon: ClipboardList, label: 'UAS' },
-                                ]
-                            },
+                            { path: '/akademik/nilai/tahfizh/semester', icon: BookMarked, label: "Qur'aniyah" },
+                            { path: '/akademik/nilai/madros/uas', icon: BookOpen, label: 'Madrasiyah' },
                         ]
                     },
                 ]
@@ -393,26 +377,8 @@ const operatorMenuItems = [
                         label: 'Ujian Semester',
                         roles: ['admin', 'guru'],
                         children: [
-                            {
-                                id: 'nilai-tahfizh',
-                                icon: BookMarked,
-                                label: "Qur'aniyah",
-                                roles: ['admin', 'guru'],
-                                children: [
-                                    { path: '/akademik/nilai/tahfizh/semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
-                                ]
-                            },
-                            {
-                                id: 'nilai-madros',
-                                icon: BookOpen,
-                                label: 'Madrasiyah',
-                                roles: ['admin', 'guru'],
-                                children: [
-                                    { path: '/akademik/nilai/madros/harian', icon: PenLine, label: 'Ujian Harian', roles: ['admin', 'guru'] },
-                                    { path: '/akademik/nilai/madros/uts', icon: FileText, label: 'UTS', roles: ['admin', 'guru'] },
-                                    { path: '/akademik/nilai/madros/uas', icon: ClipboardList, label: 'UAS', roles: ['admin', 'guru'] },
-                                ]
-                            },
+                            { path: '/akademik/nilai/tahfizh/semester', icon: BookMarked, label: "Qur'aniyah", roles: ['admin', 'guru'] },
+                            { path: '/akademik/nilai/madros/uas', icon: BookOpen, label: 'Madrasiyah', roles: ['admin', 'guru'] },
                         ]
                     },
                     // Perilaku & Catatan (New)

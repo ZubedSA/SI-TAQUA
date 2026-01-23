@@ -179,7 +179,8 @@ const CetakRaport = () => {
             setKetidakhadiran({
                 sakit: perilakuData?.sakit ?? '-',
                 izin: perilakuData?.izin ?? '-',
-                alpha: perilakuData?.alpha ?? '-'
+                alpha: perilakuData?.alpha ?? '-',
+                pulang: perilakuData?.pulang ?? '-'
             });
 
         } catch (error) {
@@ -281,7 +282,7 @@ const CetakRaport = () => {
                         <div className="grid grid-cols-[100px_10px_1fr]">
                             <span className="font-semibold text-gray-700">Halaqoh</span>
                             <span>:</span>
-                            <span className="text-gray-900">{santri.musyrif_nama || '-'}</span>
+                            <span className="text-gray-900">{santri.halaqoh?.nama || '-'}</span>
                         </div>
                         <div className="grid grid-cols-[100px_10px_1fr]">
                             <span className="font-semibold text-gray-700">Semester</span>

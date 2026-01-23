@@ -29,6 +29,8 @@ import RiwayatBayarPage from './pages/walisantri/keuangan/RiwayatBayarPage'
 import UploadBuktiPage from './pages/walisantri/keuangan/UploadBuktiPage'
 import PengumumanPage from './pages/walisantri/informasi/PengumumanPage'
 import ProfilWaliPage from './pages/walisantri/profil/ProfilWaliPage'
+import LaporanWaliPage from './pages/walisantri/laporan/LaporanWaliPage'
+import RaportWaliPage from './pages/walisantri/laporan/RaportWaliPage'
 
 // Other Pages
 import ProfilSettingsPage from './pages/profil/ProfilSettingsPage'
@@ -175,6 +177,13 @@ function App() {
                     <Route path="keuangan" element={<TagihanWaliPage />} />
                     <Route path="keuangan/riwayat" element={<RiwayatBayarPage />} />
                     <Route path="keuangan/upload" element={<UploadBuktiPage />} />
+
+                    {/* Laporan Menu */}
+                    <Route path="laporan" element={<LaporanWaliPage />} />
+                    <Route path="laporan/hafalan" element={<HafalanWaliPage />} />
+                    <Route path="laporan/pembayaran" element={<RiwayatBayarPage />} />
+                    <Route path="laporan/raport" element={<RaportWaliPage />} />
+
                     <Route path="informasi" element={<PengumumanPage />} />
                     <Route path="profil" element={<ProfilWaliPage />} />
                   </Route>
