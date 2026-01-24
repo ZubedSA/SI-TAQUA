@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Users, RefreshCw, Download, Printer, BookMarked, FileText, Calendar } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import html2canvas from 'html2canvas'
+import RaportTemplate from '../../../../../components/akademik/RaportTemplate'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import { useCalendar } from '../../../../../context/CalendarContext'
@@ -12,6 +14,8 @@ import '../../../../../pages/laporan/Laporan.css'
 const LaporanAkademikSantriPage = () => {
     const { formatDate } = useCalendar()
     const [loading, setLoading] = useState(false)
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+    const pdfTemplateRef = useRef(null)
     const [semester, setSemester] = useState([])
     const [santriList, setSantriList] = useState([])
     const [selectedSantri, setSelectedSantri] = useState(null)
@@ -19,6 +23,9 @@ const LaporanAkademikSantriPage = () => {
     const [nilaiTahfizh, setNilaiTahfizh] = useState(null)
     const [nilaiMadros, setNilaiMadros] = useState([])
     const [presensiData, setPresensiData] = useState({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
+    const [taujihad, setTaujihad] = useState(null)
+    const [perilaku, setPerilaku] = useState(null)
+    const [musyrifName, setMusyrifName] = useState("Imam 'Ashim Al-Kufi")
     const [filters, setFilters] = useState({
         semester_id: '',
         santri_id: ''
@@ -31,7 +38,7 @@ const LaporanAkademikSantriPage = () => {
     const fetchOptions = async () => {
         const [semRes, santriRes] = await Promise.all([
             supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('santri').select('id, nama, nis, kelas:kelas!kelas_id(nama), halaqoh:halaqoh!halaqoh_id(nama)').eq('status', 'Aktif').order('nama')
+            supabase.from('santri').select('id, nama, nis, nama_wali, kelas:kelas!kelas_id(nama), halaqoh:halaqoh!halaqoh_id(nama, musyrif_id)').eq('status', 'Aktif').order('nama')
         ])
         if (semRes.data) {
             setSemester(semRes.data)
@@ -107,6 +114,9 @@ const LaporanAkademikSantriPage = () => {
                 const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id) || []
                 const bestGrade = getBestGrade(mapelGrades)
 
+                // Exclude if no grade found (User Request: Only show mapels with input)
+                if (!bestGrade) return null
+
                 // Exclude Tahfizh/Quran from Madrasah list
                 if (mapel.nama.toLowerCase().includes('tahfizh') || mapel.nama.toLowerCase().includes('quran')) {
                     return null
@@ -119,8 +129,8 @@ const LaporanAkademikSantriPage = () => {
                     harian: '-', // Simplified for report view as we focus on "Final"
                     uts: '-',
                     uas: '-',
-                    rata_rata: bestGrade ? bestGrade.nilai_akhir : '-', // Main score
-                    predikat: bestGrade ? getPredikat(bestGrade.nilai_akhir) : '-'
+                    rata_rata: bestGrade.nilai_akhir, // Main score
+                    predikat: getPredikat(bestGrade.nilai_akhir)
                 }
             }).filter(Boolean)
             setNilaiMadros(madrasahList)
@@ -170,30 +180,48 @@ const LaporanAkademikSantriPage = () => {
             }
             setNilaiTahfizh(tahfizhRows.length > 0 ? tahfizhRows : null) // Modified state usage
 
-            // --- 5. Fetch Presensi (Now using Manual Input from Perilaku) ---
+            // --- Fetch Musyrif Name ---
+            if (selected.halaqoh?.musyrif_id) {
+                const { data: guruData } = await supabase
+                    .from('guru')
+                    .select('nama')
+                    .eq('id', selected.halaqoh.musyrif_id)
+                    .single()
+                if (guruData) setMusyrifName(guruData.nama)
+            } else {
+                setMusyrifName("Imam 'Ashim Al-Kufi")
+            }
+
+            // --- 5. Fetch Presensi & Perilaku Full ---
             const { data: perilakuData } = await supabase
                 .from('perilaku_semester')
-                .select('sakit, izin, alpha, pulang')
+                .select('*')
                 .eq('santri_id', santriId)
                 .eq('semester_id', filters.semester_id)
                 .single()
+
+            setPerilaku(perilakuData)
 
             if (perilakuData) {
                 setPresensiData({
                     pulang: perilakuData.pulang ?? 0,
                     sakit: perilakuData.sakit ?? 0,
                     izin: perilakuData.izin ?? 0,
-                    alpha: perilakuData.alpha ?? 0
+                    alpha: perilakuData.alpha ?? 0,
+                    hadir: perilakuData.hadir ?? 0 // if available
                 })
             } else {
                 setPresensiData({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
             }
 
-            // --- 6. Fetch Perilaku & Taujihad (Extra data for Report) ---
-            // We might just store these in state if we want to display them, 
-            // but for now the user asked to filter -> then PRINT.
-            // The Print button will load CetakRaport which fetches its own data.
-            // So we just need to ensure the "Preview" in Laporan page looks correct.
+            // --- 6. Fetch Taujihad ---
+            const { data: taujihadData } = await supabase
+                .from('taujihad')
+                .select('*')
+                .eq('santri_id', santriId)
+                .eq('semester_id', filters.semester_id)
+                .single()
+            setTaujihad(taujihadData)
 
         } catch (err) {
             console.error('Error fetching report:', err.message)
@@ -219,199 +247,417 @@ const LaporanAkademikSantriPage = () => {
 
     const generatePDF = async () => {
         if (!selectedSantri) return
+        setIsGeneratingPDF(true)
+
+        try {
+            // Wait for render
+            await new Promise(resolve => setTimeout(resolve, 500))
+
+            const element = pdfTemplateRef.current
+            if (!element) throw new Error("Template not found")
+
+            // Capture format
+            const canvas = await html2canvas(element, {
+                scale: 2, // Higher scale for better quality
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            })
+
+            const imgData = canvas.toDataURL('image/png')
+            const pdf = new jsPDF('p', 'mm', 'a4')
+            const pdfWidth = pdf.internal.pageSize.getWidth()
+            const pdfHeight = pdf.internal.pageSize.getHeight()
+
+            // Calculate aspect ratio to fit A4
+            const imgProps = pdf.getImageProperties(imgData)
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width
+
+            // Allow multiple pages if content is long (though Raport usually 1 page)
+            let heightLeft = imgHeight
+            let position = 0
+
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight)
+            heightLeft -= pdfHeight
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight
+                pdf.addPage()
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight)
+                heightLeft -= pdfHeight
+            }
+
+            const currentSem = semester.find(s => s.id === filters.semester_id)
+            pdf.save(`Raport_${selectedSantri.nama.replace(/\s/g, '_')}_${currentSem?.nama}.pdf`)
+
+        } catch (error) {
+            console.error("PDF Generation Error:", error)
+        } finally {
+            setIsGeneratingPDF(false)
+        }
+    }
+
+    const generatePDF_OLD_UNUSED = async () => {
+        if (!selectedSantri) return
 
         const doc = new jsPDF()
         const pageWidth = doc.internal.pageSize.getWidth()
         const pageHeight = doc.internal.pageSize.getHeight()
-        let y = 15
+        let y = 0
 
-        // ========== HEADER WITH LOGO ==========
-        const logoSize = 25
+        // Colors
+        const GREEN_HEADER = [0, 155, 124] // #009B7C
+
+        // ========== HEADER WITH GREEN BACKGROUND ==========
+        // Draw Green Block
+        doc.setFillColor(...GREEN_HEADER)
+        doc.rect(0, 0, pageWidth, 40, 'F')
+
+        // Logo (White)
+        const logoSize = 22
         const logoX = 14
-        let headerTextX = 45
-
+        const logoY = 9
         try {
             const logoImg = new Image()
-            logoImg.src = '/logo-pondok.png'
+            logoImg.src = '/logo-white.png'
             await new Promise((resolve) => {
                 logoImg.onload = resolve
                 logoImg.onerror = resolve
-                setTimeout(resolve, 1000)
+                setTimeout(resolve, 800)
             })
-            doc.addImage(logoImg, 'PNG', logoX, y, logoSize, logoSize)
+            // Add image with alias to avoid compression issues if repeated
+            doc.addImage(logoImg, 'PNG', logoX, logoY, logoSize, logoSize, 'logo', 'FAST')
         } catch (e) {
             console.warn('Logo loading failed', e)
         }
 
-        // Header Text
-        doc.setTextColor(0)
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text('YAYASAN ABDULLAH DEWI HASANAH', headerTextX, y + 6)
-
-        doc.setFontSize(12)
+        // Header Text White
+        doc.setTextColor(255, 255, 255)
         doc.setFont('helvetica', 'bold')
-        doc.text('PONDOK PESANTREN TAHFIZH QUR\'AN AL-USYMUNI BATUAN', headerTextX, y + 13)
+        doc.setFontSize(9)
+        doc.text('YAYASAN ABDULLAH DEWI HASANAH', 42, 16)
 
+        doc.setFontSize(11)
+        doc.text("PONDOK PESANTREN TAHFIZH QUR'AN AL-USYMUNI BATUAN", 42, 22)
+
+        doc.setFont('helvetica', 'normal')
         doc.setFontSize(8)
-        doc.setFont('helvetica', 'normal')
-        doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep', headerTextX, y + 19)
+        doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep', 42, 27)
 
-        // Line separator
-        y += 32
-        doc.setDrawColor(5, 150, 105)
-        doc.setLineWidth(1)
-        doc.line(14, y, pageWidth - 14, y)
-        doc.setLineWidth(0.5)
+        // Green Border bottom line (slightly darker)
+        doc.setDrawColor(0, 122, 97) // #007A61
+        doc.setLineWidth(1.5)
+        doc.line(0, 40, pageWidth, 40)
 
-        y += 10
-
-        // Title
-        doc.setFontSize(14)
+        // --- TITLE ---
+        y = 55
+        doc.setTextColor(0, 155, 124) // #009B7C
         doc.setFont('helvetica', 'bold')
-        doc.setTextColor(5, 150, 105)
+        doc.setFontSize(14)
         doc.text('LAPORAN AKADEMIK SANTRI', pageWidth / 2, y, { align: 'center' })
 
+        // --- BIODATA ---
         y += 10
+        // Remove "DATA SANTRI" title to match print layout
         doc.setTextColor(0)
 
-        // Biodata Santri
-        doc.setFontSize(11)
-        doc.setFont('helvetica', 'bold')
-        doc.text('DATA SANTRI', 14, y)
-        y += 8
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
+        y += 6
         const currentSem = semester.find(s => s.id === filters.semester_id)
-        const bioData = [
-            ['Nama', selectedSantri.nama],
-            ['NIS', selectedSantri.nis],
-            ['Kelas', selectedSantri.kelas?.nama || '-'],
-            ['Halaqoh', selectedSantri.halaqoh?.nama || '-'],
-            ['Semester', currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-']
-        ]
-        bioData.forEach(item => {
-            doc.text(`${item[0]}: ${item[1]}`, 14, y)
-            y += 6
+
+        // 2 Column Biodata
+        const leftColX = 14
+        const rightColX = 110
+        const labelWidth = 35
+        const rowHeight = 6
+
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'normal')
+
+        // Row 1
+        doc.text('Nama', leftColX, y)
+        doc.text(':', leftColX + labelWidth - 3, y)
+        doc.setFont('helvetica', 'bold')
+        doc.text(selectedSantri.nama.toUpperCase(), leftColX + labelWidth, y)
+
+        doc.setFont('helvetica', 'normal')
+        doc.text('Halaqoh', rightColX, y)
+        doc.text(':', rightColX + labelWidth - 3, y)
+        doc.text(selectedSantri.halaqoh?.nama || '-', rightColX + labelWidth, y)
+
+        y += rowHeight
+        // Row 2
+        doc.text('NIS', leftColX, y)
+        doc.text(':', leftColX + labelWidth - 3, y)
+        doc.text(selectedSantri.nis, leftColX + labelWidth, y)
+
+        doc.text('Semester', rightColX, y)
+        doc.text(':', rightColX + labelWidth - 3, y)
+        doc.text(currentSem ? currentSem.nama : '-', rightColX + labelWidth, y)
+
+        y += rowHeight
+        // Row 3
+        doc.text('Jenjang / Kelas', leftColX, y)
+        doc.text(':', leftColX + labelWidth - 3, y)
+        doc.text(selectedSantri.kelas?.nama || '-', leftColX + labelWidth, y)
+
+        doc.text('Tahun Ajaran', rightColX, y)
+        doc.text(':', rightColX + labelWidth - 3, y)
+        doc.text(currentSem ? currentSem.tahun_ajaran : '-', rightColX + labelWidth, y)
+
+        // --- CONTENT LAYOUT (2 Columns: Grades Left, Sidebars Right) ---
+        y += 12
+        const contentStartY = y
+        const leftContentWidth = 105
+        const rightContentX = 130
+        const rightContentWidth = pageWidth - rightContentX - 14
+
+        // --- LEFT COLUMN: NILAI TAHFIZH & MADROSIYAH ---
+
+        // 1. Nilai Tahfizh
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(10)
+
+        // Use autoTable for styling flexibility
+        // Custom header drawing for "NILAI TAHFIZH" block
+        autoTable(doc, {
+            startY: y,
+            head: [
+                [{ content: 'NILAI TAHFIZH', colSpan: 4, styles: { halign: 'center', fillColor: GREEN_HEADER, textColor: 255, fontStyle: 'bold' } }],
+                ['No', 'Mata Pelajaran', 'Nilai', 'Predikat']
+            ],
+            body: nilaiTahfizh && nilaiTahfizh.length > 0 ? nilaiTahfizh.map((row, i) => [
+                i + 1,
+                row.komponen,
+                row.nilai || '-',
+                row.predikat
+            ]) : [[1, 'Hafalan Baru', '-', '-']],
+            theme: 'plain',
+            margin: { left: 14, right: pageWidth - (14 + leftContentWidth) }, // Limit width
+            styles: { fontSize: 8, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.1 },
+            headStyles: { fillColor: GREEN_HEADER, textColor: 255, fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+                0: { halign: 'center', width: 8 },
+                2: { halign: 'center', width: 15, fontStyle: 'bold' },
+                3: { halign: 'center', width: 15 }
+            },
+            didParseCell: (data) => {
+                // Add borders to body cells manually if using plain theme
+                if (data.section === 'body') {
+                    data.cell.styles.lineWidth = 0.1
+                    data.cell.styles.lineColor = [220, 220, 220]
+                }
+            }
         })
 
-        y += 5
+        let gradeY = doc.lastAutoTable.finalY + 8
 
-        // Hafalan Progress
-        if (hafalanData.length > 0) {
-            // Check potential page break for header
-            if (y > pageHeight - 40) {
-                doc.addPage()
-                y = 20
+        // 2. Nilai Madrosiyah
+        autoTable(doc, {
+            startY: gradeY,
+            head: [
+                [{ content: 'NILAI MADRASAH', colSpan: 4, styles: { halign: 'center', fillColor: GREEN_HEADER, textColor: 255, fontStyle: 'bold' } }],
+                ['No', 'Mata Pelajaran', 'Nilai', 'Predikat']
+            ],
+            body: nilaiMadros.length > 0 ? nilaiMadros.map((m, i) => [
+                i + 1,
+                m.nama,
+                m.rata_rata,
+                m.predikat
+            ]) : [['-', 'Belum ada data', '-', '-']],
+            theme: 'plain',
+            margin: { left: 14, right: pageWidth - (14 + leftContentWidth) },
+            styles: { fontSize: 8, cellPadding: 2, lineColor: [200, 200, 200], lineWidth: 0.1 },
+            headStyles: { fillColor: GREEN_HEADER, textColor: 255, fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+                0: { halign: 'center', width: 8 },
+                2: { halign: 'center', width: 15, fontStyle: 'bold' },
+                3: { halign: 'center', width: 15 }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body') {
+                    data.cell.styles.lineWidth = 0.1
+                    data.cell.styles.lineColor = [220, 220, 220]
+                }
             }
+        })
+
+        const leftColEndY = doc.lastAutoTable.finalY
+
+
+        // --- RIGHT COLUMN: SIDEBARS ---
+        let sideY = contentStartY
+
+        // Function to draw side box
+        const drawSideBox = (title, contentCallback) => {
+            // Header
+            doc.setFillColor(...GREEN_HEADER)
+            doc.rect(rightContentX, sideY, rightContentWidth, 7, 'F')
+            doc.setTextColor(255)
+            doc.setFontSize(9)
             doc.setFont('helvetica', 'bold')
-            doc.text('PROGRESS HAFALAN', 14, y)
-            y += 3
-            autoTable(doc, {
-                startY: y,
-                head: [['Juz', 'Status', 'Tanggal']],
-                body: hafalanData.map(h => [
-                    `Juz ${h.juz}`,
-                    h.status,
-                    formatDate(h.tanggal)
-                ]),
-                theme: 'grid',
-                headStyles: { fillColor: [5, 150, 105] },
-                styles: { fontSize: 9 },
-                margin: { left: 14, right: 14, bottom: 30 } // Bottom margin for footer
-            })
-            y = doc.lastAutoTable.finalY + 10
+            doc.text(title, rightContentX + (rightContentWidth / 2), sideY + 5, { align: 'center' })
+
+            // Border box
+            const boxY = sideY + 7
+            let currentY = boxY + 4
+
+            // Content
+            doc.setTextColor(0)
+            doc.setFont('helvetica', 'normal')
+            doc.setFontSize(8)
+
+            const contentHeight = contentCallback(currentY)
+
+            // Draw Outline
+            doc.setDrawColor(...GREEN_HEADER)
+            doc.setLineWidth(0.1)
+            doc.rect(rightContentX, sideY, rightContentWidth, 7 + contentHeight + 4)
+
+            sideY += 7 + contentHeight + 4 + 6 // Gap
         }
 
-        // Nilai Tahfizh
-        if (nilaiTahfizh) {
-            if (y > pageHeight - 40) {
-                doc.addPage()
-                y = 20
-            }
-            doc.setFont('helvetica', 'bold')
-            doc.text('NILAI TAHFIZHIYAH', 14, y)
-            y += 3
-            autoTable(doc, {
-                startY: y,
-                head: [['Komponen', 'Nilai', 'Predikat']],
-                body: [
-                    ['Hafalan Baru', nilaiTahfizh.nilai_hafalan || '-', getPredikat(nilaiTahfizh.nilai_hafalan)],
-                    ['Murajaah', nilaiTahfizh.nilai_murajaah || '-', getPredikat(nilaiTahfizh.nilai_murajaah)],
-                    ['Tajwid', nilaiTahfizh.nilai_tajwid || '-', getPredikat(nilaiTahfizh.nilai_tajwid)],
-                    ['Kelancaran', nilaiTahfizh.nilai_kelancaran || '-', getPredikat(nilaiTahfizh.nilai_kelancaran)],
-                    ['Rata-rata', nilaiTahfizh.nilai_akhir?.toFixed(1) || '-', getPredikat(nilaiTahfizh.nilai_akhir)]
-                ],
-                theme: 'grid',
-                headStyles: { fillColor: [5, 150, 105] },
-                styles: { fontSize: 9 },
-                margin: { left: 14, right: 100, bottom: 30 }
-            })
-            y = doc.lastAutoTable.finalY + 10
-        }
+        // 1. Pencapaian Hafalan
+        drawSideBox('PENCAPAIAN TAHFIZH', (startY) => {
+            const hGap = 4.5
+            let cy = startY
 
-        // Nilai Madros
-        if (nilaiMadros.length > 0) {
-            if (y > pageHeight - 40) {
-                doc.addPage()
-                y = 20
-            }
-            doc.setFont('helvetica', 'bold')
-            doc.text('NILAI MADROSIYAH', 14, y)
-            y += 3
-            autoTable(doc, {
-                startY: y,
-                head: [['Mapel', 'Harian', 'UTS', 'UAS', 'Rata-rata']],
-                body: nilaiMadros.map(m => [m.nama, m.harian, m.uts, m.uas, m.rata_rata]),
-                theme: 'grid',
-                headStyles: { fillColor: [5, 150, 105] },
-                styles: { fontSize: 9 },
-                margin: { left: 14, right: 14, bottom: 30 }
-            })
-            y = doc.lastAutoTable.finalY + 10
-        }
+            const items = [
+                ['Jumlah Hafalan:', perilaku?.jumlah_hafalan || '0 Juz'],
+                ['Predikat:', perilaku?.predikat_hafalan || 'Baik'],
+                ['Total Hafalan:', perilaku?.total_hafalan || '-']
+            ]
 
-        // Kehadiran
-        if (y > pageHeight - 40) {
+            items.forEach((item, idx) => {
+                doc.setFont('helvetica', idx === 1 ? 'bold' : 'normal') // make label bold? no, value bold
+                doc.text(item[0], rightContentX + 3, cy)
+                doc.setFont('helvetica', 'bold')
+                doc.text(String(item[1]), rightContentX + rightContentWidth - 3, cy, { align: 'right' })
+                doc.setFont('helvetica', 'normal')
+
+                if (idx < items.length - 1) {
+                    doc.setDrawColor(240)
+                    doc.line(rightContentX + 3, cy + 1.5, rightContentX + rightContentWidth - 3, cy + 1.5)
+                }
+                cy += hGap
+            })
+
+            return (items.length * hGap)
+        })
+
+        // 2. Perilaku Murid
+        drawSideBox('PERILAKU MURID', (startY) => {
+            const hGap = 4.5
+            let cy = startY
+
+            const items = [
+                ['A. Ketekunan:', perilaku?.ketekunan || 'Baik'],
+                ['B. Kedisiplinan:', perilaku?.kedisiplinan || 'Baik'],
+                ['C. Kebersihan:', perilaku?.kebersihan || 'Sangat Baik'],
+                ['D. Kerapian:', perilaku?.kerapian || 'Sangat Baik']
+            ]
+
+            items.forEach((item) => {
+                doc.text(item[0], rightContentX + 3, cy)
+                doc.setFont('helvetica', 'bold')
+                doc.text(item[1], rightContentX + rightContentWidth - 3, cy, { align: 'right' })
+                doc.setFont('helvetica', 'normal')
+                cy += hGap
+            })
+
+            return (items.length * hGap)
+        })
+
+        // 3. Ketidakhadiran
+        drawSideBox('KETIDAKHADIRAN', (startY) => {
+            let cy = startY + 2
+
+            doc.setFontSize(8)
+            const parts = [
+                { l: 'Alpha', v: presensiData.alpha },
+                { l: 'Sakit', v: presensiData.sakit },
+                { l: 'Izin', v: presensiData.izin },
+                { l: 'Pulang', v: presensiData.pulang }
+            ]
+
+            // 2x2 Grid inside standard box
+            // Row 1
+            doc.text(`Alpha: ${parts[0].v}`, rightContentX + 3, cy)
+            doc.text(`Sakit: ${parts[1].v}`, rightContentX + (rightContentWidth / 2) + 2, cy)
+            cy += 5
+            doc.text(`Izin:   ${parts[2].v}`, rightContentX + 3, cy)
+            doc.text(`Pulg:  ${parts[3].v}`, rightContentX + (rightContentWidth / 2) + 2, cy)
+
+            return 12
+        })
+
+
+        // --- FOOTER SECTION: TAUJIHAT & SIGNATURES ---
+        y = Math.max(leftColEndY, sideY) + 5
+
+        // Page break check
+        if (y > pageHeight - 60) {
             doc.addPage()
             y = 20
         }
+
+        // Taujihat
         doc.setFont('helvetica', 'bold')
-        doc.text('KEHADIRAN SEMESTER INI', 14, y)
-        y += 3
-        autoTable(doc, {
-            startY: y,
-            head: [['Hadir', 'Izin', 'Sakit', 'Alpha']],
-            body: [[presensiData.hadir, presensiData.izin, presensiData.sakit, presensiData.alpha]],
-            theme: 'grid',
-            headStyles: { fillColor: [5, 150, 105] },
-            styles: { fontSize: 9, halign: 'center' },
-            margin: { left: 14, right: 100, bottom: 30 }
-        })
+        doc.setFontSize(10)
+        doc.text('Taujihat Musyrif', 14, y)
+        y += 2
 
-        // Global Footer (Executed at the end for all pages)
-        const totalPages = doc.internal.getNumberOfPages()
-        const printDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        doc.setDrawColor(150)
+        doc.setLineWidth(0.1)
+        doc.rect(14, y, pageWidth - 28, 25)
 
-        for (let i = 1; i <= totalPages; i++) {
-            doc.setPage(i)
-            const footerY = pageHeight - 15
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(9)
+        const taujihatText = taujihad?.catatan || taujihad?.isi || 'Alhamdulillah, santri menunjukkan perkembangan yang baik. Terus semangat!'
+        doc.text(doc.splitTextToSize(taujihatText, pageWidth - 32), 17, y + 5)
 
-            doc.setFontSize(8)
-            doc.setFont('helvetica', 'italic')
-            doc.setTextColor(150)
+        y += 35
 
-            // Left
-            doc.text(`Dicetak: ${printDate}`, 14, footerY)
+        // Signatures
+        // 3 Columns: Wali, Pengasuh (Center Bottom), Musyrif
+        const colW = (pageWidth - 28) / 3
 
-            // Center
-            doc.text(`Si-Taqua PTQA Batuan`, pageWidth / 2, footerY, { align: 'center' })
+        // Date
+        const dateStr = `Batuan, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
 
-            // Right (Page Number)
-            doc.text(`Hal ${i} dari ${totalPages}`, pageWidth - 14, footerY, { align: 'right' })
-        }
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
 
-        doc.save(`Laporan_Akademik_${selectedSantri.nama.replace(/\s/g, '_')}.pdf`)
+        // Right Col Date
+        doc.text(dateStr, 14 + (colW * 2) + (colW / 2), y, { align: 'center' })
+        y += 5
+
+        // Titles
+        doc.text('Wali Murid', 14 + (colW / 2), y, { align: 'center' })
+        doc.text('Musyrif', 14 + (colW * 2) + (colW / 2), y, { align: 'center' })
+
+        y += 25
+
+        // Names
+        doc.setFont('helvetica', 'bold')
+        doc.text(`(${selectedSantri.nama_wali?.toUpperCase() || '....................'})`, 14 + (colW / 2), y, { align: 'center' }) // Wali
+        doc.text(musyrifName.toUpperCase(), 14 + (colW * 2) + (colW / 2), y, { align: 'center' }) // Musyrif
+
+        y += 5
+
+        // Center Bottom: Pengasuh
+        doc.setFont('helvetica', 'normal')
+        doc.text('Mengetahui,', pageWidth / 2, y, { align: 'center' })
+        doc.text('Pengasuh PTQA Batuan', pageWidth / 2, y + 5, { align: 'center' })
+
+        y += 30
+        doc.setFont('helvetica', 'bold')
+        doc.text('KH. MIFTAHUL ARIFIN, LC.', pageWidth / 2, y, { align: 'center' })
+        doc.setLineWidth(0.2)
+        doc.line((pageWidth / 2) - 30, y + 1, (pageWidth / 2) + 30, y + 1)
+
+
+        // Save
+        doc.save(`Raport_${selectedSantri.nama.replace(/\s/g, '_')}_${currentSem?.nama}.pdf`)
     }
 
     const handleDownloadExcel = () => {
@@ -470,6 +716,24 @@ const LaporanAkademikSantriPage = () => {
 
     return (
         <div className="laporan-page">
+            {/* Hidden Template for PDF Generation */}
+            <div style={{ position: 'absolute', left: '-10000px', top: 0 }}>
+                {selectedSantri && (
+                    <div ref={pdfTemplateRef} style={{ width: '210mm', minHeight: '297mm', background: 'white' }}>
+                        <RaportTemplate
+                            santri={selectedSantri}
+                            semester={semester.find(s => s.id === filters.semester_id)}
+                            nilaiTahfizh={nilaiTahfizh}
+                            nilaiMadrasah={nilaiMadros}
+                            perilaku={perilaku}
+                            taujihad={taujihad}
+                            ketidakhadiran={presensiData}
+                            musyrifName={musyrifName}
+                        />
+                    </div>
+                )}
+            </div>
+
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
@@ -479,7 +743,7 @@ const LaporanAkademikSantriPage = () => {
                 </div>
                 <div className="header-actions">
                     <DownloadButton
-                        onDownloadPDF={() => window.open(`/raport/cetak/${filters.santri_id}/${filters.semester_id}`, '_blank')}
+                        onDownloadPDF={generatePDF}
                         onDownloadExcel={handleDownloadExcel}
                         onDownloadCSV={handleDownloadCSV}
                         disabled={!selectedSantri}
