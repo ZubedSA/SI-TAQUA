@@ -177,13 +177,13 @@ const RaportTemplate = ({
                         <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
                             Pencapaian Tahfizh
                         </div>
-                        <div className="p-4 bg-white">
-                            <div className="space-y-3 text-[11px]">
-                                <div className="flex justify-between border-b border-gray-100 pb-2">
+                        <div className="p-2 bg-white">
+                            <div className="space-y-1 text-[11px]">
+                                <div className="flex justify-between border-b border-gray-100 pb-1">
                                     <span className="text-gray-700">Jumlah Hafalan:</span>
                                     <span className="font-bold text-gray-900">{perilaku?.jumlah_hafalan || '0 Juz'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-gray-100 pb-2">
+                                <div className="flex justify-between border-b border-gray-100 pb-1">
                                     <span className="text-gray-700">Predikat:</span>
                                     <span className="font-bold text-gray-900">{perilaku?.predikat_hafalan || 'Baik'}</span>
                                 </div>
@@ -200,8 +200,8 @@ const RaportTemplate = ({
                         <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
                             Perilaku Murid
                         </div>
-                        <div className="p-4 bg-white">
-                            <ul className="space-y-2 text-[11px]">
+                        <div className="p-2 bg-white">
+                            <ul className="space-y-1 text-[11px]">
                                 <li className="grid grid-cols-[110px_1fr] items-center">
                                     <span className="text-gray-700">A. Ketekunan:</span>
                                     <span className="font-semibold text-gray-900">{perilaku?.ketekunan || 'Baik'}</span>
@@ -227,7 +227,7 @@ const RaportTemplate = ({
                         <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
                             Ketidakhadiran
                         </div>
-                        <div className="p-6 bg-white text-center">
+                        <div className="p-3 bg-white text-center">
                             <div className="inline-flex gap-3 text-[11px] font-medium text-gray-800">
                                 <span>Alpa: <span className="font-bold">{ketidakhadiran?.alpha || '0'}</span></span>
                                 <span className="text-gray-300">|</span>
