@@ -93,7 +93,7 @@ const RaportTemplate = ({
                 <div className="space-y-6">
                     {/* A. Nilai Tahfizh Table */}
                     <div>
-                        <table className="w-full border-collapse text-[10px]">
+                        <table className="w-full border-collapse text-[11px]">
                             <thead>
                                 <tr>
                                     <th colSpan="4" className="bg-[#009B7C] text-white p-1 text-center font-bold tracking-wider text-[11px] border border-[#009B7C] uppercase print-color-adjust-exact">
@@ -178,7 +178,7 @@ const RaportTemplate = ({
                             Pencapaian Tahfizh
                         </div>
                         <div className="p-4 bg-white">
-                            <div className="space-y-3 text-[13px]">
+                            <div className="space-y-3 text-[11px]">
                                 <div className="flex justify-between border-b border-gray-100 pb-2">
                                     <span className="text-gray-700">Jumlah Hafalan:</span>
                                     <span className="font-bold text-gray-900">{perilaku?.jumlah_hafalan || '0 Juz'}</span>
@@ -201,7 +201,7 @@ const RaportTemplate = ({
                             Perilaku Murid
                         </div>
                         <div className="p-4 bg-white">
-                            <ul className="space-y-2 text-[13px]">
+                            <ul className="space-y-2 text-[11px]">
                                 <li className="grid grid-cols-[110px_1fr] items-center">
                                     <span className="text-gray-700">A. Ketekunan:</span>
                                     <span className="font-semibold text-gray-900">{perilaku?.ketekunan || 'Baik'}</span>
@@ -228,7 +228,7 @@ const RaportTemplate = ({
                             Ketidakhadiran
                         </div>
                         <div className="p-6 bg-white text-center">
-                            <div className="inline-flex gap-3 text-[13px] font-medium text-gray-800">
+                            <div className="inline-flex gap-3 text-[11px] font-medium text-gray-800">
                                 <span>Alpa: <span className="font-bold">{ketidakhadiran?.alpha || '0'}</span></span>
                                 <span className="text-gray-300">|</span>
                                 <span>Sakit: <span className="font-bold">{ketidakhadiran?.sakit || '0'}</span></span>
