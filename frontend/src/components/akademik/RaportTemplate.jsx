@@ -25,7 +25,7 @@ const RaportTemplate = ({
     const HEADER_TEXT_COLOR = 'text-white';
 
     return (
-        <div className="bg-white p-[5mm] shadow-none w-full max-w-[210mm] mx-auto box-border leading-tight text-xs font-sans relative print:p-0 print:w-full">
+        <div className="bg-white p-[5mm] shadow-none w-full max-w-[210mm] mx-auto box-border leading-normal text-xs font-sans relative print:p-0 print:w-full">
 
             {/* 1. Header Yayasan */}
             <div className="bg-[#009B7C] text-white py-3 px-4 mb-2 text-center relative print-color-adjust-exact border-b-4 border-[#007A61]">
@@ -96,28 +96,28 @@ const RaportTemplate = ({
                         <table className="w-full border-collapse text-[11px]">
                             <thead>
                                 <tr>
-                                    <th colSpan="4" className="bg-[#009B7C] text-white p-1 text-center font-bold tracking-wider text-[11px] border border-[#009B7C] uppercase print-color-adjust-exact">
+                                    <th colSpan="4" className="bg-[#009B7C] text-white py-1.5 px-2 text-center font-bold tracking-wider text-[11px] border border-[#009B7C] uppercase print-color-adjust-exact leading-tight">
                                         NILAI TAHFIZH
                                     </th>
                                 </tr>
                                 <tr className="bg-[#009B7C] text-white print-color-adjust-exact">
-                                    <th className="p-1 border border-white/30 w-10 text-center font-medium">No</th>
-                                    <th className="p-1 border border-white/30 text-left font-medium">Mata Pelajaran</th>
-                                    <th className="p-1 border border-white/30 w-16 text-center font-medium">Nilai</th>
-                                    <th className="p-1 border border-white/30 w-16 text-center font-medium">Predikat</th>
+                                    <th className="py-1.5 px-2 border border-white w-10 text-center font-medium align-middle">No</th>
+                                    <th className="py-1.5 px-2 border border-white text-left font-medium align-middle">Mata Pelajaran</th>
+                                    <th className="py-1.5 px-2 border border-white w-16 text-center font-medium align-middle">Nilai</th>
+                                    <th className="py-1.5 px-2 border border-white w-16 text-center font-medium align-middle">Predikat</th>
                                 </tr>
                             </thead>
                             <tbody className="text-gray-900 bg-white">
                                 {nilaiTahfizh && nilaiTahfizh.length > 0 ? nilaiTahfizh.map((item, idx) => (
                                     <tr key={idx}>
-                                        <td className="p-1 border border-gray-300 text-center">{idx + 1}</td>
-                                        <td className="p-1 border border-gray-300 font-medium">
+                                        <td className="py-2 px-2 border border-gray-300 text-center align-middle">{idx + 1}</td>
+                                        <td className="py-2 px-2 border border-gray-300 font-medium align-middle">
                                             {item.mapel?.nama || item.komponen || '-'}
                                         </td>
-                                        <td className="p-1 border border-gray-300 text-center font-bold">
+                                        <td className="py-2 px-2 border border-gray-300 text-center font-bold align-middle">
                                             {item.nilai_akhir ?? item.nilai ?? '-'}
                                         </td>
-                                        <td className="p-1 border border-gray-300 text-center">
+                                        <td className="py-2 px-2 border border-gray-300 text-center align-middle">
                                             {item.predikat || getPredikat(item.nilai_akhir ?? item.nilai)}
                                         </td>
                                     </tr>
@@ -140,24 +140,24 @@ const RaportTemplate = ({
                         <table className="w-full border-collapse text-xs">
                             <thead>
                                 <tr>
-                                    <th colSpan="4" className="bg-[#009B7C] text-white p-1 text-center font-bold tracking-wider text-[11px] border border-[#009B7C] uppercase print-color-adjust-exact">
+                                    <th colSpan="4" className="bg-[#009B7C] text-white py-1.5 px-2 text-center font-bold tracking-wider text-[11px] border border-[#009B7C] uppercase print-color-adjust-exact leading-tight">
                                         NILAI MADRASAH
                                     </th>
                                 </tr>
                                 <tr className="bg-[#009B7C] text-white print-color-adjust-exact">
-                                    <th className="p-1 border border-white/30 w-10 text-center font-medium">No</th>
-                                    <th className="p-1 border border-white/30 text-left font-medium">Mata Pelajaran</th>
-                                    <th className="p-1 border border-white/30 w-16 text-center font-medium">Nilai</th>
-                                    <th className="p-1 border border-white/30 w-16 text-center font-medium">Predikat</th>
+                                    <th className="py-1.5 px-2 border border-white w-10 text-center font-medium align-middle">No</th>
+                                    <th className="py-1.5 px-2 border border-white text-left font-medium align-middle">Mata Pelajaran</th>
+                                    <th className="py-1.5 px-2 border border-white w-16 text-center font-medium align-middle">Nilai</th>
+                                    <th className="py-1.5 px-2 border border-white w-16 text-center font-medium align-middle">Predikat</th>
                                 </tr>
                             </thead>
                             <tbody className="text-gray-900 bg-white">
                                 {nilaiMadrasah && nilaiMadrasah.length > 0 ? nilaiMadrasah.map((item, idx) => (
                                     <tr key={idx}>
-                                        <td className="p-1 border border-gray-300 text-center">{idx + 1}</td>
-                                        <td className="p-1 border border-gray-300 font-medium">{item.mapel?.nama || item.nama}</td>
-                                        <td className="p-1 border border-gray-300 text-center font-bold">{item.nilai_akhir ?? item.rata_rata ?? '-'}</td>
-                                        <td className="p-1 border border-gray-300 text-center">{item.predikat}</td>
+                                        <td className="py-2 px-2 border border-gray-300 text-center align-middle">{idx + 1}</td>
+                                        <td className="py-2 px-2 border border-gray-300 font-medium align-middle">{item.mapel?.nama || item.nama}</td>
+                                        <td className="py-2 px-2 border border-gray-300 text-center font-bold align-middle">{item.nilai_akhir ?? item.rata_rata ?? '-'}</td>
+                                        <td className="py-2 px-2 border border-gray-300 text-center align-middle">{item.predikat}</td>
                                     </tr>
                                 )) : (
                                     <tr>
@@ -174,7 +174,7 @@ const RaportTemplate = ({
 
                     {/* 1. Pencapaian Tahfizh */}
                     <div className="border border-[#009B7C] overflow-hidden">
-                        <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
+                        <div className="bg-[#009B7C] text-white py-1.5 px-2 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact leading-tight">
                             Pencapaian Tahfizh
                         </div>
                         <div className="p-2 bg-white">
@@ -197,7 +197,7 @@ const RaportTemplate = ({
 
                     {/* 2. Perilaku Murid */}
                     <div className="border border-[#009B7C] overflow-hidden">
-                        <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
+                        <div className="bg-[#009B7C] text-white py-1.5 px-2 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact leading-tight">
                             Perilaku Murid
                         </div>
                         <div className="p-2 bg-white">
@@ -224,7 +224,7 @@ const RaportTemplate = ({
 
                     {/* 3. Ketidakhadiran */}
                     <div className="border border-[#009B7C] overflow-hidden">
-                        <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
+                        <div className="bg-[#009B7C] text-white py-1.5 px-2 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact leading-tight">
                             Ketidakhadiran
                         </div>
                         <div className="p-3 bg-white text-center">

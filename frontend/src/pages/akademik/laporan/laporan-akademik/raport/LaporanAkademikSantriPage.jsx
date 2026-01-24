@@ -258,7 +258,7 @@ const LaporanAkademikSantriPage = () => {
 
             // Capture format
             const canvas = await html2canvas(element, {
-                scale: 2, // Higher scale for better quality
+                scale: 3, // Higher scale for better quality
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff'
