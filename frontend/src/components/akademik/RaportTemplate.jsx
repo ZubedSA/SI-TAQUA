@@ -174,7 +174,7 @@ const RaportTemplate = ({
 
                     {/* 1. Pencapaian Tahfizh */}
                     <div className="border border-[#009B7C] overflow-hidden">
-                        <div className="bg-[#009B7C] text-white p-2 text-center font-bold text-sm tracking-wide uppercase print-color-adjust-exact">
+                        <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
                             Pencapaian Tahfizh
                         </div>
                         <div className="p-4 bg-white">
@@ -197,7 +197,7 @@ const RaportTemplate = ({
 
                     {/* 2. Perilaku Murid */}
                     <div className="border border-[#009B7C] overflow-hidden">
-                        <div className="bg-[#009B7C] text-white p-2 text-center font-bold text-sm tracking-wide uppercase print-color-adjust-exact">
+                        <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
                             Perilaku Murid
                         </div>
                         <div className="p-4 bg-white">
@@ -224,7 +224,7 @@ const RaportTemplate = ({
 
                     {/* 3. Ketidakhadiran */}
                     <div className="border border-[#009B7C] overflow-hidden">
-                        <div className="bg-[#009B7C] text-white p-2 text-center font-bold text-sm tracking-wide uppercase print-color-adjust-exact">
+                        <div className="bg-[#009B7C] text-white p-1 text-center font-bold text-[11px] tracking-wide uppercase print-color-adjust-exact">
                             Ketidakhadiran
                         </div>
                         <div className="p-6 bg-white text-center">
