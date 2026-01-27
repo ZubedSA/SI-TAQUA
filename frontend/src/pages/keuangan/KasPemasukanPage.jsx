@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Search, Edit2, Trash2, ArrowUpCircle, Download, RefreshCw, Filter, MessageCircle, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -249,6 +250,7 @@ const KasPemasukanPage = () => {
             jumlah: item.jumlah.toString(),
             keterangan: item.keterangan || ''
         })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
         setShowModal(true)
     }
 
@@ -319,7 +321,11 @@ const KasPemasukanPage = () => {
                         onDownloadCSV={handleDownloadCSV}
                     />
                     {canEditKas && (
-                        <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
+                        <button className="btn btn-primary" onClick={() => {
+                            resetForm();
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            setShowModal(true);
+                        }}>
                             <Plus size={18} /> Tambah Pemasukan
                         </button>
                     )}
@@ -334,7 +340,19 @@ const KasPemasukanPage = () => {
                 <ArrowUpCircle size={40} className="summary-icon" />
             </div>
 
-            <div className="filters-bar">
+
+
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ isOpen: false, item: null })}
+                onConfirm={handleDelete}
+                itemName={deleteModal.item?.sumber}
+                message={`Yakin ingin menghapus pemasukan ini?`}
+            />
+
+            {/* Filters Bar */}
+            <div className="filters-bar mt-6">
                 <div className="search-box">
                     <Search size={18} />
                     <input
@@ -351,7 +369,7 @@ const KasPemasukanPage = () => {
                         ...filters,
                         dateFrom: start,
                         dateTo: end,
-                        bulan: '', // Reset bulan selection when using custom date range
+                        bulan: '',
                         tahun: new Date().getFullYear()
                     })}
                 />
@@ -365,10 +383,6 @@ const KasPemasukanPage = () => {
             </div>
 
             <div className="table-container">
-                {/* Filters */}
-
-
-                {/* Data Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
@@ -392,14 +406,14 @@ const KasPemasukanPage = () => {
                                             icon={FileText}
                                             title="Belum ada data pemasukan"
                                             message={filters.search || filters.dateFrom ? "Tidak ditemukan data yang sesuai filter." : "Belum ada data pemasukan kas yang tercatat."}
-                                            actionLabel={canEditKas ? "Tambah Pemasukan" : null}
-                                            onAction={canEditKas ? () => { resetForm(); setShowModal(true) } : null}
+                                            // Removed action button from empty state as form is now always visible
+                                            actionLabel={null}
                                         />
                                     </td>
                                 </tr>
                             ) : (
                                 filteredData.map((item, i) => (
-                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${editItem?.id === item.id ? 'bg-amber-50' : ''}`}>
                                         <td className="px-6 py-4 text-gray-500">{i + 1}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-gray-700">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                                         <td className="px-6 py-4 font-medium text-gray-900">{item.sumber}</td>
@@ -414,29 +428,22 @@ const KasPemasukanPage = () => {
                                         <td className="px-6 py-4 text-gray-500 truncate max-w-xs" title={item.keterangan}>{item.keterangan || '-'}</td>
                                         {canEditKas && (
                                             <td className="px-6 py-4 text-right">
-                                                <MobileActionMenu
-                                                    actions={[
-                                                        { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                        { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
-                                                    ]}
-                                                >
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button
-                                                            onClick={() => openEdit(item)}
-                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => confirmDelete(item)}
-                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Hapus"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </MobileActionMenu>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        onClick={() => openEdit(item)}
+                                                        className={`p-1.5 rounded-lg transition-colors ${editItem?.id === item.id ? 'bg-amber-100 text-amber-700' : 'text-amber-600 hover:bg-amber-50'}`}
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => confirmDelete(item)}
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Hapus"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>
@@ -448,7 +455,7 @@ const KasPemasukanPage = () => {
             </div>
 
             {/* Modal */}
-            {showModal && (
+            {showModal && createPortal(
                 <div className="modal-overlay active">
                     <div className="modal">
                         <div className="modal-header">
@@ -520,7 +527,8 @@ const KasPemasukanPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <DeleteConfirmationModal
@@ -531,7 +539,7 @@ const KasPemasukanPage = () => {
                 message={`Yakin ingin menghapus pemasukan ini?`}
             />
 
-            {/* Save Confirmation Modal Restored */}
+            {/* Save Confirmation Modal */}
             <ConfirmationModal
                 isOpen={saveModal.isOpen}
                 onClose={() => setSaveModal({ isOpen: false })}
@@ -542,7 +550,7 @@ const KasPemasukanPage = () => {
                 variant="success"
                 isLoading={saving}
             />
-        </div >
+        </div>
     )
 }
 

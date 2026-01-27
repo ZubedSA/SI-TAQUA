@@ -290,11 +290,58 @@ const RaportTemplate = ({
                 @media print {
                     @page {
                         size: A4;
-                        margin: 0;
+                        margin: 10mm;
                     }
+                    
+                    /* Force color printing */
                     body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+                    
+                    /* Hide sidebar, header, and other UI elements */
+                    aside, 
+                    header,
+                    nav,
+                    .print\\:hidden,
+                    [class*="sidebar"],
+                    [class*="Sidebar"],
+                    [class*="header"],
+                    [class*="Header"],
+                    button,
+                    .btn,
+                    footer {
+                        display: none !important;
+                    }
+                    
+                    /* Reset transforms for the main content */
+                    .print\\:scale-100,
+                    .print\\:transform-none {
+                        transform: none !important;
+                        scale: 1 !important;
+                    }
+                    
+                    /* Ensure main content takes full width */
+                    main {
+                        margin-left: 0 !important;
+                        width: 100% !important;
+                    }
+                    
+                    /* Page break control */
+                    .break-inside-avoid {
+                        break-inside: avoid;
+                        page-break-inside: avoid;
+                    }
+                    
+                    /* Background colors for tables */
+                    .bg-\\[\\#009B7C\\] {
+                        background-color: #009B7C !important;
+                    }
+                    
+                    /* Ensure white backgrounds print correctly */
+                    .bg-white {
+                        background-color: white !important;
                     }
                 }
             `}</style>

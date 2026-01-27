@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Search, Edit2, Trash2, ArrowDownCircle, Download, RefreshCw, FileText } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -228,6 +229,7 @@ const KasPengeluaranPage = () => {
             jumlah: item.jumlah.toString(),
             keterangan: item.keterangan || ''
         })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
         setShowModal(true)
     }
 
@@ -299,7 +301,11 @@ const KasPengeluaranPage = () => {
                         onDownloadCSV={handleDownloadCSV}
                     />
                     {canEditKas && (
-                        <button className="btn btn-primary" onClick={() => { resetForm(); setShowModal(true) }}>
+                        <button className="btn btn-primary" onClick={() => {
+                            resetForm();
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            setShowModal(true);
+                        }}>
                             <Plus size={18} /> Tambah Pengeluaran
                         </button>
                     )}
@@ -314,7 +320,7 @@ const KasPengeluaranPage = () => {
                 <ArrowDownCircle size={40} className="summary-icon" />
             </div>
 
-            <div className="filters-bar">
+            <div className="filters-bar mt-6">
                 <div className="search-box">
                     <Search size={18} />
                     <input
@@ -354,8 +360,7 @@ const KasPengeluaranPage = () => {
                         icon={FileText}
                         title="Belum ada data pengeluaran"
                         message={filters.search || filters.dateFrom ? "Tidak ditemukan data yang sesuai filter." : "Belum ada data pengeluaran kas yang tercatat."}
-                        actionLabel={canEditKas ? "Tambah Pengeluaran" : null}
-                        onAction={canEditKas ? () => { resetForm(); setShowModal(true) } : null}
+                        actionLabel={null}
                     />
                 ) : (
                     <div className="table-wrapper">
@@ -373,7 +378,7 @@ const KasPengeluaranPage = () => {
                             </thead>
                             <tbody>
                                 {filteredData.map((item, i) => (
-                                    <tr key={item.id}>
+                                    <tr key={item.id} className={editItem?.id === item.id ? 'bg-amber-50' : ''}>
                                         <td>{i + 1}</td>
                                         <td>{formatDate(item.tanggal)}</td>
                                         <td>{item.keperluan}</td>
@@ -398,7 +403,7 @@ const KasPengeluaranPage = () => {
                                                             width: '32px',
                                                             height: '32px',
                                                             borderRadius: '6px',
-                                                            background: '#fef3c7',
+                                                            background: editItem?.id === item.id ? '#fef3c7' : '#fef3c7',
                                                             color: '#d97706',
                                                             border: 'none',
                                                             cursor: 'pointer',
@@ -437,7 +442,7 @@ const KasPengeluaranPage = () => {
             </div>
 
             {
-                showModal && (
+                showModal && createPortal(
                     <div className="modal-overlay active">
                         <div className="modal">
                             <div className="modal-header">
@@ -484,7 +489,8 @@ const KasPengeluaranPage = () => {
                                 </div>
                             </form>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )
             }
 

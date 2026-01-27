@@ -237,7 +237,7 @@ const CetakRaport = () => {
 
             {/* A4 Paper Container - Responsive Wrapper */}
             <div className="w-full flex justify-center overflow-hidden pb-12">
-                <div className="w-[210mm] transform scale-[0.45] sm:scale-75 md:scale-90 lg:scale-100 origin-top transition-transform duration-200 print:transform-none">
+                <div className="w-[210mm] transform scale-[0.45] sm:scale-75 md:scale-90 lg:scale-100 origin-top transition-transform duration-200 print:!scale-100 print:!transform-none">
                     <RaportTemplate
                         santri={santri}
                         semester={semester}

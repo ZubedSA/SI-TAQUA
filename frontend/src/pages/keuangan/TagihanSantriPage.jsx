@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Search, Edit2, Trash2, Receipt, RefreshCw, MessageCircle, AlertCircle, Calendar, Users, DollarSign, Filter, ChevronDown } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -586,7 +587,7 @@ const TagihanSantriPage = () => {
                 </div>
             </Card>
 
-            {showModal && (
+            {showModal && createPortal(
                 <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-lg animate-in zoom-in-95">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -665,7 +666,8 @@ const TagihanSantriPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <DeleteConfirmationModal
