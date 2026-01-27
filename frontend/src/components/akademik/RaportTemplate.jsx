@@ -289,59 +289,71 @@ const RaportTemplate = ({
             <style>{`
                 @media print {
                     @page {
-                        size: A4;
-                        margin: 10mm;
+                        size: A4 portrait;
+                        margin: 8mm;
                     }
                     
                     /* Force color printing */
-                    body {
+                    * {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                         color-adjust: exact !important;
                     }
                     
-                    /* Hide sidebar, header, and other UI elements */
-                    aside, 
-                    header,
-                    nav,
-                    .print\\:hidden,
-                    [class*="sidebar"],
-                    [class*="Sidebar"],
-                    [class*="header"],
-                    [class*="Header"],
-                    button,
-                    .btn,
-                    footer {
+                    /* Hide app chrome - be specific to avoid hiding raport content */
+                    .lg\\:ml-\\[260px\\] {
+                        margin-left: 0 !important;
+                    }
+                    
+                    /* Hide elements with print:hidden class */
+                    .print\\:hidden {
                         display: none !important;
                     }
                     
-                    /* Reset transforms for the main content */
-                    .print\\:scale-100,
-                    .print\\:transform-none {
-                        transform: none !important;
-                        scale: 1 !important;
+                    /* Ensure raport container is visible and properly sized */
+                    .bg-gray-100 {
+                        background: white !important;
+                        padding: 0 !important;
                     }
                     
-                    /* Ensure main content takes full width */
-                    main {
-                        margin-left: 0 !important;
+                    /* Reset any transforms that might cause blank output */
+                    .transform {
+                        transform: none !important;
+                    }
+                    
+                    .scale-\\[0\\.45\\],
+                    .sm\\:scale-75,
+                    .md\\:scale-90,
+                    .lg\\:scale-100 {
+                        transform: scale(1) !important;
+                    }
+                    
+                    /* Ensure content is visible */
+                    .w-\\[210mm\\] {
                         width: 100% !important;
+                        max-width: 100% !important;
+                    }
+                    
+                    /* Background colors for tables - ensure they print */
+                    .bg-\\[\\#009B7C\\] {
+                        background-color: #009B7C !important;
+                        color: white !important;
+                    }
+                    
+                    /* White backgrounds */
+                    .bg-white {
+                        background-color: white !important;
+                    }
+                    
+                    /* Ensure text is visible */
+                    .text-gray-900, .text-gray-800, .text-gray-700 {
+                        color: #111 !important;
                     }
                     
                     /* Page break control */
                     .break-inside-avoid {
                         break-inside: avoid;
                         page-break-inside: avoid;
-                    }
-                    
-                    /* Background colors for tables */
-                    .bg-\\[\\#009B7C\\] {
-                        background-color: #009B7C !important;
-                    }
-                    
-                    /* Ensure white backgrounds print correctly */
-                    .bg-white {
-                        background-color: white !important;
                     }
                 }
             `}</style>

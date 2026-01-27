@@ -192,7 +192,14 @@ const CetakRaport = () => {
     };
 
     const handlePrint = () => {
-        window.print();
+        console.log('handlePrint called'); // Debug log
+        try {
+            window.print();
+            console.log('window.print() executed'); // Debug log
+        } catch (error) {
+            console.error('Print error:', error);
+            alert('Terjadi error saat mencetak: ' + error.message);
+        }
     };
 
     const handleBack = () => {
