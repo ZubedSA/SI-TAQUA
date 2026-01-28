@@ -288,50 +288,75 @@ const RaportTemplate = ({
             {/* Global Print Styles embedded in component to ensure it applies when rendered */}
             <style>{`
                 @media print {
+                    /* Page setup for A4 */
                     @page {
                         size: A4 portrait;
                         margin: 8mm;
                     }
                     
-                    /* Force color printing */
+                    /* Force color printing on all elements */
                     * {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
-                        color-adjust: exact !important;
                     }
                     
-                    /* Hide app chrome - be specific to avoid hiding raport content */
-                    .lg\\:ml-\\[260px\\] {
-                        margin-left: 0 !important;
-                    }
-                    
-                    /* Hide elements with print:hidden class */
-                    .print\\:hidden {
+                    /* Hide app chrome completely */
+                    aside, nav, header, footer,
+                    .sidebar, .header, .bottom-nav,
+                    .print\\:hidden,
+                    button,
+                    [class*="sidebar"],
+                    [class*="Sidebar"] {
                         display: none !important;
+                    }
+                    
+                    /* Reset layout margins */
+                    .lg\\:ml-\\[260px\\],
+                    .main-content,
+                    main {
+                        margin-left: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                    }
+                    
+                    /* Force body reset for clean print */
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: white !important;
+                        overflow: visible !important;
                     }
                     
                     /* Ensure raport container is visible and properly sized */
                     .bg-gray-100 {
                         background: white !important;
                         padding: 0 !important;
+                        min-height: auto !important;
                     }
                     
-                    /* Reset any transforms that might cause blank output */
-                    .transform {
-                        transform: none !important;
-                    }
-                    
+                    /* CRITICAL: Reset all transforms to prevent blank output */
+                    .transform,
+                    [class*="scale-"],
+                    [class*="translate-"],
                     .scale-\\[0\\.45\\],
                     .sm\\:scale-75,
                     .md\\:scale-90,
                     .lg\\:scale-100 {
+                        transform: none !important;
                         transform: scale(1) !important;
                     }
                     
-                    /* Ensure content is visible */
+                    /* Ensure the raport wrapper takes full width */
                     .w-\\[210mm\\] {
                         width: 100% !important;
                         max-width: 100% !important;
+                        transform: none !important;
+                    }
+                    
+                    /* Force flex container to show content */
+                    .flex.justify-center {
+                        display: block !important;
                     }
                     
                     /* Background colors for tables - ensure they print */
@@ -346,14 +371,33 @@ const RaportTemplate = ({
                     }
                     
                     /* Ensure text is visible */
-                    .text-gray-900, .text-gray-800, .text-gray-700 {
-                        color: #111 !important;
+                    .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600 {
+                        color: #111827 !important;
+                    }
+                    
+                    .text-white {
+                        color: white !important;
                     }
                     
                     /* Page break control */
                     .break-inside-avoid {
                         break-inside: avoid;
                         page-break-inside: avoid;
+                    }
+                    
+                    /* Ensure tables don't break */
+                    table, tr, th, td {
+                        break-inside: avoid;
+                        page-break-inside: avoid;
+                    }
+                    
+                    /* Force raport content visibility */
+                    .bg-white.p-\\[5mm\\] {
+                        padding: 5mm !important;
+                        width: 100% !important;
+                        max-width: 210mm !important;
+                        margin: 0 auto !important;
+                        box-shadow: none !important;
                     }
                 }
             `}</style>

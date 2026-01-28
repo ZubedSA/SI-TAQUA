@@ -819,3 +819,83 @@
     transform: none !important;
   }
 }
+
+/* ==========================================================================
+   GLOBAL PRINT STYLES
+   ========================================================================== */
+@media print {
+
+  /* Hide all navigation and chrome elements */
+  aside,
+  nav,
+  header,
+  footer,
+  .sidebar,
+  .header,
+  .bottom-nav,
+  .mobile-nav,
+  .desktop-sidebar,
+  [class*="sidebar"],
+  [class*="Sidebar"],
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Reset body and html for clean print */
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    background-color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Reset main content area */
+  main,
+  .main-content,
+  #root,
+  .lg\:ml-\[260px\] {
+    margin: 0 !important;
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Reset any transforms that may cause blank output */
+  .transform,
+  [class*="scale-"],
+  [class*="translate-"] {
+    transform: none !important;
+  }
+
+  /* Page setup for A4 */
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  /* Prevent page breaks in critical sections */
+  .break-inside-avoid,
+  table,
+  tr,
+  th,
+  td {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Ensure backgrounds print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}

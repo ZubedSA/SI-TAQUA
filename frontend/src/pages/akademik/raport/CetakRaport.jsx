@@ -237,7 +237,7 @@ const CetakRaport = () => {
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg shadow-sm hover:bg-emerald-700"
                     >
                         <Printer size={18} />
-                        Cetak PDF
+                        Cetak Raport
                     </button>
                 </div>
             </div>
