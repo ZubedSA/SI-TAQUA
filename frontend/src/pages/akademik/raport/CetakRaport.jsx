@@ -253,7 +253,7 @@ const CetakRaport = () => {
                         perilaku={perilaku}
                         taujihad={taujihad}
                         ketidakhadiran={ketidakhadiran}
-                        musyrifName={santri.musyrif_nama}
+                        musyrifName={santri?.musyrif_nama}
                     />
                 </div>
             </div>

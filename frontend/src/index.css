@@ -898,4 +898,38 @@
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
+
+  /* CRITICAL: Force table borders for Chrome print */
+  table {
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    border: 1pt solid #000 !important;
+    margin: 0 !important;
+  }
+
+  table th,
+  table td {
+    border: 1pt solid #000 !important;
+    border-width: 1pt !important;
+    border-style: solid !important;
+    border-color: #000 !important;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    background-color: inherit !important;
+  }
+
+  /* Additional selector for more specificity */
+  table tbody td,
+  table thead th,
+  table tbody tr td,
+  table thead tr th {
+    border: 1pt solid #000 !important;
+  }
+
+  table tr,
+  table thead,
+  table tbody {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 }
