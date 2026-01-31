@@ -137,9 +137,9 @@ const InputPerilakuPage = () => {
             const taujihadUpserts = []
 
             for (const [santriId, data] of Object.entries(formData)) {
-                // Prepare Perilaku Data
+                // Prepare Perilaku Data - generate UUID if no existing id
                 perilakuUpserts.push({
-                    id: data.perilaku_id, // include if updating
+                    id: data.perilaku_id || crypto.randomUUID(),
                     santri_id: santriId,
                     semester_id: filters.semester_id,
                     ketekunan: data.ketekunan,
@@ -151,8 +151,6 @@ const InputPerilakuPage = () => {
                     total_hafalan: data.total_hafalan,
                     sakit: parseInt(data.sakit) || 0,
                     izin: parseInt(data.izin) || 0,
-                    sakit: parseInt(data.sakit) || 0,
-                    izin: parseInt(data.izin) || 0,
                     alpha: parseInt(data.alpha) || 0,
                     pulang: parseInt(data.pulang) || 0
                 })
@@ -160,7 +158,7 @@ const InputPerilakuPage = () => {
                 // Prepare Taujihad Data
                 if (data.catatan) {
                     taujihadUpserts.push({
-                        id: data.taujihad_id, // include if updating
+                        id: data.taujihad_id || crypto.randomUUID(),
                         santri_id: santriId,
                         semester_id: filters.semester_id,
                         catatan: data.catatan
@@ -168,38 +166,24 @@ const InputPerilakuPage = () => {
                 }
             }
 
-            // Perform Upserts
-            // Use single upsert calls per table for bulk efficiency if possible, 
-            // but Supabase ID handling might be tricky with 'id' field being undefined for inserts.
-            // Safe way: Loop.
-
-            // Note: For real bulk upsert correctly, we should remove 'id' if it's undefined
-            // and rely on Unique constraints (santri_id, semester_id).
-            // 'perilaku_semester' has UNIQUE(santri_id, semester_id) constraint? Yes (migration file).
-            // 'taujihad' should also have it.
-
-            // Clean payloads
-            const cleanPerilakuPayload = perilakuUpserts.map(({ id, ...rest }) => ({
-                ...(id ? { id } : {}),
-                ...rest
-            }))
-
-            const cleanTaujihadPayload = taujihadUpserts.map(({ id, ...rest }) => ({
-                ...(id ? { id } : {}),
-                ...rest
-            }))
-
-            if (cleanPerilakuPayload.length > 0) {
-                const { error: pErr } = await supabase.from('perilaku_semester').upsert(cleanPerilakuPayload, { onConflict: 'santri_id, semester_id' })
+            // Upsert with onConflict to handle existing records
+            if (perilakuUpserts.length > 0) {
+                const { error: pErr } = await supabase
+                    .from('perilaku_semester')
+                    .upsert(perilakuUpserts, {
+                        onConflict: 'santri_id, semester_id',
+                        ignoreDuplicates: false
+                    })
                 if (pErr) throw pErr
             }
 
-            if (cleanTaujihadPayload.length > 0) {
-                // Assuming taujihad also has unique constraint. If not, this might duplicate.
-                // If no unique constraint, we have to use ID for updates.
-                // Let's assume Unique constraint exists as it's standard.
-                // If it fails, I'll recommend adding it.
-                const { error: tErr } = await supabase.from('taujihad').upsert(cleanTaujihadPayload, { onConflict: 'santri_id, semester_id' })
+            if (taujihadUpserts.length > 0) {
+                const { error: tErr } = await supabase
+                    .from('taujihad')
+                    .upsert(taujihadUpserts, {
+                        onConflict: 'santri_id, semester_id',
+                        ignoreDuplicates: false
+                    })
                 if (tErr) throw tErr
             }
 

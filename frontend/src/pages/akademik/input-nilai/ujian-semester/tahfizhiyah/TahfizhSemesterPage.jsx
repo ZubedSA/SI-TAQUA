@@ -66,7 +66,6 @@ const TahfizhSemesterPage = () => {
                     nilaiMap[n.santri_id] = {
                         id: n.id,
                         hafalan_baru: n.nilai_hafalan || '',
-                        murajaah: n.nilai_murajaah || '',
                         tajwid: n.nilai_tajwid || '',
                         kelancaran: n.nilai_kelancaran || ''
                     }
@@ -100,11 +99,10 @@ const TahfizhSemesterPage = () => {
         const data = nilai[santriId]
         if (!data) return '-'
         const hb = parseFloat(data.hafalan_baru) || 0
-        const m = parseFloat(data.murajaah) || 0
         const t = parseFloat(data.tajwid) || 0
         const k = parseFloat(data.kelancaran) || 0
-        if (hb === 0 && m === 0 && t === 0 && k === 0) return '-'
-        return ((hb + m + t + k) / 4).toFixed(1)
+        if (hb === 0 && t === 0 && k === 0) return '-'
+        return ((hb + t + k) / 3).toFixed(1)
     }
 
     const handleSave = async () => {
@@ -114,10 +112,9 @@ const TahfizhSemesterPage = () => {
 
         try {
             for (const [santriId, data] of Object.entries(nilai)) {
-                if (!data.hafalan_baru && !data.murajaah && !data.tajwid && !data.kelancaran) continue
+                if (!data.hafalan_baru && !data.tajwid && !data.kelancaran) continue
 
                 const hb = parseFloat(data.hafalan_baru) || 0
-                const m = parseFloat(data.murajaah) || 0
                 const t = parseFloat(data.tajwid) || 0
                 const k = parseFloat(data.kelancaran) || 0
 
@@ -127,10 +124,9 @@ const TahfizhSemesterPage = () => {
                     jenis_ujian: 'semester',
                     kategori: 'Tahfizhiyah',
                     nilai_hafalan: hb,
-                    nilai_murajaah: m,
                     nilai_tajwid: t,
                     nilai_kelancaran: k,
-                    nilai_akhir: (hb + m + t + k) / 4
+                    nilai_akhir: (hb + t + k) / 3
                 }
 
                 if (data.id) {
@@ -218,8 +214,7 @@ const TahfizhSemesterPage = () => {
                                     <th>No</th>
                                     <th>NIS</th>
                                     <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Hafalan Baru</th>
-                                    <th style={{ textAlign: 'center' }}>Murajaah</th>
+                                    <th style={{ textAlign: 'center' }}>Hafalan</th>
                                     <th style={{ textAlign: 'center' }}>Tajwid</th>
                                     <th style={{ textAlign: 'center' }}>Kelancaran</th>
                                     <th style={{ textAlign: 'center' }}>Rata-rata</th>
@@ -227,9 +222,9 @@ const TahfizhSemesterPage = () => {
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan="8" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
+                                    <tr><td colSpan="7" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
                                 ) : santri.length === 0 ? (
-                                    <tr><td colSpan="8" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
+                                    <tr><td colSpan="7" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
                                 ) : (
                                     santri.map((s, i) => (
                                         <tr key={s.id}>
@@ -245,17 +240,6 @@ const TahfizhSemesterPage = () => {
                                                     placeholder="0-100"
                                                     value={nilai[s.id]?.hafalan_baru ?? ''}
                                                     onChange={e => handleNilaiChange(s.id, 'hafalan_baru', e.target.value)}
-                                                />
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="100"
-                                                    placeholder="0-100"
-                                                    value={nilai[s.id]?.murajaah ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'murajaah', e.target.value)}
                                                 />
                                             </td>
                                             <td style={{ textAlign: 'center' }}>

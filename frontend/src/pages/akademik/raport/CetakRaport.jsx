@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import { ArrowLeft, Printer, FileText, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import RaportTemplate from '../../../components/akademik/RaportTemplate';
 
 const CetakRaport = () => {
@@ -80,10 +81,11 @@ const CetakRaport = () => {
                 .single();
             setSemester(semesterData);
 
-            // 3. Fetch All Mapels (Master List)
+            // 3. Fetch Madrosiyah Mapels (for Madrasah grades)
             const { data: allMapels } = await supabase
                 .from('mapel')
                 .select('*')
+                .eq('kategori', 'Madrosiyah')
                 .order('nama', { ascending: true });
             const expectedMapels = allMapels || [];
 
@@ -149,8 +151,7 @@ const CetakRaport = () => {
                 const components = [
                     { key: 'nilai_hafalan', label: 'Hafalan' },
                     { key: 'nilai_tajwid', label: 'Tajwid' },
-                    { key: 'nilai_kelancaran', label: 'Fashohah / Kelancaran' },
-                    { key: 'nilai_murajaah', label: "Muraja'ah" }
+                    { key: 'nilai_kelancaran', label: 'Fashohah / Kelancaran' }
                 ];
 
                 components.forEach(comp => {
@@ -206,6 +207,70 @@ const CetakRaport = () => {
         navigate(-1);
     };
 
+    // Ref for capturing the template
+    const raportTemplateRef = React.useRef(null);
+    const [isDownloading, setIsDownloading] = React.useState(false);
+
+    const handleDownloadPDF = async () => {
+        if (!raportTemplateRef.current) return;
+        setIsDownloading(true);
+
+        try {
+            const element = raportTemplateRef.current;
+
+            // Save original transform and temporarily reset to full scale
+            const originalTransform = element.style.transform;
+            element.style.transform = 'none';
+
+            // Wait for reflow
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Capture at full scale for best quality
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+
+            // Restore original transform immediately after capture
+            element.style.transform = originalTransform;
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            // Calculate aspect ratio to fit A4
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            // Add image to PDF
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            // Handle multiple pages if needed
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            // Save PDF with santri name
+            pdf.save(`Raport_${santri.nama.replace(/\s/g, '_')}_${semester?.nama || 'Semester'}.pdf`);
+
+        } catch (error) {
+            console.error("PDF Download Error:", error);
+            alert('Terjadi error saat download PDF: ' + error.message);
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     if (loading) {
         return <div className="flex items-center justify-center min-h-screen">Loading Raport...</div>;
     }
@@ -213,12 +278,6 @@ const CetakRaport = () => {
     if (!santri || !semester) {
         return <div className="p-8 text-center">Data tidak ditemukan. Pastikan URL benar.</div>;
     }
-
-
-
-    // Styling constants to match the image
-    const TABLE_HEADER_COLOR = 'bg-[#009B7C]'; // Green color from image header
-    const HEADER_TEXT_COLOR = 'text-white';
 
     return (
         <div className="bg-gray-100 min-h-screen p-4 md:p-8 print:p-0 print:bg-white">
@@ -233,6 +292,14 @@ const CetakRaport = () => {
                 </button>
                 <div className="flex gap-2">
                     <button
+                        onClick={handleDownloadPDF}
+                        disabled={isDownloading}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        <Download size={18} />
+                        {isDownloading ? 'Generating...' : 'Download PDF'}
+                    </button>
+                    <button
                         onClick={handlePrint}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg shadow-sm hover:bg-emerald-700"
                     >
@@ -244,7 +311,10 @@ const CetakRaport = () => {
 
             {/* A4 Paper Container - Responsive Wrapper */}
             <div className="w-full flex justify-center overflow-hidden pb-12">
-                <div className="w-[210mm] transform scale-[0.45] sm:scale-75 md:scale-90 lg:scale-100 origin-top transition-transform duration-200 print:!scale-100 print:!transform-none">
+                <div
+                    ref={raportTemplateRef}
+                    className="w-[210mm] transform scale-[0.45] sm:scale-75 md:scale-90 lg:scale-100 origin-top transition-transform duration-200 print:!scale-100 print:!transform-none"
+                >
                     <RaportTemplate
                         santri={santri}
                         semester={semester}

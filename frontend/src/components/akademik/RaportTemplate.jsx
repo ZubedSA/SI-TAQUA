@@ -352,7 +352,7 @@ const RaportTemplate = ({
                     <div style={{ textAlign: 'center' }}>
                         <p style={{ fontSize: '11px', marginBottom: '40px', color: '#111827' }}>Wali Murid</p>
                         <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                            ({santri?.wali_nama || 'RAHEMI'})
+                            ({santri?.nama_wali || '.....................'})
                         </p>
                     </div>
                     {/* Right: Musyrif */}

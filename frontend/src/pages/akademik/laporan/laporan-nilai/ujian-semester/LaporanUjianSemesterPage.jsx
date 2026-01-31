@@ -69,10 +69,9 @@ const LaporanUjianSemesterPage = () => {
             const result = santriData.map(santri => {
                 const nilai = nilaiData?.find(n => n.santri_id === santri.id)
                 const hafalan = nilai?.nilai_hafalan || 0
-                const murajaah = nilai?.nilai_murajaah || 0
                 const tajwid = nilai?.nilai_tajwid || 0
                 const kelancaran = nilai?.nilai_kelancaran || 0
-                const rataRata = nilai ? ((hafalan + murajaah + tajwid + kelancaran) / 4) : 0
+                const rataRata = nilai ? ((hafalan + tajwid + kelancaran) / 3) : 0
 
                 let predikat = '-'
                 if (nilai) {
@@ -86,7 +85,6 @@ const LaporanUjianSemesterPage = () => {
                 return {
                     ...santri,
                     hafalan: nilai ? hafalan : '-',
-                    murajaah: nilai ? murajaah : '-',
                     tajwid: nilai ? tajwid : '-',
                     kelancaran: nilai ? kelancaran : '-',
                     rata_rata: nilai ? rataRata.toFixed(1) : '-',
@@ -128,12 +126,11 @@ const LaporanUjianSemesterPage = () => {
                 { label: 'Halaqoh', value: selectedHalaqoh?.nama || '-' },
                 { label: 'Semester', value: `${currentSem?.nama || '-'} - ${currentSem?.tahun_ajaran || '-'}` }
             ],
-            columns: ['NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat'],
+            columns: ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat'],
             data: data.map(s => [
                 s.nis,
                 s.nama,
                 s.hafalan,
-                s.murajaah,
                 s.tajwid,
                 s.kelancaran,
                 s.rata_rata,
@@ -147,12 +144,11 @@ const LaporanUjianSemesterPage = () => {
     }
 
     const handleDownloadExcel = () => {
-        const columns = ['NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']
         const exportData = data.map(s => ({
             NIS: s.nis,
             Nama: s.nama,
             Hafalan: s.hafalan,
-            Murajaah: s.murajaah,
             Tajwid: s.tajwid,
             Kelancaran: s.kelancaran,
             'Rata-rata': s.rata_rata,
@@ -162,12 +158,11 @@ const LaporanUjianSemesterPage = () => {
     }
 
     const handleDownloadCSV = () => {
-        const columns = ['NIS', 'Nama', 'Hafalan', 'Murajaah', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']
+        const columns = ['NIS', 'Nama', 'Hafalan', 'Tajwid', 'Kelancaran', 'Rata-rata', 'Predikat']
         const exportData = data.map(s => ({
             NIS: s.nis,
             Nama: s.nama,
             Hafalan: s.hafalan,
-            Murajaah: s.murajaah,
             Tajwid: s.tajwid,
             Kelancaran: s.kelancaran,
             'Rata-rata': s.rata_rata,
@@ -249,8 +244,7 @@ const LaporanUjianSemesterPage = () => {
                                     <th>No</th>
                                     <th>NIS</th>
                                     <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Hafalan Baru</th>
-                                    <th style={{ textAlign: 'center' }}>Murajaah</th>
+                                    <th style={{ textAlign: 'center' }}>Hafalan</th>
                                     <th style={{ textAlign: 'center' }}>Tajwid</th>
                                     <th style={{ textAlign: 'center' }}>Kelancaran</th>
                                     <th style={{ textAlign: 'center' }}>Rata-rata</th>
@@ -264,7 +258,6 @@ const LaporanUjianSemesterPage = () => {
                                         <td>{s.nis}</td>
                                         <td>{s.nama}</td>
                                         <td style={{ textAlign: 'center' }}>{s.hafalan}</td>
-                                        <td style={{ textAlign: 'center' }}>{s.murajaah}</td>
                                         <td style={{ textAlign: 'center' }}>{s.tajwid}</td>
                                         <td style={{ textAlign: 'center' }}>{s.kelancaran}</td>
                                         <td style={{ textAlign: 'center', fontWeight: '600' }}>{s.rata_rata}</td>
