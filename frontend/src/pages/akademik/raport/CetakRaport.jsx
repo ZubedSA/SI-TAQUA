@@ -27,6 +27,39 @@ const CetakRaport = () => {
         pulang: '-'
     });
 
+    // Dynamic scale for responsive mobile
+    const [scale, setScale] = useState(1);
+    const [marginLeft, setMarginLeft] = useState(0);
+
+    useEffect(() => {
+        const calculateScale = () => {
+            const viewportWidth = window.innerWidth;
+            const raportWidth = 794; // 210mm in pixels
+            const margin = 16; // margin total (8 each side)
+
+            if (viewportWidth >= 1024) {
+                setScale(1); // Desktop - full size
+                setMarginLeft(0);
+            } else if (viewportWidth >= 768) {
+                setScale(0.95); // Tablet large
+                setMarginLeft(0);
+            } else {
+                // Mobile - calculate to fit with margins
+                const availableWidth = viewportWidth - margin;
+                const newScale = Math.min(0.95, availableWidth / raportWidth);
+                setScale(newScale);
+                // Center the scaled raport
+                const scaledWidth = raportWidth * newScale;
+                const leftMargin = (viewportWidth - scaledWidth) / 2;
+                setMarginLeft(leftMargin);
+            }
+        };
+
+        calculateScale();
+        window.addEventListener('resize', calculateScale);
+        return () => window.removeEventListener('resize', calculateScale);
+    }, []);
+
     useEffect(() => {
         if (santriId && semesterId) {
             fetchData();
@@ -280,40 +313,46 @@ const CetakRaport = () => {
     }
 
     return (
-        <div className="bg-gray-100 min-h-screen p-4 md:p-8 print:p-0 print:bg-white">
+        <div className="bg-gray-100 min-h-screen p-0 md:p-8 print:p-0 print:bg-white">
             {/* Action Bar - Hidden on Print */}
-            <div className="max-w-[210mm] mx-auto mb-6 flex flex-wrap gap-2 justify-between items-center print:hidden">
+            <div className="px-2 md:px-0 py-2 md:py-0 max-w-[210mm] mx-auto mb-4 md:mb-6 flex flex-wrap gap-2 justify-between items-center print:hidden bg-white md:bg-transparent shadow-sm md:shadow-none">
                 <button
                     onClick={handleBack}
-                    className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg shadow-sm hover:bg-gray-50"
+                    className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-white text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 text-sm md:text-base"
                 >
-                    <ArrowLeft size={18} />
-                    Kembali
+                    <ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" />
+                    <span className="hidden sm:inline">Kembali</span>
                 </button>
-                <div className="flex gap-2">
+                <div className="flex gap-1 md:gap-2">
                     <button
                         onClick={handleDownloadPDF}
                         disabled={isDownloading}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                        className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 disabled:opacity-50 text-xs md:text-base"
                     >
-                        <Download size={18} />
-                        {isDownloading ? 'Generating...' : 'Download PDF'}
+                        <Download size={16} className="md:w-[18px] md:h-[18px]" />
+                        <span className="hidden sm:inline">{isDownloading ? 'Generating...' : 'Download PDF'}</span>
+                        <span className="sm:hidden">{isDownloading ? '...' : 'PDF'}</span>
                     </button>
                     <button
                         onClick={handlePrint}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg shadow-sm hover:bg-emerald-700"
+                        className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 bg-emerald-600 text-white rounded-lg shadow-sm hover:bg-emerald-700 text-xs md:text-base"
                     >
-                        <Printer size={18} />
-                        Cetak Raport
+                        <Printer size={16} className="md:w-[18px] md:h-[18px]" />
+                        <span className="hidden sm:inline">Cetak Raport</span>
+                        <span className="sm:hidden">Cetak</span>
                     </button>
                 </div>
             </div>
 
             {/* A4 Paper Container - Desktop layout scaled to fit screen */}
-            <div className="w-full flex justify-center overflow-hidden pb-12">
+            <div className="w-full md:flex md:justify-center overflow-hidden pb-12">
                 <div
                     ref={raportTemplateRef}
-                    className="w-[210mm] transform scale-[0.58] sm:scale-[0.75] md:scale-[0.92] lg:scale-100 origin-top print:!scale-100 print:!transform-none"
+                    className="w-[210mm] origin-top-left md:origin-top print:!scale-100 print:!transform-none"
+                    style={{
+                        transform: `scale(${scale})`,
+                        marginLeft: marginLeft > 0 ? `${marginLeft}px` : undefined
+                    }}
                 >
                     <RaportTemplate
                         santri={santri}

@@ -70,7 +70,6 @@ const adminMenuItems = [
         ]
     },
 
-    // Master Data
     {
         id: 'master-data',
         icon: Database,
@@ -97,8 +96,6 @@ const adminMenuItems = [
             { path: '/rekap-nilai/syahri', icon: FileText, label: 'Rekap Nilai Syahri' },
             { path: '/rekap-nilai/semester', icon: FileText, label: 'Rekap Nilai Semester' },
             { path: '/hafalan', icon: BookMarked, label: 'Progress Hafalan' },
-            { path: '/presensi', icon: CalendarCheck, label: 'Kehadiran' },
-            { path: '/presensi', icon: CalendarCheck, label: 'Kehadiran' },
             { path: '/akademik/kalender', icon: Calendar, label: 'Kalender Akademik' },
             { path: '/laporan/akademik-santri', icon: FileSearch, label: 'Laporan Akademik' },
         ]
@@ -243,6 +240,7 @@ const musyrifMenuItems = [
             { path: '/kelas', icon: Home, label: 'Kelas' },
             { path: '/mapel', icon: BookOpen, label: 'Mapel' },
             { path: '/halaqoh', icon: Circle, label: 'Halaqoh' },
+            { path: '/semester', icon: Calendar, label: 'Semester' },
         ]
     },
 
@@ -306,8 +304,6 @@ const musyrifMenuItems = [
                 children: [
                     { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian' },
                     { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan' },
-                    { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan' },
-                    { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester' },
                 ]
             },
             {
@@ -321,10 +317,6 @@ const musyrifMenuItems = [
             },
         ]
     },
-    // Presensi
-    { path: '/presensi', icon: CalendarCheck, label: 'Pembinaan Santri' },
-    // Semester
-    { path: '/semester', icon: Calendar, label: 'Semester' },
 ]
 
 
@@ -343,11 +335,10 @@ const operatorMenuItems = [
             { path: '/guru', icon: GraduationCap, label: 'Data Guru', roles: ['admin', 'guru'] },
             { path: '/kelas', icon: Home, label: 'Kelas', roles: ['admin', 'guru'] },
             { path: '/mapel', icon: BookOpen, label: 'Mapel', roles: ['admin', 'guru'] },
-
-            { path: '/mapel', icon: BookOpen, label: 'Mapel', roles: ['admin', 'guru'] },
             { path: '/jadwal', icon: Calendar, label: 'Jadwal Pelajaran', roles: ['admin', 'guru'] },
             { path: '/akademik/kalender', icon: Calendar, label: 'Kalender Akademik', roles: ['admin', 'guru'] },
             { path: '/halaqoh', icon: Circle, label: 'Halaqoh', roles: ['admin', 'guru'] },
+            { path: '/semester', icon: Calendar, label: 'Semester', roles: ['admin', 'guru'] },
         ]
     },
 
@@ -414,7 +405,7 @@ const operatorMenuItems = [
                             { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester', roles: ['admin', 'guru'] },
                         ]
                     },
-                    // Laporan Hafalan - dengan Harian, Mingguan, Bulanan, Semester
+                    // Laporan Hafalan - dengan Harian, Mingguan
                     {
                         id: 'laporan-hafalan',
                         icon: BookMarked,
@@ -423,8 +414,6 @@ const operatorMenuItems = [
                         children: [
                             { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian', roles: ['admin', 'guru'] },
                             { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan', roles: ['admin', 'guru'] },
-                            { path: '/hafalan/pencapaian/bulanan', icon: Calendar, label: 'Bulanan', roles: ['admin', 'guru'] },
-                            { path: '/hafalan/pencapaian/semester', icon: CalendarCheck, label: 'Semester', roles: ['admin', 'guru'] },
                         ]
                     },
                     // Laporan Akademik
@@ -440,10 +429,6 @@ const operatorMenuItems = [
                     },
                 ]
             },
-            // Pembinaan Santri (existing)
-            { path: '/presensi', icon: CalendarCheck, label: 'Pembinaan Santri', roles: ['admin', 'guru'] },
-            // Semester (existing)
-            { path: '/semester', icon: Calendar, label: 'Semester', roles: ['admin', 'guru'] },
         ]
     },
 
@@ -547,7 +532,6 @@ const Sidebar = ({ mobileOpen, onClose }) => {
             path.startsWith('/akademik') ||
             path.startsWith('/dashboard/akademik') ||
             path.startsWith('/hafalan') ||
-            path.startsWith('/presensi') ||
             path.startsWith('/laporan/') || // Most reports are academic
             // Core academic data paths (check if not explicitly finance)
             ((path.startsWith('/santri') || path.startsWith('/guru') || path.startsWith('/kelas') || path.startsWith('/halaqoh') || path.startsWith('/mapel') || path.startsWith('/semester')) && !path.startsWith('/keuangan'))

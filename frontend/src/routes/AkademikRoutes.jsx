@@ -15,8 +15,6 @@ import SemesterPage from '../pages/semester/SemesterPage'
 import HafalanList from '../pages/akademik/hafalan/input-hafalan/HafalanList'
 import HafalanForm from '../pages/akademik/hafalan/input-hafalan/HafalanForm'
 import PencapaianMingguanPage from '../pages/akademik/hafalan/rekap-hafalan/PencapaianMingguanPage'
-import PencapaianBulananPage from '../pages/akademik/hafalan/rekap-hafalan/PencapaianBulananPage'
-import PencapaianSemesterPage from '../pages/akademik/hafalan/rekap-hafalan/PencapaianSemesterPage'
 
 // Menus
 import InputNilaiMenu from '../pages/akademik/menus/InputNilaiMenu'
@@ -43,9 +41,8 @@ import LaporanUjianSyahriPage from '../pages/akademik/laporan/laporan-nilai/ujia
 import LaporanUjianSemesterPage from '../pages/akademik/laporan/laporan-nilai/ujian-semester/LaporanUjianSemesterPage'
 import LaporanAkademikSantriPage from '../pages/akademik/laporan/laporan-akademik/raport/LaporanAkademikSantriPage'
 
-// Jadwal & Presensi
+// Jadwal
 import JadwalPage from '../pages/akademik/jadwal/JadwalPage'
-import PresensiHarianPage from '../pages/akademik/presensi/PresensiHarianPage'
 import JurnalPage from '../pages/akademik/jurnal/JurnalPage'
 import KalenderAkademikPage from '../pages/akademik/kalender/KalenderAkademikPage'
 
@@ -118,15 +115,10 @@ const AkademikRoutes = () => {
                 </ProtectedRoute>
             } />
 
-            {/* Jadwal & Presensi */}
+            {/* Jadwal */}
             <Route path="/jadwal" element={
                 <ProtectedRoute roles={['admin', 'guru']} fallbackRedirect="/dashboard/admin">
                     <JadwalPage />
-                </ProtectedRoute>
-            } />
-            <Route path="/presensi" element={
-                <ProtectedRoute roles={['admin', 'guru', 'musyrif', 'pengasuh']} fallbackRedirect="/dashboard/admin">
-                    <PresensiHarianPage />
                 </ProtectedRoute>
             } />
             <Route path="/akademik/jurnal" element={
@@ -163,16 +155,7 @@ const AkademikRoutes = () => {
                     <PencapaianMingguanPage />
                 </ProtectedRoute>
             } />
-            <Route path="/hafalan/pencapaian/bulanan" element={
-                <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
-                    <PencapaianBulananPage />
-                </ProtectedRoute>
-            } />
-            <Route path="/hafalan/pencapaian/semester" element={
-                <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
-                    <PencapaianSemesterPage />
-                </ProtectedRoute>
-            } />
+
 
             {/* Nilai Navigation Menus */}
             <Route path="/akademik/menu/input-nilai" element={
