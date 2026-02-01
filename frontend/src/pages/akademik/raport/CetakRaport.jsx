@@ -282,7 +282,7 @@ const CetakRaport = () => {
     return (
         <div className="bg-gray-100 min-h-screen p-4 md:p-8 print:p-0 print:bg-white">
             {/* Action Bar - Hidden on Print */}
-            <div className="max-w-[210mm] mx-auto mb-6 flex justify-between items-center print:hidden">
+            <div className="max-w-[210mm] mx-auto mb-6 flex flex-wrap gap-2 justify-between items-center print:hidden">
                 <button
                     onClick={handleBack}
                     className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg shadow-sm hover:bg-gray-50"
@@ -309,22 +309,24 @@ const CetakRaport = () => {
                 </div>
             </div>
 
-            {/* A4 Paper Container - Responsive Wrapper */}
-            <div className="w-full flex justify-center overflow-hidden pb-12">
-                <div
-                    ref={raportTemplateRef}
-                    className="w-[210mm] transform scale-[0.45] sm:scale-75 md:scale-90 lg:scale-100 origin-top transition-transform duration-200 print:!scale-100 print:!transform-none"
-                >
-                    <RaportTemplate
-                        santri={santri}
-                        semester={semester}
-                        nilaiTahfizh={nilaiTahfizh}
-                        nilaiMadrasah={nilaiMadrasah}
-                        perilaku={perilaku}
-                        taujihad={taujihad}
-                        ketidakhadiran={ketidakhadiran}
-                        musyrifName={santri?.musyrif_nama}
-                    />
+            {/* A4 Paper Container - Same as desktop on all devices */}
+            <div className="w-full overflow-x-auto pb-12">
+                <div className="flex justify-center" style={{ minWidth: '210mm' }}>
+                    <div
+                        ref={raportTemplateRef}
+                        className="w-[210mm] print:!transform-none"
+                    >
+                        <RaportTemplate
+                            santri={santri}
+                            semester={semester}
+                            nilaiTahfizh={nilaiTahfizh}
+                            nilaiMadrasah={nilaiMadrasah}
+                            perilaku={perilaku}
+                            taujihad={taujihad}
+                            ketidakhadiran={ketidakhadiran}
+                            musyrifName={santri?.musyrif_nama}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
