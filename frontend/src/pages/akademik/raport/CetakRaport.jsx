@@ -309,24 +309,22 @@ const CetakRaport = () => {
                 </div>
             </div>
 
-            {/* A4 Paper Container - Same as desktop on all devices */}
-            <div className="w-full overflow-x-auto pb-12">
-                <div className="flex justify-center" style={{ minWidth: '210mm' }}>
-                    <div
-                        ref={raportTemplateRef}
-                        className="w-[210mm] print:!transform-none"
-                    >
-                        <RaportTemplate
-                            santri={santri}
-                            semester={semester}
-                            nilaiTahfizh={nilaiTahfizh}
-                            nilaiMadrasah={nilaiMadrasah}
-                            perilaku={perilaku}
-                            taujihad={taujihad}
-                            ketidakhadiran={ketidakhadiran}
-                            musyrifName={santri?.musyrif_nama}
-                        />
-                    </div>
+            {/* A4 Paper Container - Desktop layout scaled to fit screen */}
+            <div className="w-full flex justify-center overflow-hidden pb-12">
+                <div
+                    ref={raportTemplateRef}
+                    className="w-[210mm] transform scale-[0.58] sm:scale-[0.75] md:scale-[0.92] lg:scale-100 origin-top print:!scale-100 print:!transform-none"
+                >
+                    <RaportTemplate
+                        santri={santri}
+                        semester={semester}
+                        nilaiTahfizh={nilaiTahfizh}
+                        nilaiMadrasah={nilaiMadrasah}
+                        perilaku={perilaku}
+                        taujihad={taujihad}
+                        ketidakhadiran={ketidakhadiran}
+                        musyrifName={santri?.musyrif_nama}
+                    />
                 </div>
             </div>
         </div>
