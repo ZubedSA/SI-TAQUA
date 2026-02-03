@@ -382,6 +382,13 @@ const RaportTemplate = ({
                             margin: 10mm;
                         }
                         
+                        html, body {
+                            width: 210mm;
+                            height: auto !important;
+                            overflow: visible !important;
+                            background-color: white !important;
+                        }
+
                         body * {
                             visibility: hidden;
                         }
@@ -396,6 +403,8 @@ const RaportTemplate = ({
                             left: 0;
                             top: 0;
                             width: 100%;
+                            height: auto !important;
+                            overflow: visible !important;
                             padding: 0 !important;
                             margin: 0 !important;
                         }

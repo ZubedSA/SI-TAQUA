@@ -1,6 +1,29 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useToast } from '../../context/ToastContext'
+import { useEffect, useRef } from 'react'
+
+// Global throttling to prevent toast spam
+let lastUnauthorizedToastTime = 0
+const TOAST_COOLDOWN = 2000 // 2 seconds
+
+/**
+ * Helper component to handle redirect with notification
+ */
+const UnauthorizedRedirect = ({ to, message }) => {
+    const showToast = useToast()
+
+    useEffect(() => {
+        const now = Date.now()
+        if (message && (now - lastUnauthorizedToastTime > TOAST_COOLDOWN)) {
+            showToast.error(message, 'Akses Ditolak')
+            lastUnauthorizedToastTime = now
+        }
+    }, [message, showToast])
+
+    return <Navigate to={to} replace />
+}
 
 /**
  * Enhanced Protected Route Component
@@ -11,6 +34,7 @@ import { usePermissions } from '../../hooks/usePermissions'
  * @param {string} module - Module name for permission check (optional)
  * @param {string} redirectTo - Path to redirect if unauthorized
  * @param {boolean} requireAuth - Whether authentication is required (default true)
+ * @param {string} unauthorizedMessage - Message to show when access is denied
  */
 const ProtectedRoute = ({
     children,
@@ -18,7 +42,8 @@ const ProtectedRoute = ({
     module = null,
     redirectTo = '/login',
     fallbackRedirect = '/',
-    requireAuth = true
+    requireAuth = true,
+    unauthorizedMessage = 'Anda tidak memiliki akses ke halaman ini'
 }) => {
     const { user, loading } = useAuth()
     const { hasRole, canAccess, isAuthenticated } = usePermissions()
@@ -63,13 +88,13 @@ const ProtectedRoute = ({
     if (roles) {
         const allowedRoles = Array.isArray(roles) ? roles : [roles]
         if (!hasRole(allowedRoles)) {
-            return <Navigate to={fallbackRedirect} replace />
+            return <UnauthorizedRedirect to={fallbackRedirect} message={unauthorizedMessage} />
         }
     }
 
     // Check module-based access
     if (module && !canAccess(module)) {
-        return <Navigate to={fallbackRedirect} replace />
+        return <UnauthorizedRedirect to={fallbackRedirect} message={unauthorizedMessage} />
     }
 
     return children

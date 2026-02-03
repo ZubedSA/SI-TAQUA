@@ -264,55 +264,57 @@ const musyrifMenuItems = [
                         children: [
                             { path: '/akademik/nilai/tahfizh/semester', icon: BookMarked, label: "Qur'aniyah" },
                             { path: '/akademik/nilai/madros/uas', icon: BookOpen, label: 'Madrasiyah' },
+                            // Perilaku & Catatan (Moved here)
+                            { path: '/akademik/nilai/perilaku', icon: PenLine, label: 'Perilaku & Catatan' },
                         ]
                     },
                 ]
             },
-            // Perilaku & Catatan (New)
-            { path: '/akademik/nilai/perilaku', icon: PenLine, label: 'Perilaku & Catatan' },
-        ]
-    },
-    // Hafalan Menu
-    {
-        id: 'hafalan-menu',
-        icon: BookMarked,
-        label: 'Hafalan',
-        children: [
-            { path: '/hafalan', icon: PenLine, label: 'Input Hafalan' },
-            { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan' },
-        ]
-    },
-    // Laporan Menu
-    {
-        id: 'laporan-akademik',
-        icon: Download,
-        label: 'Laporan',
-        children: [
+
+            // Hafalan Menu
             {
-                id: 'laporan-nilai',
-                icon: FileText,
-                label: 'Laporan Nilai',
-                children: [
-                    { path: '/laporan/ujian-syahri', icon: Calendar, label: 'Ujian Syahri' },
-                    { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester' },
-                ]
-            },
-            {
-                id: 'laporan-hafalan',
+                id: 'hafalan-menu',
                 icon: BookMarked,
-                label: 'Laporan Hafalan',
+                label: 'Hafalan',
                 children: [
-                    { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian' },
-                    { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan' },
+                    { path: '/hafalan', icon: PenLine, label: 'Input Hafalan' },
+                    { path: '/hafalan?tab=rekap', icon: FileText, label: 'Rekap Hafalan' },
                 ]
             },
+
+            // Laporan Menu
             {
-                id: 'laporan-akademik-santri',
-                icon: Users,
-                label: 'Laporan Akademik',
+                id: 'laporan-akademik',
+                icon: Download,
+                label: 'Laporan',
                 children: [
-                    { path: '/laporan/akademik-santri', icon: Users, label: 'Raport' },
-                    { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan' },
+                    {
+                        id: 'laporan-nilai',
+                        icon: FileText,
+                        label: 'Laporan Nilai',
+                        children: [
+                            { path: '/laporan/ujian-syahri', icon: Calendar, label: 'Ujian Syahri' },
+                            { path: '/laporan/ujian-semester', icon: CalendarCheck, label: 'Ujian Semester' },
+                        ]
+                    },
+                    {
+                        id: 'laporan-hafalan',
+                        icon: BookMarked,
+                        label: 'Laporan Hafalan',
+                        children: [
+                            { path: '/laporan/hafalan-harian', icon: Calendar, label: 'Harian' },
+                            { path: '/laporan/rekap-mingguan', icon: Calendar, label: 'Mingguan' },
+                        ]
+                    },
+                    {
+                        id: 'laporan-akademik-santri',
+                        icon: Users,
+                        label: 'Laporan Akademik',
+                        children: [
+                            { path: '/laporan/akademik-santri', icon: Users, label: 'Raport' },
+                            { path: '/rekap-nilai/grafik', icon: Activity, label: 'Grafik Perkembangan' },
+                        ]
+                    },
                 ]
             },
         ]

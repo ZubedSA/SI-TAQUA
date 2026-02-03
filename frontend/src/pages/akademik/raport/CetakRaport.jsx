@@ -345,7 +345,7 @@ const CetakRaport = () => {
             </div>
 
             {/* A4 Paper Container - Desktop layout scaled to fit screen */}
-            <div className="w-full md:flex md:justify-center overflow-hidden pb-12">
+            <div className="w-full md:flex md:justify-center pb-12">
                 <div
                     ref={raportTemplateRef}
                     className="w-[210mm] origin-top-left md:origin-top print:!scale-100 print:!transform-none"

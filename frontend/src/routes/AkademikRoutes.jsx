@@ -181,7 +181,7 @@ const AkademikRoutes = () => {
                 </ProtectedRoute>
             } />
             <Route path="/akademik/nilai/tahfizh/semester" element={
-                <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
+                <ProtectedRoute roles={['admin']} fallbackRedirect="/">
                     <TahfizhSemesterPage />
                 </ProtectedRoute>
             } />
@@ -196,12 +196,12 @@ const AkademikRoutes = () => {
                 </ProtectedRoute>
             } />
             <Route path="/akademik/nilai/madros/uas" element={
-                <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
+                <ProtectedRoute roles={['admin']} fallbackRedirect="/">
                     <MadrosUASPage />
                 </ProtectedRoute>
             } />
             <Route path="/akademik/nilai/perilaku" element={
-                <ProtectedRoute roles={['admin', 'guru', 'musyrif']} fallbackRedirect="/dashboard/admin">
+                <ProtectedRoute roles={['admin']} fallbackRedirect="/">
                     <InputPerilakuPage />
                 </ProtectedRoute>
             } />

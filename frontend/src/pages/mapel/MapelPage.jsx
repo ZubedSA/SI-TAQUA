@@ -305,7 +305,7 @@ const MapelPage = () => {
             </Card>
 
             {showModal && (
-                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+                <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-start justify-center pt-20 p-4 animate-in fade-in">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                             <h3 className="text-lg font-bold text-gray-900">{editData ? 'Edit Mapel' : 'Tambah Mapel'}</h3>

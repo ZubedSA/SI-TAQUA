@@ -90,7 +90,9 @@ const JadwalPage = () => {
             const payload = {
                 ...formData,
                 kelas_id: selectedKelas,
-                tahun_ajaran: selectedTahun
+                tahun_ajaran: selectedTahun,
+                guru_id: formData.guru_id || null, // Convert empty string to null
+                mapel_id: formData.mapel_id || null // Ensure valid UUID or null
             }
 
             if (editData) {
