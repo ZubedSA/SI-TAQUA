@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check, User, AlertCircle, CheckCircle, ChevronDown, X, Layers, List } from 'lucide-react'
+import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check, User, AlertCircle, CheckCircle, ChevronDown, X, Layers, List, Edit2 } from 'lucide-react'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { generateLaporanPDF, generateKwitansiPDF } from '../../utils/pdfGenerator'
 import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
-import { logCreate } from '../../lib/auditLog'
+import { logCreate, logUpdate } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import { useCalendar } from '../../context/CalendarContext'
@@ -39,6 +39,17 @@ const PembayaranSantriPage = () => {
         keterangan: ''
     })
     const [saving, setSaving] = useState(false)
+
+    // Edit Payment State
+    const [showEditModal, setShowEditModal] = useState(false)
+    const [editingPayment, setEditingPayment] = useState(null)
+    const [editForm, setEditForm] = useState({
+        jumlah: '',
+        tanggal: '',
+        metode: 'Tunai',
+        keterangan: ''
+    })
+    const [editSaveModal, setEditSaveModal] = useState({ isOpen: false })
 
     const metodeOptions = ['Tunai', 'Transfer', 'QRIS', 'Lainnya']
 
@@ -98,7 +109,7 @@ const PembayaranSantriPage = () => {
                     .order('jatuh_tempo', { ascending: false }),
                 supabase
                     .from('pembayaran_santri')
-                    .select('*, tagihan:tagihan_id(kategori:kategori_id(nama))')
+                    .select('id, tagihan_id, jumlah, tanggal, metode, keterangan, santri_id, bukti_url, created_at, tagihan:tagihan_id(id, jumlah, kategori:kategori_id(nama))')
                     .eq('santri_id', santriId)
                     .order('tanggal', { ascending: false })
                     .limit(20)
@@ -481,6 +492,124 @@ const PembayaranSantriPage = () => {
 
     const isOverdue = (jatuhTempo) => new Date(jatuhTempo) < new Date()
 
+    // Open edit modal for payment correction
+    const handleOpenEditPayment = (payment) => {
+        setEditingPayment(payment)
+        setEditForm({
+            jumlah: payment.jumlah.toString(),
+            tanggal: payment.tanggal,
+            metode: payment.metode || 'Tunai',
+            keterangan: payment.keterangan || ''
+        })
+        setShowEditModal(true)
+    }
+
+    // Handle edit payment form submit
+    const handleEditFormSubmit = (e) => {
+        e.preventDefault()
+        setEditSaveModal({ isOpen: true })
+    }
+
+    // Execute payment edit/correction
+    const executeEditPayment = async () => {
+        setSaving(true)
+        try {
+            const oldAmount = Number(editingPayment.jumlah)
+            const newAmount = parseFloat(editForm.jumlah)
+            const tagihanId = editingPayment.tagihan_id
+
+            // Safety check for tagihan_id
+            if (!tagihanId) {
+                throw new Error('Data tagihan tidak ditemukan. Silakan refresh halaman dan coba lagi.')
+            }
+
+            // Update pembayaran record
+            const { error: updateError } = await supabase
+                .from('pembayaran_santri')
+                .update({
+                    jumlah: newAmount,
+                    tanggal: editForm.tanggal,
+                    metode: editForm.metode,
+                    keterangan: editForm.keterangan
+                })
+                .eq('id', editingPayment.id)
+
+            if (updateError) throw updateError
+
+            // Always update the tagihan amount to match the corrected payment
+            // When correcting a payment, the tagihan amount should also be corrected
+            const { error: updateTagihanError } = await supabase
+                .from('tagihan_santri')
+                .update({ jumlah: newAmount })
+                .eq('id', tagihanId)
+
+            if (updateTagihanError) throw updateTagihanError
+
+            // Recalculate tagihan status
+            // Get total payments for this tagihan
+            const { data: allPayments, error: payError } = await supabase
+                .from('pembayaran_santri')
+                .select('jumlah')
+                .eq('tagihan_id', tagihanId)
+
+            if (payError) throw payError
+
+            // Get tagihan details
+            const { data: tagihan, error: tagError } = await supabase
+                .from('tagihan_santri')
+                .select('jumlah')
+                .eq('id', tagihanId)
+                .single()
+
+            if (tagError) throw tagError
+
+            const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.jumlah), 0)
+            const tagihanAmount = Number(tagihan.jumlah)
+
+            // Determine new status
+            let newStatus = 'Belum Lunas'
+            if (totalPaid >= tagihanAmount) {
+                newStatus = 'Lunas'
+            } else if (totalPaid > 0) {
+                newStatus = 'Sebagian'
+            }
+
+            // Update tagihan status
+            const { error: statusError } = await supabase
+                .from('tagihan_santri')
+                .update({ status: newStatus })
+                .eq('id', tagihanId)
+
+            if (statusError) throw statusError
+
+            // Audit Log - UPDATE (non-blocking)
+            try {
+                await logUpdate(
+                    'pembayaran_santri',
+                    selectedSantri?.nama || 'Unknown',
+                    `Koreksi pembayaran: ${selectedSantri?.nama} - ${editingPayment.tagihan?.kategori?.nama} - Rp ${oldAmount.toLocaleString('id-ID')} → Rp ${newAmount.toLocaleString('id-ID')}`,
+                    { jumlah: oldAmount, tanggal: editingPayment.tanggal, metode: editingPayment.metode },
+                    { jumlah: newAmount, tanggal: editForm.tanggal, metode: editForm.metode }
+                )
+            } catch (auditErr) {
+                console.warn('Audit log failed (non-critical):', auditErr)
+            }
+
+            // Refresh data
+            await fetchTagihanSantri(selectedSantri.id)
+
+            setEditSaveModal({ isOpen: false })
+            setShowEditModal(false)
+            setEditingPayment(null)
+            showToast.success('Koreksi pembayaran berhasil disimpan!')
+        } catch (err) {
+            console.error('Error updating payment:', err)
+            showToast.error('Gagal menyimpan koreksi: ' + err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <div className="keuangan-page">
             <div className="page-header">
@@ -723,10 +852,14 @@ const PembayaranSantriPage = () => {
                                                 <div className="history-item-actions">
                                                     <MobileActionMenu
                                                         actions={[
+                                                            { icon: <Edit2 size={16} />, label: 'Edit/Koreksi', onClick: () => handleOpenEditPayment(p) },
                                                             { icon: <MessageCircle size={16} />, label: 'Kirim WA', onClick: () => handleSendHistoryWASingle(p) },
                                                             { icon: <Printer size={16} />, label: 'Cetak Kwitansi', onClick: () => handlePrintHistorySingle(p) }
                                                         ]}
                                                     >
+                                                        <button className="btn-icon-xs" onClick={() => handleOpenEditPayment(p)} title="Edit/Koreksi">
+                                                            <Edit2 size={14} />
+                                                        </button>
                                                         <button className="btn-icon-xs" onClick={() => handleSendHistoryWASingle(p)} title="Kirim WA">
                                                             <MessageCircle size={14} />
                                                         </button>
@@ -852,6 +985,88 @@ const PembayaranSantriPage = () => {
                 message={`Apakah Anda yakin ingin memproses pembayaran sebesar Rp ${Number(form.jumlah).toLocaleString('id-ID')}?`}
                 confirmLabel="Bayar"
                 variant="success"
+            />
+
+            {/* Edit Payment Modal */}
+            {showEditModal && (
+                <div className="modal-overlay active">
+                    <div className="modal">
+                        <div className="modal-header">
+                            <h3>✏️ Koreksi Pembayaran</h3>
+                            <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
+                        </div>
+                        <form onSubmit={handleEditFormSubmit}>
+                            <div className="modal-body">
+                                <div className="payment-info-card" style={{ marginBottom: '1rem', background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+                                    <div className="payment-info-row">
+                                        <span>Santri</span>
+                                        <strong>{selectedSantri?.nama}</strong>
+                                    </div>
+                                    <div className="payment-info-row">
+                                        <span>Kategori</span>
+                                        <strong>{editingPayment?.tagihan?.kategori?.nama || '-'}</strong>
+                                    </div>
+                                    <div className="payment-info-row" style={{ color: '#6b7280' }}>
+                                        <span>Nominal Sebelumnya</span>
+                                        <strong>Rp {Number(editingPayment?.jumlah || 0).toLocaleString('id-ID')}</strong>
+                                    </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Jumlah Bayar Baru (Rp) *</label>
+                                    <input
+                                        type="number"
+                                        value={editForm.jumlah}
+                                        onChange={e => setEditForm({ ...editForm, jumlah: e.target.value })}
+                                        min="0"
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Tanggal Bayar</label>
+                                    <div style={{ width: '100%' }}>
+                                        <DateRangePicker
+                                            singleDate
+                                            startDate={editForm.tanggal}
+                                            onChange={(date) => setEditForm({ ...editForm, tanggal: date })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Metode Pembayaran</label>
+                                    <select value={editForm.metode} onChange={e => setEditForm({ ...editForm, metode: e.target.value })}>
+                                        {metodeOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Keterangan</label>
+                                    <textarea
+                                        value={editForm.keterangan}
+                                        onChange={e => setEditForm({ ...editForm, keterangan: e.target.value })}
+                                        rows={2}
+                                        placeholder="Alasan koreksi (opsional)"
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Batal</button>
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? <><RefreshCw size={14} className="spin" /> Menyimpan...</> : <><Check size={18} /> Simpan Koreksi</>}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            <ConfirmationModal
+                isOpen={editSaveModal.isOpen}
+                onClose={() => setEditSaveModal({ isOpen: false })}
+                onConfirm={executeEditPayment}
+                title="Konfirmasi Koreksi Pembayaran"
+                message={`Apakah Anda yakin ingin mengubah pembayaran dari Rp ${Number(editingPayment?.jumlah || 0).toLocaleString('id-ID')} menjadi Rp ${Number(editForm.jumlah || 0).toLocaleString('id-ID')}? Status tagihan akan dihitung ulang secara otomatis.`}
+                confirmLabel="Simpan Koreksi"
+                variant="warning"
             />
         </div>
     )
