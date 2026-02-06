@@ -38,8 +38,8 @@ const PersetujuanDanaPage = () => {
                 .order('created_at', { ascending: false })
             if (error) throw error
             setData(result || [])
-        } catch (err) {
-            console.error('Error:', err.message)
+        } catch {
+            showToast.error('Gagal memuat data')
         } finally {
             setLoading(false)
         }

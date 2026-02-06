@@ -26,8 +26,6 @@ const KasLaporanPage = () => {
 
     const fetchData = async () => {
         setLoading(true)
-        console.log('[KasLaporan] Filters:', filters)
-        console.log('[KasLaporan] Mode:', mode)
         try {
             let queryPemasukan = supabase.from('kas_pemasukan').select('*').order('tanggal', { ascending: false })
             let queryPengeluaran = supabase.from('kas_pengeluaran').select('*').order('tanggal', { ascending: false })
@@ -57,9 +55,10 @@ const KasLaporanPage = () => {
 
             const [pemasukanRes, pengeluaranRes] = await Promise.all([queryPemasukan, queryPengeluaran])
             setPemasukan(pemasukanRes.data || [])
+            setPemasukan(pemasukanRes.data || [])
             setPengeluaran(pengeluaranRes.data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
+        } catch {
+            showToast.error('Gagal memuat data')
         } finally {
             setLoading(false)
         }

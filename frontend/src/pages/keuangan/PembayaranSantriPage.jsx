@@ -85,12 +85,10 @@ const PembayaranSantriPage = () => {
                 .order('nama')
 
             if (error) {
-                console.error('Supabase error:', error)
                 throw error
             }
             setSantriList(data || [])
         } catch (err) {
-            console.error('Error fetching santri:', err)
             showToast.error('Gagal mencari santri: ' + err.message)
             setSantriList([])
         } finally {
@@ -122,7 +120,6 @@ const PembayaranSantriPage = () => {
             setPembayaranHistory(pembayaranRes.data || [])
             setSelectedTagihanIds([]) // Reset selection
         } catch (err) {
-            console.error('Error:', err.message)
             showToast.error('Gagal memuat data tagihan: ' + err.message)
         } finally {
             setLoadingTagihan(false)
@@ -190,8 +187,6 @@ const PembayaranSantriPage = () => {
 
     const executePayment = async () => {
         setSaving(true)
-        console.log('[PembayaranSantri] Processing payment:', form)
-        console.log('[PembayaranSantri] Mode:', mode)
         try {
             const jumlahBayar = parseFloat(form.jumlah)
 
@@ -591,8 +586,8 @@ const PembayaranSantriPage = () => {
                     { jumlah: oldAmount, tanggal: editingPayment.tanggal, metode: editingPayment.metode },
                     { jumlah: newAmount, tanggal: editForm.tanggal, metode: editForm.metode }
                 )
-            } catch (auditErr) {
-                console.warn('Audit log failed (non-critical):', auditErr)
+            } catch {
+                // Audit log failed - non-critical, silently ignore
             }
 
             // Refresh data
@@ -603,7 +598,6 @@ const PembayaranSantriPage = () => {
             setEditingPayment(null)
             showToast.success('Koreksi pembayaran berhasil disimpan!')
         } catch (err) {
-            console.error('Error updating payment:', err)
             showToast.error('Gagal menyimpan koreksi: ' + err.message)
         } finally {
             setSaving(false)

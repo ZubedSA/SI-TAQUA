@@ -62,7 +62,9 @@ export const authService = {
             const { profile, roles, requiresSelection } = await this.resolveRoles(authData.user.id, authData.user)
 
             // 4. Log Success Activity (Fire and forget)
-            this.logLoginAttempt(email, 'SUCCESS').catch(e => console.warn('Log failed', e))
+            this.logLoginAttempt(email, 'SUCCESS').catch(() => {
+                // Login logging failed - non-critical
+            })
 
             return {
                 user: authData.user,
@@ -73,11 +75,11 @@ export const authService = {
             }
 
         } catch (error) {
-            console.error('Login process error:', error)
-
             // Log Failure (Fire and forget)
             if (error.message !== 'Username tidak ditemukan.') {
-                this.logLoginAttempt(email || usernameOrEmail, 'FAILED', error.message).catch(e => console.warn('Log failed', e))
+                this.logLoginAttempt(email || usernameOrEmail, 'FAILED', error.message).catch(() => {
+                    // Login logging failed - non-critical
+                })
             }
 
             throw error
@@ -119,8 +121,8 @@ export const authService = {
                 requiresSelection
             }
 
-        } catch (error) {
-            console.warn('Profile fetch failed, using fallback profile:', error)
+        } catch {
+            // Profile fetch failed - construct fallback profile from Auth Metadata
 
             // CONSTRUCT FALLBACK PROFILE from Auth Metadata
             const metadata = authUser?.user_metadata || {}
@@ -157,11 +159,13 @@ export const authService = {
                 .from('user_profiles')
                 .update({ active_role: targetRole })
                 .eq('user_id', userId)
-        } catch (e) {
-            console.warn('Failed to update active_role in DB:', e)
+        } catch {
+            // Failed to update active_role in DB - non-critical
         }
 
-        this.logLoginAttempt(null, 'ROLE_SWITCH', `Switched to ${targetRole}`).catch(() => { })
+        this.logLoginAttempt(null, 'ROLE_SWITCH', `Switched to ${targetRole}`).catch(() => {
+            // Role switch logging failed - non-critical, silently ignore
+        })
 
         return { role: targetRole, scopeId }
     },
@@ -181,8 +185,8 @@ export const authService = {
             }
             // Add other scope resolutions here
             return null
-        } catch (error) {
-            console.warn(`Scope resolution failed for ${role}:`, error)
+        } catch {
+            // Scope resolution failed - return null as fallback
             return null
         }
     },
@@ -190,18 +194,8 @@ export const authService = {
     /**
      * Log Login Activity
      */
-    async logLoginAttempt(email, status, message = null) {
+    async logLoginAttempt() {
         // DISABLED - log_login_activity function removed from DB
-        // Uncomment when the function is restored
-        // try {
-        //     await supabase.rpc('log_login_activity', {
-        //         p_email: email,
-        //         p_status: status,
-        //         p_message: message
-        //     })
-        // } catch (error) {
-        //     console.warn('Logging failed:', error)
-        // }
-        console.log(`[Auth Log] ${status}: ${email} - ${message || ''}`)
+        // Function kept for future use when logging is restored
     }
 }

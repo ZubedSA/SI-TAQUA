@@ -56,7 +56,7 @@ const KategoriPembayaranPage = () => {
             if (error) throw error
             setData(result || [])
         } catch (err) {
-            console.error('Error:', err.message)
+            showToast.error('Gagal memuat kategori')
         } finally {
             setLoading(false)
         }

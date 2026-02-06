@@ -27,10 +27,8 @@ const KasPengeluaranPage = () => {
     const { canCreate, canUpdate, canDelete } = usePermissions()
     const showToast = useToast() // showToast is returned directly from context, not destructured
 
-    // Multiple checks - admin dan bendahara bisa CRUD
-    const adminCheck = isAdmin() || userProfile?.role === 'admin' || hasRole('admin')
-    const bendaharaCheck = isBendahara() || userProfile?.role === 'bendahara' || hasRole('bendahara')
-    const canEditKas = adminCheck || bendaharaCheck
+    // Permission check - admin dan bendahara
+    const canEditKas = isAdmin() || isBendahara() || userProfile?.role === 'admin' || userProfile?.role === 'bendahara' || hasRole('admin') || hasRole('bendahara')
 
     // Filters State
     const [filters, setFilters] = useState({
@@ -49,12 +47,7 @@ const KasPengeluaranPage = () => {
 
     useEffect(() => {
         setLoading(loadingMain)
-        if (!loadingMain) {
-            console.log('[KasPengeluaran] Data loaded:', rawData.length, 'items')
-            console.log('[KasPengeluaran] Mode:', mode)
-            console.log('[KasPengeluaran] Filters:', filters)
-        }
-    }, [loadingMain, mode, filters])
+    }, [loadingMain])
 
     useEffect(() => {
         fetchKategori()
@@ -63,7 +56,6 @@ const KasPengeluaranPage = () => {
     // Error Handling
     useEffect(() => {
         if (error) {
-            console.error('Error loading kas:', error)
             showToast.error('Gagal memuat data kas')
         }
     }, [error])
@@ -78,8 +70,8 @@ const KasPengeluaranPage = () => {
                 .order('nama')
             if (error) throw error
             setKategoriList(data || [])
-        } catch (error) {
-            console.error('Error loading kategori:', error)
+        } catch {
+            // Silent fail
         }
     }
     const [form, setForm] = useState({
@@ -153,7 +145,9 @@ const KasPengeluaranPage = () => {
                         { keperluan: editItem.keperluan, jumlah: editItem.jumlah, kategori: editItem.kategori },
                         { keperluan: payload.keperluan, jumlah: payload.jumlah, kategori: payload.kategori }
                     )
-                } catch (auditErr) { console.error('Audit log failed', auditErr) }
+                } catch {
+                    // Audit log failed - non-critical
+                }
 
             } else {
                 const { error } = await supabase.from('kas_pengeluaran').insert([payload])
@@ -168,14 +162,15 @@ const KasPengeluaranPage = () => {
                         payload.keperluan,
                         `Tambah pengeluaran: ${payload.keperluan} - Rp ${Number(payload.jumlah).toLocaleString('id-ID')}`
                     )
-                } catch (auditErr) { console.error('Audit log failed', auditErr) }
+                } catch {
+                    // Audit log failed - non-critical
+                }
             }
 
             // 4. Refresh Data (Background)
             if (refetch) await refetch()
 
         } catch (err) {
-            console.error('Submit error:', err)
             showToast.error('Gagal menyimpan: ' + err.message)
             // Form is already closed, so user just sees error toast.
         }
@@ -200,11 +195,9 @@ const KasPengeluaranPage = () => {
                 `Hapus pengeluaran: ${itemToDelete.keperluan} - Rp ${Number(itemToDelete.jumlah).toLocaleString('id-ID')}`
             )
 
-            await refetch()
             showToast.success('Data berhasil dihapus')
             setDeleteModal({ isOpen: false, item: null })
         } catch (err) {
-            console.error('Delete error:', err)
             showToast.error('Gagal menghapus: ' + err.message)
         }
     }

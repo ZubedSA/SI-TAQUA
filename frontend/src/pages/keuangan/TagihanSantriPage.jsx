@@ -52,8 +52,7 @@ const TagihanSantriPage = () => {
     // Error Handling
     useEffect(() => {
         if (error) {
-            console.error('Error loading tagihan:', error)
-            showToast.error('Gagal memuat data tagihan') // Generic error for safety
+            showToast.error('Gagal memuat data tagihan')
         }
     }, [error])
 
@@ -87,8 +86,8 @@ const TagihanSantriPage = () => {
                 .order('nama')
             if (error) throw error
             setKategoriList(data || [])
-        } catch (error) {
-            console.error('Error loading kategori:', error)
+        } catch {
+            // Silent fail - kategori list will be empty
         }
     }
 

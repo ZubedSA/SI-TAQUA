@@ -48,7 +48,7 @@ const AnggaranPage = () => {
             if (error) throw error
             setData(result || [])
         } catch (err) {
-            console.error('Error:', err.message)
+            // Error handled by UI state or silent
         } finally {
             setLoading(false)
         }
@@ -66,8 +66,6 @@ const AnggaranPage = () => {
 
     const executeSave = async () => {
         setSaving(true)
-        console.log('[Anggaran] Saving proposal:', form)
-        console.log('[Anggaran] Mode:', mode)
         try {
             const payload = {
                 nama_program: form.nama_program,

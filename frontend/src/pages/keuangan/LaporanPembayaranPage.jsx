@@ -25,8 +25,6 @@ const LaporanPembayaranPage = () => {
     })
 
     const fetchData = async () => {
-        console.log('[LaporanPembayaran] Fetch triggered:', filters)
-        console.log('[LaporanPembayaran] Mode:', mode)
         setLoading(true)
         try {
             let queryPembayaran = supabase
@@ -59,8 +57,8 @@ const LaporanPembayaranPage = () => {
 
             setPembayaran(pembayaranRes.data || [])
             setTagihan(tagihanRes.data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
+        } catch {
+            showToast.error('Gagal memuat data')
         } finally {
             setLoading(false)
         }

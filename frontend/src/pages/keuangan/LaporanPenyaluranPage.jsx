@@ -26,8 +26,8 @@ const LaporanPenyaluranPage = () => {
             ])
             setAnggaran(anggaranRes.data || [])
             setRealisasi(realisasiRes.data || [])
-        } catch (err) {
-            console.error('Error:', err.message)
+        } catch {
+            showToast.error('Gagal memuat data')
         } finally {
             setLoading(false)
         }

@@ -59,8 +59,8 @@ const RealisasiDanaPage = () => {
                 .order('tanggal', { ascending: false })
             if (error) throw error
             setData(result || [])
-        } catch (err) {
-            console.error('Error:', err.message)
+        } catch {
+            showToast.error('Gagal memuat data')
         } finally {
             setLoading(false)
         }
@@ -78,8 +78,6 @@ const RealisasiDanaPage = () => {
 
     const executeSave = async () => {
         setSaving(true)
-        // console.log('[RealisasiDana] Saving realization:', form)
-        console.log('[RealisasiDana] Mode:', mode)
         try {
             const anggaran = anggaranList.find(a => a.id === form.anggaran_id)
             const payload = {
