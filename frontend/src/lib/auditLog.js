@@ -12,25 +12,32 @@ export const logActivity = async (action, tableName, recordName, description, op
     try {
         console.log('📝 Logging activity:', action, tableName, recordName)
 
-        // Get current user email
+        // Get current user
+        let userId = null
         let userEmail = 'System'
         try {
             const { data: { user } } = await supabase.auth.getUser()
+            userId = user?.id || null
             userEmail = user?.email || 'System'
         } catch (authError) {
             console.warn('Could not get user:', authError.message)
         }
 
+        // Use correct column names that match database schema
         const logData = {
-            user_email: userEmail,
-            action: action,
-            table_name: tableName,
-            record_name: recordName,
-            description: description,
-            record_id: options.recordId || null,
+            user_id: userId,                    // UUID column in database
+            action: action,                     // Action type: CREATE, UPDATE, DELETE, INPUT
+            target_table: tableName,            // Table name (matches DB schema)
+            module: tableName.toUpperCase(),    // Module for filtering
+            source: 'FRONTEND',                 // Mark as frontend activity
+            meta_data: {                        // Store additional details in JSONB
+                record_name: recordName,
+                description: description,
+                record_id: options.recordId || null,
+                user_email: userEmail           // Keep email for reference
+            },
             old_data: options.oldData || null,
-            new_data: options.newData || null,
-            ip_address: null
+            new_data: options.newData || null
         }
 
         console.log('📝 Log data:', logData)

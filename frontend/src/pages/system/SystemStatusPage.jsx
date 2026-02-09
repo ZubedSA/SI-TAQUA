@@ -129,18 +129,24 @@ const SystemStatusPage = () => {
      */
     const fetchReferences = async () => {
         const refs = {}
-        const refTables = ['santri', 'guru', 'kelas', 'halaqoh', 'mapel', 'semester', 'anggaran']
+        const refTables = ['santri', 'guru', 'kelas', 'halaqoh', 'mapel', 'semester', 'anggaran', 'kategori_pembayaran', 'tagihan_santri']
 
         for (const table of refTables) {
-            const { data } = await supabase.from(table).select('*')
-            if (data) {
-                refs[table] = data.reduce((acc, item) => {
-                    // Tentukan field mana yang jadi label
-                    let label = item.nama || item.name || item.judul || item.nama_anggaran
-                    if (table === 'santri') label = `${item.nama} (${item.nis})`
-                    acc[item.id] = label
-                    return acc
-                }, {})
+            try {
+                const { data } = await supabase.from(table).select('*')
+                if (data) {
+                    refs[table] = data.reduce((acc, item) => {
+                        // Tentukan field mana yang jadi label
+                        let label = item.nama || item.name || item.judul || item.nama_anggaran || item.nama_kategori
+                        if (table === 'santri') label = `${item.nama} (${item.nis || '-'})`
+                        if (table === 'guru') label = `${item.nama} (${item.nip || '-'})`
+                        if (table === 'tagihan_santri') label = `Tagihan ${item.bulan}/${item.tahun}`
+                        acc[item.id] = label
+                        return acc
+                    }, {})
+                }
+            } catch (err) {
+                console.warn(`Could not fetch ${table} for reference:`, err.message)
             }
         }
         return refs
@@ -172,6 +178,14 @@ const SystemStatusPage = () => {
                 newRow['Nama Guru'] = refs.guru?.[newRow.guru_id] || 'DATA TIDAK DITEMUKAN'
                 delete newRow.guru_id
             }
+            if (newRow.musyrif_id) {
+                newRow['Musyrif'] = refs.guru?.[newRow.musyrif_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.musyrif_id
+            }
+            if (newRow.wali_kelas_id) {
+                newRow['Wali Kelas'] = refs.guru?.[newRow.wali_kelas_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.wali_kelas_id
+            }
             if (newRow.kelas_id) {
                 newRow['Kelas'] = refs.kelas?.[newRow.kelas_id] || 'DATA TIDAK DITEMUKAN'
                 delete newRow.kelas_id
@@ -192,16 +206,40 @@ const SystemStatusPage = () => {
                 newRow['Anggaran'] = refs.anggaran?.[newRow.anggaran_id] || 'DATA TIDAK DITEMUKAN'
                 delete newRow.anggaran_id
             }
+            if (newRow.kategori_id) {
+                newRow['Kategori'] = refs.kategori_pembayaran?.[newRow.kategori_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.kategori_id
+            }
+            if (newRow.tagihan_id) {
+                newRow['Tagihan'] = refs.tagihan_santri?.[newRow.tagihan_id] || 'DATA TIDAK DITEMUKAN'
+                delete newRow.tagihan_id
+            }
+            if (newRow.pelanggaran_id) {
+                newRow['ID Pelanggaran'] = newRow.pelanggaran_id.substring(0, 8) + '...'
+                delete newRow.pelanggaran_id
+            }
 
             // Format Tanggal & Uang
             Object.keys(newRow).forEach(key => {
-                if (key.includes('tanggal') || key.includes('date') || key.includes('waktu')) {
-                    if (newRow[key]) newRow[key] = new Date(newRow[key]).toLocaleDateString('id-ID')
+                // Format tanggal
+                if (key.includes('tanggal') || key.includes('date') || key.includes('waktu') || key === 'mulai_tampil' || key === 'selesai_tampil') {
+                    if (newRow[key]) {
+                        try {
+                            newRow[key] = new Date(newRow[key]).toLocaleDateString('id-ID')
+                        } catch {
+                            // Keep original if parsing fails
+                        }
+                    }
                 }
-                if (key.includes('total') || key.includes('jumlah') || key.includes('bayar') || key.includes('nominal')) {
+                // Format uang
+                if (key.includes('total') || key.includes('jumlah') || key.includes('bayar') || key.includes('nominal') || key === 'saldo') {
                     if (typeof newRow[key] === 'number') {
                         newRow[key] = newRow[key].toLocaleString('id-ID', { style: 'currency', currency: 'IDR' })
                     }
+                }
+                // Format boolean
+                if (typeof newRow[key] === 'boolean') {
+                    newRow[key] = newRow[key] ? 'Ya' : 'Tidak'
                 }
             })
 

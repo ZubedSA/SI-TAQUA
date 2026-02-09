@@ -495,8 +495,15 @@ const Sidebar = ({ mobileOpen, onClose }) => {
 
     // Auto-switch role based on path (Smart Context Switching)
     // Helps multi-role users see the correct sidebar menu when navigating
+    // IMPORTANT: Skip auto-switch if user is currently admin (monitoring mode)
     useEffect(() => {
         const path = location.pathname
+
+        // Skip auto-switching if user is in admin role (monitoring all areas)
+        if (activeRole === 'admin') {
+            return // Admin can view all pages without switching
+        }
+
         const trySwitch = async (targetRole) => {
             if (activeRole !== targetRole && roles?.includes(targetRole)) {
                 await switchRole(targetRole)

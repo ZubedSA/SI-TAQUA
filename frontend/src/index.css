@@ -933,3 +933,101 @@
     padding: 0 !important;
   }
 }
+
+/* ==========================================================================
+   GLOBAL MODAL STYLES
+   Ensures all modals appear centered on viewport without scrolling
+   ========================================================================== */
+
+/* Modal Overlay - covers entire viewport */
+.modal-overlay,
+.ota-modal-overlay,
+.delete-modal-overlay,
+[class*="-modal-overlay"],
+.fixed.inset-0[class*="z-"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+  padding: var(--space-4);
+  overflow: auto;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Modal Content - centered in viewport */
+.modal-content,
+.modal,
+.ota-modal,
+.delete-modal,
+.preview-modal,
+.raport-modal,
+[class*="-modal"]:not([class*="-modal-overlay"]):not([class*="-modal-header"]):not([class*="-modal-body"]):not([class*="-modal-footer"]):not([class*="-modal-close"]):not([class*="-modal-actions"]):not([class*="-modal-icon"]) {
+  position: relative !important;
+  max-height: 90vh !important;
+  max-width: 90vw !important;
+  margin: auto !important;
+  overflow-y: auto;
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden !important;
+}
+
+/* Modal animation */
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Dark mode modal */
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal,
+[data-theme="dark"] .ota-modal,
+[data-theme="dark"] .delete-modal,
+[data-theme="dark"] .preview-modal {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-default);
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 640px) {
+
+  .modal-content,
+  .modal,
+  .ota-modal,
+  .delete-modal,
+  .preview-modal,
+  .raport-modal {
+    max-height: 85vh !important;
+    max-width: 95vw !important;
+    margin: var(--space-2) !important;
+  }
+
+  .modal-overlay,
+  .ota-modal-overlay,
+  .delete-modal-overlay,
+  [class*="-modal-overlay"] {
+    padding: var(--space-2);
+  }
+}

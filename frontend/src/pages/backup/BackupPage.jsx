@@ -47,16 +47,108 @@ const BackupPage = () => {
 
             for (const table of tables) {
                 try {
-                    const { data, error } = await supabase
-                        .from(table)
-                        .select('*')
+                    // Use table-specific queries with relations for human-readable data
+                    let query = supabase.from(table)
+
+                    // Customize select based on table to include related names
+                    switch (table) {
+                        case 'santri':
+                            query = query.select(`
+                                *,
+                                kelas:kelas_id(nama),
+                                halaqoh:halaqoh_id(nama)
+                            `)
+                            break
+                        case 'hafalan':
+                            query = query.select(`
+                                *,
+                                santri:santri_id(nama, nis),
+                                guru:musyrif_id(nama)
+                            `)
+                            break
+                        case 'nilai':
+                            query = query.select(`
+                                *,
+                                santri:santri_id(nama, nis),
+                                mapel:mapel_id(nama),
+                                guru:guru_id(nama)
+                            `)
+                            break
+                        case 'presensi':
+                            query = query.select(`
+                                *,
+                                santri:santri_id(nama, nis),
+                                kelas:kelas_id(nama)
+                            `)
+                            break
+                        case 'pencapaian_hafalan':
+                            query = query.select(`
+                                *,
+                                santri:santri_id(nama, nis)
+                            `)
+                            break
+                        case 'kelas':
+                            query = query.select(`
+                                *,
+                                wali_kelas:wali_kelas_id(nama)
+                            `)
+                            break
+                        case 'halaqoh':
+                            query = query.select(`
+                                *,
+                                musyrif:musyrif_id(nama)
+                            `)
+                            break
+                        default:
+                            query = query.select('*')
+                    }
+
+                    const { data, error } = await query
 
                     if (error) {
                         console.warn(`Warning: Could not backup ${table}:`, error.message)
                         backup.tables[table] = { error: error.message, data: [] }
                     } else {
-                        backup.tables[table] = { count: data?.length || 0, data: data || [] }
-                        totalRecords += data?.length || 0
+                        // Transform data to flatten related names for readability
+                        const transformedData = data?.map(row => {
+                            const transformed = { ...row }
+
+                            // Flatten nested relations to readable format
+                            if (row.santri) {
+                                transformed.santri_nama = row.santri.nama
+                                transformed.santri_nis = row.santri.nis
+                                delete transformed.santri
+                            }
+                            if (row.kelas && typeof row.kelas === 'object') {
+                                transformed.kelas_nama = row.kelas.nama
+                                delete transformed.kelas
+                            }
+                            if (row.halaqoh && typeof row.halaqoh === 'object') {
+                                transformed.halaqoh_nama = row.halaqoh.nama
+                                delete transformed.halaqoh
+                            }
+                            if (row.guru && typeof row.guru === 'object') {
+                                transformed.guru_nama = row.guru.nama
+                                delete transformed.guru
+                            }
+                            if (row.mapel && typeof row.mapel === 'object') {
+                                transformed.mapel_nama = row.mapel.nama
+                                delete transformed.mapel
+                            }
+                            if (row.wali_kelas && typeof row.wali_kelas === 'object') {
+                                transformed.wali_kelas_nama = row.wali_kelas.nama
+                                delete transformed.wali_kelas
+                            }
+                            if (row.musyrif && typeof row.musyrif === 'object') {
+                                transformed.musyrif_nama = row.musyrif.nama
+                                delete transformed.musyrif
+                            }
+
+                            return transformed
+                        }) || []
+
+                        backup.tables[table] = { count: transformedData.length, data: transformedData }
+                        totalRecords += transformedData.length
                     }
                 } catch (err) {
                     console.warn(`Error backing up ${table}:`, err.message)

@@ -1,27 +1,12 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { usePermissions } from '../../hooks/usePermissions'
-import { useToast } from '../../context/ToastContext'
-import { useEffect, useRef } from 'react'
-
-// Global throttling to prevent toast spam
-let lastUnauthorizedToastTime = 0
-const TOAST_COOLDOWN = 2000 // 2 seconds
 
 /**
- * Helper component to handle redirect with notification
+ * Helper component to handle redirect without notification
+ * Toast notification removed to prevent popup on page refresh
  */
-const UnauthorizedRedirect = ({ to, message }) => {
-    const showToast = useToast()
-
-    useEffect(() => {
-        const now = Date.now()
-        if (message && (now - lastUnauthorizedToastTime > TOAST_COOLDOWN)) {
-            showToast.error(message, 'Akses Ditolak')
-            lastUnauthorizedToastTime = now
-        }
-    }, [message, showToast])
-
+const UnauthorizedRedirect = ({ to }) => {
     return <Navigate to={to} replace />
 }
 
