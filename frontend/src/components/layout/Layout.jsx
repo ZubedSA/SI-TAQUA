@@ -54,7 +54,7 @@ const Layout = () => {
             <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 lg:ml-[260px]`}>
                 <Header onMenuClick={toggleSidebar} />
 
-                <div key={pageKey} className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1600px] w-full mx-auto page-enter">
+                <div key={pageKey} className="flex-1 px-4 py-6 md:p-6 lg:p-8 max-w-[1600px] w-full mx-auto page-enter">
                     <Outlet />
                 </div>
             </main>

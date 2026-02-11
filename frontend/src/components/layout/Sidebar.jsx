@@ -757,13 +757,23 @@ const Sidebar = ({ mobileOpen, onClose }) => {
 
     return (
         <>
+            {/* Backdrop for Mobile - Rendered BEFORE Sidebar so Sidebar sits on top */}
+            {mobileOpen && (
+                <div
+                    className="fixed inset-0 bg-gray-900/50 lg:hidden backdrop-blur-sm transition-opacity"
+                    style={{ zIndex: 9998 }}
+                    onClick={onClose}
+                />
+            )}
+
             {/* Desktop Sidebar & Mobile Drawer */}
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-50 w-[260px] bg-white border-r border-gray-200 
+                    fixed inset-y-0 left-0 w-[260px] bg-white border-r border-gray-200 
                     transition-transform duration-300 ease-in-out lg:translate-x-0
                     ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
                 `}
+                style={{ zIndex: 9999 }}
             >
                 {/* Header */}
                 <div className="h-16 flex items-center px-6 border-b border-gray-100 bg-white">
@@ -806,13 +816,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                 </div>
             </aside>
 
-            {/* Backdrop for Mobile */}
-            {mobileOpen && (
-                <div
-                    className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
-                    onClick={onClose}
-                />
-            )}
+
         </>
     )
 }

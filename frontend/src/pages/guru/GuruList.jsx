@@ -141,7 +141,7 @@ const GuruList = () => {
                 title="Data Guru"
                 description="Kelola data pengajar dan wali kelas"
                 actions={
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <DownloadButton
                             onDownloadPDF={handleDownloadPDF}
                             onDownloadExcel={handleDownloadExcel}

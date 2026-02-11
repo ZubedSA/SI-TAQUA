@@ -330,7 +330,7 @@ const SantriList = () => {
                 description="Kelola data santri pondok pesantren"
                 icon={UserX}
                 actions={
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <DownloadButton
                             onDownloadPDF={handleDownloadPDF}
                             onDownloadExcel={handleDownloadExcel}
@@ -338,6 +338,11 @@ const SantriList = () => {
                         />
                         {canEditSantri && (
                             <>
+                                <Link to="/santri/create">
+                                    <Button>
+                                        <Plus size={18} /> Tambah Santri
+                                    </Button>
+                                </Link>
                                 <input
                                     type="file"
                                     ref={fileInputRef}
@@ -348,11 +353,6 @@ const SantriList = () => {
                                 <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
                                     <Upload size={18} /> Import Excel/CSV
                                 </Button>
-                                <Link to="/santri/create">
-                                    <Button>
-                                        <Plus size={18} /> Tambah Santri
-                                    </Button>
-                                </Link>
                             </>
                         )}
                     </div>
@@ -360,23 +360,25 @@ const SantriList = () => {
             />
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-200 space-y-4">
-                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                        <div className="relative flex-1 w-full md:max-w-md">
+                <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Daftar Santri ({filteredSantri.length})</h3>
+                    <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                        <div className="relative w-full md:w-64">
                             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Cari santri berdasarkan nama atau NIS..."
+                                placeholder="Cari santri..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                             />
                         </div>
-                        <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <span className="text-sm text-gray-500 whitespace-nowrap">Urutkan:</span>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full md:w-auto px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                className="w-full md:w-auto px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                             >
                                 <option value="nama-asc">Nama A-Z</option>
                                 <option value="nama-desc">Nama Z-A</option>
