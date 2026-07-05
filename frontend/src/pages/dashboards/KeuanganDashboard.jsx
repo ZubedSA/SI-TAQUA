@@ -1,0 +1,409 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Bar } from 'react-chartjs-2'
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+} from 'chart.js'
+import {
+    Wallet,
+    TrendingUp,
+    TrendingDown,
+    CreditCard,
+    Receipt,
+    PiggyBank,
+    FileBarChart,
+    ArrowUpCircle,
+    ArrowDownCircle,
+    CheckCircle,
+    Tag,
+    ArrowUpRight,
+    ArrowDownRight,
+    Search,
+    RefreshCw
+} from 'lucide-react'
+import DateRangePicker from '../../components/ui/DateRangePicker'
+import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
+import { useCalendar } from '../../context/CalendarContext'
+import { supabase } from '../../lib/supabase'
+import './KeuanganDashboard.css'
+
+// Register ChartJS
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend
+)
+
+/**
+ * Keuangan Dashboard - Operasional keuangan (bendahara)
+ * Fokus pada kas, pembayaran, dan penyaluran dana
+ */
+const KeuanganDashboard = () => {
+    const { mode } = useCalendar()
+    const [keuanganStats, setKeuanganStats] = useState({
+        pemasukan: 0,
+        pengeluaran: 0,
+        pembayaran: 0,
+        saldo: 0
+    })
+    const [filters, setFilters] = useState({
+        bulan: '',
+        tahun: new Date().getFullYear(),
+        dateFrom: '',
+        dateTo: ''
+    })
+    const [monthlyData, setMonthlyData] = useState({
+        pemasukan: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        pengeluaran: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    })
+    const [loading, setLoading] = useState(true)
+    const [greeting, setGreeting] = useState('')
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
+    const currentYear = new Date().getFullYear()
+
+    const updateGreeting = () => {
+        const hour = new Date().getHours()
+        if (hour >= 4 && hour < 11) setGreeting('Selamat Pagi')
+        else if (hour >= 11 && hour < 15) setGreeting('Selamat Siang')
+        else if (hour >= 15 && hour < 18) setGreeting('Selamat Sore')
+        else setGreeting('Selamat Malam')
+    }
+
+    useEffect(() => {
+        console.log('[KeuanganDashboard] Filters changed:', filters)
+        console.log('[KeuanganDashboard] Mode:', mode)
+        fetchKeuanganStats()
+        fetchMonthlyData()
+    }, [filters.bulan, filters.tahun, filters.dateFrom, filters.dateTo])
+
+    useEffect(() => {
+        updateGreeting()
+        const interval = setInterval(updateGreeting, 60000)
+        return () => clearInterval(interval)
+    }, [])
+
+    const fetchKeuanganStats = async () => {
+        setLoading(true)
+        try {
+            let start = `${currentYear}-01-01`
+            let end = `${currentYear}-12-31`
+
+            if (filters.dateFrom && filters.dateTo) {
+                start = filters.dateFrom
+                end = filters.dateTo
+            } else if (filters.tahun) {
+                start = `${filters.tahun}-01-01`
+                end = `${filters.tahun}-12-31`
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    start = `${filters.tahun}-${month}-01`
+                    end = `${filters.tahun}-${month}-31`
+                }
+            }
+
+            const [pemasukanRes, pengeluaranRes, pembayaranRes] = await Promise.all([
+                supabase.from('kas_pemasukan').select('jumlah').gte('tanggal', start).lte('tanggal', end),
+                supabase.from('kas_pengeluaran').select('jumlah').gte('tanggal', start).lte('tanggal', end),
+                supabase.from('pembayaran_santri').select('jumlah').gte('tanggal', start).lte('tanggal', end)
+            ])
+
+            const totalPemasukan = pemasukanRes.data?.reduce((sum, d) => sum + Number(d.jumlah || 0), 0) || 0
+            const totalPengeluaran = pengeluaranRes.data?.reduce((sum, d) => sum + Number(d.jumlah || 0), 0) || 0
+            const totalPembayaran = pembayaranRes.data?.reduce((sum, d) => sum + Number(d.jumlah || 0), 0) || 0
+
+            setKeuanganStats({
+                pemasukan: totalPemasukan,
+                pengeluaran: totalPengeluaran,
+                pembayaran: totalPembayaran,
+                saldo: totalPemasukan - totalPengeluaran
+            })
+        } catch (error) {
+            console.log('Error fetching keuangan stats:', error.message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchMonthlyData = async () => {
+        try {
+            let start = `${currentYear}-01-01`
+            let end = `${currentYear}-12-31`
+
+            if (filters.dateFrom && filters.dateTo) {
+                start = filters.dateFrom
+                end = filters.dateTo
+            } else if (filters.tahun) {
+                start = `${filters.tahun}-01-01`
+                end = `${filters.tahun}-12-31`
+                if (filters.bulan) {
+                    const month = String(filters.bulan).padStart(2, '0')
+                    start = `${filters.tahun}-${month}-01`
+                    end = `${filters.tahun}-${month}-31`
+                }
+            }
+
+            const [pemasukanRes, pengeluaranRes] = await Promise.all([
+                supabase.from('kas_pemasukan').select('jumlah, tanggal').gte('tanggal', start).lte('tanggal', end),
+                supabase.from('kas_pengeluaran').select('jumlah, tanggal').gte('tanggal', start).lte('tanggal', end)
+            ])
+
+            const pemasukan = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            const pengeluaran = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+            pemasukanRes.data?.forEach(d => {
+                const month = new Date(d.tanggal).getMonth()
+                pemasukan[month] += Number(d.jumlah || 0)
+            })
+
+            pengeluaranRes.data?.forEach(d => {
+                const month = new Date(d.tanggal).getMonth()
+                pengeluaran[month] += Number(d.jumlah || 0)
+            })
+
+            setMonthlyData({ pemasukan, pengeluaran })
+        } catch (error) {
+            console.log('Error fetching monthly data:', error.message)
+        }
+    }
+
+    const formatCurrency = (amount, short = false) => {
+        if (short && amount >= 1000000) {
+            return `Rp ${(amount / 1000000).toFixed(1)}jt`
+        }
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0
+        }).format(amount)
+    }
+
+    // Chart Data
+    const kasBarData = {
+        labels: months,
+        datasets: [
+            {
+                label: 'Pemasukan',
+                data: monthlyData.pemasukan,
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderRadius: 4
+            },
+            {
+                label: 'Pengeluaran',
+                data: monthlyData.pengeluaran,
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                borderRadius: 4
+            }
+        ]
+    }
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+                labels: {
+                    color: '#4b5563',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 12
+                    }
+                }
+            },
+            tooltip: {
+                backgroundColor: '#ffffff',
+                titleColor: '#1f2937',
+                bodyColor: '#4b5563',
+                borderColor: '#e5e7eb',
+                borderWidth: 1,
+                padding: 12,
+                titleFont: { family: "'Inter', sans-serif", size: 14, weight: 'bold' },
+                bodyFont: { family: "'Inter', sans-serif", size: 13 }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                border: { display: false },
+                grid: {
+                    color: '#f3f4f6',
+                },
+                ticks: {
+                    callback: (value) => formatCurrency(value, true),
+                    color: '#6b7280',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11
+                    }
+                }
+            },
+            x: {
+                border: { display: false },
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: '#6b7280',
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 11
+                    }
+                }
+            }
+        }
+    }
+
+    return (
+        <div className="keuangan-dashboard" data-dashboard="bendahara">
+            {/* Welcome Header */}
+            <div className="dashboard-welcome keuangan">
+                <div className="welcome-content">
+                    <h1>👋 {greeting}!</h1>
+                    <p>Dashboard Bendahara PTQA Batuan</p>
+                </div>
+                <div className="welcome-badge">
+                    <Wallet size={20} />
+                    <span>Bendahara</span>
+                </div>
+            </div>
+
+            {/* Quick Stats - Premium Siohioma */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 mt-6">
+                <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:translate-y-[-4px] md:hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 md:p-4 bg-emerald-100 text-emerald-600 rounded-xl md:rounded-2xl">
+                            <ArrowUpCircle size={24} className="md:w-7 md:h-7" />
+                        </div>
+                    </div>
+                    <div>
+                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Total Pemasukan</p>
+                        <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                            {loading ? '...' : formatCurrency(keuanganStats.pemasukan)}
+                        </h3>
+                    </div>
+                </div>
+
+                <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:translate-y-[-4px] md:hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 md:p-4 bg-rose-100 text-rose-600 rounded-xl md:rounded-2xl">
+                            <ArrowDownCircle size={24} className="md:w-7 md:h-7" />
+                        </div>
+                    </div>
+                    <div>
+                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Total Pengeluaran</p>
+                        <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                            {loading ? '...' : formatCurrency(keuanganStats.pengeluaran)}
+                        </h3>
+                    </div>
+                </div>
+
+                <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:translate-y-[-4px] md:hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden sm:col-span-2 lg:col-span-1">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 md:p-4 bg-blue-100 text-blue-600 rounded-xl md:rounded-2xl">
+                            <Wallet size={24} className="md:w-7 md:h-7" />
+                        </div>
+                    </div>
+                    <div>
+                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Saldo Kas</p>
+                        <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                            {loading ? '...' : formatCurrency(keuanganStats.saldo)}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters Bar */}
+            <div className="filters-bar">
+                <div className="filter-group-date">
+                    <DateRangePicker
+                        startDate={filters.dateFrom}
+                        endDate={filters.dateTo}
+                        onChange={(start, end) => setFilters({
+                            ...filters,
+                            dateFrom: start,
+                            dateTo: end,
+                            bulan: '',
+                            tahun: new Date().getFullYear()
+                        })}
+                    />
+                </div>
+
+                <div className="filter-group-period">
+                    <SmartMonthYearFilter
+                        filters={filters}
+                        onFilterChange={(newFilters) => setFilters({
+                            ...newFilters,
+                            dateFrom: '', // Clear custom dates when using period filter
+                            dateTo: ''
+                        })}
+                    />
+                </div>
+
+                <button className="btn-refresh" onClick={() => { fetchKeuanganStats(); fetchMonthlyData(); }} title="Refresh Data">
+                    <RefreshCw size={18} />
+                </button>
+            </div>
+
+            {/* Chart */}
+            <div className="keuangan-card chart-card">
+                <div className="card-header">
+                    <h3><TrendingUp size={20} /> Arus Kas Bulanan {currentYear}</h3>
+                </div>
+                <div className="chart-container">
+                    <Bar data={kasBarData} options={chartOptions} />
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="keuangan-card">
+                <div className="card-header">
+                    <h3><Wallet size={20} /> Menu Keuangan</h3>
+                </div>
+                <div className="quick-actions-grid">
+                    <div className="action-group">
+                        <h4><PiggyBank size={16} /> Alur KAS</h4>
+                        <div className="action-links">
+                            <Link to="/keuangan/kas/pemasukan"><ArrowUpCircle size={16} /> Pemasukan</Link>
+                            <Link to="/keuangan/kas/pengeluaran"><ArrowDownCircle size={16} /> Pengeluaran</Link>
+                            <Link to="/keuangan/kas/laporan"><FileBarChart size={16} /> Laporan Kas</Link>
+                        </div>
+                    </div>
+                    <div className="action-group">
+                        <h4><CreditCard size={16} /> Pembayaran</h4>
+                        <div className="action-links">
+                            <Link to="/keuangan/pembayaran/tagihan"><Receipt size={16} /> Tagihan Santri</Link>
+                            <Link to="/keuangan/pembayaran/kategori"><Tag size={16} /> Kategori</Link>
+                            <Link to="/keuangan/pembayaran/bayar"><CreditCard size={16} /> Pembayaran</Link>
+                            <Link to="/keuangan/pembayaran/laporan"><FileBarChart size={16} /> Laporan</Link>
+                        </div>
+                    </div>
+                    <div className="action-group">
+                        <h4><TrendingUp size={16} /> Penyaluran Dana</h4>
+                        <div className="action-links">
+                            <Link to="/keuangan/dana/anggaran"><PiggyBank size={16} /> Anggaran</Link>
+                            <Link to="/keuangan/dana/persetujuan"><CheckCircle size={16} /> Persetujuan</Link>
+                            <Link to="/keuangan/dana/realisasi"><TrendingUp size={16} /> Realisasi</Link>
+                            <Link to="/keuangan/dana/laporan"><FileBarChart size={16} /> Laporan</Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export default KeuanganDashboard

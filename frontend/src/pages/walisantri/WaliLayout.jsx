@@ -1,0 +1,37 @@
+import { Outlet } from 'react-router-dom'
+import { useLayoutEffect, Suspense } from 'react'
+import WaliNavbar from './components/WaliNavbar'
+import FloatingChatButton from '../../components/chat/FloatingChatButton'
+import Spinner from '../../components/ui/Spinner'
+import './WaliPortal.css'
+
+/**
+ * WaliLayout - Layout khusus untuk Portal Wali Santri
+ * Tidak menggunakan sidebar admin, hanya navbar sederhana
+ * Dark mode dinonaktifkan secara permanen
+ */
+const WaliLayout = () => {
+    // Force light mode di seluruh halaman wali santri
+    useLayoutEffect(() => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        // Simpan preference agar konsisten
+        localStorage.setItem('ptqa-theme', 'light')
+    }, [])
+
+    return (
+        <div className="min-h-screen bg-gray-50 pb-20 md:pb-0 overflow-x-hidden">
+            <WaliNavbar />
+            <main className="max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 animate-fade-in overflow-hidden">
+                <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" label="Memuat halaman..." /></div>}>
+                    <Outlet />
+                </Suspense>
+            </main>
+
+            {/* Floating Chat Button - konsisten dengan layout admin */}
+            <FloatingChatButton />
+        </div>
+    )
+}
+
+export default WaliLayout
+

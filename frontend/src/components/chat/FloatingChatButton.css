@@ -1,0 +1,89 @@
+/* Floating Chat Button */
+.floating-chat-button {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 1000;
+    user-select: none;
+    touch-action: none;
+}
+
+/* Custom positioned button */
+.floating-chat-button.custom-position {
+    bottom: auto;
+    right: auto;
+}
+
+.floating-chat-button:hover {
+    box-shadow: 0 6px 28px rgba(79, 70, 229, 0.5);
+}
+
+.floating-chat-button:not(.dragging):hover {
+    transform: scale(1.05);
+}
+
+.floating-chat-button.dragging {
+    cursor: grabbing;
+    transform: scale(1.1);
+    box-shadow: 0 8px 32px rgba(79, 70, 229, 0.6);
+    opacity: 0.9;
+}
+
+.floating-chat-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    animation: pulse-badge 2s infinite;
+    pointer-events: none;
+}
+
+@keyframes pulse-badge {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .floating-chat-button:not(.custom-position) {
+        bottom: 80px;
+        right: 16px;
+        width: 50px;
+        height: 50px;
+    }
+
+    .floating-chat-button svg {
+        width: 22px;
+        height: 22px;
+    }
+}

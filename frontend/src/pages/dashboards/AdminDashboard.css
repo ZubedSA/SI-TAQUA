@@ -1,0 +1,375 @@
+/* =====================================================
+   Admin Dashboard - Enterprise Premium
+   Accent Color: Indigo (#4F46E5)
+   ===================================================== */
+
+[data-dashboard="admin"] {
+    --dashboard-accent: var(--accent-admin);
+    --dashboard-accent-hover: var(--accent-admin-hover);
+}
+
+.admin-dashboard {
+    padding: 0;
+}
+
+/* === WELCOME HEADER === */
+.dashboard-welcome {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-8) var(--space-8);
+    background: var(--dashboard-accent);
+    border-radius: var(--radius-xl);
+    color: white;
+    margin-bottom: var(--space-6);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+/* Subtle decorative circle */
+.dashboard-welcome::after {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.welcome-content {
+    position: relative;
+    z-index: 1;
+}
+
+.welcome-content h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    margin: 0 0 var(--space-1) 0;
+    color: white;
+}
+
+.welcome-content p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: var(--font-size-sm);
+}
+
+.welcome-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 1;
+    transition: background-color 0.2s ease;
+}
+
+.welcome-badge:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* === STATS GRID === */
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.admin-stat-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-6);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.stat-value {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+/* Icon box - simplified, no gradients */
+.stat-icon-box {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
+}
+
+.stat-icon-box.green {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.stat-icon-box.blue {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+.stat-icon-box.yellow {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.stat-icon-box.purple {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+/* === ADMIN ROW === */
+.admin-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-6);
+    margin-bottom: var(--space-6);
+}
+
+/* === ADMIN CARD === */
+.admin-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-4);
+}
+
+.card-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-heading);
+}
+
+.card-link {
+    font-size: var(--font-size-sm);
+    color: var(--dashboard-accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.card-link:hover {
+    color: var(--dashboard-accent-hover);
+    text-decoration: underline;
+}
+
+/* === FINANCE SUMMARY === */
+.finance-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.finance-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-section);
+    border: 1px solid var(--border-default);
+}
+
+.finance-item>svg {
+    flex-shrink: 0;
+}
+
+.finance-item.income svg {
+    color: var(--color-success);
+}
+
+.finance-item.expense svg {
+    color: var(--color-danger);
+}
+
+.finance-item.balance svg {
+    color: var(--color-info);
+}
+
+.finance-item>div {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    flex: 1;
+}
+
+.finance-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.finance-value {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.finance-value.positive {
+    color: var(--color-success);
+}
+
+.finance-value.negative {
+    color: var(--color-danger);
+}
+
+/* === HEALTH LIST === */
+.health-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.health-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-4);
+    background: var(--bg-section);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-default);
+}
+
+.health-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-body);
+    font-weight: 500;
+}
+
+.text-green {
+    color: var(--color-success);
+}
+
+.text-yellow {
+    color: var(--color-warning);
+}
+
+.text-red {
+    color: var(--color-danger);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 1200px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-welcome {
+        flex-direction: column;
+        gap: var(--space-3);
+        text-align: center;
+        padding: var(--space-6);
+    }
+
+    .admin-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-row {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-value {
+        font-size: var(--font-size-2xl);
+    }
+
+    .stat-icon-box {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* === DARK MODE === */
+[data-theme="dark"] .admin-stat-card {
+    background: var(--bg-card);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .stat-label {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .stat-value {
+    color: var(--text-heading);
+}
+
+[data-theme="dark"] .admin-card {
+    background: var(--bg-card);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .card-header h3 {
+    color: var(--text-heading);
+}
+
+[data-theme="dark"] .finance-item,
+[data-theme="dark"] .health-item {
+    background: var(--bg-section);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .finance-label {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .finance-value {
+    color: var(--text-heading);
+}
+
+[data-theme="dark"] .health-info {
+    color: var(--text-body);
+}

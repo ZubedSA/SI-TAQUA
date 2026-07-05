@@ -1,0 +1,53 @@
+{
+    "name": "Sistem Informasi Al-Usymuni (Si-TaQua)",
+    "short_name": "Si-TaQua",
+    "description": "Sistem Akademik Pondok Pesantren Tahfizh Qur'an Al-Usymuni Batuan - Manajemen santri, guru, hafalan, dan nilai",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/favicon.png",
+            "sizes": "64x64",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/favicon.png",
+            "sizes": "128x128",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/logo-pwa-white.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/logo-pwa-white.png",
+            "sizes": "256x256",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/logo-pwa-white.png",
+            "sizes": "384x384",
+            "type": "image/png",
+            "purpose": "maskable any"
+        },
+        {
+            "src": "/logo-pwa-white.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable any"
+        }
+    ],
+    "categories": [
+        "education"
+    ],
+    "lang": "id",
+    "dir": "ltr"
+}

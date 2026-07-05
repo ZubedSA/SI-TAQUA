@@ -1,0 +1,362 @@
+/* =====================================================
+   Wali Santri Dashboard - Enterprise Premium
+   Accent Color: Amber (#D97706)
+   ===================================================== */
+
+[data-dashboard="walisantri"] {
+    --dashboard-accent: var(--accent-walisantri);
+    --dashboard-accent-hover: var(--accent-walisantri-hover);
+}
+
+.walisantri-dashboard {
+    padding: 0;
+}
+
+/* === WELCOME HEADER === */
+.dashboard-welcome.walisantri {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-8) var(--space-8);
+    background: var(--dashboard-accent);
+    border-radius: var(--radius-xl);
+    color: white;
+    margin-bottom: var(--space-6);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-welcome.walisantri::after {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.dashboard-welcome.walisantri .welcome-content h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    margin: 0 0 var(--space-1) 0;
+    color: white;
+}
+
+.dashboard-welcome.walisantri .welcome-content p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: var(--font-size-sm);
+}
+
+/* === SANTRI SELECTOR === */
+.santri-selector {
+    background: var(--bg-card);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.selector-label {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-right: var(--space-3);
+}
+
+.santri-tabs {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.santri-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-section);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-body);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.santri-tab:hover {
+    background: var(--bg-card);
+    border-color: var(--dashboard-accent);
+}
+
+.santri-tab.active {
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
+    color: white;
+}
+
+/* === PROFILE CARD === */
+.wali-card.profile-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-8);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--bg-section);
+    border: 3px solid var(--dashboard-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dashboard-accent);
+    flex-shrink: 0;
+}
+
+.profile-info h2 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-heading);
+    margin: 0 0 var(--space-2) 0;
+}
+
+.profile-details {
+    display: flex;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+}
+
+.profile-details span {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+/* === STATS GRID === */
+.wali-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.wali-stat-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-6);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.wali-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.wali-stat-card .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.wali-stat-card .stat-icon.hafalan {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+.wali-stat-card .stat-icon.lancar {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.wali-stat-card .stat-icon.tagihan {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.wali-stat-card .stat-icon.lunas {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+.wali-stat-card .stat-info {
+    flex: 1;
+}
+
+.wali-stat-card .stat-value {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-heading);
+    display: block;
+    margin-bottom: var(--space-1);
+}
+
+.wali-stat-card .stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* === CARDS GRID === */
+.wali-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.wali-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.wali-card .card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+
+.wali-card .card-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-heading);
+    margin: 0;
+}
+
+.wali-card .card-body {
+    color: var(--text-body);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+}
+
+.wali-card .card-body.placeholder {
+    padding: var(--space-8);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* === NOTICE === */
+.wali-notice {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-info-bg);
+    border: 1px solid var(--color-info);
+    border-radius: var(--radius-lg);
+    color: var(--color-info);
+}
+
+.wali-notice strong {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-weight: 600;
+}
+
+.wali-notice p {
+    font-size: var(--font-size-sm);
+    margin: 0;
+}
+
+/* === STATES === */
+.loading-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-12);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.loading-state .spinner {
+    margin-bottom: var(--space-4);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+    .dashboard-welcome.walisantri {
+        flex-direction: column;
+        gap: var(--space-3);
+        text-align: center;
+        padding: var(--space-6);
+    }
+
+    .wali-card.profile-card {
+        flex-direction: column;
+        text-align: center;
+        padding: var(--space-6);
+    }
+
+    .wali-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wali-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .santri-tabs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .santri-tab {
+        justify-content: center;
+    }
+}
+
+/* === DARK MODE === */
+[data-theme="dark"] .wali-stat-card,
+[data-theme="dark"] .wali-card,
+[data-theme="dark"] .santri-selector {
+    background: var(--bg-card);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .santri-tab {
+    background: var(--bg-section);
+    border-color: var(--border-default);
+    color: var(--text-body);
+}
+
+[data-theme="dark"] .santri-tab:hover {
+    border-color: var(--dashboard-accent);
+}
+
+[data-theme="dark"] .santri-tab.active {
+    background: var(--dashboard-accent);
+    color: white;
+}

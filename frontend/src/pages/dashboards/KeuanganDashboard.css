@@ -1,0 +1,438 @@
+/* =====================================================
+   Keuangan/Bendahara Dashboard - Enterprise Premium
+   Accent Color: Teal (#0D9488)
+   ===================================================== */
+
+[data-dashboard="bendahara"] {
+    --dashboard-accent: var(--accent-bendahara);
+    --dashboard-accent-hover: var(--accent-bendahara-hover);
+}
+
+.keuangan-dashboard {
+    padding: 0;
+}
+
+/* === WELCOME HEADER === */
+.dashboard-welcome.keuangan {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-8) var(--space-8);
+    background: var(--dashboard-accent);
+    border-radius: var(--radius-xl);
+    color: white;
+    margin-bottom: var(--space-6);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.dashboard-welcome.keuangan::after {
+    content: '';
+    position: absolute;
+    right: -50px;
+    top: -50px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.dashboard-welcome.keuangan .welcome-content h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    margin: 0 0 var(--space-1) 0;
+    color: white;
+}
+
+.dashboard-welcome.keuangan .welcome-content p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: var(--font-size-sm);
+}
+
+.welcome-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 1;
+    transition: background-color 0.2s ease;
+}
+
+.welcome-badge:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* === STATS GRID === */
+.keuangan-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.keuangan-stat-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-6);
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.keuangan-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.keuangan-stat-card .stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.keuangan-stat-card .stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.keuangan-stat-card .stat-value {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.keuangan-stat-card .stat-currency {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: var(--space-1);
+}
+
+.keuangan-stat-card .stat-icon-box {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
+}
+
+/* Color variants - match Admin Dashboard */
+.stat-value.green {
+    color: var(--color-success);
+}
+
+.stat-value.red {
+    color: var(--color-danger);
+}
+
+.stat-value.blue {
+    color: var(--color-info);
+}
+
+.stat-value.purple {
+    color: #8b5cf6;
+}
+
+.stat-icon-box.green {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.stat-icon-box.red {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
+.stat-icon-box.blue {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+.stat-icon-box.purple {
+    background: rgba(139, 92, 246, 0.1);
+    color: #8b5cf6;
+}
+
+/* === CARD === */
+.keuangan-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+    padding: var(--space-6);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-sm);
+}
+
+.keuangan-card.chart-card {
+    min-height: 350px;
+}
+
+.keuangan-card .chart-container {
+    height: 280px;
+}
+
+/* === FILTERS BAR === */
+.filters-bar {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filters-bar select,
+.filters-bar input[type="date"] {
+    flex: 0 0 auto;
+}
+
+.filters-bar .date-range-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* Filters Bar Children */
+.filter-group-date,
+.filter-group-period {
+    display: flex;
+    align-items: center;
+}
+
+.btn-refresh {
+    margin-left: auto;
+    /* Push to the right */
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-refresh:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+    transform: rotate(180deg);
+}
+
+.btn-refresh:active {
+    background: #e2e8f0;
+}
+
+.filters-bar .btn-icon {
+    padding: var(--space-2);
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-body);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filters-bar .btn-icon:hover {
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
+    color: white;
+}
+
+/* === QUICK ACTIONS GRID === */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+}
+
+.action-group {
+    background: var(--bg-section);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+}
+
+.action-group h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--text-heading);
+    margin: 0 0 var(--space-3) 0;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.action-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.action-links a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    color: var(--text-body);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    border: 1px solid var(--border-default);
+    transition: all 0.2s ease;
+}
+
+.action-links a:hover {
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
+    color: white;
+    transform: translateX(2px);
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 1200px) {
+    .keuangan-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-welcome.keuangan {
+        flex-direction: column;
+        gap: var(--space-3);
+        text-align: center;
+        padding: var(--space-6);
+    }
+
+    .dashboard-welcome.keuangan .welcome-badge {
+        align-self: center;
+    }
+
+    .keuangan-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+    }
+
+    .action-group {
+        padding: var(--space-3);
+    }
+
+    .action-group h4 {
+        font-size: var(--font-size-sm);
+        padding-bottom: var(--space-2);
+        margin-bottom: var(--space-2);
+    }
+
+    .action-links a {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--font-size-xs);
+    }
+
+    .keuangan-stat-card .stat-value {
+        font-size: var(--font-size-2xl);
+    }
+
+    .filters-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters-bar select,
+    .filters-bar input[type="date"] {
+        width: 100%;
+    }
+
+    .filter-group-date,
+    .filter-group-period {
+        width: 100%;
+    }
+
+    .btn-refresh {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .quick-actions-grid {
+        gap: var(--space-3);
+    }
+
+    .action-group {
+        padding: var(--space-3);
+    }
+
+    .action-links a {
+        padding: var(--space-2);
+        font-size: 12px;
+    }
+}
+
+/* === DARK MODE === */
+[data-theme="dark"] .keuangan-stat-card {
+    background: var(--bg-card);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .keuangan-card {
+    background: var(--bg-card);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .action-group {
+    background: var(--bg-section);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .action-group h4 {
+    color: var(--text-heading);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .action-links a {
+    background: var(--bg-card);
+    color: var(--text-body);
+    border-color: var(--border-default);
+}
+
+[data-theme="dark"] .action-links a:hover {
+    background: var(--dashboard-accent);
+    border-color: var(--dashboard-accent);
+    color: white;
+}

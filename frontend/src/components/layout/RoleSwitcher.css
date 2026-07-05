@@ -1,0 +1,290 @@
+/* =====================================================
+   Role Switcher Component Styles
+   ===================================================== */
+
+.role-switcher {
+    position: relative;
+}
+
+.role-switcher-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--role-bg, rgba(99, 102, 241, 0.1));
+    border: 1px solid var(--role-color, #6366f1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    color: var(--role-color, #6366f1);
+    font-weight: 500;
+}
+
+.role-switcher-trigger:hover {
+    background: var(--role-color, #6366f1);
+    color: white;
+}
+
+.role-switcher-trigger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.role-switcher-current {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.role-switcher-arrow {
+    transition: transform 0.2s ease;
+}
+
+.role-switcher-arrow.open {
+    transform: rotate(180deg);
+}
+
+/* Dropdown */
+.role-switcher-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 280px;
+    background: var(--bg-secondary, white);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.role-switcher-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary, #f9fafb);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-switcher-list {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.role-switcher-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    text-align: left;
+}
+
+.role-switcher-item:hover:not(:disabled) {
+    background: var(--role-bg, rgba(99, 102, 241, 0.08));
+}
+
+.role-switcher-item.active {
+    background: var(--role-bg, rgba(99, 102, 241, 0.1));
+    cursor: default;
+}
+
+.role-switcher-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.role-item-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--role-bg, rgba(99, 102, 241, 0.1));
+    border-radius: 8px;
+    color: var(--role-color, #6366f1);
+    flex-shrink: 0;
+}
+
+.role-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.role-item-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+}
+
+.role-item-desc {
+    font-size: 11px;
+    color: var(--text-secondary, #6b7280);
+}
+
+.role-item-check {
+    color: var(--role-color, #10b981);
+    flex-shrink: 0;
+}
+
+/* Dark mode support */
+[data-theme="dark"] .role-switcher-dropdown {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+[data-theme="dark"] .role-switcher-header {
+    background: #111827;
+    border-color: #374151;
+}
+
+[data-theme="dark"] .role-item-label {
+    color: #f3f4f6;
+}
+
+[data-theme="dark"] .role-item-desc {
+    color: #9ca3af;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .role-label {
+        display: none;
+    }
+
+    .role-switcher-trigger {
+        padding: 8px;
+    }
+
+    .role-switcher-dropdown {
+        width: 260px;
+        right: -50px;
+    }
+}
+
+@media (max-width: 480px) {
+    .role-switcher-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+}
+
+/* =====================================================
+   Inline Mode (for Profile Dropdown)
+   ===================================================== */
+
+.role-switcher-inline {
+    padding: 8px 0;
+}
+
+.role-switcher-header-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-switcher-list-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 8px;
+}
+
+.role-item-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+    text-align: left;
+    font-size: 13px;
+    color: var(--text-primary, #1f2937);
+}
+
+.role-item-inline:hover:not(:disabled):not(.active) {
+    background: var(--role-bg, rgba(99, 102, 241, 0.08));
+}
+
+.role-item-inline.active {
+    background: var(--role-bg, rgba(99, 102, 241, 0.1));
+    color: var(--role-color, #6366f1);
+    font-weight: 600;
+}
+
+.role-item-inline:disabled {
+    cursor: default;
+}
+
+.role-item-icon-inline {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--role-bg, rgba(99, 102, 241, 0.1));
+    border-radius: 6px;
+    color: var(--role-color, #6366f1);
+    flex-shrink: 0;
+}
+
+.role-item-label-inline {
+    flex: 1;
+}
+
+.role-item-check-inline {
+    color: var(--role-color, #10b981);
+    flex-shrink: 0;
+}
+
+/* Header CSS addition for dropdown role switcher */
+.dropdown-role-switcher {
+    margin: 0 -8px;
+}
