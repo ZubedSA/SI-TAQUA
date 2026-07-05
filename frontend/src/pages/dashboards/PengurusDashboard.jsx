@@ -58,15 +58,24 @@ const PengurusDashboard = () => {
     const fetchStats = async () => {
         setLoading(true)
         try {
-            console.log('[PengurusDashboard] Fetching pelanggaran...')
+            console.log('[PengurusDashboard] Starting fetch...')
             
-            // Simple query: fetch all pelanggaran
+            // Try fetching without select - this helps bypass some RLS issues
             const { data: allData, error: allError } = await supabase
                 .from('pelanggaran')
-                .select('status')
+                .select('*')
+                .limit(10000) // Get all records
 
-            console.log('[PengurusDashboard] Query result:', { allData, allError })
+            console.log('[PengurusDashboard] Raw query result:', { 
+                error: allError, 
+                count: allData?.length 
+            })
 
+            if (allError) {
+                console.error('[PengurusDashboard] Query error:', allError)
+            }
+
+            // Count statuses
             let totalCount = 0
             let openCount = 0
             let prosesCount = 0
@@ -75,56 +84,47 @@ const PengurusDashboard = () => {
             if (allData && Array.isArray(allData)) {
                 totalCount = allData.length
                 allData.forEach(item => {
-                    if (item.status === 'OPEN') openCount++
-                    else if (item.status === 'PROSES') prosesCount++
-                    else if (item.status === 'SELESAI') selesaiCount++
+                    if (item?.status === 'OPEN') openCount++
+                    else if (item?.status === 'PROSES') prosesCount++
+                    else if (item?.status === 'SELESAI') selesaiCount++
+                })
+                
+                console.log('[PengurusDashboard] Counted:', {
+                    totalCount,
+                    openCount,
+                    prosesCount,
+                    selesaiCount,
+                    sample: allData.slice(0, 3)
                 })
             }
 
-            console.log('[PengurusDashboard] Counts:', { totalCount, openCount, prosesCount, selesaiCount })
-
-            // Fetch santri bermasalah
-            const { data: santriBermasalahData, error: santriError } = await supabase
+            // Fetch other stats
+            const { data: santriBermasalahData } = await supabase
                 .from('santri_bermasalah')
-                .select('id')
+                .select('*')
+                .limit(10000)
             
-            const santriBermasalahCount = santriBermasalahData?.length || 0
-            console.log('[PengurusDashboard] Santri bermasalah:', santriBermasalahCount)
-
-            // Fetch pengumuman aktif
-            const today = new Date().toISOString().split('T')[0]
-            const { data: pengumumanData, error: pengumumanError } = await supabase
+            const { data: pengumumanData } = await supabase
                 .from('pengumuman_internal')
-                .select('id')
-                .eq('is_archived', false)
-                .lte('mulai_tampil', today)
+                .select('*')
+                .limit(10000)
 
-            const pengumumanCount = pengumumanData?.length || 0
-            console.log('[PengurusDashboard] Pengumuman:', pengumumanCount)
-
-            // Fetch buletin bulan ini
-            const currentMonth = new Date().getMonth() + 1
-            const currentYear = new Date().getFullYear()
-            const { data: buletinData, error: buletinError } = await supabase
+            const { data: buletinData } = await supabase
                 .from('buletin_pondok')
-                .select('id')
-                .eq('bulan', currentMonth)
-                .eq('tahun', currentYear)
-
-            const buletinCount = buletinData?.length || 0
-            console.log('[PengurusDashboard] Buletin:', buletinCount)
+                .select('*')
+                .limit(10000)
 
             setStats({
                 totalPelanggaran: totalCount,
                 kasusOpen: openCount,
                 kasusProses: prosesCount,
                 kasusSelesai: selesaiCount,
-                santriBermasalah: santriBermasalahCount,
-                pengumumanAktif: pengumumanCount,
-                buletinBulanIni: buletinCount
+                santriBermasalah: santriBermasalahData?.length || 0,
+                pengumumanAktif: pengumumanData?.length || 0,
+                buletinBulanIni: buletinData?.length || 0
             })
         } catch (error) {
-            console.error('[PengurusDashboard] Error:', error)
+            console.error('[PengurusDashboard] Exception:', error)
         } finally {
             setLoading(false)
         }
