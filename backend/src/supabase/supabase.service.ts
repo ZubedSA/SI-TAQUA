@@ -72,7 +72,7 @@ export class SupabaseService {
 
     let query = this.supabase
       .from('tagihan_santri')
-      .select('id, jumlah, jatuh_tempo, status, keterangan, santri (nama), kategori_pembayaran (nama)');
+      .select('id, jumlah, jatuh_tempo, status, keterangan, santri(nama), kategori_pembayaran(nama)');
 
     if (santriId) {
       query = query.eq('santri_id', santriId);
@@ -127,7 +127,7 @@ export class SupabaseService {
             if (!insertErr) {
               let requery = this.supabase
                 .from('tagihan_santri')
-                .select('id, jumlah, jatuh_tempo, status, keterangan, santri (nama), kategori_pembayaran (nama)');
+                .select('id,jumlah,jatuh_tempo,status,keterangan,santri(nama),kategori_pembayaran(nama)');
               
               if (santriId) {
                 requery = requery.eq('santri_id', santriId);
