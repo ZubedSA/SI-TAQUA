@@ -70,7 +70,7 @@ Tugasmu: Analisis pesan pengguna dan keluarkan JSON dengan format:
 {
   "intent": "<intent_name>",
   "parameters": {
-    "santri_name": "<nama santri jika ada>",
+    "santri_name": "<NAMA SANTRI SAJA, contoh: 'Ahmad Fauzi' atau 'Abdullah'. DILARANG KERAS memasukkan kata tanya, kata kerja, kata depan, nominal, atau keterangan lain seperti 'apakah sudah lunas', 'sudah bayar', 'bulan ini'>",
     "nominal": <angka jika ada>,
     "kategori": "<kategori jika ada>",
     "juz": <nomor juz jika ada>,
@@ -113,6 +113,7 @@ Daftar intent yang valid:
 Konteks sebelumnya: Nama santri terakhir = "${ctx.lastSantriName || 'belum ada'}", Intent terakhir = "${ctx.lastIntent}".
 
 PENTING: 
+- Parameter "santri_name" harus MURNI nama orang/santri saja (misal: 'Abdullah Ahmad Zayn'). Hapus kata-kata kelanjutan seperti 'apakah sudah lunas...', 'sudah bayar...', 'bulan ini'.
 - Jika pesan adalah konfirmasi ya/setuju (ya, ok, oke, sip, lanjut, benar, betul, yoi, heeh, yes) → intent: "konfirmasi_ya"
 - Jika pesan adalah penolakan (tidak, batal, cancel, ga, gak, ndak, no) → intent: "konfirmasi_tidak"
 - Jika ada referensi "dia" / "santri itu" / "hafalannya" / "nilainya" dan ada nama terakhir, gunakan nama terakhir.
