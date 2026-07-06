@@ -65,53 +65,63 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         return count;
     }
     async checkPembayaran(santriId, month = '') {
-        const query = this.supabase
+        await this.ensureSampleData();
+        let query = this.supabase
             .from('tagihan_santri')
-            .select(`
-        id,
-        jumlah,
-        jatuh_tempo,
-        status,
-        keterangan,
-        kategori_pembayaran (nama)
-      `)
-            .eq('santri_id', santriId);
+            .select('id, jumlah, jatuh_tempo, status, keterangan, santri (nama), kategori_pembayaran (nama)');
+        if (santriId) {
+            query = query.eq('santri_id', santriId);
+        }
         let { data, error } = await query;
         if (error)
             throw error;
-        if ((!data || data.length === 0) && santriId) {
+        if ((!data || data.length === 0)) {
             try {
-                this.logger.log(`Demo Mode: Membuat data tagihan dummy untuk santri ${santriId}`);
                 const { data: categories } = await this.supabase
                     .from('kategori_pembayaran')
                     .select('id, nama, nominal_default');
                 if (categories && categories.length > 0) {
                     const currentYear = new Date().getFullYear();
-                    const dummyBills = categories.slice(0, 3).map((cat, idx) => ({
-                        santri_id: santriId,
-                        kategori_id: cat.id,
-                        jumlah: cat.nominal_default || 200000,
-                        jatuh_tempo: `${currentYear}-07-10`,
-                        status: idx === 0 ? 'Lunas' : 'Belum Lunas',
-                        keterangan: `Tagihan Bulanan ${cat.nama}`
-                    }));
-                    const { error: insertErr } = await this.supabase
-                        .from('tagihan_santri')
-                        .insert(dummyBills);
-                    if (!insertErr) {
-                        const requery = await this.supabase
+                    let targetStudents = [];
+                    if (santriId) {
+                        targetStudents = [{ id: santriId }];
+                    }
+                    else {
+                        const { data: allStudents } = await this.supabase
+                            .from('santri')
+                            .select('id')
+                            .eq('status', 'Aktif');
+                        targetStudents = allStudents || [];
+                    }
+                    if (targetStudents.length > 0) {
+                        this.logger.log(`Demo Mode: Membuat data tagihan dummy untuk ${targetStudents.length} santri`);
+                        const dummyBills = [];
+                        targetStudents.forEach(st => {
+                            categories.slice(0, 3).map((cat, idx) => {
+                                dummyBills.push({
+                                    santri_id: st.id,
+                                    kategori_id: cat.id,
+                                    jumlah: cat.nominal_default || 200000,
+                                    jatuh_tempo: `${currentYear}-07-10`,
+                                    status: idx === 0 ? 'Lunas' : 'Belum Lunas',
+                                    keterangan: `Tagihan Bulanan ${cat.nama}`
+                                });
+                            });
+                        });
+                        const { error: insertErr } = await this.supabase
                             .from('tagihan_santri')
-                            .select(`
-                id,
-                jumlah,
-                jatuh_tempo,
-                status,
-                keterangan,
-                kategori_pembayaran (nama)
-              `)
-                            .eq('santri_id', santriId);
-                        if (!requery.error) {
-                            data = requery.data;
+                            .insert(dummyBills);
+                        if (!insertErr) {
+                            let requery = this.supabase
+                                .from('tagihan_santri')
+                                .select('id, jumlah, jatuh_tempo, status, keterangan, santri (nama), kategori_pembayaran (nama)');
+                            if (santriId) {
+                                requery = requery.eq('santri_id', santriId);
+                            }
+                            const reqResult = await requery;
+                            if (!reqResult.error) {
+                                data = reqResult.data;
+                            }
                         }
                     }
                 }
@@ -610,6 +620,78 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             catch (e) {
                 this.logger.error('Gagal mengambil data debug DB:', e);
                 return { error: e.message };
+            }
+        }
+        async;
+        ensureSampleData();
+        {
+            try {
+                const { count, error: countErr } = await this.supabase
+                    .from('santri')
+                    .select('*', { count: 'exact', head: true });
+                if (countErr) {
+                    this.logger.error('Gagal mengecek jumlah santri:', countErr.message);
+                    return;
+                }
+                const currentCount = count || 0;
+                if (currentCount === 0) {
+                    this.logger.log('Database kosong. Menginisialisasi data sample untuk demo...');
+                    const { data: existingCats } = await this.supabase
+                        .from('kategori_pembayaran')
+                        .select('id, nama');
+                    let categories = existingCats;
+                    if (!categories || categories.length === 0) {
+                        const { data: newCats } = await this.supabase
+                            .from('kategori_pembayaran')
+                            .insert([
+                            { nama: 'SPP Bulanan', nominal_default: 500000 },
+                            { nama: 'Uang Makan', nominal_default: 300000 },
+                            { nama: 'Uang Asrama', nominal_default: 200000 }
+                        ])
+                            .select();
+                        categories = newCats;
+                    }
+                    const { data: newSantri, error: santriErr } = await this.supabase
+                        .from('santri')
+                        .insert([
+                        { nis: 'S2026001', nama: 'Ahmad Dliaul Asykia', jenis_kelamin: 'Laki-laki', status: 'Aktif' },
+                        { nis: 'S2026002', nama: 'Muhammad Rizki Pratama', jenis_kelamin: 'Laki-laki', status: 'Aktif' },
+                        { nis: 'S2026003', nama: 'Abdullah Rahman', jenis_kelamin: 'Laki-laki', status: 'Aktif' }
+                    ])
+                        .select();
+                    if (santriErr || !newSantri || newSantri.length === 0) {
+                        this.logger.error('Gagal memasukkan sample santri:', santriErr?.message);
+                        return;
+                    }
+                    if (categories && categories.length > 0) {
+                        const currentYear = new Date().getFullYear();
+                        const bills = [];
+                        newSantri.forEach((s, sIdx) => {
+                            categories.forEach((cat, cIdx) => {
+                                bills.push({
+                                    santri_id: s.id,
+                                    kategori_id: cat.id,
+                                    jumlah: cat.nominal_default || 200000,
+                                    jatuh_tempo: `${currentYear}-07-10`,
+                                    status: sIdx === 0 && cIdx === 0 ? 'Lunas' : 'Belum Lunas',
+                                    keterangan: `Tagihan Bulanan ${cat.nama}`
+                                });
+                            });
+                        });
+                        const { error: billErr } = await this.supabase
+                            .from('tagihan_santri')
+                            .insert(bills);
+                        if (billErr) {
+                            this.logger.error('Gagal memasukkan sample tagihan:', billErr.message);
+                        }
+                        else {
+                            this.logger.log('Inisialisasi data sample berhasil dilakukan.');
+                        }
+                    }
+                }
+            }
+            catch (err) {
+                this.logger.error('Error saat memastikan data sample:', err);
             }
         }
     }

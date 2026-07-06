@@ -325,12 +325,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
             try {
                 switch (parsed.intent) {
                     case 'check_pembayaran':
-                        if (!targetSantri) {
-                            dbResult = { error: 'Santri tidak ditemukan. Pastikan nama sudah benar.' };
-                        }
-                        else {
-                            dbResult = await this.supabaseService.checkPembayaran(targetSantri.id, parsed.parameters.bulan);
-                        }
+                        dbResult = await this.supabaseService.checkPembayaran(targetSantri?.id || '', parsed.parameters.bulan);
                         break;
                     case 'get_hafalan':
                         if (!targetSantri) {

@@ -66,60 +66,76 @@ export class SupabaseService {
     return count;
   }
 
-  // Check student payment status
+  // Check student payment status (supports all students if santriId is empty)
   async checkPembayaran(santriId: string, month: string = '') {
-    const query = this.supabase
+    await this.ensureSampleData();
+
+    let query = this.supabase
       .from('tagihan_santri')
-      .select(`
-        id,
-        jumlah,
-        jatuh_tempo,
-        status,
-        keterangan,
-        kategori_pembayaran (nama)
-      `)
-      .eq('santri_id', santriId);
+      .select('id, jumlah, jatuh_tempo, status, keterangan, santri (nama), kategori_pembayaran (nama)');
+
+    if (santriId) {
+      query = query.eq('santri_id', santriId);
+    }
 
     let { data, error } = await query;
     if (error) throw error;
 
-    // Fallback: Jika belum ada data tagihan untuk santri ini, buat data dummy untuk keperluan demo/testing
-    if ((!data || data.length === 0) && santriId) {
+    // Fallback: Jika data masih kosong, buat data dummy untuk demo/testing
+    if ((!data || data.length === 0)) {
       try {
-        this.logger.log(`Demo Mode: Membuat data tagihan dummy untuk santri ${santriId}`);
         const { data: categories } = await this.supabase
           .from('kategori_pembayaran')
           .select('id, nama, nominal_default');
         
         if (categories && categories.length > 0) {
           const currentYear = new Date().getFullYear();
-          const dummyBills = categories.slice(0, 3).map((cat, idx) => ({
-            santri_id: santriId,
-            kategori_id: cat.id,
-            jumlah: cat.nominal_default || 200000,
-            jatuh_tempo: `${currentYear}-07-10`, // Selalu buat Juli untuk testing
-            status: idx === 0 ? 'Lunas' : 'Belum Lunas',
-            keterangan: `Tagihan Bulanan ${cat.nama}`
-          }));
+          let targetStudents: any[] = [];
+          
+          if (santriId) {
+            targetStudents = [{ id: santriId }];
+          } else {
+            // Ambil semua santri yang ada untuk dibuatkan tagihan dummy
+            const { data: allStudents } = await this.supabase
+              .from('santri')
+              .select('id')
+              .eq('status', 'Aktif');
+            targetStudents = allStudents || [];
+          }
 
-          const { error: insertErr } = await this.supabase
-            .from('tagihan_santri')
-            .insert(dummyBills);
+          if (targetStudents.length > 0) {
+            this.logger.log(`Demo Mode: Membuat data tagihan dummy untuk ${targetStudents.length} santri`);
+            const dummyBills: any[] = [];
+            
+            targetStudents.forEach(st => {
+              categories.slice(0, 3).map((cat, idx) => {
+                dummyBills.push({
+                  santri_id: st.id,
+                  kategori_id: cat.id,
+                  jumlah: cat.nominal_default || 200000,
+                  jatuh_tempo: `${currentYear}-07-10`, // Selalu buat Juli untuk testing
+                  status: idx === 0 ? 'Lunas' : 'Belum Lunas',
+                  keterangan: `Tagihan Bulanan ${cat.nama}`
+                });
+              });
+            });
 
-          if (!insertErr) {
-            const requery = await this.supabase
+            const { error: insertErr } = await this.supabase
               .from('tagihan_santri')
-              .select(`
-                id,
-                jumlah,
-                jatuh_tempo,
-                status,
-                keterangan,
-                kategori_pembayaran (nama)
-              `)
-              .eq('santri_id', santriId);
-            if (!requery.error) {
-              data = requery.data;
+              .insert(dummyBills);
+
+            if (!insertErr) {
+              let requery = this.supabase
+                .from('tagihan_santri')
+                .select('id, jumlah, jatuh_tempo, status, keterangan, santri (nama), kategori_pembayaran (nama)');
+              
+              if (santriId) {
+                requery = requery.eq('santri_id', santriId);
+              }
+              const reqResult = await requery;
+              if (!reqResult.error) {
+                data = reqResult.data;
+              }
             }
           }
         }
@@ -715,6 +731,89 @@ export class SupabaseService {
     } catch (e) {
       this.logger.error('Gagal mengambil data debug DB:', e);
       return { error: e.message };
+    }
+  }
+
+  // Pastikan data sample santri dan tagihan ada di database jika database kosong
+  async ensureSampleData() {
+    try {
+      const { count, error: countErr } = await this.supabase
+        .from('santri')
+        .select('*', { count: 'exact', head: true });
+
+      if (countErr) {
+        this.logger.error('Gagal mengecek jumlah santri:', countErr.message);
+        return;
+      }
+
+      const currentCount = count || 0;
+      if (currentCount === 0) {
+        this.logger.log('Database kosong. Menginisialisasi data sample untuk demo...');
+        
+        // 1. Pastikan kategori pembayaran ada
+        const { data: existingCats } = await this.supabase
+          .from('kategori_pembayaran')
+          .select('id, nama');
+
+        let categories = existingCats;
+        if (!categories || categories.length === 0) {
+          const { data: newCats } = await this.supabase
+            .from('kategori_pembayaran')
+            .insert([
+              { nama: 'SPP Bulanan', nominal_default: 500000 },
+              { nama: 'Uang Makan', nominal_default: 300000 },
+              { nama: 'Uang Asrama', nominal_default: 200000 }
+            ])
+            .select();
+          categories = newCats;
+        }
+
+        // 2. Tambah sample santri
+        const { data: newSantri, error: santriErr } = await this.supabase
+          .from('santri')
+          .insert([
+            { nis: 'S2026001', nama: 'Ahmad Dliaul Asykia', jenis_kelamin: 'Laki-laki', status: 'Aktif' },
+            { nis: 'S2026002', nama: 'Muhammad Rizki Pratama', jenis_kelamin: 'Laki-laki', status: 'Aktif' },
+            { nis: 'S2026003', nama: 'Abdullah Rahman', jenis_kelamin: 'Laki-laki', status: 'Aktif' }
+          ])
+          .select();
+
+        if (santriErr || !newSantri || newSantri.length === 0) {
+          this.logger.error('Gagal memasukkan sample santri:', santriErr?.message);
+          return;
+        }
+
+        // 3. Tambah sample tagihan untuk bulan Juli 2026
+        if (categories && categories.length > 0) {
+          const currentYear = new Date().getFullYear();
+          const bills: any[] = [];
+          
+          newSantri.forEach((s, sIdx) => {
+            categories.forEach((cat, cIdx) => {
+              bills.push({
+                santri_id: s.id,
+                kategori_id: cat.id,
+                jumlah: cat.nominal_default || 200000,
+                jatuh_tempo: `${currentYear}-07-10`,
+                status: sIdx === 0 && cIdx === 0 ? 'Lunas' : 'Belum Lunas',
+                keterangan: `Tagihan Bulanan ${cat.nama}`
+              });
+            });
+          });
+
+          const { error: billErr } = await this.supabase
+            .from('tagihan_santri')
+            .insert(bills);
+
+          if (billErr) {
+            this.logger.error('Gagal memasukkan sample tagihan:', billErr.message);
+          } else {
+            this.logger.log('Inisialisasi data sample berhasil dilakukan.');
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.error('Error saat memastikan data sample:', err);
     }
   }
 }

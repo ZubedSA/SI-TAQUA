@@ -23,6 +23,9 @@ export declare class SupabaseService {
         jatuh_tempo: any;
         status: any;
         keterangan: any;
+        santri: {
+            nama: any;
+        }[];
         kategori_pembayaran: {
             nama: any;
         }[];
