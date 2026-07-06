@@ -34,42 +34,31 @@ let WebhookController = WebhookController_1 = class WebhookController {
             }
         }
     }
-    async sendFonnteMessage(target, message, retries = 3) {
+    async sendFonnteMessage(target, message) {
         const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
         const formData = new URLSearchParams();
         formData.append('target', target);
         formData.append('message', message);
-        for (let attempt = 1; attempt <= retries; attempt++) {
-            try {
-                this.logger.log(`Mengirim WA ke ${target} (Percobaan ${attempt}/${retries})...`);
-                const response = await fetch('https://api.fonnte.com/send', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': token,
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: formData.toString(),
-                    signal: AbortSignal.timeout(10000),
-                });
-                const resData = await response.json();
-                this.logger.log(`Fonnte Response untuk ${target}: ${JSON.stringify(resData)}`);
-                return;
-            }
-            catch (e) {
-                this.logger.error(`Percobaan ${attempt} gagal kirim ke ${target}: ${e.message || e}`);
-                if (attempt < retries) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-                else {
-                    this.logger.error(`Semua ${retries} percobaan gagal untuk ${target}.`);
-                }
-            }
+        try {
+            this.logger.log(`Mengirim WA ke ${target}...`);
+            const response = await fetch('https://api.fonnte.com/send', {
+                method: 'POST',
+                headers: {
+                    'Authorization': token,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData.toString(),
+                signal: AbortSignal.timeout(8000),
+            });
+            const resData = await response.json();
+            this.logger.log(`Fonnte Response: ${JSON.stringify(resData)}`);
+        }
+        catch (e) {
+            this.logger.error(`Gagal kirim WA ke ${target}: ${e.message || e}`);
         }
     }
     async replyToUser(res, target, text) {
-        this.sendFonnteMessage(target, text).catch(e => {
-            this.logger.error('Background message sending gagal:', e);
-        });
+        await this.sendFonnteMessage(target, text);
         return res.status(common_1.HttpStatus.OK).json({ reply: text });
     }
     async handleWebhook(req, res) {

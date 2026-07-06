@@ -36,9 +36,9 @@ export class WebhookController {
   }
 
   // =====================================================================
-  // Helper: Kirim pesan via Fonnte dengan auto-retry
+  // Helper: Kirim pesan via Fonnte (optimized untuk Vercel serverless)
   // =====================================================================
-  private async sendFonnteMessage(target: string, message: string, retries = 3) {
+  private async sendFonnteMessage(target: string, message: string) {
     // Gunakan fallback hardcoded agar tetap berjalan di Vercel serverless
     const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
 
@@ -46,39 +46,32 @@ export class WebhookController {
     formData.append('target', target);
     formData.append('message', message);
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        this.logger.log(`Mengirim WA ke ${target} (Percobaan ${attempt}/${retries})...`);
-        const response = await fetch('https://api.fonnte.com/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': token,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: formData.toString(),
-          signal: AbortSignal.timeout(10000),
-        });
-        const resData = await response.json();
-        this.logger.log(`Fonnte Response untuk ${target}: ${JSON.stringify(resData)}`);
-        return;
-      } catch (e) {
-        this.logger.error(`Percobaan ${attempt} gagal kirim ke ${target}: ${e.message || e}`);
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        } else {
-          this.logger.error(`Semua ${retries} percobaan gagal untuk ${target}.`);
-        }
-      }
+    try {
+      this.logger.log(`Mengirim WA ke ${target}...`);
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': token,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+        signal: AbortSignal.timeout(8000), // 8 detik timeout agar muat di Vercel
+      });
+      const resData = await response.json();
+      this.logger.log(`Fonnte Response: ${JSON.stringify(resData)}`);
+    } catch (e) {
+      this.logger.error(`Gagal kirim WA ke ${target}: ${e.message || e}`);
     }
   }
 
   // =====================================================================
-  // Helper: Balas user dan kirim WA di background
+  // Helper: Balas user — KIRIM WA DULU, BARU return response
+  // Di Vercel serverless, fungsi mati setelah res.json() dikembalikan,
+  // jadi SEMUA async work harus selesai SEBELUM response dikirim.
   // =====================================================================
   private async replyToUser(res: Response, target: string, text: string) {
-    this.sendFonnteMessage(target, text).catch(e => {
-      this.logger.error('Background message sending gagal:', e);
-    });
+    // WAJIB await! Jangan fire-and-forget di serverless!
+    await this.sendFonnteMessage(target, text);
     return res.status(HttpStatus.OK).json({ reply: text });
   }
 
