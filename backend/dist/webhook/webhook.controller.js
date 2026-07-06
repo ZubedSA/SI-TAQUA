@@ -26,6 +26,10 @@ let WebhookController = WebhookController_1 = class WebhookController {
         this.logger = new common_1.Logger(WebhookController_1.name);
         this.pendingActions = {};
         this.processedMessages = new Map();
+        this.sentMessages = new Map();
+    }
+    normalizeText(txt) {
+        return txt.trim().replace(/\s+/g, ' ').toLowerCase();
     }
     isSamePhone(phone1, phone2) {
         const clean1 = phone1.replace(/\D/g, '');
@@ -36,6 +40,17 @@ let WebhookController = WebhookController_1 = class WebhookController {
             return clean1.slice(-9) === clean2.slice(-9);
         }
         return clean1 === clean2;
+    }
+    isBotSentMessage(text) {
+        const norm = this.normalizeText(text);
+        const timestamp = this.sentMessages.get(norm);
+        if (!timestamp)
+            return false;
+        if (Date.now() - timestamp < 2 * 60 * 1000) {
+            return true;
+        }
+        this.sentMessages.delete(norm);
+        return false;
     }
     cleanupExpiredPending() {
         const now = Date.now();
@@ -53,7 +68,16 @@ let WebhookController = WebhookController_1 = class WebhookController {
             }
         }
     }
+    cleanupExpiredSentMessages() {
+        const now = Date.now();
+        for (const [text, timestamp] of this.sentMessages.entries()) {
+            if (now - timestamp > 2 * 60 * 1000) {
+                this.sentMessages.delete(text);
+            }
+        }
+    }
     async sendFonnteMessage(target, message) {
+        this.sentMessages.set(this.normalizeText(message), Date.now());
         const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
         const formData = new URLSearchParams();
         formData.append('target', target);
@@ -101,6 +125,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
         try {
             this.cleanupExpiredPending();
             this.cleanupExpiredProcessed();
+            this.cleanupExpiredSentMessages();
             const body = req.body || {};
             const query = req.query || {};
             await this.supabaseService.logWebhookPayload(body, query);
@@ -119,8 +144,10 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
             }
             if (device && (this.isSamePhone(sender, device) || (member && this.isSamePhone(member, device)))) {
-                this.logger.log(`Mengabaikan pesan keluar dari device sendiri (${device}) untuk menghindari loop.`);
-                return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_self_message' });
+                if (this.isBotSentMessage(message)) {
+                    this.logger.log(`Mengabaikan pesan keluar dari device sendiri (${device}) untuk menghindari loop.`);
+                    return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_self_message' });
+                }
             }
             if (messageId) {
                 const existing = this.processedMessages.get(messageId);

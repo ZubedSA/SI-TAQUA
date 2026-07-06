@@ -7,10 +7,14 @@ export declare class WebhookController {
     private readonly logger;
     private pendingActions;
     private processedMessages;
+    private sentMessages;
     constructor(supabaseService: SupabaseService, aiService: AiService);
+    private normalizeText;
     private isSamePhone;
+    private isBotSentMessage;
     private cleanupExpiredPending;
     private cleanupExpiredProcessed;
+    private cleanupExpiredSentMessages;
     private sendFonnteMessage;
     private replyToUser;
     getDebugLogs(res: Response): Promise<Response<any, Record<string, any>>>;

@@ -23,10 +23,18 @@ export class WebhookController {
   // In-memory store untuk melacak message ID demi mencegah duplikasi akibat retry
   private processedMessages = new Map<string, { status: 'in_progress' | 'completed'; timestamp: number }>();
 
+  // Cache untuk menyimpan teks pesan yang baru saja dikirim oleh bot (untuk anti-loop pada self-chat)
+  private sentMessages = new Map<string, number>();
+
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly aiService: AiService,
   ) {}
+
+  // Helper untuk menormalisasi teks (menghilangkan spasi berlebih dan case-insensitive)
+  private normalizeText(txt: string): string {
+    return txt.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
 
   // Helper untuk membandingkan nomor telepon secara aman (mengabaikan perbedaan format)
   private isSamePhone(phone1: string, phone2: string): boolean {
@@ -37,6 +45,18 @@ export class WebhookController {
       return clean1.slice(-9) === clean2.slice(-9);
     }
     return clean1 === clean2;
+  }
+
+  // Memeriksa apakah teks pesan dikirim oleh bot sendiri dalam 2 menit terakhir
+  private isBotSentMessage(text: string): boolean {
+    const norm = this.normalizeText(text);
+    const timestamp = this.sentMessages.get(norm);
+    if (!timestamp) return false;
+    if (Date.now() - timestamp < 2 * 60 * 1000) {
+      return true;
+    }
+    this.sentMessages.delete(norm);
+    return false;
   }
 
   // Bersihkan pending actions yang sudah expired (>10 menit)
@@ -59,10 +79,23 @@ export class WebhookController {
     }
   }
 
+  // Bersihkan cache pesan terkirim yang sudah expired (>2 menit)
+  private cleanupExpiredSentMessages() {
+    const now = Date.now();
+    for (const [text, timestamp] of this.sentMessages.entries()) {
+      if (now - timestamp > 2 * 60 * 1000) {
+        this.sentMessages.delete(text);
+      }
+    }
+  }
+
   // =====================================================================
   // Helper: Kirim pesan via Fonnte (optimized untuk Vercel serverless)
   // =====================================================================
   private async sendFonnteMessage(target: string, message: string) {
+    // Catat pesan yang dikirim oleh bot untuk mendeteksi loop saat self-chat
+    this.sentMessages.set(this.normalizeText(message), Date.now());
+
     // Gunakan fallback hardcoded agar tetap berjalan di Vercel serverless
     const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
 
@@ -127,6 +160,7 @@ export class WebhookController {
       // Bersihkan data expired
       this.cleanupExpiredPending();
       this.cleanupExpiredProcessed();
+      this.cleanupExpiredSentMessages();
 
       const body = req.body || {};
       const query = req.query || {};
@@ -153,10 +187,14 @@ export class WebhookController {
         return res.status(HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
       }
 
-      // 2. Abaikan jika pengirim adalah device itu sendiri (anti-loop)
+      // 2. Abaikan jika pengirim adalah device itu sendiri DAN pesan tersebut adalah pesan yang dikirim oleh bot (anti-loop)
+      // Ini memungkinkan user melakukan self-chat (kirim pesan ke diri sendiri) untuk testing,
+      // tapi tetap memblokir jika webhook menerima pesan balasan yang diposting oleh bot.
       if (device && (this.isSamePhone(sender, device) || (member && this.isSamePhone(member, device)))) {
-        this.logger.log(`Mengabaikan pesan keluar dari device sendiri (${device}) untuk menghindari loop.`);
-        return res.status(HttpStatus.OK).json({ status: 'ignored_self_message' });
+        if (this.isBotSentMessage(message)) {
+          this.logger.log(`Mengabaikan pesan keluar dari device sendiri (${device}) untuk menghindari loop.`);
+          return res.status(HttpStatus.OK).json({ status: 'ignored_self_message' });
+        }
       }
 
       // 3. Cek idempotensi (duplikasi akibat retry Fonnte)
