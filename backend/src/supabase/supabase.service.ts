@@ -578,4 +578,30 @@ export class SupabaseService {
       this.logger.error(`Exception marking message processed:`, e);
     }
   }
+
+  // Log raw webhook payload for debugging
+  async logWebhookPayload(body: any, query: any) {
+    try {
+      await this.supabase
+        .from('audit_log')
+        .insert({
+          action: 'webhook_received',
+          table_name: 'fonnte_webhook',
+          new_data: { body, query }
+        });
+    } catch (e) {
+      this.logger.error('Gagal mencatat webhook payload ke audit_log:', e);
+    }
+  }
+
+  // Get recent webhook logs for debugging
+  async getRecentWebhookLogs() {
+    return await this.supabase
+      .from('audit_log')
+      .select('*')
+      .eq('table_name', 'fonnte_webhook')
+      .eq('action', 'webhook_received')
+      .order('created_at', { ascending: false })
+      .limit(10);
+  }
 }

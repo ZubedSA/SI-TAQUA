@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Res, HttpStatus, Logger, Req } from '@nestjs/common';
+import { Controller, Post, Get, Body, Res, HttpStatus, Logger, Req } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
 import { AiService } from '../ai/ai.service';
@@ -102,6 +102,17 @@ export class WebhookController {
     return res.status(HttpStatus.OK).json({ reply: text });
   }
 
+  @Get('webhook/debug-logs')
+  async getDebugLogs(@Res() res: Response) {
+    try {
+      const { data, error } = await this.supabaseService.getRecentWebhookLogs();
+      if (error) throw error;
+      return res.status(HttpStatus.OK).json(data);
+    } catch (err) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
+    }
+  }
+
   // =====================================================================
   // POST /webhook — Main entry point
   // =====================================================================
@@ -119,6 +130,9 @@ export class WebhookController {
 
       const body = req.body || {};
       const query = req.query || {};
+
+      // Catat payload masuk untuk didebug
+      await this.supabaseService.logWebhookPayload(body, query);
 
       // 1. Deteksi dan abaikan status update dari Fonnte (karena tidak berisi pesan masuk baru)
       if (body.status || body.state || body.stateid) {

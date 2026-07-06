@@ -83,6 +83,17 @@ let WebhookController = WebhookController_1 = class WebhookController {
         await this.sendFonnteMessage(target, text);
         return res.status(common_1.HttpStatus.OK).json({ reply: text });
     }
+    async getDebugLogs(res) {
+        try {
+            const { data, error } = await this.supabaseService.getRecentWebhookLogs();
+            if (error)
+                throw error;
+            return res.status(common_1.HttpStatus.OK).json(data);
+        }
+        catch (err) {
+            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
+        }
+    }
     async handleWebhook(req, res) {
         let sender = '';
         let message = '';
@@ -92,6 +103,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
             this.cleanupExpiredProcessed();
             const body = req.body || {};
             const query = req.query || {};
+            await this.supabaseService.logWebhookPayload(body, query);
             if (body.status || body.state || body.stateid) {
                 this.logger.log(`Mengabaikan status update webhook: ID=${body.id || 'N/A'}, Status=${body.status || body.state}`);
                 return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_status_update' });
@@ -347,6 +359,13 @@ let WebhookController = WebhookController_1 = class WebhookController {
     }
 };
 exports.WebhookController = WebhookController;
+__decorate([
+    (0, common_1.Get)('webhook/debug-logs'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "getDebugLogs", null);
 __decorate([
     (0, common_1.Post)('webhook'),
     (0, common_1.Post)(),

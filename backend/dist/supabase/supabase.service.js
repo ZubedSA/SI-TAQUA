@@ -488,6 +488,29 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             this.logger.error(`Exception marking message processed:`, e);
         }
     }
+    async logWebhookPayload(body, query) {
+        try {
+            await this.supabase
+                .from('audit_log')
+                .insert({
+                action: 'webhook_received',
+                table_name: 'fonnte_webhook',
+                new_data: { body, query }
+            });
+        }
+        catch (e) {
+            this.logger.error('Gagal mencatat webhook payload ke audit_log:', e);
+        }
+    }
+    async getRecentWebhookLogs() {
+        return await this.supabase
+            .from('audit_log')
+            .select('*')
+            .eq('table_name', 'fonnte_webhook')
+            .eq('action', 'webhook_received')
+            .order('created_at', { ascending: false })
+            .limit(10);
+    }
 };
 exports.SupabaseService = SupabaseService;
 exports.SupabaseService = SupabaseService = SupabaseService_1 = __decorate([

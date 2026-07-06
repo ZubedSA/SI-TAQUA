@@ -88,4 +88,6 @@ export declare class SupabaseService {
     addCatatanPembinaan(santriId: string, jenis: 'UMUM' | 'KONSELING' | 'PEMBINAAN' | 'PUJIAN' | 'CATATAN', isi: string): Promise<any>;
     isMessageProcessed(messageId: string): Promise<boolean>;
     markMessageProcessed(messageId: string): Promise<void>;
+    logWebhookPayload(body: any, query: any): Promise<void>;
+    getRecentWebhookLogs(): Promise<import("@supabase/postgrest-js").PostgrestSingleResponse<any[]>>;
 }
