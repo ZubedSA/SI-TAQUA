@@ -62,6 +62,35 @@ export class WebhookController {
     return false;
   }
 
+  // Helper untuk memproses hasil pencarian nama santri (klarifikasi jika ganda, atau return target tunggal)
+  private handleSantriMatches(matches: any[], searchName: string): { target: any; clarification?: string } {
+    if (!matches || matches.length === 0) {
+      return { target: null };
+    }
+    
+    if (matches.length === 1) {
+      return { target: matches[0] };
+    }
+
+    // Cek jika ada nama yang sama persis (case-insensitive)
+    const exactMatch = matches.find(s => s.nama.toLowerCase() === searchName.toLowerCase());
+    if (exactMatch) {
+      return { target: exactMatch };
+    }
+
+    // Jika lebih dari 1, buat teks klarifikasi ganda
+    let clarificationText = `Saya menemukan beberapa santri dengan nama *"${searchName}"*:\n\n`;
+    matches.slice(0, 5).forEach((s, idx) => {
+      clarificationText += `${idx + 1}. *${s.nama}* (NIS: ${s.nis})\n`;
+    });
+    if (matches.length > 5) {
+      clarificationText += `...dan ${matches.length - 5} santri lainnya.\n`;
+    }
+    clarificationText += `\nMohon tuliskan kembali nama santri dengan lebih lengkap atau spesifik ya. 😊`;
+
+    return { target: null, clarification: clarificationText };
+  }
+
   // Bersihkan pending actions yang sudah expired (>10 menit)
   private cleanupExpiredPending() {
     const now = Date.now();
@@ -310,16 +339,21 @@ export class WebhookController {
           return this.replyToUser(res, sender, `⚠️ Gagal mencari nama santri akibat gangguan koneksi database.`, messageId);
         }
 
-        if (!matchingSantri || matchingSantri.length === 0) {
+        const resolution = this.handleSantriMatches(matchingSantri, santriName);
+        if (resolution.clarification) {
+          return this.replyToUser(res, sender, resolution.clarification, messageId);
+        }
+
+        if (!resolution.target) {
           return this.replyToUser(res, sender,
             `Maaf, santri dengan nama *"${santriName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`,
             messageId
           );
         }
 
-        // Jika ada lebih dari 1 santri dengan nama mirip, gunakan yang pertama
-        parsed.parameters.santri_id = matchingSantri[0].id;
-        parsed.parameters.resolved_name = matchingSantri[0].nama;
+        // Gunakan santri yang ter-resolve
+        parsed.parameters.santri_id = resolution.target.id;
+        parsed.parameters.resolved_name = resolution.target.nama;
 
         // Simpan pending action
         this.pendingActions[sender] = {
@@ -357,17 +391,38 @@ export class WebhookController {
       if (parsed.parameters?.santri_name) {
         try {
           const matches = await this.supabaseService.findSantriByName(parsed.parameters.santri_name);
-          if (matches && matches.length > 0) {
-            targetSantri = matches[0];
+          const resolution = this.handleSantriMatches(matches, parsed.parameters.santri_name);
+          
+          if (resolution.clarification) {
+            return this.replyToUser(res, sender, resolution.clarification, messageId);
           }
+
+          if (!resolution.target) {
+            return this.replyToUser(res, sender,
+              `Maaf, santri dengan nama *"${parsed.parameters.santri_name}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`,
+              messageId
+            );
+          }
+          targetSantri = resolution.target;
         } catch (dbError) {
           this.logger.error('Gagal resolve santri name:', dbError);
         }
       } else {
         try {
           const matches = await this.supabaseService.findSantriByWaliPhone(sender);
-          if (matches && matches.length > 0) {
-            targetSantri = matches[0];
+          const resolution = this.handleSantriMatches(matches, 'Anak Anda');
+          
+          if (resolution.clarification) {
+            return this.replyToUser(
+              res, 
+              sender, 
+              resolution.clarification.replace('dengan nama "Anak Anda"', 'yang terhubung dengan nomor Anda'), 
+              messageId
+            );
+          }
+          
+          targetSantri = resolution.target;
+          if (targetSantri) {
             this.logger.log(`Mengidentifikasi santri secara otomatis dari nomor wali ${sender}: ${targetSantri.nama}`);
           }
         } catch (dbError) {

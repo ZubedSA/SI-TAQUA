@@ -54,6 +54,27 @@ let WebhookController = WebhookController_1 = class WebhookController {
         this.sentMessages.delete(norm);
         return false;
     }
+    handleSantriMatches(matches, searchName) {
+        if (!matches || matches.length === 0) {
+            return { target: null };
+        }
+        if (matches.length === 1) {
+            return { target: matches[0] };
+        }
+        const exactMatch = matches.find(s => s.nama.toLowerCase() === searchName.toLowerCase());
+        if (exactMatch) {
+            return { target: exactMatch };
+        }
+        let clarificationText = `Saya menemukan beberapa santri dengan nama *"${searchName}"*:\n\n`;
+        matches.slice(0, 5).forEach((s, idx) => {
+            clarificationText += `${idx + 1}. *${s.nama}* (NIS: ${s.nis})\n`;
+        });
+        if (matches.length > 5) {
+            clarificationText += `...dan ${matches.length - 5} santri lainnya.\n`;
+        }
+        clarificationText += `\nMohon tuliskan kembali nama santri dengan lebih lengkap atau spesifik ya. 😊`;
+        return { target: null, clarification: clarificationText };
+    }
     cleanupExpiredPending() {
         const now = Date.now();
         for (const [sender, action] of Object.entries(this.pendingActions)) {
@@ -227,11 +248,15 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     this.logger.error('Gagal mencari santri:', dbError);
                     return this.replyToUser(res, sender, `⚠️ Gagal mencari nama santri akibat gangguan koneksi database.`, messageId);
                 }
-                if (!matchingSantri || matchingSantri.length === 0) {
+                const resolution = this.handleSantriMatches(matchingSantri, santriName);
+                if (resolution.clarification) {
+                    return this.replyToUser(res, sender, resolution.clarification, messageId);
+                }
+                if (!resolution.target) {
                     return this.replyToUser(res, sender, `Maaf, santri dengan nama *"${santriName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`, messageId);
                 }
-                parsed.parameters.santri_id = matchingSantri[0].id;
-                parsed.parameters.resolved_name = matchingSantri[0].nama;
+                parsed.parameters.santri_id = resolution.target.id;
+                parsed.parameters.resolved_name = resolution.target.nama;
                 this.pendingActions[sender] = {
                     intent: parsed.intent,
                     parameters: parsed.parameters,
@@ -268,9 +293,14 @@ let WebhookController = WebhookController_1 = class WebhookController {
             if (parsed.parameters?.santri_name) {
                 try {
                     const matches = await this.supabaseService.findSantriByName(parsed.parameters.santri_name);
-                    if (matches && matches.length > 0) {
-                        targetSantri = matches[0];
+                    const resolution = this.handleSantriMatches(matches, parsed.parameters.santri_name);
+                    if (resolution.clarification) {
+                        return this.replyToUser(res, sender, resolution.clarification, messageId);
                     }
+                    if (!resolution.target) {
+                        return this.replyToUser(res, sender, `Maaf, santri dengan nama *"${parsed.parameters.santri_name}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`, messageId);
+                    }
+                    targetSantri = resolution.target;
                 }
                 catch (dbError) {
                     this.logger.error('Gagal resolve santri name:', dbError);
@@ -279,8 +309,12 @@ let WebhookController = WebhookController_1 = class WebhookController {
             else {
                 try {
                     const matches = await this.supabaseService.findSantriByWaliPhone(sender);
-                    if (matches && matches.length > 0) {
-                        targetSantri = matches[0];
+                    const resolution = this.handleSantriMatches(matches, 'Anak Anda');
+                    if (resolution.clarification) {
+                        return this.replyToUser(res, sender, resolution.clarification.replace('dengan nama "Anak Anda"', 'yang terhubung dengan nomor Anda'), messageId);
+                    }
+                    targetSantri = resolution.target;
+                    if (targetSantri) {
                         this.logger.log(`Mengidentifikasi santri secara otomatis dari nomor wali ${sender}: ${targetSantri.nama}`);
                     }
                 }

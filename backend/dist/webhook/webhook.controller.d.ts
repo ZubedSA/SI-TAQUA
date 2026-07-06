@@ -12,6 +12,7 @@ export declare class WebhookController {
     private normalizeText;
     private isSamePhone;
     private isBotSentMessage;
+    private handleSantriMatches;
     private cleanupExpiredPending;
     private cleanupExpiredProcessed;
     private cleanupExpiredSentMessages;

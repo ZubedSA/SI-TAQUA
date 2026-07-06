@@ -26,13 +26,19 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         });
     }
     async findSantriByName(name) {
-        const { data, error } = await this.supabase
+        let queryBuilder = this.supabase
             .from('santri')
             .select('id, nama, nis, status, kelas_id, halaqoh_id')
-            .ilike('nama', `%${name}%`)
             .eq('status', 'Aktif');
+        const words = name.trim().split(/\s+/);
+        words.forEach(word => {
+            if (word) {
+                queryBuilder = queryBuilder.ilike('nama', `%${word}%`);
+            }
+        });
+        const { data, error } = await queryBuilder;
         if (error) {
-            this.logger.error(`Error finding santri by name ${name}:`, error);
+            this.logger.error(`Error finding santri by name ${name}:`, error.message || error);
             throw error;
         }
         return data;
