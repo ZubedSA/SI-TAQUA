@@ -25,22 +25,17 @@ let WebhookController = WebhookController_1 = class WebhookController {
         this.aiService = aiService;
         this.logger = new common_1.Logger(WebhookController_1.name);
         this.pendingActions = {};
-        setInterval(() => {
-            const now = Date.now();
-            for (const [sender, action] of Object.entries(this.pendingActions)) {
-                if (now - action.timestamp > 10 * 60 * 1000) {
-                    delete this.pendingActions[sender];
-                    this.logger.log(`Pending action expired for ${sender}`);
-                }
+    }
+    cleanupExpiredPending() {
+        const now = Date.now();
+        for (const [sender, action] of Object.entries(this.pendingActions)) {
+            if (now - action.timestamp > 10 * 60 * 1000) {
+                delete this.pendingActions[sender];
             }
-        }, 5 * 60 * 1000);
+        }
     }
     async sendFonnteMessage(target, message, retries = 3) {
-        const token = process.env.FONNTE_TOKEN;
-        if (!token) {
-            this.logger.warn('FONNTE_TOKEN tidak dikonfigurasi, skip pengiriman WA.');
-            return;
-        }
+        const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
         const formData = new URLSearchParams();
         formData.append('target', target);
         formData.append('message', message);
@@ -81,6 +76,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
         let sender = '';
         let message = '';
         try {
+            this.cleanupExpiredPending();
             const body = req.body || {};
             const query = req.query || {};
             sender = body.sender || query.sender || body.from || query.from || '';

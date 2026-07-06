@@ -7,6 +7,7 @@ export declare class WebhookController {
     private readonly logger;
     private pendingActions;
     constructor(supabaseService: SupabaseService, aiService: AiService);
+    private cleanupExpiredPending;
     private sendFonnteMessage;
     private replyToUser;
     handleWebhook(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;

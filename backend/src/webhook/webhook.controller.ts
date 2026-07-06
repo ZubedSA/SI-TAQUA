@@ -23,28 +23,24 @@ export class WebhookController {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly aiService: AiService,
-  ) {
-    // Bersihkan pending actions yang sudah lebih dari 10 menit setiap 5 menit
-    setInterval(() => {
-      const now = Date.now();
-      for (const [sender, action] of Object.entries(this.pendingActions)) {
-        if (now - action.timestamp > 10 * 60 * 1000) {
-          delete this.pendingActions[sender];
-          this.logger.log(`Pending action expired for ${sender}`);
-        }
+  ) {}
+
+  // Bersihkan pending actions yang sudah expired (>10 menit)
+  private cleanupExpiredPending() {
+    const now = Date.now();
+    for (const [sender, action] of Object.entries(this.pendingActions)) {
+      if (now - action.timestamp > 10 * 60 * 1000) {
+        delete this.pendingActions[sender];
       }
-    }, 5 * 60 * 1000);
+    }
   }
 
   // =====================================================================
   // Helper: Kirim pesan via Fonnte dengan auto-retry
   // =====================================================================
   private async sendFonnteMessage(target: string, message: string, retries = 3) {
-    const token = process.env.FONNTE_TOKEN;
-    if (!token) {
-      this.logger.warn('FONNTE_TOKEN tidak dikonfigurasi, skip pengiriman WA.');
-      return;
-    }
+    // Gunakan fallback hardcoded agar tetap berjalan di Vercel serverless
+    const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
 
     const formData = new URLSearchParams();
     formData.append('target', target);
@@ -96,6 +92,9 @@ export class WebhookController {
     let message = '';
 
     try {
+      // Bersihkan pending actions yang expired
+      this.cleanupExpiredPending();
+
       const body = req.body || {};
       const query = req.query || {};
 
