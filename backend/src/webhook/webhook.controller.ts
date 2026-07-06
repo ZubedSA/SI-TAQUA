@@ -9,13 +9,6 @@ interface PendingAction {
   timestamp: number;
 }
 
-interface MessageTracker {
-  replyCount: number;
-  lastQuestion: string;
-  lastReply: string;
-  lastTimestamp: number;
-}
-
 // Alias konfirmasi YA dan TIDAK yang dikenali (case-insensitive, normalized)
 const CONFIRM_YES = new Set(['YA', 'BENAR', 'BETUL', 'OK', 'OKE', 'YES', 'SIP', 'LANJUT', 'YOI', 'HEEH', 'SETUJU', 'IYA', 'LAKSANAKAN', 'KONFIRMASI']);
 const CONFIRM_NO  = new Set(['TIDAK', 'BUKAN', 'SALAH', 'BATAL', 'JANGAN', 'NO', 'CANCEL', 'GA', 'GAK', 'NDAK', 'NGGAK', 'ENGGAK', 'STOP']);
@@ -26,9 +19,6 @@ export class WebhookController {
 
   // In-memory store untuk pending confirmations (keyed by phone number)
   private pendingActions: Record<string, PendingAction> = {};
-
-  // In-memory store untuk pelacakan pesan (keyed by phone number)
-  private messageTracker: Record<string, MessageTracker> = {};
 
   constructor(
     private readonly supabaseService: SupabaseService,
@@ -43,23 +33,6 @@ export class WebhookController {
         delete this.pendingActions[sender];
       }
     }
-  }
-
-  // Bersihkan tracker pesan yang sudah expired (>10 menit)
-  private cleanupExpiredTracker() {
-    const now = Date.now();
-    for (const [sender, tracker] of Object.entries(this.messageTracker)) {
-      if (now - tracker.lastTimestamp > 10 * 60 * 1000) {
-        delete this.messageTracker[sender];
-      }
-    }
-  }
-
-  // Normalisasi dan bandingkan kesamaan pesan untuk mendeteksi loop
-  private isSimilar(str1: string, str2: string): boolean {
-    if (!str1 || !str2) return false;
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
-    return norm(str1) === norm(str2);
   }
 
   // =====================================================================
@@ -97,17 +70,6 @@ export class WebhookController {
   // jadi SEMUA async work harus selesai SEBELUM response dikirim.
   // =====================================================================
   private async replyToUser(res: Response, target: string, text: string) {
-    // Update last reply di tracker
-    if (!this.messageTracker[target]) {
-      this.messageTracker[target] = {
-        replyCount: 0,
-        lastQuestion: '',
-        lastReply: '',
-        lastTimestamp: Date.now(),
-      };
-    }
-    this.messageTracker[target].lastReply = text;
-
     // WAJIB await! Jangan fire-and-forget di serverless!
     await this.sendFonnteMessage(target, text);
     return res.status(HttpStatus.OK).json({ reply: text });
@@ -123,9 +85,8 @@ export class WebhookController {
     let message = '';
 
     try {
-      // Bersihkan pending actions dan tracker yang expired
+      // Bersihkan pending actions yang expired
       this.cleanupExpiredPending();
-      this.cleanupExpiredTracker();
 
       const body = req.body || {};
       const query = req.query || {};
@@ -140,47 +101,10 @@ export class WebhookController {
         return res.status(HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
       }
 
-      const normalizedMsg = message.trim();
-
-      // Cek apakah pesan masuk mirip dengan balasan terakhir bot (pencegahan loop)
-      const tracker = this.messageTracker[sender];
-      if (tracker && tracker.lastReply && this.isSimilar(normalizedMsg, tracker.lastReply)) {
-        this.logger.log(`Loop terdeteksi: Pesan masuk dari ${sender} sama dengan balasan terakhir bot. Diabaikan.`);
-        return res.status(HttpStatus.OK).json({ status: 'ignored_loop' });
-      }
-
-      if (!message || normalizedMsg === '') {
+      if (!message || message.trim() === '') {
         return this.replyToUser(res, sender,
           "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri."
         );
-      }
-
-      // Jalankan pembatasan balasan maksimal 3 balasan untuk satu pertanyaan
-      if (tracker) {
-        const now = Date.now();
-        const isTimeLimit = now - tracker.lastTimestamp < 60 * 1000; // Rentang waktu 1 menit
-        const isSameQuestion = this.isSimilar(normalizedMsg, tracker.lastQuestion);
-
-        if (isSameQuestion || isTimeLimit) {
-          tracker.replyCount += 1;
-          if (tracker.replyCount > 3) {
-            this.logger.warn(`Batas maksimal balasan (3x) tercapai untuk ${sender}. Menghentikan balasan.`);
-            return res.status(HttpStatus.OK).json({ status: 'limit_reached' });
-          }
-        } else {
-          // Reset tracker untuk pertanyaan baru
-          tracker.replyCount = 1;
-          tracker.lastQuestion = normalizedMsg;
-        }
-        tracker.lastTimestamp = now;
-      } else {
-        // Buat tracker baru jika belum ada
-        this.messageTracker[sender] = {
-          replyCount: 1,
-          lastQuestion: normalizedMsg,
-          lastReply: '',
-          lastTimestamp: Date.now(),
-        };
       }
 
       // ----------------------------------------------------------------
@@ -412,17 +336,9 @@ export class WebhookController {
     } catch (error) {
       this.logger.error('Error global di handleWebhook:', error);
       if (sender) {
-        const errorText = '⚠️ Maaf, terjadi kesalahan teknis pada sistem. Silakan coba lagi sebentar ya.';
-        if (!this.messageTracker[sender]) {
-          this.messageTracker[sender] = {
-            replyCount: 0,
-            lastQuestion: '',
-            lastReply: '',
-            lastTimestamp: Date.now(),
-          };
-        }
-        this.messageTracker[sender].lastReply = errorText;
-        await this.sendFonnteMessage(sender, errorText);
+        await this.sendFonnteMessage(sender,
+          '⚠️ Maaf, terjadi kesalahan teknis pada sistem. Silakan coba lagi sebentar ya.'
+        );
       }
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ reply: 'Kesalahan internal.' });
     }
