@@ -31,6 +31,13 @@ const MessagesPage = () => {
     const [selectedMessageId, setSelectedMessageId] = useState(null)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const longPressTimer = useRef(null)
+    // Ref untuk menghindari stale closure di realtime subscription
+    const activeConversationRef = useRef(null)
+
+    // Sync ref setiap kali activeConversation berubah
+    useEffect(() => {
+        activeConversationRef.current = activeConversation
+    }, [activeConversation])
 
     // Fetch conversations and directory on mount
     useEffect(() => {
@@ -38,7 +45,7 @@ const MessagesPage = () => {
         fetchConversations()
         fetchDirectory()
 
-        // Subscribe to new messages
+        // Subscribe ke perubahan realtime
         const channel = supabase
             .channel('messages-realtime')
             .on(
@@ -49,8 +56,10 @@ const MessagesPage = () => {
                     table: 'messages'
                 },
                 (payload) => {
-                    if (payload.new && activeConversation?.id === payload.new.conversation_id) {
-                        fetchMessages(activeConversation.id)
+                    // Gunakan ref (bukan state) agar tidak stale closure
+                    const currentConv = activeConversationRef.current
+                    if (payload.new && currentConv?.id === payload.new.conversation_id) {
+                        fetchMessages(currentConv.id)
                     }
                     fetchConversations()
                 }

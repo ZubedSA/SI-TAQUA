@@ -257,13 +257,73 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         return Object.values(countMap).sort((a, b) => b.maxJuz - a.maxJuz).slice(0, 10);
     }
     async getGuruBelumAbsen() {
-        const { data: allGuru, error } = await this.supabase
+        const today = new Date().toISOString().split('T')[0];
+        const { data: allGuru, error: err1 } = await this.supabase
             .from('guru')
-            .select('id, nama')
+            .select('id, nama, nip')
             .eq('status', 'Aktif');
+        if (err1)
+            throw err1;
+        if (!allGuru || allGuru.length === 0)
+            return [];
+        let sudahAbsenIds = new Set();
+        try {
+            const { data: absenGuru } = await this.supabase
+                .from('presensi_guru')
+                .select('guru_id')
+                .eq('tanggal', today);
+            if (absenGuru) {
+                absenGuru.forEach(a => sudahAbsenIds.add(a.guru_id));
+            }
+        }
+        catch {
+            try {
+                const { data: absenStaf } = await this.supabase
+                    .from('presensi_staf')
+                    .select('guru_id')
+                    .eq('tanggal', today);
+                if (absenStaf) {
+                    absenStaf.forEach(a => sudahAbsenIds.add(a.guru_id));
+                }
+            }
+            catch {
+                this.logger.warn('Tabel presensi_guru/presensi_staf tidak ditemukan. Menampilkan semua guru aktif.');
+                return allGuru;
+            }
+        }
+        return allGuru.filter(g => !sudahAbsenIds.has(g.id));
+    }
+    async addNilai(santriId, mapelNama, nilaiAkhir, semester = '1', tahunAjaran = '') {
+        if (!tahunAjaran) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            tahunAjaran = month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+        }
+        const { data: mapelList, error: mapelErr } = await this.supabase
+            .from('mapel')
+            .select('id')
+            .ilike('nama', `%${mapelNama}%`)
+            .limit(1);
+        if (mapelErr)
+            throw mapelErr;
+        const mapelId = mapelList && mapelList.length > 0 ? mapelList[0].id : null;
+        const payload = {
+            santri_id: santriId,
+            nilai_akhir: nilaiAkhir,
+            semester: semester,
+            tahun_ajaran: tahunAjaran,
+        };
+        if (mapelId)
+            payload.mapel_id = mapelId;
+        const { data, error } = await this.supabase
+            .from('nilai')
+            .insert(payload)
+            .select('*')
+            .single();
         if (error)
             throw error;
-        return allGuru;
+        return data;
     }
     async addPembayaran(santriId, categoryName, nominal, tanggal = new Date().toISOString().split('T')[0]) {
         const { data: categories, error: catErr } = await this.supabase

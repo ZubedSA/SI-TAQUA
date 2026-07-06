@@ -17,21 +17,36 @@ exports.WebhookController = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_service_1 = require("../supabase/supabase.service");
 const ai_service_1 = require("../ai/ai.service");
+const CONFIRM_YES = new Set(['YA', 'BENAR', 'BETUL', 'OK', 'OKE', 'YES', 'SIP', 'LANJUT', 'YOI', 'HEEH', 'SETUJU', 'IYA', 'LAKSANAKAN', 'KONFIRMASI']);
+const CONFIRM_NO = new Set(['TIDAK', 'BUKAN', 'SALAH', 'BATAL', 'JANGAN', 'NO', 'CANCEL', 'GA', 'GAK', 'NDAK', 'NGGAK', 'ENGGAK', 'STOP']);
 let WebhookController = WebhookController_1 = class WebhookController {
     constructor(supabaseService, aiService) {
         this.supabaseService = supabaseService;
         this.aiService = aiService;
         this.logger = new common_1.Logger(WebhookController_1.name);
         this.pendingActions = {};
+        setInterval(() => {
+            const now = Date.now();
+            for (const [sender, action] of Object.entries(this.pendingActions)) {
+                if (now - action.timestamp > 10 * 60 * 1000) {
+                    delete this.pendingActions[sender];
+                    this.logger.log(`Pending action expired for ${sender}`);
+                }
+            }
+        }, 5 * 60 * 1000);
     }
     async sendFonnteMessage(target, message, retries = 3) {
-        const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
+        const token = process.env.FONNTE_TOKEN;
+        if (!token) {
+            this.logger.warn('FONNTE_TOKEN tidak dikonfigurasi, skip pengiriman WA.');
+            return;
+        }
         const formData = new URLSearchParams();
         formData.append('target', target);
         formData.append('message', message);
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                this.logger.log(`Sending WhatsApp reply to ${target} (Attempt ${attempt}/${retries})...`);
+                this.logger.log(`Mengirim WA ke ${target} (Percobaan ${attempt}/${retries})...`);
                 const response = await fetch('https://api.fonnte.com/send', {
                     method: 'POST',
                     headers: {
@@ -42,24 +57,23 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     signal: AbortSignal.timeout(10000),
                 });
                 const resData = await response.json();
-                this.logger.log(`Fonnte API Response for ${target}: ${JSON.stringify(resData)}`);
+                this.logger.log(`Fonnte Response untuk ${target}: ${JSON.stringify(resData)}`);
                 return;
             }
             catch (e) {
-                this.logger.error(`Attempt ${attempt} failed to send message to ${target}: ${e.message || e}`);
+                this.logger.error(`Percobaan ${attempt} gagal kirim ke ${target}: ${e.message || e}`);
                 if (attempt < retries) {
-                    this.logger.log(`Waiting 2 seconds before retrying...`);
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
                 else {
-                    this.logger.error(`All ${retries} attempts failed to send message to ${target}.`);
+                    this.logger.error(`Semua ${retries} percobaan gagal untuk ${target}.`);
                 }
             }
         }
     }
     async replyToUser(res, target, text) {
         this.sendFonnteMessage(target, text).catch(e => {
-            this.logger.error('Background message sending failed:', e);
+            this.logger.error('Background message sending gagal:', e);
         });
         return res.status(common_1.HttpStatus.OK).json({ reply: text });
     }
@@ -71,111 +85,118 @@ let WebhookController = WebhookController_1 = class WebhookController {
             const query = req.query || {};
             sender = body.sender || query.sender || body.from || query.from || '';
             message = body.message || query.message || body.text || query.text || '';
-            this.logger.log(`Webhook triggered. Sender: "${sender}", Message: "${message}"`);
-            this.logger.debug(`Raw Request Body: ${JSON.stringify(body)}`);
+            this.logger.log(`Webhook: Sender="${sender}", Message="${message}"`);
             if (!sender) {
-                this.logger.warn('Webhook request received, but sender number is missing.');
+                this.logger.warn('Sender tidak ditemukan di request.');
                 return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
             }
             if (!message || message.trim() === '') {
-                return this.replyToUser(res, sender, 'Halo! Saya adalah Asisten AI SI-TAQUA. Ada yang bisa saya bantu? Silakan kirimkan pertanyaan Anda.');
+                return this.replyToUser(res, sender, "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.");
             }
             const pending = this.pendingActions[sender];
-            const normalizedMessage = message.trim().toUpperCase();
-            if (pending && (normalizedMessage === 'YA' || normalizedMessage === 'TIDAK')) {
-                if (normalizedMessage === 'YA') {
+            const normalizedMsg = message.trim().toUpperCase();
+            if (pending) {
+                if (CONFIRM_YES.has(normalizedMsg)) {
                     try {
                         const result = await this.executeAction(pending.intent, pending.parameters);
                         delete this.pendingActions[sender];
-                        const replyText = `✅ *Data berhasil disimpan!*\n\nDetail:\n- Aksi: *${pending.intent.replace('tambah_', 'Input ')}*\n- Nama: *${pending.parameters.resolved_name}*`;
+                        const actionLabel = pending.intent.replace('tambah_', 'Input ').replace('_', ' ');
+                        const replyText = `✅ *Data berhasil disimpan!*\n\n` +
+                            `Aksi: *${actionLabel}*\n` +
+                            `Santri: *${pending.parameters.resolved_name || '-'}*\n\n` +
+                            `Jazakumullah khairan atas konfirmasinya. 🤲`;
                         return this.replyToUser(res, sender, replyText);
                     }
                     catch (execError) {
-                        this.logger.error('Failed to execute pending database action:', execError);
+                        this.logger.error('Gagal eksekusi pending action:', execError);
                         delete this.pendingActions[sender];
                         return this.replyToUser(res, sender, `❌ *Gagal menyimpan data:* ${execError.message || execError}`);
                     }
                 }
-                else {
+                else if (CONFIRM_NO.has(normalizedMsg)) {
                     delete this.pendingActions[sender];
-                    return this.replyToUser(res, sender, '❌ *Transaksi dibatalkan.*');
+                    return this.replyToUser(res, sender, '❌ *Transaksi dibatalkan.* Ada lagi yang bisa saya bantu?');
                 }
+                delete this.pendingActions[sender];
             }
             let parsed;
             try {
                 parsed = await this.aiService.parseIntent(message, sender);
             }
             catch (parseError) {
-                this.logger.error('AI Intent parsing failed. Falling back to default parser.', parseError);
+                this.logger.error('AI intent parsing gagal, fallback chitchat:', parseError);
                 parsed = { intent: 'chitchat', parameters: {} };
             }
-            this.logger.log(`Parsed Intent: ${parsed.intent}, Params: ${JSON.stringify(parsed.parameters)}`);
-            if (parsed.intent.startsWith('tambah_') || parsed.intent === 'update_data' || parsed.intent === 'koreksi_data') {
-                let santriId = null;
-                let santriName = parsed.parameters?.santri_name;
-                if (santriName) {
-                    try {
-                        const matchingSantri = await this.supabaseService.findSantriByName(santriName);
-                        if (matchingSantri && matchingSantri.length > 0) {
-                            santriId = matchingSantri[0].id;
-                            parsed.parameters.santri_id = santriId;
-                            parsed.parameters.resolved_name = matchingSantri[0].nama;
-                        }
-                        else {
-                            return this.replyToUser(res, sender, `Maaf, santri dengan nama "${santriName}" tidak ditemukan. Silakan ulangi dengan nama yang benar.`);
-                        }
-                    }
-                    catch (dbError) {
-                        this.logger.error('Error querying student during write prep:', dbError);
-                        return this.replyToUser(res, sender, `⚠️ Gagal mencari nama santri akibat gangguan koneksi database.`);
-                    }
+            this.logger.log(`Intent: ${parsed.intent} | Params: ${JSON.stringify(parsed.parameters)}`);
+            const writeIntents = ['tambah_pembayaran', 'tambah_hafalan', 'tambah_absensi', 'tambah_perizinan',
+                'tambah_pelanggaran', 'tambah_prestasi', 'tambah_catatan_guru', 'tambah_nilai'];
+            if (writeIntents.includes(parsed.intent)) {
+                const santriName = parsed.parameters?.santri_name;
+                if (!santriName) {
+                    return this.replyToUser(res, sender, `Format pesan kurang lengkap. Mohon sebutkan *nama santri* dengan jelas ya.\n\nContoh: "Tambah pembayaran SPP Ahmad Rp300.000"`);
                 }
-                else {
-                    return this.replyToUser(res, sender, `Format pesan kurang lengkap. Tolong sebutkan nama santri dengan jelas.`);
+                let matchingSantri;
+                try {
+                    matchingSantri = await this.supabaseService.findSantriByName(santriName);
                 }
+                catch (dbError) {
+                    this.logger.error('Gagal mencari santri:', dbError);
+                    return this.replyToUser(res, sender, `⚠️ Gagal mencari nama santri akibat gangguan koneksi database.`);
+                }
+                if (!matchingSantri || matchingSantri.length === 0) {
+                    return this.replyToUser(res, sender, `Maaf, santri dengan nama *"${santriName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`);
+                }
+                parsed.parameters.santri_id = matchingSantri[0].id;
+                parsed.parameters.resolved_name = matchingSantri[0].nama;
                 this.pendingActions[sender] = {
                     intent: parsed.intent,
                     parameters: parsed.parameters,
                     timestamp: Date.now()
                 };
-                let confirmationText = `Saya mendengar:\n`;
+                let confirmText = `📝 Saya mendengar permintaan berikut:\n\n`;
                 if (parsed.parameters.resolved_name)
-                    confirmationText += `- Santri: *${parsed.parameters.resolved_name}*\n`;
+                    confirmText += `👤 Santri: *${parsed.parameters.resolved_name}*\n`;
                 if (parsed.parameters.nominal)
-                    confirmationText += `- Nominal: *Rp${Number(parsed.parameters.nominal).toLocaleString('id-ID')}*\n`;
+                    confirmText += `💰 Nominal: *Rp${Number(parsed.parameters.nominal).toLocaleString('id-ID')}*\n`;
                 if (parsed.parameters.kategori)
-                    confirmationText += `- Kategori: *${parsed.parameters.kategori}*\n`;
+                    confirmText += `📁 Kategori: *${parsed.parameters.kategori}*\n`;
                 if (parsed.parameters.juz)
-                    confirmationText += `- Juz: *${parsed.parameters.juz}*\n`;
+                    confirmText += `📖 Juz: *${parsed.parameters.juz}*\n`;
                 if (parsed.parameters.surah)
-                    confirmationText += `- Surah: *${parsed.parameters.surah}*\n`;
+                    confirmText += `📖 Surah: *${parsed.parameters.surah}*\n`;
+                if (parsed.parameters.ayat_awal)
+                    confirmText += `📖 Ayat: *${parsed.parameters.ayat_awal}${parsed.parameters.ayat_akhir ? '-' + parsed.parameters.ayat_akhir : ''}*\n`;
                 if (parsed.parameters.status)
-                    confirmationText += `- Status: *${parsed.parameters.status}*\n`;
+                    confirmText += `📋 Status: *${parsed.parameters.status}*\n`;
                 if (parsed.parameters.keterangan)
-                    confirmationText += `- Keterangan: *${parsed.parameters.keterangan}*\n`;
+                    confirmText += `📝 Keterangan: *${parsed.parameters.keterangan}*\n`;
                 if (parsed.parameters.isi_catatan)
-                    confirmationText += `- Isi Catatan: *${parsed.parameters.isi_catatan}*\n`;
-                confirmationText += `\nApakah data ini sudah benar?\nBalas *YA* atau *TIDAK*.`;
-                return this.replyToUser(res, sender, confirmationText);
+                    confirmText += `📝 Catatan: *${parsed.parameters.isi_catatan}*\n`;
+                if (parsed.parameters.nilai !== undefined)
+                    confirmText += `🎯 Nilai: *${parsed.parameters.nilai}*\n`;
+                if (parsed.parameters.mapel)
+                    confirmText += `📚 Mapel: *${parsed.parameters.mapel}*\n`;
+                confirmText += `\nApakah data ini sudah benar?\nBalas *YA* untuk simpan atau *TIDAK* untuk batalkan.`;
+                return this.replyToUser(res, sender, confirmText);
             }
             let dbResult = null;
             let targetSantri = null;
             if (parsed.parameters?.santri_name) {
                 try {
-                    const matchingSantri = await this.supabaseService.findSantriByName(parsed.parameters.santri_name);
-                    if (matchingSantri && matchingSantri.length > 0) {
-                        targetSantri = matchingSantri[0];
+                    const matches = await this.supabaseService.findSantriByName(parsed.parameters.santri_name);
+                    if (matches && matches.length > 0) {
+                        targetSantri = matches[0];
                     }
                 }
                 catch (dbError) {
-                    this.logger.error('Error resolving student name:', dbError);
+                    this.logger.error('Gagal resolve santri name:', dbError);
                 }
             }
             try {
                 switch (parsed.intent) {
                     case 'check_pembayaran':
                         if (!targetSantri) {
-                            dbResult = { error: 'Santri tidak ditemukan atau nama kurang jelas.' };
+                            dbResult = { error: 'Santri tidak ditemukan. Pastikan nama sudah benar.' };
                         }
                         else {
                             dbResult = await this.supabaseService.checkPembayaran(targetSantri.id, parsed.parameters.bulan);
@@ -183,25 +204,25 @@ let WebhookController = WebhookController_1 = class WebhookController {
                         break;
                     case 'get_hafalan':
                         if (!targetSantri) {
-                            dbResult = { error: 'Santri tidak ditemukan atau nama kurang jelas.' };
+                            dbResult = { error: 'Santri tidak ditemukan. Pastikan nama sudah benar.' };
                         }
                         else {
                             dbResult = await this.supabaseService.getHafalan(targetSantri.id);
                         }
                         break;
+                    case 'get_tidak_setor_today':
+                        dbResult = await this.supabaseService.getWhoHasNotDepositedToday();
+                        break;
+                    case 'get_top_10_hafalan':
+                        dbResult = await this.supabaseService.getTop10Hafalan();
+                        break;
                     case 'get_nilai':
                         if (!targetSantri) {
-                            dbResult = { error: 'Santri tidak ditemukan atau nama kurang jelas.' };
+                            dbResult = { error: 'Santri tidak ditemukan. Pastikan nama sudah benar.' };
                         }
                         else {
                             dbResult = await this.supabaseService.getNilai(targetSantri.id);
                         }
-                        break;
-                    case 'get_tidak_setor_today':
-                        dbResult = await this.supabaseService.getWhoHasNotDepositedToday();
-                        break;
-                    case 'get_pemasukan_bulan':
-                        dbResult = await this.supabaseService.getTotalPemasukanBulanIni();
                         break;
                     case 'get_presence_today':
                         dbResult = await this.supabaseService.getSantriHadirHariIni();
@@ -209,69 +230,74 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     case 'get_santri_most_izin':
                         dbResult = await this.supabaseService.getSantriPalingBanyakIzin();
                         break;
-                    case 'get_perkembangan_summary':
-                        if (!targetSantri) {
-                            dbResult = { error: 'Santri tidak ditemukan atau nama kurang jelas.' };
-                        }
-                        else {
-                            const h = await this.supabaseService.getHafalan(targetSantri.id);
-                            const n = await this.supabaseService.getNilai(targetSantri.id);
-                            const p = await this.supabaseService.getPresensi(targetSantri.id);
-                            dbResult = {
-                                santri: targetSantri.nama,
-                                hafalan: h.slice(0, 5),
-                                nilai: n,
-                                presensi: p.slice(0, 10)
-                            };
-                        }
+                    case 'get_guru_belum_absen':
+                        dbResult = await this.supabaseService.getGuruBelumAbsen();
                         break;
-                    case 'get_tunggakan_terbesar':
-                        dbResult = await this.supabaseService.getTunggakanTerbesar();
+                    case 'get_pemasukan_bulan':
+                        dbResult = await this.supabaseService.getTotalPemasukanBulanIni();
                         break;
                     case 'get_pemasukan_perbandingan':
                         dbResult = await this.supabaseService.getPemasukanPerbandingan();
                         break;
-                    case 'get_guru_belum_absen':
-                        dbResult = await this.supabaseService.getGuruBelumAbsen();
+                    case 'get_tunggakan_terbesar':
+                        dbResult = await this.supabaseService.getTunggakanTerbesar();
                         break;
                     case 'get_jumlah_santri_aktif':
                         dbResult = { jumlah_santri_aktif: await this.supabaseService.getActiveSantriCount() };
                         break;
+                    case 'get_perkembangan_summary':
+                        if (!targetSantri) {
+                            dbResult = { error: 'Santri tidak ditemukan. Pastikan nama sudah benar.' };
+                        }
+                        else {
+                            const [h, n, p] = await Promise.all([
+                                this.supabaseService.getHafalan(targetSantri.id),
+                                this.supabaseService.getNilai(targetSantri.id),
+                                this.supabaseService.getPresensi(targetSantri.id),
+                            ]);
+                            dbResult = {
+                                santri: targetSantri.nama,
+                                hafalan: h.slice(0, 5),
+                                nilai: n,
+                                presensi: p.slice(0, 30),
+                            };
+                        }
+                        break;
                     case 'chitchat':
                     default:
-                        dbResult = { status: 'general conversation' };
+                        dbResult = { status: 'chitchat' };
                         break;
                 }
             }
             catch (dbError) {
-                this.logger.error(`Database query failed for intent ${parsed.intent}:`, dbError);
-                dbResult = { error: 'Terjadi gangguan saat mengambil data dari database.' };
+                this.logger.error(`Database query gagal untuk intent ${parsed.intent}:`, dbError);
+                dbResult = { error: 'Terjadi gangguan saat mengambil data dari database. Coba lagi sebentar ya.' };
             }
             const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);
             return this.replyToUser(res, sender, reply);
         }
         catch (error) {
-            this.logger.error('Error handling Fonnte webhook:', error);
+            this.logger.error('Error global di handleWebhook:', error);
             if (sender) {
-                await this.sendFonnteMessage(sender, '⚠️ Maaf, terjadi kesalahan teknis pada sistem asisten saat memproses pesan Anda.');
+                await this.sendFonnteMessage(sender, '⚠️ Maaf, terjadi kesalahan teknis pada sistem. Silakan coba lagi sebentar ya.');
             }
-            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
-                reply: 'Maaf, terjadi kesalahan internal.'
-            });
+            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ reply: 'Kesalahan internal.' });
         }
     }
     async executeAction(intent, parameters) {
         const santriId = parameters.santri_id;
         if (!santriId)
-            throw new Error('Santri ID is required to execute action');
+            throw new Error('Santri ID dibutuhkan untuk menyimpan data.');
         switch (intent) {
             case 'tambah_pembayaran':
                 return await this.supabaseService.addPembayaran(santriId, parameters.kategori || 'SPP Bulanan', Number(parameters.nominal));
             case 'tambah_hafalan':
-                return await this.supabaseService.addHafalan(santriId, Number(parameters.juz || 1), parameters.surah || '', Number(parameters.ayat_awal || 0), Number(parameters.ayat_akhir || 0), parameters.status || 'Proses');
+                return await this.supabaseService.addHafalan(santriId, Number(parameters.juz || 1), parameters.surah || '', Number(parameters.ayat_awal || 1), Number(parameters.ayat_akhir || parameters.ayat_awal || 1), parameters.status || 'Proses');
             case 'tambah_absensi':
             case 'tambah_perizinan':
                 return await this.supabaseService.addAbsensi(santriId, parameters.status || 'hadir', parameters.keterangan || '');
+            case 'tambah_nilai':
+                return await this.supabaseService.addNilai(santriId, parameters.mapel || '', Number(parameters.nilai || parameters.nilai_akhir || 0), parameters.semester || '1');
             case 'tambah_pelanggaran':
                 return await this.supabaseService.addPelanggaran(santriId, parameters.kategori || 'Lainnya', Number(parameters.tingkat || 1), parameters.keterangan || '');
             case 'tambah_prestasi':
@@ -279,7 +305,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
             case 'tambah_catatan_guru':
                 return await this.supabaseService.addCatatanPembinaan(santriId, 'CATATAN', parameters.isi_catatan || '');
             default:
-                throw new Error(`Unsupported action intent: ${intent}`);
+                throw new Error(`Aksi tidak dikenali: ${intent}`);
         }
     }
 };

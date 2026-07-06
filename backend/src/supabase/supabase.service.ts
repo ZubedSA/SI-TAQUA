@@ -303,20 +303,99 @@ export class SupabaseService {
     return Object.values(countMap).sort((a, b) => b.maxJuz - a.maxJuz).slice(0, 10);
   }
 
-  // Teacher absence check (teachers who haven't inputted attendance today)
+  // Teacher absence check: hanya guru yang BELUM absen hari ini
   async getGuruBelumAbsen() {
-    // In our schema, we have a table presensi_staf or check-guru-absensi or class schedules
-    // Let's query all active guru
-    const { data: allGuru, error } = await this.supabase
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1. Ambil semua guru aktif
+    const { data: allGuru, error: err1 } = await this.supabase
       .from('guru')
-      .select('id, nama')
+      .select('id, nama, nip')
       .eq('status', 'Aktif');
 
-    if (error) throw error;
-    return allGuru; // Return list of active teachers for reference
+    if (err1) throw err1;
+    if (!allGuru || allGuru.length === 0) return [];
+
+    // 2. Ambil guru yang sudah absen hari ini (dari presensi_guru atau presensi_staf)
+    // Coba tabel presensi_guru dulu, fallback ke presensi_staf
+    let sudahAbsenIds = new Set<string>();
+    try {
+      const { data: absenGuru } = await this.supabase
+        .from('presensi_guru')
+        .select('guru_id')
+        .eq('tanggal', today);
+      if (absenGuru) {
+        absenGuru.forEach(a => sudahAbsenIds.add(a.guru_id));
+      }
+    } catch {
+      try {
+        const { data: absenStaf } = await this.supabase
+          .from('presensi_staf')
+          .select('guru_id')
+          .eq('tanggal', today);
+        if (absenStaf) {
+          absenStaf.forEach(a => sudahAbsenIds.add(a.guru_id));
+        }
+      } catch {
+        // Jika tidak ada tabel presensi guru, kembalikan semua guru aktif
+        this.logger.warn('Tabel presensi_guru/presensi_staf tidak ditemukan. Menampilkan semua guru aktif.');
+        return allGuru;
+      }
+    }
+
+    // 3. Filter guru yang belum absen
+    return allGuru.filter(g => !sudahAbsenIds.has(g.id));
   }
 
+  // =====================================================================
   // Save/Insert operations
+  // =====================================================================
+
+  // Tambah/update nilai santri
+  async addNilai(
+    santriId: string,
+    mapelNama: string,
+    nilaiAkhir: number,
+    semester: string = '1',
+    tahunAjaran: string = '',
+  ) {
+    if (!tahunAjaran) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      tahunAjaran = month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+    }
+
+    // Cari mapel berdasarkan nama
+    const { data: mapelList, error: mapelErr } = await this.supabase
+      .from('mapel')
+      .select('id')
+      .ilike('nama', `%${mapelNama}%`)
+      .limit(1);
+
+    if (mapelErr) throw mapelErr;
+
+    const mapelId = mapelList && mapelList.length > 0 ? mapelList[0].id : null;
+
+    // Upsert nilai
+    const payload: any = {
+      santri_id: santriId,
+      nilai_akhir: nilaiAkhir,
+      semester: semester,
+      tahun_ajaran: tahunAjaran,
+    };
+    if (mapelId) payload.mapel_id = mapelId;
+
+    const { data, error } = await this.supabase
+      .from('nilai')
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   async addPembayaran(santriId: string, categoryName: string, nominal: number, tanggal: string = new Date().toISOString().split('T')[0]) {
     // 1. Get or create tagihan for this category
     const { data: categories, error: catErr } = await this.supabase

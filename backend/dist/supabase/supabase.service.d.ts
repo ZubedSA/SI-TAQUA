@@ -78,7 +78,9 @@ export declare class SupabaseService {
     getGuruBelumAbsen(): Promise<{
         id: any;
         nama: any;
+        nip: any;
     }[]>;
+    addNilai(santriId: string, mapelNama: string, nilaiAkhir: number, semester?: string, tahunAjaran?: string): Promise<any>;
     addPembayaran(santriId: string, categoryName: string, nominal: number, tanggal?: string): Promise<any>;
     addHafalan(santriId: string, juz: number, surah: string, ayatMulai: number, ayatSelesai: number, status?: string): Promise<any>;
     addAbsensi(santriId: string, status: string, keterangan?: string, tanggal?: string): Promise<any>;
