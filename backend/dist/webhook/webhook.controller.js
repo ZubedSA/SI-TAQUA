@@ -267,6 +267,18 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     this.logger.error('Gagal resolve santri name:', dbError);
                 }
             }
+            else {
+                try {
+                    const matches = await this.supabaseService.findSantriByWaliPhone(sender);
+                    if (matches && matches.length > 0) {
+                        targetSantri = matches[0];
+                        this.logger.log(`Mengidentifikasi santri secara otomatis dari nomor wali ${sender}: ${targetSantri.nama}`);
+                    }
+                }
+                catch (dbError) {
+                    this.logger.error('Gagal resolve santri berdasarkan nomor wali:', dbError);
+                }
+            }
             try {
                 switch (parsed.intent) {
                     case 'check_pembayaran':

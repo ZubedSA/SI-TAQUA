@@ -343,7 +343,7 @@ export class WebhookController {
       let dbResult: any = null;
       let targetSantri: any = null;
 
-      // Resolve santri jika ada nama
+      // Resolve santri jika ada nama, jika tidak cari berdasarkan nomor wali
       if (parsed.parameters?.santri_name) {
         try {
           const matches = await this.supabaseService.findSantriByName(parsed.parameters.santri_name);
@@ -352,6 +352,16 @@ export class WebhookController {
           }
         } catch (dbError) {
           this.logger.error('Gagal resolve santri name:', dbError);
+        }
+      } else {
+        try {
+          const matches = await this.supabaseService.findSantriByWaliPhone(sender);
+          if (matches && matches.length > 0) {
+            targetSantri = matches[0];
+            this.logger.log(`Mengidentifikasi santri secara otomatis dari nomor wali ${sender}: ${targetSantri.nama}`);
+          }
+        } catch (dbError) {
+          this.logger.error('Gagal resolve santri berdasarkan nomor wali:', dbError);
         }
       }
 

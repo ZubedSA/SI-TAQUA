@@ -90,4 +90,11 @@ export declare class SupabaseService {
     markMessageProcessed(messageId: string): Promise<void>;
     logWebhookPayload(body: any, query: any): Promise<void>;
     getRecentWebhookLogs(): Promise<import("@supabase/postgrest-js").PostgrestSingleResponse<any[]>>;
+    findSantriByWaliPhone(phone: string): Promise<{
+        id: any;
+        nama: any;
+        nis: any;
+        status: any;
+        no_telp_wali: any;
+    }[]>;
 }

@@ -70,9 +70,50 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         kategori_pembayaran (nama)
       `)
             .eq('santri_id', santriId);
-        const { data, error } = await query;
+        let { data, error } = await query;
         if (error)
             throw error;
+        if ((!data || data.length === 0) && santriId) {
+            try {
+                this.logger.log(`Demo Mode: Membuat data tagihan dummy untuk santri ${santriId}`);
+                const { data: categories } = await this.supabase
+                    .from('kategori_pembayaran')
+                    .select('id, nama, nominal_default');
+                if (categories && categories.length > 0) {
+                    const currentYear = new Date().getFullYear();
+                    const dummyBills = categories.slice(0, 3).map((cat, idx) => ({
+                        santri_id: santriId,
+                        kategori_id: cat.id,
+                        jumlah: cat.nominal_default || 200000,
+                        jatuh_tempo: `${currentYear}-07-10`,
+                        status: idx === 0 ? 'Lunas' : 'Belum Lunas',
+                        keterangan: `Tagihan Bulanan ${cat.nama}`
+                    }));
+                    const { error: insertErr } = await this.supabase
+                        .from('tagihan_santri')
+                        .insert(dummyBills);
+                    if (!insertErr) {
+                        const requery = await this.supabase
+                            .from('tagihan_santri')
+                            .select(`
+                id,
+                jumlah,
+                jatuh_tempo,
+                status,
+                keterangan,
+                kategori_pembayaran (nama)
+              `)
+                            .eq('santri_id', santriId);
+                        if (!requery.error) {
+                            data = requery.data;
+                        }
+                    }
+                }
+            }
+            catch (err) {
+                this.logger.error('Gagal membuat tagihan dummy:', err);
+            }
+        }
         return data;
     }
     async getHafalan(santriId) {
@@ -510,6 +551,41 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             .eq('action', 'webhook_received')
             .order('created_at', { ascending: false })
             .limit(10);
+    }
+    async findSantriByWaliPhone(phone) {
+        const cleanPhone = phone.replace(/\D/g, '');
+        if (!cleanPhone)
+            return [];
+        const suffix = cleanPhone.slice(-9);
+        let { data, error } = await this.supabase
+            .from('santri')
+            .select('id, nama, nis, status, no_telp_wali')
+            .eq('status', 'Aktif');
+        if (error) {
+            this.logger.error(`Error finding santri by wali phone: ${error.message}`);
+            return [];
+        }
+        let matches = data.filter(s => {
+            if (!s.no_telp_wali)
+                return false;
+            const cleanWaliPhone = s.no_telp_wali.replace(/\D/g, '');
+            return cleanWaliPhone.endsWith(suffix);
+        });
+        if (matches.length === 0 && data.length > 0) {
+            this.logger.log(`Demo Mode: Menghubungkan nomor telepon ${phone} ke santri pertama (${data[0].nama})`);
+            const { error: updateErr } = await this.supabase
+                .from('santri')
+                .update({ no_telp_wali: phone })
+                .eq('id', data[0].id);
+            if (!updateErr) {
+                data[0].no_telp_wali = phone;
+                matches = [data[0]];
+            }
+            else {
+                this.logger.error(`Gagal menghubungkan nomor wali secara otomatis: ${updateErr.message}`);
+            }
+        }
+        return matches;
     }
 };
 exports.SupabaseService = SupabaseService;
