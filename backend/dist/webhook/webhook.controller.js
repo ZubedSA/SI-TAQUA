@@ -25,6 +25,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
         this.aiService = aiService;
         this.logger = new common_1.Logger(WebhookController_1.name);
         this.pendingActions = {};
+        this.messageTracker = {};
     }
     cleanupExpiredPending() {
         const now = Date.now();
@@ -33,6 +34,20 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 delete this.pendingActions[sender];
             }
         }
+    }
+    cleanupExpiredTracker() {
+        const now = Date.now();
+        for (const [sender, tracker] of Object.entries(this.messageTracker)) {
+            if (now - tracker.lastTimestamp > 10 * 60 * 1000) {
+                delete this.messageTracker[sender];
+            }
+        }
+    }
+    isSimilar(str1, str2) {
+        if (!str1 || !str2)
+            return false;
+        const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+        return norm(str1) === norm(str2);
     }
     async sendFonnteMessage(target, message) {
         const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
@@ -58,6 +73,15 @@ let WebhookController = WebhookController_1 = class WebhookController {
         }
     }
     async replyToUser(res, target, text) {
+        if (!this.messageTracker[target]) {
+            this.messageTracker[target] = {
+                replyCount: 0,
+                lastQuestion: '',
+                lastReply: '',
+                lastTimestamp: Date.now(),
+            };
+        }
+        this.messageTracker[target].lastReply = text;
         await this.sendFonnteMessage(target, text);
         return res.status(common_1.HttpStatus.OK).json({ reply: text });
     }
@@ -66,6 +90,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
         let message = '';
         try {
             this.cleanupExpiredPending();
+            this.cleanupExpiredTracker();
             const body = req.body || {};
             const query = req.query || {};
             sender = body.sender || query.sender || body.from || query.from || '';
@@ -75,8 +100,39 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 this.logger.warn('Sender tidak ditemukan di request.');
                 return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
             }
-            if (!message || message.trim() === '') {
+            const normalizedMsg = message.trim();
+            const tracker = this.messageTracker[sender];
+            if (tracker && tracker.lastReply && this.isSimilar(normalizedMsg, tracker.lastReply)) {
+                this.logger.log(`Loop terdeteksi: Pesan masuk dari ${sender} sama dengan balasan terakhir bot. Diabaikan.`);
+                return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_loop' });
+            }
+            if (!message || normalizedMsg === '') {
                 return this.replyToUser(res, sender, "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.");
+            }
+            if (tracker) {
+                const now = Date.now();
+                const isTimeLimit = now - tracker.lastTimestamp < 60 * 1000;
+                const isSameQuestion = this.isSimilar(normalizedMsg, tracker.lastQuestion);
+                if (isSameQuestion || isTimeLimit) {
+                    tracker.replyCount += 1;
+                    if (tracker.replyCount > 3) {
+                        this.logger.warn(`Batas maksimal balasan (3x) tercapai untuk ${sender}. Menghentikan balasan.`);
+                        return res.status(common_1.HttpStatus.OK).json({ status: 'limit_reached' });
+                    }
+                }
+                else {
+                    tracker.replyCount = 1;
+                    tracker.lastQuestion = normalizedMsg;
+                }
+                tracker.lastTimestamp = now;
+            }
+            else {
+                this.messageTracker[sender] = {
+                    replyCount: 1,
+                    lastQuestion: normalizedMsg,
+                    lastReply: '',
+                    lastTimestamp: Date.now(),
+                };
             }
             const pending = this.pendingActions[sender];
             const normalizedMsg = message.trim().toUpperCase();
@@ -264,7 +320,17 @@ let WebhookController = WebhookController_1 = class WebhookController {
         catch (error) {
             this.logger.error('Error global di handleWebhook:', error);
             if (sender) {
-                await this.sendFonnteMessage(sender, '⚠️ Maaf, terjadi kesalahan teknis pada sistem. Silakan coba lagi sebentar ya.');
+                const errorText = '⚠️ Maaf, terjadi kesalahan teknis pada sistem. Silakan coba lagi sebentar ya.';
+                if (!this.messageTracker[sender]) {
+                    this.messageTracker[sender] = {
+                        replyCount: 0,
+                        lastQuestion: '',
+                        lastReply: '',
+                        lastTimestamp: Date.now(),
+                    };
+                }
+                this.messageTracker[sender].lastReply = errorText;
+                await this.sendFonnteMessage(sender, errorText);
             }
             return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ reply: 'Kesalahan internal.' });
         }

@@ -6,8 +6,11 @@ export declare class WebhookController {
     private readonly aiService;
     private readonly logger;
     private pendingActions;
+    private messageTracker;
     constructor(supabaseService: SupabaseService, aiService: AiService);
     private cleanupExpiredPending;
+    private cleanupExpiredTracker;
+    private isSimilar;
     private sendFonnteMessage;
     private replyToUser;
     handleWebhook(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
