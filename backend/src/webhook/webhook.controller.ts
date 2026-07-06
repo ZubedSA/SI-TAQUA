@@ -31,9 +31,12 @@ export class WebhookController {
     private readonly aiService: AiService,
   ) {}
 
-  // Helper untuk menormalisasi teks (menghilangkan spasi berlebih dan case-insensitive)
+  // Helper untuk menormalisasi teks (menghilangkan spasi berlebih, signature Fonnte, dan case-insensitive)
   private normalizeText(txt: string): string {
-    return txt.trim().replace(/\s+/g, ' ').toLowerCase();
+    let clean = txt.trim();
+    // Hapus signature Fonnte jika ada (contoh: > _Sent via fonnte.com_)
+    clean = clean.replace(/>\s*_?Sent\s+via\s+fonnte\.com_?/i, '');
+    return clean.trim().replace(/\s+/g, ' ').toLowerCase();
   }
 
   // Helper untuk membandingkan nomor telepon secara aman (mengabaikan perbedaan format)

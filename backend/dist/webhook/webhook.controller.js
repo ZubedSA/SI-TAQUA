@@ -29,7 +29,9 @@ let WebhookController = WebhookController_1 = class WebhookController {
         this.sentMessages = new Map();
     }
     normalizeText(txt) {
-        return txt.trim().replace(/\s+/g, ' ').toLowerCase();
+        let clean = txt.trim();
+        clean = clean.replace(/>\s*_?Sent\s+via\s+fonnte\.com_?/i, '');
+        return clean.trim().replace(/\s+/g, ' ').toLowerCase();
     }
     isSamePhone(phone1, phone2) {
         const clean1 = phone1.replace(/\D/g, '');
