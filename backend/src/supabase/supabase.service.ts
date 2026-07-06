@@ -535,4 +535,47 @@ export class SupabaseService {
     if (error) throw error;
     return data;
   }
+
+  // Check if message ID has been processed (idempotency)
+  async isMessageProcessed(messageId: string): Promise<boolean> {
+    if (!messageId) return false;
+    try {
+      const { data, error } = await this.supabase
+        .from('audit_log')
+        .select('id')
+        .eq('table_name', 'fonnte_webhook')
+        .eq('action', 'whatsapp_message')
+        .contains('new_data', { messageId })
+        .limit(1);
+
+      if (error) {
+        this.logger.error(`Error checking message idempotency: ${error.message}`);
+        return false;
+      }
+      return data && data.length > 0;
+    } catch (e) {
+      this.logger.error(`Exception checking message idempotency:`, e);
+      return false;
+    }
+  }
+
+  // Mark message ID as processed
+  async markMessageProcessed(messageId: string) {
+    if (!messageId) return;
+    try {
+      const { error } = await this.supabase
+        .from('audit_log')
+        .insert({
+          action: 'whatsapp_message',
+          table_name: 'fonnte_webhook',
+          new_data: { messageId }
+        });
+
+      if (error) {
+        this.logger.error(`Error marking message processed: ${error.message}`);
+      }
+    } catch (e) {
+      this.logger.error(`Exception marking message processed:`, e);
+    }
+  }
 }

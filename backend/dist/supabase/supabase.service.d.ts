@@ -86,4 +86,6 @@ export declare class SupabaseService {
     addAbsensi(santriId: string, status: string, keterangan?: string, tanggal?: string): Promise<any>;
     addPelanggaran(santriId: string, jenis: string, tingkat: number, deskripsi?: string): Promise<any>;
     addCatatanPembinaan(santriId: string, jenis: 'UMUM' | 'KONSELING' | 'PEMBINAAN' | 'PUJIAN' | 'CATATAN', isi: string): Promise<any>;
+    isMessageProcessed(messageId: string): Promise<boolean>;
+    markMessageProcessed(messageId: string): Promise<void>;
 }

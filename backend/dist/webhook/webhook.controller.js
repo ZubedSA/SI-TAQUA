@@ -113,10 +113,16 @@ let WebhookController = WebhookController_1 = class WebhookController {
             if (messageId) {
                 const existing = this.processedMessages.get(messageId);
                 if (existing) {
-                    this.logger.log(`Pesan dengan ID ${messageId} sedang/sudah diproses (${existing.status}). Mengabaikan duplikasi.`);
+                    this.logger.log(`Pesan dengan ID ${messageId} sedang/sudah diproses secara in-memory (${existing.status}). Mengabaikan duplikasi.`);
                     return res.status(common_1.HttpStatus.OK).json({ status: 'duplicate_ignored', original_status: existing.status });
                 }
+                const isProcessed = await this.supabaseService.isMessageProcessed(messageId);
+                if (isProcessed) {
+                    this.logger.log(`Pesan dengan ID ${messageId} sudah diproses secara database. Mengabaikan duplikasi.`);
+                    return res.status(common_1.HttpStatus.OK).json({ status: 'duplicate_ignored', original_status: 'database' });
+                }
                 this.processedMessages.set(messageId, { status: 'in_progress', timestamp: Date.now() });
+                await this.supabaseService.markMessageProcessed(messageId);
             }
             if (!message || message.trim() === '') {
                 return this.replyToUser(res, sender, "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.", messageId);

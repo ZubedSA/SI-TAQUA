@@ -147,13 +147,23 @@ export class WebhookController {
 
       // 3. Cek idempotensi (duplikasi akibat retry Fonnte)
       if (messageId) {
+        // Cek in-memory first (fast path)
         const existing = this.processedMessages.get(messageId);
         if (existing) {
-          this.logger.log(`Pesan dengan ID ${messageId} sedang/sudah diproses (${existing.status}). Mengabaikan duplikasi.`);
+          this.logger.log(`Pesan dengan ID ${messageId} sedang/sudah diproses secara in-memory (${existing.status}). Mengabaikan duplikasi.`);
           return res.status(HttpStatus.OK).json({ status: 'duplicate_ignored', original_status: existing.status });
         }
-        // Tandai sebagai sedang diproses
+
+        // Cek database (slow path, tapi aman untuk multi-container serverless)
+        const isProcessed = await this.supabaseService.isMessageProcessed(messageId);
+        if (isProcessed) {
+          this.logger.log(`Pesan dengan ID ${messageId} sudah diproses secara database. Mengabaikan duplikasi.`);
+          return res.status(HttpStatus.OK).json({ status: 'duplicate_ignored', original_status: 'database' });
+        }
+
+        // Tandai sebagai sedang diproses di memory dan langsung simpan ke database
         this.processedMessages.set(messageId, { status: 'in_progress', timestamp: Date.now() });
+        await this.supabaseService.markMessageProcessed(messageId);
       }
 
       if (!message || message.trim() === '') {
