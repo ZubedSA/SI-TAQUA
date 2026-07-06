@@ -686,9 +686,27 @@ export class SupabaseService {
         matches = [data[0]];
       } else {
         this.logger.error(`Gagal menghubungkan nomor wali secara otomatis: ${updateErr.message}`);
-      }
     }
 
     return matches;
+  }
+
+  // Get debug database content
+  async getDebugDbData() {
+    try {
+      const [santri, kategori, tagihan] = await Promise.all([
+        this.supabase.from('santri').select('id, nama, nis, status, no_telp_wali'),
+        this.supabase.from('kategori_pembayaran').select('id, nama, nominal_default, is_active'),
+        this.supabase.from('tagihan_santri').select('id, santri_id, kategori_id, jumlah, jatuh_tempo, status, keterangan')
+      ]);
+      return {
+        santri: santri.data || [],
+        kategori: kategori.data || [],
+        tagihan: tagihan.data || []
+      };
+    } catch (e) {
+      this.logger.error('Gagal mengambil data debug DB:', e);
+      return { error: e.message };
+    }
   }
 }

@@ -149,6 +149,16 @@ export class WebhookController {
     }
   }
 
+  @Get('webhook/debug-db')
+  async getDebugDb(@Res() res: Response) {
+    try {
+      const data = await this.supabaseService.getDebugDbData();
+      return res.status(HttpStatus.OK).json(data);
+    } catch (err) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
+    }
+  }
+
   // =====================================================================
   // POST /webhook — Main entry point
   // =====================================================================

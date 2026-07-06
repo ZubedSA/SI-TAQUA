@@ -120,6 +120,15 @@ let WebhookController = WebhookController_1 = class WebhookController {
             return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
         }
     }
+    async getDebugDb(res) {
+        try {
+            const data = await this.supabaseService.getDebugDbData();
+            return res.status(common_1.HttpStatus.OK).json(data);
+        }
+        catch (err) {
+            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
+        }
+    }
     async handleWebhook(req, res) {
         let sender = '';
         let message = '';
@@ -407,6 +416,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "getDebugLogs", null);
+__decorate([
+    (0, common_1.Get)('webhook/debug-db'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "getDebugDb", null);
 __decorate([
     (0, common_1.Post)('webhook'),
     (0, common_1.Post)(),

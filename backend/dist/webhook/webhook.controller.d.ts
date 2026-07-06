@@ -18,6 +18,7 @@ export declare class WebhookController {
     private sendFonnteMessage;
     private replyToUser;
     getDebugLogs(res: Response): Promise<Response<any, Record<string, any>>>;
+    getDebugDb(res: Response): Promise<Response<any, Record<string, any>>>;
     handleWebhook(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
     private executeAction;
 }

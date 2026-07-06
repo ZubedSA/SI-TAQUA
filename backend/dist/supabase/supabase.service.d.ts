@@ -96,5 +96,34 @@ export declare class SupabaseService {
         nis: any;
         status: any;
         no_telp_wali: any;
-    }[]>;
+    }[] | {
+        santri: {
+            id: any;
+            nama: any;
+            nis: any;
+            status: any;
+            no_telp_wali: any;
+        }[];
+        kategori: {
+            id: any;
+            nama: any;
+            nominal_default: any;
+            is_active: any;
+        }[];
+        tagihan: {
+            id: any;
+            santri_id: any;
+            kategori_id: any;
+            jumlah: any;
+            jatuh_tempo: any;
+            status: any;
+            keterangan: any;
+        }[];
+        error?: undefined;
+    } | {
+        error: any;
+        santri?: undefined;
+        kategori?: undefined;
+        tagihan?: undefined;
+    }>;
 }
