@@ -25,12 +25,31 @@ let WebhookController = WebhookController_1 = class WebhookController {
         this.aiService = aiService;
         this.logger = new common_1.Logger(WebhookController_1.name);
         this.pendingActions = {};
+        this.processedMessages = new Map();
+    }
+    isSamePhone(phone1, phone2) {
+        const clean1 = phone1.replace(/\D/g, '');
+        const clean2 = phone2.replace(/\D/g, '');
+        if (!clean1 || !clean2)
+            return false;
+        if (clean1.length >= 9 && clean2.length >= 9) {
+            return clean1.slice(-9) === clean2.slice(-9);
+        }
+        return clean1 === clean2;
     }
     cleanupExpiredPending() {
         const now = Date.now();
         for (const [sender, action] of Object.entries(this.pendingActions)) {
             if (now - action.timestamp > 10 * 60 * 1000) {
                 delete this.pendingActions[sender];
+            }
+        }
+    }
+    cleanupExpiredProcessed() {
+        const now = Date.now();
+        for (const [msgId, item] of this.processedMessages.entries()) {
+            if (now - item.timestamp > 10 * 60 * 1000) {
+                this.processedMessages.delete(msgId);
             }
         }
     }
@@ -57,26 +76,50 @@ let WebhookController = WebhookController_1 = class WebhookController {
             this.logger.error(`Gagal kirim WA ke ${target}: ${e.message || e}`);
         }
     }
-    async replyToUser(res, target, text) {
+    async replyToUser(res, target, text, messageId) {
+        if (messageId) {
+            this.processedMessages.set(messageId, { status: 'completed', timestamp: Date.now() });
+        }
         await this.sendFonnteMessage(target, text);
         return res.status(common_1.HttpStatus.OK).json({ reply: text });
     }
     async handleWebhook(req, res) {
         let sender = '';
         let message = '';
+        let messageId = '';
         try {
             this.cleanupExpiredPending();
+            this.cleanupExpiredProcessed();
             const body = req.body || {};
             const query = req.query || {};
+            if (body.status || body.state || body.stateid) {
+                this.logger.log(`Mengabaikan status update webhook: ID=${body.id || 'N/A'}, Status=${body.status || body.state}`);
+                return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_status_update' });
+            }
             sender = body.sender || query.sender || body.from || query.from || '';
             message = body.message || query.message || body.text || query.text || '';
-            this.logger.log(`Webhook: Sender="${sender}", Message="${message}"`);
+            const device = body.device || query.device || '';
+            const member = body.member || query.member || '';
+            messageId = body.id || body.inboxid || query.id || query.inboxid || '';
+            this.logger.log(`Webhook: Sender="${sender}", Device="${device}", Member="${member}", MessageId="${messageId}", Message="${message}"`);
             if (!sender) {
                 this.logger.warn('Sender tidak ditemukan di request.');
                 return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
             }
+            if (device && (this.isSamePhone(sender, device) || (member && this.isSamePhone(member, device)))) {
+                this.logger.log(`Mengabaikan pesan keluar dari device sendiri (${device}) untuk menghindari loop.`);
+                return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_self_message' });
+            }
+            if (messageId) {
+                const existing = this.processedMessages.get(messageId);
+                if (existing) {
+                    this.logger.log(`Pesan dengan ID ${messageId} sedang/sudah diproses (${existing.status}). Mengabaikan duplikasi.`);
+                    return res.status(common_1.HttpStatus.OK).json({ status: 'duplicate_ignored', original_status: existing.status });
+                }
+                this.processedMessages.set(messageId, { status: 'in_progress', timestamp: Date.now() });
+            }
             if (!message || message.trim() === '') {
-                return this.replyToUser(res, sender, "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.");
+                return this.replyToUser(res, sender, "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.", messageId);
             }
             const pending = this.pendingActions[sender];
             const normalizedMsg = message.trim().toUpperCase();
@@ -90,17 +133,17 @@ let WebhookController = WebhookController_1 = class WebhookController {
                             `Aksi: *${actionLabel}*\n` +
                             `Santri: *${pending.parameters.resolved_name || '-'}*\n\n` +
                             `Jazakumullah khairan atas konfirmasinya. 🤲`;
-                        return this.replyToUser(res, sender, replyText);
+                        return this.replyToUser(res, sender, replyText, messageId);
                     }
                     catch (execError) {
                         this.logger.error('Gagal eksekusi pending action:', execError);
                         delete this.pendingActions[sender];
-                        return this.replyToUser(res, sender, `❌ *Gagal menyimpan data:* ${execError.message || execError}`);
+                        return this.replyToUser(res, sender, `❌ *Gagal menyimpan data:* ${execError.message || execError}`, messageId);
                     }
                 }
                 else if (CONFIRM_NO.has(normalizedMsg)) {
                     delete this.pendingActions[sender];
-                    return this.replyToUser(res, sender, '❌ *Transaksi dibatalkan.* Ada lagi yang bisa saya bantu?');
+                    return this.replyToUser(res, sender, '❌ *Transaksi dibatalkan.* Ada lagi yang bisa saya bantu?', messageId);
                 }
                 delete this.pendingActions[sender];
             }
@@ -118,7 +161,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
             if (writeIntents.includes(parsed.intent)) {
                 const santriName = parsed.parameters?.santri_name;
                 if (!santriName) {
-                    return this.replyToUser(res, sender, `Format pesan kurang lengkap. Mohon sebutkan *nama santri* dengan jelas ya.\n\nContoh: "Tambah pembayaran SPP Ahmad Rp300.000"`);
+                    return this.replyToUser(res, sender, `Format pesan kurang lengkap. Mohon sebutkan *nama santri* dengan jelas ya.\n\nContoh: "Tambah pembayaran SPP Ahmad Rp300.000"`, messageId);
                 }
                 let matchingSantri;
                 try {
@@ -126,10 +169,10 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 }
                 catch (dbError) {
                     this.logger.error('Gagal mencari santri:', dbError);
-                    return this.replyToUser(res, sender, `⚠️ Gagal mencari nama santri akibat gangguan koneksi database.`);
+                    return this.replyToUser(res, sender, `⚠️ Gagal mencari nama santri akibat gangguan koneksi database.`, messageId);
                 }
                 if (!matchingSantri || matchingSantri.length === 0) {
-                    return this.replyToUser(res, sender, `Maaf, santri dengan nama *"${santriName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`);
+                    return this.replyToUser(res, sender, `Maaf, santri dengan nama *"${santriName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`, messageId);
                 }
                 parsed.parameters.santri_id = matchingSantri[0].id;
                 parsed.parameters.resolved_name = matchingSantri[0].nama;
@@ -162,7 +205,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 if (parsed.parameters.mapel)
                     confirmText += `📚 Mapel: *${parsed.parameters.mapel}*\n`;
                 confirmText += `\nApakah data ini sudah benar?\nBalas *YA* untuk simpan atau *TIDAK* untuk batalkan.`;
-                return this.replyToUser(res, sender, confirmText);
+                return this.replyToUser(res, sender, confirmText, messageId);
             }
             let dbResult = null;
             let targetSantri = null;
@@ -259,10 +302,13 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 dbResult = { error: 'Terjadi gangguan saat mengambil data dari database. Coba lagi sebentar ya.' };
             }
             const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);
-            return this.replyToUser(res, sender, reply);
+            return this.replyToUser(res, sender, reply, messageId);
         }
         catch (error) {
             this.logger.error('Error global di handleWebhook:', error);
+            if (messageId) {
+                this.processedMessages.set(messageId, { status: 'completed', timestamp: Date.now() });
+            }
             if (sender) {
                 await this.sendFonnteMessage(sender, '⚠️ Maaf, terjadi kesalahan teknis pada sistem. Silakan coba lagi sebentar ya.');
             }
