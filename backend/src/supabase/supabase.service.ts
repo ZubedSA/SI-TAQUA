@@ -710,6 +710,7 @@ export class SupabaseService {
         matches = [data[0]];
       } else {
         this.logger.error(`Gagal menghubungkan nomor wali secara otomatis: ${updateErr.message}`);
+      }
     }
 
     return matches;
