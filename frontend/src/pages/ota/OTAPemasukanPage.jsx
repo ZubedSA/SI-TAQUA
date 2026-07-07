@@ -14,7 +14,6 @@ import 'jspdf-autotable'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
-import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
 import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTA.css'
 
