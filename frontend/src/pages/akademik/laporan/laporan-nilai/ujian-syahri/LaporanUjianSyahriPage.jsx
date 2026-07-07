@@ -6,6 +6,7 @@ import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import { useCalendar } from '../../../../../context/CalendarContext'
+import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../../../pages/laporan/Laporan.css'
 
 import SmartMonthYearFilter from '../../../../../components/common/SmartMonthYearFilter'
@@ -338,54 +339,75 @@ const LaporanUjianSyahriPage = () => {
                     </div>
                 ) : (
                     <div className="table-container">
-                        <div className="table-wrapper">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>NIS</th>
-                                        <th>Nama Santri</th>
-                                        <th style={{ textAlign: 'center' }}>Hafalan</th>
-                                        <th style={{ textAlign: 'center' }}>Tajwid</th>
-                                        <th style={{ textAlign: 'center' }}>Tilawah</th>
-                                        <th style={{ textAlign: 'center' }}>Rata-rata</th>
-                                        <th style={{ textAlign: 'center' }}>Predikat</th>
-                                        <th style={{ textAlign: 'center' }}>Pencapaian Terakhir</th>
-                                        <th style={{ textAlign: 'center' }}>Jml Juz</th>
-                                        <th style={{ textAlign: 'center' }}>Jml Hal</th>
-                                        <th style={{ textAlign: 'center' }}>Mukhtabir</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.map((s, i) => (
-                                        <tr key={s.id}>
-                                            <td>{i + 1}</td>
-                                            <td>{s.nis}</td>
-                                            <td className="name-cell">{s.nama}</td>
-                                            <td style={{ textAlign: 'center' }}>{s.hafalan}</td>
-                                            <td style={{ textAlign: 'center' }}>{s.tajwid}</td>
-                                            <td style={{ textAlign: 'center' }}>{s.tilawah}</td>
-                                            <td style={{ textAlign: 'center', fontWeight: '600' }}>{s.rata_rata}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <span className={`badge ${getPredikatBadgeClass(s.predikat)}`}>{s.predikat}</span>
-                                            </td>
-                                            <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>
-                                                {s.pencapaian_juz !== '-' ? (
-                                                    <span>Juz {s.pencapaian_juz}<br /><small style={{ color: '#64748b' }}>{s.pencapaian_surah}</small></span>
-                                                ) : '-'}
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                {s.jumlah_hafalan !== '-' ? `${s.jumlah_hafalan} Juz` : '-'}
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                {s.jumlah_hafalan_halaman !== '-' ? `${s.jumlah_hafalan_halaman} Hal` : '-'}
-                                            </td>
-                                            <td style={{ textAlign: 'center', fontSize: '0.85rem' }}>{s.penguji}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'NIS', accessor: 'nis', hideOnMobile: true },
+                                { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
+                                { header: 'Hafalan', accessor: 'hafalan', className: 'text-center' },
+                                { header: 'Tajwid', accessor: 'tajwid', className: 'text-center' },
+                                { header: 'Tilawah', accessor: 'tilawah', className: 'text-center' },
+                                { header: 'Rata-rata', accessor: 'rata_rata', className: 'text-center font-semibold' },
+                                { 
+                                    header: 'Predikat', 
+                                    className: 'text-center',
+                                    render: (row) => <span className={`badge ${getPredikatBadgeClass(row.predikat)}`}>{row.predikat}</span>
+                                },
+                                { 
+                                    header: 'Pencapaian Terakhir', 
+                                    className: 'text-center text-sm',
+                                    render: (row) => row.pencapaian_juz !== '-' ? (
+                                        <span>Juz {row.pencapaian_juz}<br /><small className="text-gray-500">{row.pencapaian_surah}</small></span>
+                                    ) : '-'
+                                },
+                                { header: 'Jml Juz', render: (row) => row.jumlah_hafalan !== '-' ? `${row.jumlah_hafalan} Juz` : '-', className: 'text-center' },
+                                { header: 'Jml Hal', render: (row) => row.jumlah_hafalan_halaman !== '-' ? `${row.jumlah_hafalan_halaman} Hal` : '-', className: 'text-center' },
+                                { header: 'Mukhtabir', accessor: 'penguji', className: 'text-center text-sm' }
+                            ]}
+                            data={data}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                                </div>
+                            )}
+                            mobileCardActions={() => null}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-1 w-full text-xs mt-2 pt-2 border-t border-gray-100">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-gray-500 font-medium">Predikat</span>
+                                        <span className={`badge ${getPredikatBadgeClass(row.predikat)} !text-[10px] !py-0.5 !px-2`}>{row.predikat}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Hafalan:</span>
+                                        <span className="font-semibold">{row.hafalan}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Tajwid:</span>
+                                        <span className="font-semibold">{row.tajwid}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Tilawah:</span>
+                                        <span className="font-semibold">{row.tilawah}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-gray-50 pt-1 mt-0.5">
+                                        <span className="text-gray-500 font-medium">Rata-rata:</span>
+                                        <span className="font-bold text-gray-900">{row.rata_rata}</span>
+                                    </div>
+                                    
+                                    <div className="flex justify-between border-t border-gray-50 pt-1 mt-1">
+                                        <span className="text-gray-500">Pencapaian:</span>
+                                        <span className="font-semibold text-right">
+                                            {row.pencapaian_juz !== '-' ? `Juz ${row.pencapaian_juz} - ${row.pencapaian_surah}` : '-'}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Mukhtabir:</span>
+                                        <span className="font-semibold">{row.penguji}</span>
+                                    </div>
+                                </div>
+                            )}
+                        />
                     </div>
                 )}
             </div>

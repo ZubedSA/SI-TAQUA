@@ -11,6 +11,7 @@ import Badge from '../../components/ui/Badge'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import DateRangePicker from '../../components/ui/DateRangePicker'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 
 const WaliSantriPage = () => {
     const showToast = useToast()
@@ -336,34 +337,46 @@ const WaliSantriPage = () => {
                             </div>
 
                             <Card className="overflow-hidden border-gray-200">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                            <tr>
-                                                <th className="px-6 py-4 w-12 text-center">No</th>
-                                                <th className="px-6 py-4">Tanggal</th>
-                                                <th className="px-6 py-4">Juz</th>
-                                                <th className="px-6 py-4">Surat</th>
-                                                <th className="px-6 py-4">Ayat</th>
-                                                <th className="px-6 py-4">Jenis</th>
-                                                <th className="px-6 py-4">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {hafalanData.map((h, i) => (
-                                                <tr key={h.id} className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 text-center">{i + 1}</td>
-                                                    <td className="px-6 py-4"><DateDisplay date={h.tanggal} /></td>
-                                                    <td className="px-6 py-4">Juz {h.juz_mulai || h.juz || '-'}{(h.juz_selesai && h.juz_selesai !== h.juz_mulai) ? ` - ${h.juz_selesai}` : ''}</td>
-                                                    <td className="px-6 py-4">{h.surah_mulai || h.surah || '-'}{(h.surah_selesai && h.surah_selesai !== h.surah_mulai) ? ` s/d ${h.surah_selesai}` : ''}</td>
-                                                    <td className="px-6 py-4">{h.ayat_mulai || 1} - {h.ayat_selesai || 1}</td>
-                                                    <td className="px-6 py-4 text-gray-500">{h.jenis || 'Setoran'}</td>
-                                                    <td className="px-6 py-4">{getStatusBadge(h.status)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'No', render: (row, i) => i + 1, className: 'px-6 py-4 text-center w-12', hideOnMobile: true },
+                                        { header: 'Tanggal', render: (row) => <DateDisplay date={row.tanggal} />, className: 'px-6 py-4' },
+                                        { header: 'Juz', render: (row) => `Juz ${row.juz_mulai || row.juz || '-'}${(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}`, className: 'px-6 py-4' },
+                                        { header: 'Surat', render: (row) => `${row.surah_mulai || row.surah || '-'}${(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}`, className: 'px-6 py-4' },
+                                        { header: 'Ayat', render: (row) => `${row.ayat_mulai || 1} - ${row.ayat_selesai || 1}`, className: 'px-6 py-4' },
+                                        { header: 'Jenis', render: (row) => <span className="text-gray-500">{row.jenis || 'Setoran'}</span>, className: 'px-6 py-4', hideOnMobile: true },
+                                        { header: 'Status', render: (row) => getStatusBadge(row.status), className: 'px-6 py-4 text-right' }
+                                    ]}
+                                    data={hafalanData}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex justify-between items-center w-full">
+                                            <div className="font-bold text-gray-900">
+                                                {row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}
+                                            </div>
+                                            <div>{getStatusBadge(row.status)}</div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="flex flex-col gap-1 text-sm text-gray-600 mt-2">
+                                            <div className="flex justify-between">
+                                                <span>Tanggal:</span>
+                                                <DateDisplay date={row.tanggal} />
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Juz:</span>
+                                                <span>{row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Ayat:</span>
+                                                <span>{row.ayat_mulai || 1} - {row.ayat_selesai || 1}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Jenis:</span>
+                                                <span className="text-gray-500">{row.jenis || 'Setoran'}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                />
                             </Card>
                         </>
                     ) : (
@@ -420,34 +433,43 @@ const WaliSantriPage = () => {
                             </div>
 
                             <Card className="overflow-hidden border-gray-200">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                            <tr>
-                                                <th className="px-6 py-4 w-12 text-center">No</th>
-                                                <th className="px-6 py-4">Mata Pelajaran</th>
-                                                <th className="px-6 py-4">Kategori</th>
-                                                <th className="px-6 py-4 text-center">Tugas</th>
-                                                <th className="px-6 py-4 text-center">UTS</th>
-                                                <th className="px-6 py-4 text-center">UAS</th>
-                                                <th className="px-6 py-4 text-center">Nilai Akhir</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {nilaiData.map((n, i) => (
-                                                <tr key={i} className="hover:bg-gray-50">
-                                                    <td className="px-6 py-4 text-center">{i + 1}</td>
-                                                    <td className="px-6 py-4 font-medium text-gray-900">{n.mapel?.nama}</td>
-                                                    <td className="px-6 py-4 text-gray-500">{n.mapel?.kategori}</td>
-                                                    <td className="px-6 py-4 text-center">{n.nilai_tugas || '-'}</td>
-                                                    <td className="px-6 py-4 text-center">{n.nilai_uts || '-'}</td>
-                                                    <td className="px-6 py-4 text-center">{n.nilai_uas || '-'}</td>
-                                                    <td className="px-6 py-4 text-center font-bold text-primary-600">{n.nilai_akhir?.toFixed(0) || '-'}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'No', render: (row, i) => i + 1, className: 'px-6 py-4 text-center w-12', hideOnMobile: true },
+                                        { header: 'Mata Pelajaran', render: (row) => <span className="font-medium text-gray-900">{row.mapel?.nama}</span>, className: 'px-6 py-4' },
+                                        { header: 'Kategori', render: (row) => <span className="text-gray-500">{row.mapel?.kategori}</span>, className: 'px-6 py-4', hideOnMobile: true },
+                                        { header: 'Tugas', render: (row) => row.nilai_tugas || '-', className: 'px-6 py-4 text-center', hideOnMobile: true },
+                                        { header: 'UTS', render: (row) => row.nilai_uts || '-', className: 'px-6 py-4 text-center', hideOnMobile: true },
+                                        { header: 'UAS', render: (row) => row.nilai_uas || '-', className: 'px-6 py-4 text-center', hideOnMobile: true },
+                                        { header: 'Nilai Akhir', render: (row) => <span className="font-bold text-primary-600">{row.nilai_akhir?.toFixed(0) || '-'}</span>, className: 'px-6 py-4 text-center' }
+                                    ]}
+                                    data={nilaiData}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex justify-between items-center w-full">
+                                            <div>
+                                                <div className="font-bold text-gray-900">{row.mapel?.nama}</div>
+                                                <div className="text-[10px] text-gray-500">{row.mapel?.kategori}</div>
+                                            </div>
+                                            <div className="text-lg font-bold text-primary-600">{row.nilai_akhir?.toFixed(0) || '-'}</div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="grid grid-cols-3 gap-2 mt-4 text-center text-sm">
+                                            <div className="bg-gray-50 rounded p-2">
+                                                <div className="text-xs text-gray-500 mb-1">Tugas</div>
+                                                <div className="font-bold text-gray-700">{row.nilai_tugas || '-'}</div>
+                                            </div>
+                                            <div className="bg-gray-50 rounded p-2">
+                                                <div className="text-xs text-gray-500 mb-1">UTS</div>
+                                                <div className="font-bold text-gray-700">{row.nilai_uts || '-'}</div>
+                                            </div>
+                                            <div className="bg-gray-50 rounded p-2">
+                                                <div className="text-xs text-gray-500 mb-1">UAS</div>
+                                                <div className="font-bold text-gray-700">{row.nilai_uas || '-'}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                />
                             </Card>
                         </>
                     ) : (
@@ -514,32 +536,31 @@ const WaliSantriPage = () => {
                             </div>
 
                             <Card className="overflow-hidden border-gray-200">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                            <tr>
-                                                <th className="px-6 py-4 w-12 text-center">No</th>
-                                                <th className="px-6 py-4">Tanggal</th>
-                                                <th className="px-6 py-4">Hari</th>
-                                                <th className="px-6 py-4">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {presensiData.map((p, i) => {
-                                                const date = new Date(p.tanggal)
-                                                const hari = date.toLocaleDateString('id-ID', { weekday: 'long' })
-                                                return (
-                                                    <tr key={p.id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 text-center">{i + 1}</td>
-                                                        <td className="px-6 py-4"><DateDisplay date={p.tanggal} /></td>
-                                                        <td className="px-6 py-4">{hari}</td>
-                                                        <td className="px-6 py-4">{getStatusBadge(p.status)}</td>
-                                                    </tr>
-                                                )
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'No', render: (row, i) => i + 1, className: 'px-6 py-4 text-center w-12', hideOnMobile: true },
+                                        { header: 'Tanggal', render: (row) => <DateDisplay date={row.tanggal} />, className: 'px-6 py-4' },
+                                        { header: 'Hari', render: (row) => {
+                                            const date = new Date(row.tanggal)
+                                            return date.toLocaleDateString('id-ID', { weekday: 'long' })
+                                        }, className: 'px-6 py-4', hideOnMobile: true },
+                                        { header: 'Status', render: (row) => getStatusBadge(row.status), className: 'px-6 py-4' }
+                                    ]}
+                                    data={presensiData}
+                                    mobileCardHeader={(row) => {
+                                        const date = new Date(row.tanggal)
+                                        const hari = date.toLocaleDateString('id-ID', { weekday: 'long' })
+                                        return (
+                                            <div className="flex justify-between items-center w-full">
+                                                <div>
+                                                    <div className="font-bold text-gray-900"><DateDisplay date={row.tanggal} /></div>
+                                                    <div className="text-xs text-gray-500">{hari}</div>
+                                                </div>
+                                                <div>{getStatusBadge(row.status)}</div>
+                                            </div>
+                                        )
+                                    }}
+                                />
                             </Card>
                         </>
                     ) : (
@@ -608,33 +629,33 @@ const WaliSantriPage = () => {
                             <h4 className="flex items-center gap-2 font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">
                                 <Award size={18} className="text-blue-600" /> Nilai Akademik
                             </h4>
-                            <div className="overflow-x-auto mb-8 rounded-lg border border-gray-200">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 text-gray-600 font-medium">
-                                        <tr>
-                                            <th className="px-4 py-3 w-10 text-center">No</th>
-                                            <th className="px-4 py-3">Mata Pelajaran</th>
-                                            <th className="px-4 py-3 text-center">Nilai</th>
-                                            <th className="px-4 py-3 text-center">Predikat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {raportData.nilai.map((n, i) => {
-                                            const nilai = n.nilai_akhir || 0
+                            <div className="mb-8 rounded-lg border border-gray-200 overflow-hidden">
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'No', render: (row, i) => i + 1, className: 'px-4 py-3 text-center w-10', hideOnMobile: true },
+                                        { header: 'Mata Pelajaran', render: (row) => row.mapel?.nama, className: 'px-4 py-3' },
+                                        { header: 'Nilai', render: (row) => <span className="font-bold text-gray-900">{(row.nilai_akhir || 0).toFixed(0)}</span>, className: 'px-4 py-3 text-center' },
+                                        { header: 'Predikat', render: (row) => {
+                                            const nilai = row.nilai_akhir || 0
                                             const predikat = nilai >= 90 ? 'A' : nilai >= 80 ? 'B' : nilai >= 70 ? 'C' : 'D'
-                                            return (
-                                                <tr key={i}>
-                                                    <td className="px-4 py-3 text-center">{i + 1}</td>
-                                                    <td className="px-4 py-3">{n.mapel?.nama}</td>
-                                                    <td className="px-4 py-3 text-center font-bold text-gray-900">{nilai.toFixed(0)}</td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <Badge variant={predikat === 'A' ? 'success' : predikat === 'B' ? 'info' : 'warning'}>{predikat}</Badge>
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
+                                            return <Badge variant={predikat === 'A' ? 'success' : predikat === 'B' ? 'info' : 'warning'}>{predikat}</Badge>
+                                        }, className: 'px-4 py-3 text-center' }
+                                    ]}
+                                    data={raportData.nilai}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex justify-between items-center w-full">
+                                            <div className="font-bold text-gray-900">{row.mapel?.nama}</div>
+                                            <div className="flex gap-2 items-center">
+                                                <span className="font-bold text-gray-900">{(row.nilai_akhir || 0).toFixed(0)}</span>
+                                                {(() => {
+                                                    const nilai = row.nilai_akhir || 0
+                                                    const predikat = nilai >= 90 ? 'A' : nilai >= 80 ? 'B' : nilai >= 70 ? 'C' : 'D'
+                                                    return <Badge variant={predikat === 'A' ? 'success' : predikat === 'B' ? 'info' : 'warning'}>{predikat}</Badge>
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
+                                />
                             </div>
 
                             {/* Pencapaian Hafalan & Perilaku */}

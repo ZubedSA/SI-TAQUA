@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 
 const styles = {
     container: {
@@ -409,62 +410,99 @@ const OTAKategoriPage = () => {
 
                 {/* Table */}
                 {filteredData.length > 0 ? (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={styles.table}>
-                            <thead>
-                                <tr>
-                                    <th style={{ ...styles.th, width: '60px' }}>No</th>
-                                    <th style={styles.th}>Nama Kategori</th>
-                                    <th style={styles.th}>Keterangan</th>
-                                    <th style={{ ...styles.th, width: '120px', textAlign: 'center' }}>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((item, idx) => (
-                                    <tr
-                                        key={item.id}
-                                        style={{ transition: 'background 0.2s' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        <td style={{ ...styles.td, fontWeight: 500, color: '#9ca3af' }}>{idx + 1}</td>
-                                        <td style={styles.td}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={styles.categoryIcon}>
-                                                    <Tag size={16} />
-                                                </div>
-                                                <span style={{ fontWeight: 600, color: '#312e81' }}>{item.nama}</span>
+                    <div className="w-full">
+                        <ResponsiveTable
+                            columns={[
+                                {
+                                    header: 'No',
+                                    render: (row, index) => <span style={{ fontWeight: 500, color: '#9ca3af' }}>{index + 1}</span>,
+                                    className: 'w-16',
+                                    hideOnMobile: true
+                                },
+                                {
+                                    header: 'Nama Kategori',
+                                    render: (row) => (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <div style={styles.categoryIcon}>
+                                                <Tag size={16} />
                                             </div>
-                                        </td>
-                                        <td style={{ ...styles.td, color: '#6b7280' }}>
-                                            {item.keterangan || <span style={{ fontStyle: 'italic', color: '#9ca3af' }}>-</span>}
-                                        </td>
-                                        <td style={{ ...styles.td, textAlign: 'center' }}>
-                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                <button
-                                                    style={{ ...styles.actionBtn, background: '#fef3c7', color: '#d97706' }}
-                                                    onClick={() => openEdit(item)}
-                                                    title="Edit"
-                                                    onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
-                                                    onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button
-                                                    style={{ ...styles.actionBtn, background: '#fee2e2', color: '#dc2626' }}
-                                                    onClick={() => confirmDelete(item)}
-                                                    title="Hapus"
-                                                    onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
-                                                    onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                            <span style={{ fontWeight: 600, color: '#312e81' }}>{row.nama}</span>
+                                        </div>
+                                    )
+                                },
+                                {
+                                    header: 'Keterangan',
+                                    render: (row) => (
+                                        <span style={{ color: '#6b7280' }}>
+                                            {row.keterangan || <span style={{ fontStyle: 'italic', color: '#9ca3af' }}>-</span>}
+                                        </span>
+                                    ),
+                                    hideOnMobile: true
+                                },
+                                {
+                                    header: 'Aksi',
+                                    render: (row) => (
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                style={{ ...styles.actionBtn, background: '#fef3c7', color: '#d97706' }}
+                                                onClick={() => openEdit(row)}
+                                                title="Edit"
+                                                onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
+                                                onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button
+                                                style={{ ...styles.actionBtn, background: '#fee2e2', color: '#dc2626' }}
+                                                onClick={() => confirmDelete(row)}
+                                                title="Hapus"
+                                                onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
+                                                onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ),
+                                    className: 'text-center w-32',
+                                    hideOnMobile: false
+                                }
+                            ]}
+                            data={filteredData}
+                            mobileCardHeader={(row) => (
+                                <div className="flex justify-between items-center w-full">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div style={styles.categoryIcon}>
+                                            <Tag size={16} />
+                                        </div>
+                                        <span style={{ fontWeight: 600, color: '#312e81' }}>{row.nama}</span>
+                                    </div>
+                                </div>
+                            )}
+                            mobileCardContent={(row) => (
+                                <div className="w-full mt-3 space-y-3">
+                                    <div className="text-sm" style={{ color: '#6b7280' }}>
+                                        <span className="font-medium">Keterangan:</span><br/>
+                                        {row.keterangan || <span style={{ fontStyle: 'italic', color: '#9ca3af' }}>-</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100 justify-end" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            style={{ ...styles.actionBtn, background: '#fef3c7', color: '#d97706', padding: '6px 12px', width: 'auto', borderRadius: '8px' }}
+                                            onClick={() => openEdit(row)}
+                                            className="flex items-center gap-2 text-sm"
+                                        >
+                                            <Edit2 size={14} /> Edit
+                                        </button>
+                                        <button
+                                            style={{ ...styles.actionBtn, background: '#fee2e2', color: '#dc2626', padding: '6px 12px', width: 'auto', borderRadius: '8px' }}
+                                            onClick={() => confirmDelete(row)}
+                                            className="flex items-center gap-2 text-sm"
+                                        >
+                                            <Trash2 size={14} /> Hapus
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        />
                     </div>
                 ) : (
                     <div style={styles.emptyState}>

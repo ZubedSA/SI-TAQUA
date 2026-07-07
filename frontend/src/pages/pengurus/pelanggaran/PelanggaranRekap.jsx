@@ -31,6 +31,7 @@ import FormInput from '../../../components/ui/FormInput'
 import Spinner from '../../../components/ui/Spinner'
 import EmptyState from '../../../components/ui/EmptyState'
 import Badge from '../../../components/ui/Badge'
+import ResponsiveTable from '../../../components/ui/ResponsiveTable'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
@@ -758,226 +759,221 @@ const PelanggaranRekap = () => {
                     </div>
                 </div>
 
-                {/* Desktop View Table */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left font-bold text-gray-700">
-                        <thead className="bg-gray-50/50 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b border-gray-100">
-                            <tr>
-                                <th className="px-8 py-5">Peringkat</th>
-                                <th className="px-8 py-5">Santri</th>
-                                <th className="px-8 py-5 text-center">Total Kasus</th>
-                                <th className="px-8 py-5 text-center text-red-600">Total Poin</th>
-                                <th className="px-8 py-5">Tingkat & Sanksi Mingguan</th>
-                                <th className="px-8 py-5 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan={6} className="py-20"><Spinner label="Memuat rekap..." /></td></tr>
-                            ) : filteredData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="p-12">
-                                        <EmptyState icon={CheckCircle} title="Tidak Ada Data" message="Tidak ada catatan pelanggaran dalam periode ini." />
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredData.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => fetchDetails(item)}>
-                                        <td className="px-8 py-5">
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${index < 3 ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-gray-100 text-gray-500'}`}>
-                                                {index + 1}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">
-                                                {item.nama}
-                                            </div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                NIS: {item.nis} • {item.kelas}
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-2 no-print">
-                                                {getStatusBadge(getStudentStatus(item))}
-                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                    {getStudentStatus(item) === 'SELESAI'
-                                                        ? `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
-                                                        : formatDate(item.lastViolation)}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-black">
-                                                {item.totalKasus}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className="px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100">
-                                                {item.totalPoin}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="flex flex-col gap-1 max-w-xs">
-                                                <span className={`w-fit px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-${item.color}-50 text-${item.color}-600 border border-${item.color}-100`}>
-                                                    {item.tingkat} ({item.activeWeek.points} Pts)
-                                                </span>
-                                                <span className="text-xs text-gray-500 font-bold truncate leading-snug" title={item.sanksi}>
-                                                    {item.sanksi}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-3">
-                                                <select
-                                                    value={getStudentStatus(item)}
-                                                    onChange={async (e) => {
-                                                        const newStatus = e.target.value;
-                                                        if (newStatus === 'MIX') return;
-                                                        await handleBulkUpdateStatus(item.id, newStatus);
-                                                    }}
-                                                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border outline-none cursor-pointer transition-all
-                                                        ${getStudentStatus(item) === 'SELESAI' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100/50' :
-                                                            getStudentStatus(item) === 'PROSES' ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100/50' :
-                                                                getStudentStatus(item) === 'OPEN' ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' :
-                                                                    'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}
-                                                    `}
-                                                    style={{ minWidth: '110px' }}
-                                                >
-                                                    <option value="MIX" disabled className="bg-white text-gray-400">Status...</option>
-                                                    <option value="OPEN" className="bg-white text-red-600 font-bold">Open</option>
-                                                    <option value="PROSES" className="bg-white text-amber-600 font-bold">Proses</option>
-                                                    <option value="SELESAI" className="bg-white text-emerald-600 font-bold">Selesai</option>
-                                                </select>
-                                                <button
-                                                    onClick={() => handleSendWhatsApp(item, item.allViolations)}
-                                                    className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-100 flex items-center justify-center shrink-0"
-                                                    title="Kirim Laporan WhatsApp"
-                                                >
-                                                    <MessageCircle size={14} />
-                                                </button>
-                                                <div
-                                                    onClick={() => fetchDetails(item)}
-                                                    className="flex items-center gap-1 text-primary-600 font-bold text-xs uppercase tracking-widest hover:text-primary-700 transition-colors cursor-pointer shrink-0"
-                                                >
-                                                    Rincian <ChevronRight size={14} />
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile View Cards */}
-                <div className="md:hidden no-print">
-                    <div className="divide-y divide-gray-50 bg-white">
-                        {loading ? (
-                            <div className="py-20 text-center"><Spinner label="Memuat rekap..." /></div>
-                        ) : filteredData.length === 0 ? (
-                            <div className="p-12">
-                                <EmptyState icon={CheckCircle} title="Tidak Ada Data" message="Tidak ada catatan pelanggaran dalam periode ini." />
-                            </div>
-                        ) : (
-                            filteredData.map((item, index) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => fetchDetails(item)}
-                                    className="p-6 space-y-4 active:bg-gray-50 transition-colors cursor-pointer"
-                                >
-                                    {/* Header Row: Rank, Student Info */}
-                                    <div className="flex items-start gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${index < 3 ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-gray-100 text-gray-500'}`}>
-                                            {index + 1}
+                {/* Responsive Table View */}
+                <div className="no-print">
+                    <ResponsiveTable
+                        columns={[
+                            { 
+                                header: 'Peringkat', 
+                                render: (row, index) => (
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${index < 3 ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-gray-100 text-gray-500'}`}>
+                                        {index + 1}
+                                    </div>
+                                ), 
+                                className: 'px-8 py-5 w-16',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Santri', 
+                                render: (row) => (
+                                    <>
+                                        <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">
+                                            {row.nama}
                                         </div>
-                                        <div className="space-y-1 min-w-0 flex-1">
-                                            <div className="font-black text-gray-900 text-base leading-tight truncate">{item.nama}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                NIS: {item.nis} • {item.kelas}
-                                            </div>
-                                            <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                                                {getStatusBadge(getStudentStatus(item))}
-                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                                                    {getStudentStatus(item) === 'SELESAI'
-                                                        ? `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
-                                                        : formatDate(item.lastViolation)}
-                                                </span>
-                                            </div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                            NIS: {row.nis} • {row.kelas}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            {getStatusBadge(getStudentStatus(row))}
+                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                {getStudentStatus(row) === 'SELESAI'
+                                                    ? `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
+                                                    : formatDate(row.lastViolation)}
+                                            </span>
+                                        </div>
+                                    </>
+                                ), 
+                                className: 'px-8 py-5'
+                            },
+                            { 
+                                header: 'Total Kasus', 
+                                render: (row) => (
+                                    <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-black">
+                                        {row.totalKasus}
+                                    </span>
+                                ), 
+                                className: 'px-8 py-5 text-center',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Total Poin', 
+                                render: (row) => (
+                                    <span className="px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100">
+                                        {row.totalPoin}
+                                    </span>
+                                ), 
+                                className: 'px-8 py-5 text-center',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Tingkat & Sanksi Mingguan', 
+                                render: (row) => (
+                                    <div className="flex flex-col gap-1 max-w-xs">
+                                        <span className={`w-fit px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-${row.color}-50 text-${row.color}-600 border border-${row.color}-100`}>
+                                            {row.tingkat} ({row.activeWeek.points} Pts)
+                                        </span>
+                                        <span className="text-xs text-gray-500 font-bold truncate leading-snug" title={row.sanksi}>
+                                            {row.sanksi}
+                                        </span>
+                                    </div>
+                                ), 
+                                className: 'px-8 py-5',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Aksi', 
+                                render: (row) => (
+                                    <div className="flex items-center justify-end gap-3" onClick={(e) => e.stopPropagation()}>
+                                        <select
+                                            value={getStudentStatus(row)}
+                                            onChange={async (e) => {
+                                                const newStatus = e.target.value;
+                                                if (newStatus === 'MIX') return;
+                                                await handleBulkUpdateStatus(row.id, newStatus);
+                                            }}
+                                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border outline-none cursor-pointer transition-all
+                                                ${getStudentStatus(row) === 'SELESAI' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100/50' :
+                                                    getStudentStatus(row) === 'PROSES' ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100/50' :
+                                                        getStudentStatus(row) === 'OPEN' ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' :
+                                                            'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}
+                                            `}
+                                            style={{ minWidth: '110px' }}
+                                        >
+                                            <option value="MIX" disabled className="bg-white text-gray-400">Status...</option>
+                                            <option value="OPEN" className="bg-white text-red-600 font-bold">Open</option>
+                                            <option value="PROSES" className="bg-white text-amber-600 font-bold">Proses</option>
+                                            <option value="SELESAI" className="bg-white text-emerald-600 font-bold">Selesai</option>
+                                        </select>
+                                        <button
+                                            onClick={() => handleSendWhatsApp(row, row.allViolations)}
+                                            className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-100 flex items-center justify-center shrink-0"
+                                            title="Kirim Laporan WhatsApp"
+                                        >
+                                            <MessageCircle size={14} />
+                                        </button>
+                                        <div
+                                            onClick={() => fetchDetails(row)}
+                                            className="flex items-center gap-1 text-primary-600 font-bold text-xs uppercase tracking-widest hover:text-primary-700 transition-colors cursor-pointer shrink-0"
+                                        >
+                                            Rincian <ChevronRight size={14} />
                                         </div>
                                     </div>
-
-                                    {/* Stats Grid */}
-                                    <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <div className="text-center py-1">
-                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Kasus</div>
-                                            <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black">
-                                                {item.totalKasus} Kasus
-                                            </span>
-                                        </div>
-                                        <div className="text-center py-1 border-l border-gray-200">
-                                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Poin</div>
-                                            <span className="px-2.5 py-0.5 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100">
-                                                {item.totalPoin} PTS
-                                            </span>
-                                        </div>
+                                ), 
+                                className: 'px-8 py-5 text-right',
+                                hideOnMobile: false
+                            }
+                        ]}
+                        data={filteredData}
+                        loading={loading}
+                        onRowClick={(row) => fetchDetails(row)}
+                        emptyState={
+                            <EmptyState icon={CheckCircle} title="Tidak Ada Data" message="Tidak ada catatan pelanggaran dalam periode ini." />
+                        }
+                        mobileCardHeader={(row, index) => (
+                            <div className="flex items-start gap-3 w-full">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${index < 3 ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-gray-100 text-gray-500'}`}>
+                                    {index + 1}
+                                </div>
+                                <div className="space-y-1 min-w-0 flex-1">
+                                    <div className="font-black text-gray-900 text-base leading-tight truncate">{row.nama}</div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                        NIS: {row.nis} • {row.kelas}
                                     </div>
-
-                                    {/* Sanction Banner */}
-                                    <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 space-y-1">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-${item.color}-50 text-${item.color}-600 border border-${item.color}-100`}>
-                                                {item.tingkat}
-                                            </span>
-                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Sanksi Mingguan:</span>
-                                        </div>
-                                        <p className="text-xs text-gray-600 font-bold leading-relaxed">{item.sanksi}</p>
-                                    </div>
-
-                                    {/* Action Row */}
-                                    <div className="flex items-center justify-between gap-3 pt-2" onClick={(e) => e.stopPropagation()}>
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Status:</span>
-                                            <select
-                                                value={getStudentStatus(item)}
-                                                onChange={async (e) => {
-                                                    const newStatus = e.target.value;
-                                                    if (newStatus === 'MIX') return;
-                                                    await handleBulkUpdateStatus(item.id, newStatus);
-                                                }}
-                                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border outline-none cursor-pointer transition-all
-                                                    ${getStudentStatus(item) === 'SELESAI' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100/50' :
-                                                        getStudentStatus(item) === 'PROSES' ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100/50' :
-                                                            getStudentStatus(item) === 'OPEN' ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' :
-                                                                'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}
-                                                `}
-                                                style={{ minWidth: '110px' }}
-                                            >
-                                                <option value="MIX" disabled className="bg-white text-gray-400">Status...</option>
-                                                <option value="OPEN" className="bg-white text-red-600 font-bold">Open</option>
-                                                <option value="PROSES" className="bg-white text-amber-600 font-bold">Proses</option>
-                                                <option value="SELESAI" className="bg-white text-emerald-600 font-bold">Selesai</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => handleSendWhatsApp(item, item.allViolations)}
-                                                className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl flex items-center justify-center"
-                                                title="WhatsApp Wali"
-                                            >
-                                                <MessageCircle size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => fetchDetails(item)}
-                                                className="inline-flex items-center gap-1 text-primary-600 font-black text-xs uppercase tracking-widest hover:text-primary-700 transition-colors"
-                                            >
-                                                Rincian <ChevronRight size={14} />
-                                            </button>
-                                        </div>
+                                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                                        {getStatusBadge(getStudentStatus(row))}
+                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
+                                            {getStudentStatus(row) === 'SELESAI'
+                                                ? `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`
+                                                : formatDate(row.lastViolation)}
+                                        </span>
                                     </div>
                                 </div>
-                            ))
+                            </div>
                         )}
-                    </div>
+                        mobileCardContent={(row) => (
+                            <div className="w-full mt-4 space-y-3">
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <div className="text-center py-1">
+                                        <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Kasus</div>
+                                        <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 text-xs font-black">
+                                            {row.totalKasus} Kasus
+                                        </span>
+                                    </div>
+                                    <div className="text-center py-1 border-l border-gray-200">
+                                        <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total Poin</div>
+                                        <span className="px-2.5 py-0.5 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100">
+                                            {row.totalPoin} PTS
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Sanction Banner */}
+                                <div className="p-3 bg-gray-50 rounded-2xl border border-gray-100 space-y-1">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-${row.color}-50 text-${row.color}-600 border border-${row.color}-100`}>
+                                            {row.tingkat}
+                                        </span>
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Sanksi Mingguan:</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 font-bold leading-relaxed">{row.sanksi}</p>
+                                </div>
+
+                                {/* Action Row */}
+                                <div className="flex items-center justify-between gap-3 pt-2" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Status:</span>
+                                        <select
+                                            value={getStudentStatus(row)}
+                                            onChange={async (e) => {
+                                                const newStatus = e.target.value;
+                                                if (newStatus === 'MIX') return;
+                                                await handleBulkUpdateStatus(row.id, newStatus);
+                                            }}
+                                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border outline-none cursor-pointer transition-all
+                                                ${getStudentStatus(row) === 'SELESAI' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100/50' :
+                                                    getStudentStatus(row) === 'PROSES' ? 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100/50' :
+                                                        getStudentStatus(row) === 'OPEN' ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100/50' :
+                                                            'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'}
+                                            `}
+                                            style={{ minWidth: '110px' }}
+                                        >
+                                            <option value="MIX" disabled className="bg-white text-gray-400">Status...</option>
+                                            <option value="OPEN" className="bg-white text-red-600 font-bold">Open</option>
+                                            <option value="PROSES" className="bg-white text-amber-600 font-bold">Proses</option>
+                                            <option value="SELESAI" className="bg-white text-emerald-600 font-bold">Selesai</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleSendWhatsApp(row, row.allViolations)}
+                                            className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl flex items-center justify-center"
+                                            title="WhatsApp Wali"
+                                        >
+                                            <MessageCircle size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => fetchDetails(row)}
+                                            className="inline-flex items-center gap-1 text-primary-600 font-black text-xs uppercase tracking-widest hover:text-primary-700 transition-colors"
+                                        >
+                                            Rincian <ChevronRight size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    />
                 </div>
             </Card>
 

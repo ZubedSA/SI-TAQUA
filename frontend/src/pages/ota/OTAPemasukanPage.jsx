@@ -14,6 +14,8 @@ import 'jspdf-autotable'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
+import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTA.css'
 
 /**
@@ -471,70 +473,111 @@ const OTAPemasukanPage = () => {
 
                 <div className="ota-table-container">
                     {filteredData.length > 0 ? (
-                        <table className="ota-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama OTA</th>
-                                    <th className="text-right">Nominal</th>
-                                    <th>Metode</th>
-                                    <th>Keterangan</th>
-                                    <th className="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td>{idx + 1}</td>
-                                        <td>{formatDate(item.tanggal)}</td>
-                                        <td style={{ fontWeight: 500 }}>{item.ota?.nama || '-'}</td>
-                                        <td className="text-right" style={{ color: '#16a34a', fontWeight: 600 }}>
-                                            {formatRupiah(item.jumlah)}
-                                        </td>
-                                        <td>
-                                            <span className="ota-badge ota-badge-info">{item.metode || 'Transfer'}</span>
-                                        </td>
-                                        <td style={{ color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {item.keterangan || '-'}
-                                        </td>
-                                        <td>
-                                            <div className="ota-action-buttons desktop">
-                                                {item.ota?.no_hp && (
+                        <div className="w-full">
+                            <ResponsiveTable
+                                columns={[
+                                    {
+                                        header: 'No',
+                                        render: (row, index) => index + 1,
+                                        className: 'w-16',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Tanggal',
+                                        render: (row) => formatDate(row.tanggal),
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Nama OTA',
+                                        render: (row) => <div style={{ fontWeight: 500 }}>{row.ota?.nama || '-'}</div>
+                                    },
+                                    {
+                                        header: 'Nominal',
+                                        render: (row) => formatRupiah(row.jumlah),
+                                        className: 'text-right text-emerald-600 font-semibold',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Metode',
+                                        render: (row) => <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-xs font-semibold">{row.metode || 'Transfer'}</span>,
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Keterangan',
+                                        render: (row) => row.keterangan || '-',
+                                        className: 'text-gray-500 max-w-[200px] truncate',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Aksi',
+                                        render: (row) => (
+                                            <div className="flex items-center gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
+                                                {row.ota?.no_hp && (
                                                     <button
-                                                        className="ota-action-btn"
-                                                        style={{ color: '#25d366' }}
-                                                        onClick={() => sendWhatsAppConfirmation(item.ota, item.jumlah, item.tanggal)}
+                                                        className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                                                        onClick={() => sendWhatsAppConfirmation(row.ota, row.jumlah, row.tanggal)}
                                                         title="Kirim WhatsApp"
                                                     >
                                                         <MessageCircle size={16} />
                                                     </button>
                                                 )}
-                                                <button className="ota-action-btn edit" onClick={() => openEdit(item)} title="Edit">
+                                                <button className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" onClick={() => openEdit(row)} title="Edit">
                                                     <Edit2 size={16} />
                                                 </button>
-                                                <button className="ota-action-btn delete" onClick={() => openDeleteModal(item)} title="Hapus">
+                                                <button className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" onClick={() => openDeleteModal(row)} title="Hapus">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
-                                            <MobileActionMenu
-                                                item={item}
-                                                onEdit={() => openEdit(item)}
-                                                onDelete={() => openDeleteModal(item)}
-                                                onWhatsApp={item.ota?.no_hp ? () => sendWhatsAppConfirmation(item.ota, item.jumlah, item.tanggal) : null}
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr style={{ background: '#f8fafc', fontWeight: 600 }}>
-                                    <td colSpan={3}>Total</td>
-                                    <td className="text-right" style={{ color: '#16a34a' }}>{formatRupiah(totalPemasukan)}</td>
-                                    <td colSpan={3}></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                        ),
+                                        className: 'text-center',
+                                        hideOnMobile: false
+                                    }
+                                ]}
+                                data={filteredData}
+                                loading={loading}
+                                mobileCardHeader={(row) => (
+                                    <div className="flex justify-between items-start w-full">
+                                        <div className="space-y-1">
+                                            <div className="font-bold text-gray-900">{row.ota?.nama || '-'}</div>
+                                            <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                                <Calendar size={12} /> {formatDate(row.tanggal)}
+                                            </div>
+                                            <div className="mt-1">
+                                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-[10px] font-semibold">{row.metode || 'Transfer'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="font-bold text-emerald-600 text-sm">
+                                            {formatRupiah(row.jumlah)}
+                                        </div>
+                                    </div>
+                                )}
+                                mobileCardContent={(row) => (
+                                    <div className="w-full mt-3 space-y-3">
+                                        <div className="text-sm text-gray-600">
+                                            <span className="font-medium">Keterangan:</span><br/>
+                                            {row.keterangan || '-'}
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-2 border-t border-gray-100 justify-end" onClick={(e) => e.stopPropagation()}>
+                                            {row.ota?.no_hp && (
+                                                <button className="p-2 flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors" onClick={() => sendWhatsAppConfirmation(row.ota, row.jumlah, row.tanggal)}>
+                                                    <MessageCircle size={14} /> WhatsApp
+                                                </button>
+                                            )}
+                                            <button className="p-2 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" onClick={() => openEdit(row)}>
+                                                <Edit2 size={14} /> Edit
+                                            </button>
+                                            <button className="p-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" onClick={() => openDeleteModal(row)}>
+                                                <Trash2 size={14} /> Hapus
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            />
+                            <div className="p-4 bg-gray-50 rounded-xl mt-4 flex justify-between items-center border border-gray-100">
+                                <div className="font-bold text-gray-700">Total</div>
+                                <div className="font-bold text-emerald-600 text-lg">{formatRupiah(totalPemasukan)}</div>
+                            </div>
+                        </div>
                     ) : (
                         <div className="ota-empty">
                             <EmptyState

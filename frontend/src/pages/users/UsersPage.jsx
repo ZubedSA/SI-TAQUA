@@ -35,6 +35,8 @@ import { Card } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import FormInput from '../../components/ui/FormInput'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 
 /**
  * Users Management Page - Admin Only
@@ -403,7 +405,8 @@ const UsersPage = () => {
         }
     }
 
-    const handleResetPasswordClick = () => {
+    const handleResetPasswordClick = (e) => {
+        if (e) e.preventDefault()
         if (!newPasswordReset || newPasswordReset.length < 6) {
             showToast?.error('Password minimal 6 karakter')
             return
@@ -426,13 +429,13 @@ const UsersPage = () => {
             setResetPasswordOpen(false)
             setNewPasswordReset('')
             setPasswordResetUser(null)
-            setActionModal({ ...actionModal, isOpen: false })
         } catch (err) {
             console.error('Reset Password Error:', err)
             if (showToast?.error) showToast.error('Gagal reset password: ' + err.message)
             else alert('Gagal: ' + err.message)
         } finally {
             setSaving(false)
+            setActionModal(prev => ({ ...prev, isOpen: false, type: null }))
         }
     }
 
@@ -442,7 +445,8 @@ const UsersPage = () => {
         type: null, // 'save_user', 'reset_password'
     })
 
-    const handleSaveUserClick = () => {
+    const handleSaveUserClick = (e) => {
+        if (e) e.preventDefault()
         const isValid = validateForm()
         if (!isValid) return
         setActionModal({ isOpen: true, type: 'save_user' })
@@ -504,7 +508,6 @@ const UsersPage = () => {
                 }
                 fetchUsers()
                 closeModal()
-                setActionModal({ isOpen: false, type: null })
 
             } else {
                 // ============ CREATE USER (VIA RPC) ============
@@ -571,6 +574,7 @@ const UsersPage = () => {
             }
         } finally {
             setSaving(false)
+            setActionModal(prev => ({ ...prev, isOpen: false, type: null }))
         }
     }
 
@@ -927,82 +931,159 @@ const UsersPage = () => {
                             <p className="text-sm text-gray-500">Coba kata kunci pencarian atau filter yang berbeda.</p>
                         </div>
                     ) : (
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50/50 text-gray-400">
-                                <tr>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Pengguna</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Roles & Akses</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Kontak</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Bergabung</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredUsers.map((user) => (
-                                    <tr key={user.user_id} className="hover:bg-gray-50/80 transition-colors group">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg group-hover:scale-110 transition-transform">
-                                                    {user.nama?.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-gray-900 text-base">{user.nama}</div>
-                                                    <div className="text-xs font-medium text-gray-400">@{user.username}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {user.roles.map((role) => (
-                                                    <Badge 
-                                                        key={role} 
-                                                        variant="neutral"
-                                                        className={`${getRoleBadgeColor(role)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border-none shadow-sm`}
-                                                    >
-                                                        {getRoleLabel(role)}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="text-sm font-bold text-gray-700">{user.email}</div>
-                                            <div className="text-xs font-medium text-gray-400">{user.phone || '-'}</div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="text-sm font-bold text-gray-700">{new Date(user.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                {new Date(user.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => { setEditingUser(user); setShowAddModal(true); }}
-                                                    className="p-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                                    title="Edit User"
-                                                >
-                                                    <Edit size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => { setPasswordResetUser(user); setResetPasswordOpen(true); }}
-                                                    className="p-2.5 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm"
-                                                    title="Reset Password"
-                                                >
-                                                    <Key size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => openDeleteUser(user)}
-                                                    className="p-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                                                    title="Hapus User"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <ResponsiveTable
+                        columns={[
+                            { 
+                                header: 'Pengguna', 
+                                render: (row) => (
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg group-hover:scale-110 transition-transform">
+                                            {row.nama?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div className="font-black text-gray-900 text-base">{row.nama}</div>
+                                            <div className="text-xs font-medium text-gray-400">@{row.username}</div>
+                                        </div>
+                                    </div>
+                                ),
+                                className: 'px-8 py-6',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Roles & Akses', 
+                                render: (row) => (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {row.roles.map((role) => (
+                                            <Badge 
+                                                key={role} 
+                                                variant="neutral"
+                                                className={`${getRoleBadgeColor(role)} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border-none shadow-sm`}
+                                            >
+                                                {getRoleLabel(role)}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ),
+                                className: 'px-8 py-6',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Kontak', 
+                                render: (row) => (
+                                    <>
+                                        <div className="text-sm font-bold text-gray-700">{row.email}</div>
+                                        <div className="text-xs font-medium text-gray-400">{row.phone || '-'}</div>
+                                    </>
+                                ),
+                                className: 'px-8 py-6',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Bergabung', 
+                                render: (row) => (
+                                    <>
+                                        <div className="text-sm font-bold text-gray-700">{new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                            {new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    </>
+                                ),
+                                className: 'px-8 py-6',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Aksi', 
+                                className: 'px-8 py-6 text-right',
+                                render: (row) => (
+                                    <div className="flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setEditingUser(row); setShowAddModal(true); }}
+                                            className="p-2.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                            title="Edit User"
+                                        >
+                                            <Edit size={18} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setPasswordResetUser(row); setResetPasswordOpen(true); }}
+                                            className="p-2.5 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm"
+                                            title="Reset Password"
+                                        >
+                                            <Key size={18} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); openDeleteUser(row); }}
+                                            className="p-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                            title="Hapus User"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                ) 
+                            }
+                        ]}
+                        data={filteredUsers}
+                        loading={loading}
+                        emptyState={
+                            <div className="py-20 text-center">
+                                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Search className="text-gray-300" size={32} />
+                                </div>
+                                <p className="text-lg font-bold text-gray-900">Tidak ada pengguna ditemukan</p>
+                                <p className="text-sm text-gray-500">Coba kata kunci pencarian atau filter yang berbeda.</p>
+                            </div>
+                        }
+                        mobileCardHeader={(row) => (
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-lg shadow-sm">
+                                    {row.nama?.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-base">{row.nama}</div>
+                                    <div className="text-xs font-medium text-gray-400">@{row.username}</div>
+                                </div>
+                            </div>
+                        )}
+                        mobileCardActions={(row) => (
+                            <MobileActionMenu
+                                actions={[
+                                    { icon: <Edit size={16} />, label: 'Edit', onClick: () => { setEditingUser(row); setShowAddModal(true); } },
+                                    { icon: <Key size={16} />, label: 'Reset Password', onClick: () => { setPasswordResetUser(row); setResetPasswordOpen(true); } },
+                                    { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => openDeleteUser(row), danger: true }
+                                ]}
+                            />
+                        )}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-3 w-full mt-1">
+                                <div className="flex flex-wrap gap-1.5">
+                                    {row.roles.map((role) => (
+                                        <span 
+                                            key={role} 
+                                            className={`${getRoleBadgeColor(role)} px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border-none`}
+                                        >
+                                            {getRoleLabel(role)}
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-gray-500">Email</span>
+                                        <span className="text-xs font-bold text-gray-900">{row.email || '-'}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-gray-500">Telp</span>
+                                        <span className="text-xs font-bold text-gray-900">{row.phone || '-'}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
+                                        <span className="text-xs font-semibold text-gray-500">Bergabung</span>
+                                        <span className="text-[10px] font-bold text-gray-900 text-right">
+                                            {new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}<br/>
+                                            <span className="text-gray-400">{new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    />
                     )}
                 </div>
             </Card>
@@ -1011,41 +1092,11 @@ const UsersPage = () => {
             */}
 
 
-            {/* Confirmation Modals */}
-            <ConfirmationModal
-                isOpen={actionModal.isOpen && actionModal.type === 'save_user'}
-                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
-                onConfirm={executeSaveUser}
-                title="Konfirmasi Simpan"
-                message={`Apakah anda yakin ingin menyimpan data user ${formData.nama}?`}
-                confirmLabel={saving ? 'Menyimpan...' : 'Ya, Simpan'}
-                cancelLabel="Batal"
-                variant="primary"
-                isLoading={saving}
-            />
 
-            <ConfirmationModal
-                isOpen={actionModal.isOpen && actionModal.type === 'reset_password'}
-                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
-                onConfirm={executeResetPassword}
-                title="Konfirmasi Reset Password"
-                message={`Yakin reset password untuk user ${passwordResetUser?.nama}?`}
-                confirmLabel={saving ? 'Memproses...' : 'Ya, Reset'}
-                cancelLabel="Batal"
-                variant="warning"
-                isLoading={saving}
-            />
-
-            <DeleteConfirmationModal
-                isOpen={deleteModalOpen}
-                onClose={() => setDeleteModalOpen(false)}
-                onConfirm={handleDeleteUser}
-                itemName={userToDelete?.nama}
-            />
 
             {/* Add/Edit Modal */}
             {showAddModal && createPortal(
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 overflow-y-auto animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-auto animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
                             <h2 className="text-xl font-bold text-gray-900">{editingUser ? 'Edit User' : 'Tambah User Baru'}</h2>
@@ -1264,6 +1315,7 @@ const UsersPage = () => {
                                 Batal
                             </button>
                             <button 
+                                type="button"
                                 onClick={handleSaveUserClick} 
                                 disabled={saving}
                                 className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 active:scale-95 transition-all text-sm font-medium shadow-sm"
@@ -1278,7 +1330,7 @@ const UsersPage = () => {
 
             {/* Reset Password Modal */}
             {resetPasswordOpen && createPortal(
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 overflow-y-auto animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md my-auto animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
                         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
                             <h3 className="text-lg font-bold text-gray-900">Reset Password</h3>
@@ -1318,7 +1370,37 @@ const UsersPage = () => {
                 </div>,
                 document.body
             )}
+            {/* Confirmation Modals MUST be at the end to ensure they appear on top of other portals */}
+            <ConfirmationModal
+                isOpen={actionModal.isOpen && actionModal.type === 'save_user'}
+                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
+                onConfirm={executeSaveUser}
+                title="Konfirmasi Simpan"
+                message={`Apakah anda yakin ingin menyimpan data user ${formData.nama}?`}
+                confirmLabel={saving ? 'Menyimpan...' : 'Ya, Simpan'}
+                cancelLabel="Batal"
+                variant="primary"
+                isLoading={saving}
+            />
 
+            <ConfirmationModal
+                isOpen={actionModal.isOpen && actionModal.type === 'reset_password'}
+                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
+                onConfirm={executeResetPassword}
+                title="Konfirmasi Reset Password"
+                message={`Yakin reset password untuk user ${passwordResetUser?.nama}?`}
+                confirmLabel={saving ? 'Memproses...' : 'Ya, Reset'}
+                cancelLabel="Batal"
+                variant="warning"
+                isLoading={saving}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={handleDeleteUser}
+                itemName={userToDelete?.nama}
+            />
         </div>
     )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, RefreshCw, Users, Calendar } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
+import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../shared/styles/Nilai.css'
 
 const GrafikPerkembanganPage = () => {
@@ -85,28 +86,18 @@ const GrafikPerkembanganPage = () => {
 
                         <div className="rekap-table" style={{ marginTop: '24px' }}>
                             <h4>Rekap Nilai Per Semester</h4>
-                            <table className="data-table" style={{ marginTop: '12px' }}>
-                                <thead>
-                                    <tr>
-                                        <th>Semester</th>
-                                        <th>Tahfizhiyah</th>
-                                        <th>Madrosiyah</th>
-                                        <th>Rata-rata</th>
-                                        <th>Ranking</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {semester.slice(0, 4).map(s => (
-                                        <tr key={s.id}>
-                                            <td>{s.nama} {s.tahun_ajaran}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                            <ResponsiveTable
+                                columns={[
+                                    { header: 'Semester', render: (row) => `${row.nama} ${row.tahun_ajaran}`, className: 'font-medium' },
+                                    { header: 'Tahfizhiyah', render: () => '-', className: 'text-center' },
+                                    { header: 'Madrosiyah', render: () => '-', className: 'text-center' },
+                                    { header: 'Rata-rata', render: () => '-', className: 'text-center' },
+                                    { header: 'Ranking', render: () => '-', className: 'text-center' }
+                                ]}
+                                data={semester.slice(0, 4)}
+                                emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data semester</div>}
+                                mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">{row.nama} {row.tahun_ajaran}</span>}
+                            />
                         </div>
                     </div>
                 )}

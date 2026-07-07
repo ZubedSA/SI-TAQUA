@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import { useToast } from '../../context/ToastContext'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 
 const OTADetail = () => {
     const { id } = useParams()
@@ -322,24 +323,45 @@ const OTADetail = () => {
                         </div>
                         <div className="p-0">
                             {santriList.length > 0 ? (
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-                                        <tr>
-                                            <th className="p-3 text-left pl-6">Nama Santri</th>
-                                            <th className="p-3 text-left">Kelas</th>
-                                            <th className="p-3 text-right pr-6">NIS</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {santriList.map((item, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50/50 transition">
-                                                <td className="p-3 pl-6 font-medium text-gray-900">{item.santri?.nama}</td>
-                                                <td className="p-3 text-gray-500">{item.santri?.kelas?.nama}</td>
-                                                <td className="p-3 pr-6 text-right text-gray-400 font-mono text-xs">{item.santri?.nis}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <div className="w-full">
+                                    <ResponsiveTable
+                                        columns={[
+                                            {
+                                                header: 'Nama Santri',
+                                                render: (row) => <div className="font-medium text-gray-900">{row.santri?.nama}</div>,
+                                                className: 'pl-6'
+                                            },
+                                            {
+                                                header: 'Kelas',
+                                                render: (row) => row.santri?.kelas?.nama,
+                                                className: 'text-gray-500',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'NIS',
+                                                render: (row) => row.santri?.nis,
+                                                className: 'pr-6 text-right text-gray-400 font-mono text-xs',
+                                                hideOnMobile: true
+                                            }
+                                        ]}
+                                        data={santriList}
+                                        mobileCardHeader={(row) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <div className="space-y-1">
+                                                    <div className="font-bold text-gray-900">{row.santri?.nama}</div>
+                                                    <div className="text-xs text-gray-500">NIS: {row.santri?.nis}</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        mobileCardContent={(row) => (
+                                            <div className="w-full mt-3 pt-3 border-t border-gray-100">
+                                                <div className="text-sm text-gray-600">
+                                                    <span className="font-medium">Kelas:</span> {row.santri?.kelas?.nama}
+                                                </div>
+                                            </div>
+                                        )}
+                                    />
+                                </div>
                             ) : (
                                 <div className="p-8">
                                     <EmptyState message="Belum ada santri terhubung" icon={Users} />
@@ -357,30 +379,43 @@ const OTADetail = () => {
                         </div>
                         <div className="max-h-[300px] overflow-y-auto">
                             {transactions.length > 0 ? (
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 text-xs text-gray-500 uppercase sticky top-0">
-                                        <tr>
-                                            <th className="p-3 text-left pl-6">Tanggal</th>
-                                            <th className="p-3 text-right">Jumlah</th>
-                                            <th className="p-3 text-left pr-6">Keterangan</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {transactions.map((tx, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50/50 transition">
-                                                <td className="p-3 pl-6 text-gray-600">
-                                                    {new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                </td>
-                                                <td className="p-3 text-right font-medium text-green-600">
-                                                    Rp {Number(tx.jumlah).toLocaleString('id-ID')}
-                                                </td>
-                                                <td className="p-3 pr-6 text-gray-500 truncate max-w-[150px]">
-                                                    {tx.keterangan || '-'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <div className="w-full">
+                                    <ResponsiveTable
+                                        columns={[
+                                            {
+                                                header: 'Tanggal',
+                                                render: (row) => new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+                                                className: 'pl-6 text-gray-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Jumlah',
+                                                render: (row) => `Rp ${Number(row.jumlah).toLocaleString('id-ID')}`,
+                                                className: 'text-right font-medium text-green-600'
+                                            },
+                                            {
+                                                header: 'Keterangan',
+                                                render: (row) => row.keterangan || '-',
+                                                className: 'pr-6 text-gray-500 truncate max-w-[150px]'
+                                            }
+                                        ]}
+                                        data={transactions}
+                                        mobileCardHeader={(row) => (
+                                            <div className="flex justify-between items-start w-full">
+                                                <div className="space-y-1">
+                                                    <div className="font-bold text-gray-900 text-sm truncate max-w-[200px]">{row.keterangan || '-'}</div>
+                                                    <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                                        <Calendar size={12} /> {new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </div>
+                                                </div>
+                                                <div className="font-bold text-green-600 text-sm">
+                                                    Rp {Number(row.jumlah).toLocaleString('id-ID')}
+                                                </div>
+                                            </div>
+                                        )}
+                                        mobileCardContent={(row) => null}
+                                    />
+                                </div>
                             ) : (
                                 <div className="p-8">
                                     <EmptyState message="Belum ada data donasi" icon={Wallet} />

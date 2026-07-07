@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext'
 import Spinner from '../../components/ui/Spinner'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTASantriPage.css'
 
 const OTASantriPage = () => {
@@ -277,116 +278,117 @@ const OTASantriPage = () => {
                     </div>
                 ) : filteredData.length > 0 ? (
                     <>
-                        {/* Table View (Desktop) */}
-                        <div className="table-container">
-                            <div className="table-wrapper">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th className="ota-th">Santri</th>
-                                            <th className="ota-th">Status</th>
-                                            <th className="ota-th">Tanggal Mulai</th>
-                                            <th className="ota-th">Tanggal Selesai</th>
-                                            <th className="ota-th" style={{ textAlign: 'center' }}>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredData.map((item) => (
-                                            <tr key={item.id} className="ota-tr">
-                                                <td className="ota-td">
-                                                    <div className="ota-user-cell">
-                                                        <div className="ota-avatar" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
-                                                            {item.santri?.nama?.substring(0, 2).toUpperCase()}
-                                                        </div>
-                                                        <div className="ota-user-info">
-                                                            <div>{item.santri?.nama}</div>
-                                                            <div className="ota-user-details">
-                                                                <span>NIS: {item.santri?.nis}</span>
-                                                                {item.santri?.kelas?.nama && <span>• {item.santri.kelas.nama}</span>}
-                                                            </div>
-                                                        </div>
+                        <div className="table-container no-print">
+                            <ResponsiveTable
+                                columns={[
+                                    {
+                                        header: 'Santri',
+                                        render: (row) => (
+                                            <div className="ota-user-cell">
+                                                <div className="ota-avatar" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                                                    {row.santri?.nama?.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="ota-user-info">
+                                                    <div>{row.santri?.nama}</div>
+                                                    <div className="ota-user-details">
+                                                        <span>NIS: {row.santri?.nis}</span>
+                                                        {row.santri?.kelas?.nama && <span>• {row.santri.kelas.nama}</span>}
                                                     </div>
-                                                </td>
-                                                <td className="ota-td">
-                                                    <span className={`ota-status-badge ${item.status === 'aktif' ? 'ota-status-active' : 'ota-status-inactive'}`}>
-                                                        {item.status === 'aktif' ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                                                        {item.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
-                                                    </span>
-                                                </td>
-                                                <td className="ota-td">
-                                                    {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                                                </td>
-                                                <td className="ota-td">
-                                                    {item.tanggal_selesai ? new Date(item.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                                                </td>
-                                                <td className="ota-td" style={{ textAlign: 'center' }}>
-                                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                                                        <button
-                                                            className={`ota-action-btn ota-btn-toggle ${item.status === 'aktif' ? 'active' : 'inactive'}`}
-                                                            onClick={() => handleToggleStatus(item)}
-                                                            title={item.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                                                        >
-                                                            {item.status === 'aktif' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                                                        </button>
-                                                        <button
-                                                            className="ota-action-btn ota-btn-delete"
-                                                            onClick={() => openDeleteModal(item.id)}
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Mobile List View (Hidden on Desktop) */}
-                        <div className="ota-mobile-list">
-                            {filteredData.map((item) => (
-                                <div key={item.id} className="ota-mobile-card">
-                                    <div className="ota-mobile-header">
+                                                </div>
+                                            </div>
+                                        ),
+                                        className: 'ota-td'
+                                    },
+                                    {
+                                        header: 'Status',
+                                        render: (row) => (
+                                            <span className={`ota-status-badge ${row.status === 'aktif' ? 'ota-status-active' : 'ota-status-inactive'}`}>
+                                                {row.status === 'aktif' ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                                                {row.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
+                                            </span>
+                                        ),
+                                        className: 'ota-td'
+                                    },
+                                    {
+                                        header: 'Tanggal Mulai',
+                                        render: (row) => row.tanggal_mulai ? new Date(row.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-',
+                                        className: 'ota-td',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Tanggal Selesai',
+                                        render: (row) => row.tanggal_selesai ? new Date(row.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-',
+                                        className: 'ota-td',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Aksi',
+                                        render: (row) => (
+                                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    className={`ota-action-btn ota-btn-toggle ${row.status === 'aktif' ? 'active' : 'inactive'}`}
+                                                    onClick={() => handleToggleStatus(row)}
+                                                    title={row.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                                                >
+                                                    {row.status === 'aktif' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                                                </button>
+                                                <button
+                                                    className="ota-action-btn ota-btn-delete"
+                                                    onClick={() => openDeleteModal(row.id)}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        ),
+                                        className: 'ota-td',
+                                        style: { textAlign: 'center' },
+                                        hideOnMobile: false
+                                    }
+                                ]}
+                                data={filteredData}
+                                loading={loading}
+                                mobileCardHeader={(row) => (
+                                    <div className="ota-mobile-header" style={{ width: '100%' }}>
                                         <div className="ota-user-cell">
                                             <div className="ota-avatar" style={{ background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
-                                                {item.santri?.nama?.substring(0, 2).toUpperCase()}
+                                                {row.santri?.nama?.substring(0, 2).toUpperCase()}
                                             </div>
                                             <div className="ota-user-info">
-                                                <div>{item.santri?.nama}</div>
+                                                <div>{row.santri?.nama}</div>
                                                 <div className="ota-user-details">
-                                                    NIS: {item.santri?.nis}
+                                                    NIS: {row.santri?.nis}
                                                 </div>
                                             </div>
                                         </div>
-                                        <span className={`ota-status-badge ${item.status === 'aktif' ? 'ota-status-active' : 'ota-status-inactive'}`}>
-                                            {item.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
+                                        <span className={`ota-status-badge ${row.status === 'aktif' ? 'ota-status-active' : 'ota-status-inactive'}`}>
+                                            {row.status === 'aktif' ? 'Aktif' : 'Non-Aktif'}
                                         </span>
                                     </div>
-
-                                    <div style={{ fontSize: '0.875rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Calendar size={14} />
-                                        Mulai: {item.tanggal_mulai ? new Date(item.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                )}
+                                mobileCardContent={(row) => (
+                                    <div className="w-full mt-3">
+                                        <div style={{ fontSize: '0.875rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                            <Calendar size={14} />
+                                            Mulai: {row.tanggal_mulai ? new Date(row.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                        </div>
+                                        <div className="ota-mobile-footer" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                className="ota-action-btn ota-btn-delete"
+                                                onClick={() => openDeleteModal(row.id)}
+                                            >
+                                                <Trash2 size={16} /> Hapus
+                                            </button>
+                                            <button
+                                                className={`ota-action-btn ota-btn-toggle ${row.status === 'aktif' ? '' : 'inactive'}`}
+                                                style={{ background: 'none', border: '1px solid #e2e8f0' }}
+                                                onClick={() => handleToggleStatus(row)}
+                                            >
+                                                {row.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
+                                            </button>
+                                        </div>
                                     </div>
-
-                                    <div className="ota-mobile-footer">
-                                        <button
-                                            className="ota-action-btn ota-btn-delete"
-                                            onClick={() => openDeleteModal(item.id)}
-                                        >
-                                            <Trash2 size={16} /> Hapus
-                                        </button>
-
-                                        <button
-                                            className={`ota-action-btn ota-btn-toggle ${item.status === 'aktif' ? '' : 'inactive'}`}
-                                            style={{ background: 'none', border: '1px solid #e2e8f0' }}
-                                            onClick={() => handleToggleStatus(item)}
-                                        >
-                                            {item.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'}
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                                )}
+                            />
                         </div>
                     </>
                 ) : (

@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './Keuangan.css'
 
 const KategoriPembayaranPage = () => {
@@ -199,123 +200,59 @@ const KategoriPembayaranPage = () => {
                 ) : (
                     <>
                         {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Nama</th>
-                                        <th>Tipe</th>
-                                        <th className="hide-mobile">Keterangan</th>
-                                        <th className="hide-mobile">Nominal Default</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredData.map((item, i) => (
-                                        <tr key={item.id}>
-                                            <td>{i + 1}</td>
-                                            <td><strong>{item.nama}</strong></td>
-                                            <td>
-                                                <span className={`badge ${getTipeColor(item.tipe)}`}>
-                                                    {getTipeLabel(item.tipe)}
-                                                </span>
-                                            </td>
-                                            <td className="hide-mobile">{item.keterangan || '-'}</td>
-                                            <td className="hide-mobile amount">Rp {Number(item.nominal_default || 0).toLocaleString('id-ID')}</td>
-                                            <td>
-                                                <span className={`badge ${item.is_active ? 'green' : 'red'}`}>
-                                                    {item.is_active ? 'Aktif' : 'Nonaktif'}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {/* Desktop: Show buttons directly */}
-                                                <div className="action-buttons show-desktop">
-                                                    <button className="btn-icon-sm" onClick={() => openEdit(item)} title="Edit">
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button className="btn-icon-sm danger" onClick={() => confirmDelete(item)} title="Hapus">
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                                {/* Mobile: Show 3-dot menu */}
-                                                <div className="action-menu-wrapper show-mobile" ref={activeMenu === item.id ? menuRef : null}>
-                                                    <button
-                                                        className="btn-icon-sm"
-                                                        onClick={() => setActiveMenu(activeMenu === item.id ? null : item.id)}
-                                                    >
-                                                        <MoreVertical size={16} />
-                                                    </button>
-                                                    {activeMenu === item.id && (
-                                                        <div className="action-dropdown">
-                                                            <button onClick={() => openEdit(item)}>
-                                                                <Edit2 size={14} /> Edit
-                                                            </button>
-                                                            <button className="danger" onClick={() => { setActiveMenu(null); confirmDelete(item); }}>
-                                                                <Trash2 size={14} /> Hapus
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {filteredData.map((item, i) => (
-                                <div key={item.id} className="mobile-data-card">
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title text-gray-900 font-bold">{item.nama}</h4>
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold mt-1 badge ${getTipeColor(item.tipe)}`}>
-                                                {getTipeLabel(item.tipe)}
-                                            </span>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'Nama', accessor: 'nama', className: 'font-bold', hideOnMobile: true },
+                                { 
+                                    header: 'Tipe', 
+                                    render: (row) => (
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${getTipeColor(row.tipe)}`}>
+                                            {getTipeLabel(row.tipe)}
+                                        </span>
+                                    )
+                                },
+                                { header: 'Keterangan', accessor: 'keterangan', render: (row) => row.keterangan || '-' },
+                                { 
+                                    header: 'Nominal Default', 
+                                    render: (row) => row.nominal_default > 0 ? `Rp ${Number(row.nominal_default).toLocaleString('id-ID')}` : '-'
+                                },
+                                { 
+                                    header: 'Status', 
+                                    render: (row) => (
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${row.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                            {row.is_active ? 'Aktif' : 'Nonaktif'}
+                                        </span>
+                                    )
+                                },
+                                {
+                                    header: 'Aksi',
+                                    hideOnMobile: true,
+                                    className: 'text-right',
+                                    render: (row) => (
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button onClick={() => openEdit(row)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>
+                                            <button onClick={() => confirmDelete(row)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 size={16} /></button>
                                         </div>
-                                        <div className="text-right">
-                                            {item.nominal_default > 0 && (
-                                                <div className="mobile-card-amount text-gray-900 font-bold">
-                                                    Rp {Number(item.nominal_default).toLocaleString('id-ID')}
-                                                </div>
-                                            )}
-                                            <div className="mt-1">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold badge ${item.is_active ? 'green' : 'red'}`}>
-                                                    {item.is_active ? 'Aktif' : 'Nonaktif'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    {item.keterangan && (
-                                        <p className="mobile-card-desc">{item.keterangan}</p>
-                                    )}
-                                    
-                                    <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1">
-                                        <div className="mobile-card-meta">
-                                            <span>No: {i + 1}</span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => openEdit(item)}
-                                                className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-bold transition-colors"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => confirmDelete(item)}
-                                                className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-bold transition-colors"
-                                            >
-                                                Hapus
-                                            </button>
-                                        </div>
-                                    </div>
+                                    )
+                                }
+                            ]}
+                            data={filteredData}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold mt-1 w-max ${getTipeColor(row.tipe)}`}>
+                                        {getTipeLabel(row.tipe)}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            mobileCardActions={(row) => (
+                                <>
+                                    <button onClick={() => openEdit(row)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                                    <button onClick={() => confirmDelete(row)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                </>
+                            )}
+                        />
                     </>
                 )}
             </div>

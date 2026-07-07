@@ -67,11 +67,6 @@ const MobileActionMenu = ({ children, actions }) => {
                         e.stopPropagation()
                         setIsOpen(!isOpen)
                     }}
-                    onTouchEnd={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setIsOpen(!isOpen)
-                    }}
                     title="Menu Aksi"
                     aria-label="Menu Aksi"
                     aria-haspopup="true"

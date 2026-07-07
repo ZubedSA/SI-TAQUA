@@ -7,6 +7,7 @@ import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import { useCalendar } from '../../context/CalendarContext'
 import DateDisplay from '../../components/common/DateDisplay'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
 import './Keuangan.css'
@@ -199,73 +200,39 @@ const LaporanPembayaranPage = () => {
                     <div className="empty-state">Belum ada pembayaran</div>
                 ) : (
                     <>
-                        {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Santri</th>
-                                        <th>Kategori</th>
-                                        <th>Jumlah</th>
-                                        <th>Metode</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {pembayaran.map((item, i) => (
-                                        <tr key={item.id}>
-                                            <td>{i + 1}</td>
-                                            <td><DateDisplay date={item.tanggal} /></td>
-                                            <td>
-                                                <div className="cell-santri">
-                                                    <strong>{item.santri?.nama}</strong>
-                                                    <small>{item.santri?.nis}</small>
-                                                </div>
-                                            </td>
-                                            <td><span className="badge green">{item.tagihan?.kategori?.nama || '-'}</span></td>
-                                            <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                            <td>{item.metode}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {pembayaran.map((item, i) => (
-                                <div key={item.id} className="mobile-data-card">
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title text-gray-900 font-bold">{item.santri?.nama}</h4>
-                                            <div className="text-[10px] text-gray-500 mt-1">
-                                                {item.santri?.nis}
-                                            </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'Tanggal', render: (row) => <DateDisplay date={row.tanggal} /> },
+                                { 
+                                    header: 'Santri', 
+                                    hideOnMobile: true,
+                                    render: (row) => (
+                                        <div className="flex flex-col">
+                                            <strong className="text-gray-900">{row.santri?.nama}</strong>
+                                            <span className="text-xs text-gray-500">{row.santri?.nis}</span>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="mobile-card-amount text-emerald-600 font-bold">
-                                                Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                            </div>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200 mt-1">
-                                                {item.tagihan?.kategori?.nama || '-'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1 text-xs text-gray-500">
-                                        <div className="mobile-card-meta">
-                                            <span>No: {i + 1}</span>
-                                            <span>•</span>
-                                            <span><DateDisplay date={item.tanggal} /></span>
-                                        </div>
-                                        <div>
-                                            Metode: <strong>{item.metode}</strong>
-                                        </div>
-                                    </div>
+                                    )
+                                },
+                                { 
+                                    header: 'Kategori', 
+                                    render: (row) => <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">{row.tagihan?.kategori?.nama || '-'}</span>
+                                },
+                                { 
+                                    header: 'Jumlah', 
+                                    render: (row) => <span className="font-mono font-medium text-emerald-600">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span>
+                                },
+                                { header: 'Metode', accessor: 'metode', className: 'text-gray-500' }
+                            ]}
+                            data={pembayaran}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.santri?.nama}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{row.santri?.nis}</span>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            mobileCardActions={(row) => null}
+                        />
                     </>
                 )}
             </div>

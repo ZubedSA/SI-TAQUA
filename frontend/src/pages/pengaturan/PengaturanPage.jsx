@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import * as XLSX from 'xlsx'
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import {
     Database,
     Upload,
@@ -29,6 +33,9 @@ import {
 import { useToast } from '../../context/ToastContext'
 import { useTahunAjaran } from '../../hooks/useAkademik'
 import PageHeader from '../../components/layout/PageHeader'
+import Button from '../../components/ui/Button'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { Card } from '../../components/ui/Card'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import './Pengaturan.css'
@@ -709,23 +716,36 @@ const PengaturanPage = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="overflow-x-auto rounded-[1.5rem] border border-gray-100">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-gray-50 text-gray-400">
-                                            <tr>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">No</th>
-                                                {getPreviewColumns().map(col => <th key={col} className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">{col}</th>)}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50">
-                                            {importData.slice(0, 5).map((row, idx) => (
-                                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4 font-bold text-gray-400">#{idx + 1}</td>
-                                                    {getPreviewColumns().map(col => <td key={col} className="px-6 py-4 font-bold text-gray-700">{row[col] || '-'}</td>)}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="w-full mt-6">
+                                    <ResponsiveTable
+                                        columns={[
+                                            {
+                                                header: 'No',
+                                                render: (row, idx) => <span className="font-bold text-gray-400">#{idx + 1}</span>,
+                                                className: 'w-16'
+                                            },
+                                            ...getPreviewColumns().map(col => ({
+                                                header: col,
+                                                render: (row) => <span className="font-bold text-gray-700">{row[col] || '-'}</span>
+                                            }))
+                                        ]}
+                                        data={importData.slice(0, 5)}
+                                        mobileCardHeader={(row, idx) => (
+                                            <div className="flex justify-between items-center w-full">
+                                                <div className="font-bold text-gray-900">Baris #{idx + 1}</div>
+                                            </div>
+                                        )}
+                                        mobileCardContent={(row) => (
+                                            <div className="w-full mt-3 grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                                {getPreviewColumns().map(col => (
+                                                    <div key={col} className="p-2 bg-gray-50 rounded-lg">
+                                                        <span className="font-medium text-xs text-gray-400 block uppercase tracking-wider">{col}</span>
+                                                        <span className="font-bold text-gray-700">{row[col] || '-'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    />
                                 </div>
                             </Card>
                         )}
@@ -814,64 +834,119 @@ const PengaturanPage = () => {
                                         <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Semua data aman tersimpan</p>
                                     </div>
                                 ) : (
-                                    <table className="w-full text-left">
-                                        <thead className="bg-gray-50 text-gray-400 font-black text-[10px] uppercase tracking-widest">
-                                            <tr>
-                                                <th className="px-8 py-6">Data Source</th>
-                                                <th className="px-8 py-6">Waktu Hapus</th>
-                                                <th className="px-8 py-6">Sisa Waktu</th>
-                                                <th className="px-8 py-6 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50">
-                                            {trashItems.map((item) => (
-                                                <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center font-black text-amber-600 group-hover:scale-110 transition-transform">
-                                                                {item.table_name[0].toUpperCase()}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-black text-gray-900 text-sm">{getItemDisplayName(item)}</div>
-                                                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter opacity-50">{item.table_name}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="text-sm font-bold text-gray-700">{formatDate(item.deleted_at)}</div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex-1 max-w-[80px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-amber-500" style={{ width: `${(getDaysUntilAutoDelete(item.deleted_at) / 30) * 100}%` }} />
-                                                            </div>
-                                                            <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
-                                                                {getDaysUntilAutoDelete(item.deleted_at)} Hari
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-right">
-                                                        <div className="flex items-center justify-end gap-3">
-                                                            <button 
-                                                                className="p-3 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                                                                onClick={() => handleRestoreItem(item)}
-                                                                disabled={restoringId === item.id}
-                                                            >
-                                                                {restoringId === item.id ? <RefreshCw size={18} className="animate-spin" /> : <RotateCcw size={18} />}
-                                                            </button>
-                                                            <button 
-                                                                className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                                                                onClick={() => openDeleteModal(item)}
-                                                                disabled={deletingId === item.id}
-                                                            >
-                                                                {deletingId === item.id ? <RefreshCw size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <ResponsiveTable
+                                    columns={[
+                                        { 
+                                            header: 'Data Source', 
+                                            render: (item) => (
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center font-black text-amber-600 group-hover:scale-110 transition-transform">
+                                                        {item.table_name[0].toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-gray-900 text-sm">{getItemDisplayName(item)}</div>
+                                                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter opacity-50">{item.table_name}</div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            className: 'px-8 py-6',
+                                            hideOnMobile: true
+                                        },
+                                        { 
+                                            header: 'Waktu Hapus', 
+                                            render: (item) => <div className="text-sm font-bold text-gray-700">{formatDate(item.deleted_at)}</div>,
+                                            className: 'px-8 py-6',
+                                            hideOnMobile: true
+                                        },
+                                        { 
+                                            header: 'Sisa Waktu', 
+                                            render: (item) => (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 max-w-[80px] h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-amber-500" style={{ width: `${(getDaysUntilAutoDelete(item.deleted_at) / 30) * 100}%` }} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                                                        {getDaysUntilAutoDelete(item.deleted_at)} Hari
+                                                    </span>
+                                                </div>
+                                            ),
+                                            className: 'px-8 py-6',
+                                            hideOnMobile: true
+                                        },
+                                        { 
+                                            header: 'Actions', 
+                                            className: 'px-8 py-6 text-right',
+                                            render: (item) => (
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button 
+                                                        className="p-3 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                                                        onClick={(e) => { e.stopPropagation(); handleRestoreItem(item); }}
+                                                        disabled={restoringId === item.id}
+                                                    >
+                                                        {restoringId === item.id ? <RefreshCw size={18} className="animate-spin" /> : <RotateCcw size={18} />}
+                                                    </button>
+                                                    <button 
+                                                        className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                                        onClick={(e) => { e.stopPropagation(); openDeleteModal(item); }}
+                                                        disabled={deletingId === item.id}
+                                                    >
+                                                        {deletingId === item.id ? <RefreshCw size={18} className="animate-spin" /> : <Trash2 size={18} />}
+                                                    </button>
+                                                </div>
+                                            ) 
+                                        }
+                                    ]}
+                                    data={trashItems}
+                                    loading={loadingTrash}
+                                    loadingComponent={
+                                        <div className="py-20 text-center">
+                                            <RefreshCw size={48} className="animate-spin mx-auto text-amber-600 mb-4" />
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Scanning Storage...</p>
+                                        </div>
+                                    }
+                                    emptyState={
+                                        <div className="py-20 text-center bg-gray-50/50">
+                                            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-gray-100">
+                                                <Trash2 className="text-gray-200" size={32} />
+                                            </div>
+                                            <p className="text-lg font-black text-gray-900">Trash is Empty</p>
+                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Semua data aman tersimpan</p>
+                                        </div>
+                                    }
+                                    mobileCardHeader={(item) => (
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center font-black text-amber-600">
+                                                {item.table_name[0].toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div className="font-black text-gray-900 text-sm">{getItemDisplayName(item)}</div>
+                                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter opacity-50">{item.table_name}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardActions={(item) => (
+                                        <MobileActionMenu
+                                            actions={[
+                                                { icon: <RotateCcw size={16} />, label: 'Pulihkan', onClick: () => handleRestoreItem(item) },
+                                                { icon: <Trash2 size={16} />, label: 'Hapus Permanen', onClick: () => openDeleteModal(item), danger: true }
+                                            ]}
+                                        />
+                                    )}
+                                    mobileCardContent={(item) => (
+                                        <div className="flex flex-col gap-3 w-full mt-1">
+                                            <div className="bg-gray-50 p-3 rounded-xl space-y-2 border border-gray-100">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="font-semibold text-gray-500">Dihapus</span>
+                                                    <span className="font-bold text-gray-900">{formatDate(item.deleted_at)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-xs border-t border-gray-100 pt-2">
+                                                    <span className="font-semibold text-gray-500">Sisa Waktu</span>
+                                                    <span className="font-black text-amber-600">{getDaysUntilAutoDelete(item.deleted_at)} Hari</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                />
                                 )}
                             </div>
                         </Card>

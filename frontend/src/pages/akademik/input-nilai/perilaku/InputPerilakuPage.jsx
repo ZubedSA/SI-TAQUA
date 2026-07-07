@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Save, RefreshCw } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 import '../../shared/styles/Nilai.css'
 
 const InputPerilakuPage = () => {
@@ -322,99 +323,104 @@ const InputPerilakuPage = () => {
                             {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Data</>}
                         </button>
                     </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-10 sticky left-0 z-10 bg-white' },
+                            { header: 'Nama Santri', accessor: 'nama', className: 'w-48 sticky left-10 z-10 bg-white font-medium', hideOnMobile: true },
+                            
+                            { header: 'Ketekunan', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.ketekunan} onChange={v => handleInputChange(row.id, 'ketekunan', v)} /> },
+                            { header: 'Kedisiplinan', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.kedisiplinan} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} /> },
+                            { header: 'Kebersihan', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.kebersihan} onChange={v => handleInputChange(row.id, 'kebersihan', v)} /> },
+                            { header: 'Kerapian', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.kerapian} onChange={v => handleInputChange(row.id, 'kerapian', v)} /> },
 
-                    <div className="table-wrapper overflow-x-auto">
-                        <table className="table min-w-[1500px]">
-                            <thead>
-                                <tr>
-                                    <th className="w-10 sticky left-0 z-10">No</th>
-                                    <th className="w-48 sticky left-10 z-10">Nama Santri</th>
-
-                                    <th className="w-32">Ketekunan</th>
-                                    <th className="w-32">Kedisiplinan</th>
-                                    <th className="w-32">Kebersihan</th>
-                                    <th className="w-32">Kerapian</th>
-
-                                    <th className="w-40 border-l">Hafalan (Juz)</th>
-                                    <th className="w-32">Predikat</th>
-                                    <th className="w-40">Total Hafalan</th>
-
-                                    <th className="w-56 border-l text-center">Ketidakhadiran (S/I/A/P)</th>
-
-                                    <th className="w-64 border-l">Catatan Musyrif (Taujihat)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="10" className="text-center p-8"><RefreshCw size={20} className="spin inline mr-2" /> Loading data...</td></tr>
-                                ) : santri.length === 0 ? (
-                                    <tr><td colSpan="10" className="text-center p-8">Tidak ada santri di kelas ini</td></tr>
-                                ) : (
-                                    santri.map((s, i) => {
-                                        const d = formData[s.id] || {}
-                                        return (
-                                            <tr key={s.id}>
-                                                <td className="sticky left-0 bg-white z-10">{i + 1}</td>
-                                                <td className="sticky left-10 bg-white z-10 font-medium">{s.nama}</td>
-
-                                                {/* Perilaku */}
-                                                <td><BehaviorOptions value={d.ketekunan} onChange={v => handleInputChange(s.id, 'ketekunan', v)} /></td>
-                                                <td><BehaviorOptions value={d.kedisiplinan} onChange={v => handleInputChange(s.id, 'kedisiplinan', v)} /></td>
-                                                <td><BehaviorOptions value={d.kebersihan} onChange={v => handleInputChange(s.id, 'kebersihan', v)} /></td>
-                                                <td><BehaviorOptions value={d.kerapian} onChange={v => handleInputChange(s.id, 'kerapian', v)} /></td>
-
-                                                {/* Tahfizh Summary */}
-                                                <td className="border-l">
-                                                    <input
-                                                        type="text" className="form-control h-8 text-sm" placeholder="Contoh: 1 Juz"
-                                                        value={d.jumlah_hafalan} onChange={e => handleInputChange(s.id, 'jumlah_hafalan', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td><PredikatOptions value={d.predikat_hafalan} onChange={v => handleInputChange(s.id, 'predikat_hafalan', v)} /></td>
-                                                <td>
-                                                    <input
-                                                        type="text" className="form-control h-8 text-sm" placeholder="Contoh: 3 Juz"
-                                                        value={d.total_hafalan} onChange={e => handleInputChange(s.id, 'total_hafalan', e.target.value)}
-                                                    />
-                                                </td>
-
-                                                {/* Presensi */}
-                                                <td className="border-l">
-                                                    <div className="flex gap-1 justify-center">
-                                                        <input
-                                                            type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="S" title="Sakit"
-                                                            value={d.sakit} onChange={e => handleInputChange(s.id, 'sakit', e.target.value)}
-                                                        />
-                                                        <input
-                                                            type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="I" title="Izin"
-                                                            value={d.izin} onChange={e => handleInputChange(s.id, 'izin', e.target.value)}
-                                                        />
-                                                        <input
-                                                            type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="A" title="Alpha"
-                                                            value={d.alpha} onChange={e => handleInputChange(s.id, 'alpha', e.target.value)}
-                                                        />
-                                                        <input
-                                                            type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="P" title="Pulang"
-                                                            value={d.pulang} onChange={e => handleInputChange(s.id, 'pulang', e.target.value)}
-                                                        />
-                                                    </div>
-                                                </td>
-
-                                                {/* Taujihat */}
-                                                <td className="border-l">
-                                                    <textarea
-                                                        className="form-control text-sm min-h-[60px]"
-                                                        placeholder="Catatan untuk santri..."
-                                                        value={d.catatan} onChange={e => handleInputChange(s.id, 'catatan', e.target.value)}
-                                                    />
-                                                </td>
-                                            </tr>
-                                        )
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                            { header: 'Hafalan (Juz)', className: 'w-40 border-l', render: (row) => <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 1 Juz" value={formData[row.id]?.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} /> },
+                            { header: 'Predikat', className: 'w-32', render: (row) => <PredikatOptions value={formData[row.id]?.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} /> },
+                            { header: 'Total Hafalan', className: 'w-40', render: (row) => <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 3 Juz" value={formData[row.id]?.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} /> },
+                            
+                            { header: 'Ketidakhadiran (S/I/A/P)', className: 'w-56 border-l text-center', render: (row) => (
+                                <div className="flex gap-1 justify-center">
+                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="S" title="Sakit" value={formData[row.id]?.sakit ?? ''} onChange={e => handleInputChange(row.id, 'sakit', e.target.value)} />
+                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="I" title="Izin" value={formData[row.id]?.izin ?? ''} onChange={e => handleInputChange(row.id, 'izin', e.target.value)} />
+                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="A" title="Alpha" value={formData[row.id]?.alpha ?? ''} onChange={e => handleInputChange(row.id, 'alpha', e.target.value)} />
+                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="P" title="Pulang" value={formData[row.id]?.pulang ?? ''} onChange={e => handleInputChange(row.id, 'pulang', e.target.value)} />
+                                </div>
+                            ) },
+                            
+                            { header: 'Catatan Musyrif (Taujihat)', className: 'w-64 border-l', render: (row) => <textarea className="form-control text-sm min-h-[60px]" placeholder="Catatan untuk santri..." value={formData[row.id]?.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} /> }
+                        ]}
+                        data={santri}
+                        loading={loading}
+                        emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Tidak ada santri di kelas/halaqoh ini</div>}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                            </div>
+                        )}
+                        mobileCardActions={() => null}
+                        mobileCardContent={(row) => {
+                            const d = formData[row.id] || {}
+                            return (
+                                <div className="flex flex-col gap-4 w-full mt-2 pt-2 border-t border-gray-100">
+                                    {/* Perilaku */}
+                                    <div>
+                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Perilaku</h4>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Ketekunan</label>
+                                                <BehaviorOptions value={d.ketekunan} onChange={v => handleInputChange(row.id, 'ketekunan', v)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Kedisiplinan</label>
+                                                <BehaviorOptions value={d.kedisiplinan} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Kebersihan</label>
+                                                <BehaviorOptions value={d.kebersihan} onChange={v => handleInputChange(row.id, 'kebersihan', v)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Kerapian</label>
+                                                <BehaviorOptions value={d.kerapian} onChange={v => handleInputChange(row.id, 'kerapian', v)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Tahfizh Summary */}
+                                    <div className="border-t border-gray-50 pt-3">
+                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Tahfizh Summary</h4>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="col-span-2">
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Hafalan (Juz)</label>
+                                                <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 1 Juz" value={d.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Predikat</label>
+                                                <PredikatOptions value={d.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 mb-1 block">Total Hafalan</label>
+                                                <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 3 Juz" value={d.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* Presensi */}
+                                    <div className="border-t border-gray-50 pt-3">
+                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Ketidakhadiran (S/I/A/P)</h4>
+                                        <div className="flex gap-2">
+                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="S" title="Sakit" value={d.sakit ?? ''} onChange={e => handleInputChange(row.id, 'sakit', e.target.value)} />
+                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="I" title="Izin" value={d.izin ?? ''} onChange={e => handleInputChange(row.id, 'izin', e.target.value)} />
+                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="A" title="Alpha" value={d.alpha ?? ''} onChange={e => handleInputChange(row.id, 'alpha', e.target.value)} />
+                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="P" title="Pulang" value={d.pulang ?? ''} onChange={e => handleInputChange(row.id, 'pulang', e.target.value)} />
+                                        </div>
+                                    </div>
+                                    {/* Taujihat */}
+                                    <div className="border-t border-gray-50 pt-3">
+                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Catatan Musyrif (Taujihat)</h4>
+                                        <textarea className="form-control text-sm min-h-[80px]" placeholder="Catatan untuk santri..." value={d.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} />
+                                    </div>
+                                </div>
+                            )
+                        }}
+                    />
                 </div>
             )}
         </div>

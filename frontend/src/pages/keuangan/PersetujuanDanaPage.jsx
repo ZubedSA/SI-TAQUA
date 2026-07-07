@@ -6,6 +6,7 @@ import { logUpdate } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import { useToast } from '../../context/ToastContext'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './Keuangan.css'
 
 const PersetujuanDanaPage = () => {
@@ -162,135 +163,54 @@ const PersetujuanDanaPage = () => {
                     <div className="empty-state">Belum ada pengajuan</div>
                 ) : (
                     <>
-                        {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Program</th>
-                                        <th>Jumlah Diajukan</th>
-                                        <th>Tanggal</th>
-                                        <th>Status</th>
-                                        {canApprove && <th>Aksi</th>}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.map((item, i) => (
-                                        <tr key={item.id}>
-                                            <td>{i + 1}</td>
-                                            <td>
-                                                <div className="cell-santri">
-                                                    <strong>{item.nama_program}</strong>
-                                                    <small>{item.deskripsi?.substring(0, 50) || '-'}</small>
-                                                </div>
-                                            </td>
-                                            <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
-                                            <td>{new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID')}</td>
-                                            <td><span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span></td>
-                                            {canApprove && (
-                                                <td>
-                                                    <MobileActionMenu
-                                                        actions={[
-                                                            { label: 'Setujui', icon: <CheckCircle size={14} />, onClick: () => openApproval(item, 'approve') },
-                                                            { label: 'Tolak', icon: <XCircle size={14} />, onClick: () => openApproval(item, 'reject'), danger: true }
-                                                        ]}
-                                                    >
-                                                        <button
-                                                            onClick={() => openApproval(item, 'approve')}
-                                                            title="Setujui"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '32px',
-                                                                height: '32px',
-                                                                borderRadius: '6px',
-                                                                background: '#dcfce7',
-                                                                color: '#16a34a',
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                marginRight: '4px'
-                                                            }}
-                                                        >
-                                                            <CheckCircle size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => openApproval(item, 'reject')}
-                                                            title="Tolak"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '32px',
-                                                                height: '32px',
-                                                                borderRadius: '6px',
-                                                                background: '#fee2e2',
-                                                                color: '#dc2626',
-                                                                border: 'none',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            <XCircle size={16} />
-                                                        </button>
-                                                    </MobileActionMenu>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {data.map((item, i) => (
-                                <div key={item.id} className="mobile-data-card">
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title text-gray-900 font-bold">{item.nama_program}</h4>
-                                            <div className="text-[10px] text-gray-500 mt-1">
-                                                {new Date(item.tanggal_pengajuan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                            </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { 
+                                    header: 'Program', 
+                                    hideOnMobile: true,
+                                    render: (row) => (
+                                        <div className="flex flex-col">
+                                            <strong className="text-gray-900">{row.nama_program}</strong>
+                                            <span className="text-xs text-gray-500">{row.deskripsi?.substring(0, 50) || '-'}</span>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="mobile-card-amount text-gray-900 font-bold">
-                                                Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}
-                                            </div>
-                                            <div className="mt-1">
-                                                <span className={`status-badge ${getStatusClass(item.status)}`}>{item.status}</span>
-                                            </div>
+                                    )
+                                },
+                                { 
+                                    header: 'Jumlah Diajukan', 
+                                    render: (row) => <span className="font-mono font-medium text-gray-700">Rp {Number(row.jumlah_diajukan).toLocaleString('id-ID')}</span>
+                                },
+                                { header: 'Tanggal', render: (row) => new Date(row.tanggal_pengajuan).toLocaleDateString('id-ID') },
+                                { 
+                                    header: 'Status', 
+                                    render: (row) => <span className={`status-badge ${getStatusClass(row.status)}`}>{row.status}</span>
+                                },
+                                ...(canApprove ? [{
+                                    header: 'Aksi',
+                                    hideOnMobile: true,
+                                    className: 'text-right',
+                                    render: (row) => row.status === 'Pending' ? (
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button onClick={() => openApproval(row, 'approve')} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Setujui"><CheckCircle size={16} /></button>
+                                            <button onClick={() => openApproval(row, 'reject')} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Tolak"><XCircle size={16} /></button>
                                         </div>
-                                    </div>
-
-                                    {item.deskripsi && (
-                                        <p className="mobile-card-desc">{item.deskripsi}</p>
-                                    )}
-
-                                    {canApprove && item.status === 'Pending' && (
-                                        <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1">
-                                            <div className="mobile-card-meta">
-                                                <span>No: {i + 1}</span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => openApproval(item, 'approve')}
-                                                    className="px-3 py-1 bg-green-50 text-green-700 rounded-md text-xs font-bold transition-colors"
-                                                >
-                                                    Setujui
-                                                </button>
-                                                <button
-                                                    onClick={() => openApproval(item, 'reject')}
-                                                    className="px-3 py-1 bg-red-50 text-red-600 rounded-md text-xs font-bold transition-colors"
-                                                >
-                                                    Tolak
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+                                    ) : null
+                                }] : [])
+                            ]}
+                            data={data}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.nama_program}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{new Date(row.tanggal_pengajuan).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            mobileCardActions={(row) => canApprove && row.status === 'Pending' ? (
+                                <>
+                                    <button onClick={() => openApproval(row, 'approve')} className="px-3 py-1.5 bg-green-50 text-green-700 rounded-md text-xs font-bold transition-colors flex items-center gap-1"><CheckCircle size={14}/> Setujui</button>
+                                    <button onClick={() => openApproval(row, 'reject')} className="px-3 py-1.5 bg-red-50 text-red-600 rounded-md text-xs font-bold transition-colors flex items-center gap-1"><XCircle size={14}/> Tolak</button>
+                                </>
+                            ) : null}
+                        />
                     </>
                 )}
             </div>

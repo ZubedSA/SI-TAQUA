@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, RefreshCw, BookOpen } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
+import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../shared/styles/Nilai.css'
 
 const MadrosUTSPage = () => {
@@ -209,55 +210,77 @@ const MadrosUTSPage = () => {
                         </button>
                     </div>
 
-                    <div className="table-wrapper">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Nilai UTS</th>
-                                    <th>Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="5" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                                ) : santri.length === 0 ? (
-                                    <tr><td colSpan="5" className="text-center">Tidak ada santri di kelas ini</td></tr>
-                                ) : (
-                                    santri.map((s, i) => (
-                                        <tr key={s.id}>
-                                            <td>{i + 1}</td>
-                                            <td>{s.nis}</td>
-                                            <td className="name-cell">{s.nama}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <input
-                                                    type="number"
-                                                    className="nilai-input"
-                                                    min="0"
-                                                    max="100"
-                                                    placeholder="0-100"
-                                                    value={nilai[s.id]?.nilai ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'nilai', e.target.value)}
-                                                />
-                                            </td>
-                                            <td>
-                                                <input
-                                                    type="text"
-                                                    className="form-control"
-                                                    placeholder="Keterangan..."
-                                                    value={nilai[s.id]?.catatan ?? ''}
-                                                    onChange={e => handleNilaiChange(s.id, 'catatan', e.target.value)}
-                                                    style={{ minWidth: '150px' }}
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'NIS', accessor: 'nis', hideOnMobile: true },
+                            { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
+                            {
+                                header: 'Nilai UTS',
+                                className: 'text-center',
+                                render: (row) => (
+                                    <input
+                                        type="number"
+                                        className="nilai-input"
+                                        min="0"
+                                        max="100"
+                                        placeholder="0-100"
+                                        value={nilai[row.id]?.nilai ?? ''}
+                                        onChange={e => handleNilaiChange(row.id, 'nilai', e.target.value)}
+                                    />
+                                )
+                            },
+                            {
+                                header: 'Keterangan',
+                                render: (row) => (
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Keterangan..."
+                                        value={nilai[row.id]?.catatan ?? ''}
+                                        onChange={e => handleNilaiChange(row.id, 'catatan', e.target.value)}
+                                        style={{ minWidth: '150px' }}
+                                    />
+                                )
+                            }
+                        ]}
+                        data={santri}
+                        loading={loading}
+                        emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Tidak ada santri di kelas ini</div>}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                            </div>
+                        )}
+                        mobileCardActions={() => null}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-3 w-full mt-2 pt-2 border-t border-gray-100">
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Nilai UTS</label>
+                                    <input
+                                        type="number"
+                                        className="form-control text-sm px-2 py-1"
+                                        min="0"
+                                        max="100"
+                                        placeholder="0-100"
+                                        value={nilai[row.id]?.nilai ?? ''}
+                                        onChange={e => handleNilaiChange(row.id, 'nilai', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-500 mb-1 block">Keterangan</label>
+                                    <input
+                                        type="text"
+                                        className="form-control text-sm px-2 py-1"
+                                        placeholder="Keterangan..."
+                                        value={nilai[row.id]?.catatan ?? ''}
+                                        onChange={e => handleNilaiChange(row.id, 'catatan', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    />
                 </div>
             )}
         </div>

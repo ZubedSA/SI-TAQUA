@@ -16,6 +16,8 @@ import Badge from '../../components/ui/Badge'
 import { Card } from '../../components/ui/Card'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
+import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useKelasList } from '../../hooks/features/useKelasList'
 
 const KelasPage = () => {
@@ -412,56 +414,88 @@ const KelasPage = () => {
                                     )}
                                 </div>
                             ) : (
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0">
-                                        <tr>
-                                            <th className="px-6 py-3">NIS</th>
-                                            <th className="px-6 py-3">Nama</th>
-                                            <th className="px-6 py-3">L/P</th>
-                                            <th className="px-6 py-3">Status</th>
-                                            {canEdit && <th className="px-6 py-3 text-right">Aksi</th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        {santriList.map(s => (
-                                            <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-3 font-mono text-gray-600">{s.nis || '-'}</td>
-                                                <td className="px-6 py-3 font-medium text-gray-900">{s.nama}</td>
-                                                <td className="px-6 py-3 text-gray-600">{s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</td>
-                                                <td className="px-6 py-3">
-                                                    <Badge variant={s.status === 'Aktif' ? 'success' : 'warning'}>
-                                                        {s.status}
-                                                    </Badge>
-                                                </td>
-                                                {canEdit && (
-                                                    <td className="px-6 py-3 text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            {currentSemesterId && (
-                                                                <a
-                                                                    href={`/raport/cetak/${s.id}/${currentSemesterId}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                                    title="Cetak Raport"
-                                                                >
-                                                                    <Printer size={16} />
-                                                                </a>
-                                                            )}
-                                                            <button
-                                                                type="button"
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                title="Hapus dari kelas"
-                                                                onClick={(e) => confirmRemoveSantri(s.id, e)}
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                )}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'NIS', render: (row) => <span className="font-mono text-gray-600">{row.nis || '-'}</span>, className: 'px-6 py-3', hideOnMobile: true },
+                                        { header: 'Nama', render: (row) => <span className="font-medium text-gray-900">{row.nama}</span>, className: 'px-6 py-3', hideOnMobile: true },
+                                        { header: 'L/P', render: (row) => <span className="text-gray-600">{row.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}</span>, className: 'px-6 py-3', hideOnMobile: true },
+                                        { 
+                                            header: 'Status', 
+                                            render: (row) => (
+                                                <Badge variant={row.status === 'Aktif' ? 'success' : 'warning'}>
+                                                    {row.status}
+                                                </Badge>
+                                            ), 
+                                            className: 'px-6 py-3', 
+                                            hideOnMobile: true 
+                                        },
+                                        canEdit && { 
+                                            header: 'Aksi', 
+                                            className: 'px-6 py-3 text-right',
+                                            render: (row) => (
+                                                <div className="flex justify-end gap-2">
+                                                    {currentSemesterId && (
+                                                        <a
+                                                            href={`/raport/cetak/${row.id}/${currentSemesterId}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                            title="Cetak Raport"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <Printer size={16} />
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Hapus dari kelas"
+                                                        onClick={(e) => { e.stopPropagation(); confirmRemoveSantri(row.id, e); }}
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            ) 
+                                        }
+                                    ].filter(Boolean)}
+                                    data={santriList}
+                                    loading={loadingSantri}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-gray-600">
+                                                {row.nama?.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-gray-900 text-sm">{row.nama}</div>
+                                                <div className="text-xs text-gray-500 font-mono">{row.nis || '-'}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardActions={(row) => (
+                                        canEdit ? (
+                                            <MobileActionMenu
+                                                actions={[
+                                                    ...(currentSemesterId ? [{ icon: <Printer size={16} />, label: 'Cetak Raport', onClick: () => window.open(`/raport/cetak/${row.id}/${currentSemesterId}`, '_blank') }] : []),
+                                                    { icon: <X size={16} />, label: 'Hapus dari Kelas', onClick: (e) => confirmRemoveSantri(row.id, e), danger: true }
+                                                ]}
+                                            />
+                                        ) : null
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-50">
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-gray-500">Gender</span>
+                                                <span className="font-medium text-gray-900">{row.jenis_kelamin}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-gray-500">Status</span>
+                                                <Badge variant={row.status === 'Aktif' ? 'success' : 'warning'}>
+                                                    {row.status}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    )}
+                                />
                             )}
                         </div>
                         <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3 shrink-0">
@@ -512,42 +546,59 @@ const KelasPage = () => {
                             )}
 
                             <div className="overflow-y-auto flex-1 border border-gray-200 rounded-lg">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0">
-                                        <tr>
-                                            <th className="px-4 py-2 w-10"></th>
-                                            <th className="px-4 py-2">NIS</th>
-                                            <th className="px-4 py-2">Nama</th>
-                                            <th className="px-4 py-2">Kelas Saat Ini</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredAvailableSantri.length === 0 ? (
-                                            <tr><td colSpan="4" className="text-center py-8 text-gray-500">Tidak ada santri ditemukan</td></tr>
-                                        ) : (
-                                            filteredAvailableSantri.map(s => {
-                                                const currentKelas = kelasList.find(k => k.id === s.kelas_id)
-                                                const isSelected = selectedSantriIds.includes(s.id)
+                                <ResponsiveTable
+                                    columns={[
+                                        { 
+                                            header: '', 
+                                            render: (row) => {
+                                                const isSelected = selectedSantriIds.includes(row.id)
                                                 return (
-                                                    <tr
-                                                        key={s.id}
-                                                        onClick={() => toggleSantriSelection(s.id)}
-                                                        className={`cursor-pointer transition-colors ${isSelected ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
-                                                    >
-                                                        <td className="px-4 py-2">
-                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
-                                                                {isSelected && <Check size={12} className="text-white" />}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-2 font-mono text-gray-600">{s.nis || '-'}</td>
-                                                        <td className="px-4 py-2 font-medium text-gray-900">{s.nama}</td>
-                                                        <td className="px-4 py-2 text-gray-500">{currentKelas?.nama || <span className="text-gray-400 italic">Belum ada</span>}</td>
-                                                    </tr>
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary-600 border-primary-600' : 'border-gray-300 bg-white'}`}>
+                                                        {isSelected && <Check size={12} className="text-white" />}
+                                                    </div>
                                                 )
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
+                                            },
+                                            className: 'px-4 py-2 w-10',
+                                            hideOnMobile: false
+                                        },
+                                        { header: 'NIS', render: (row) => <span className="font-mono text-gray-600">{row.nis || '-'}</span>, className: 'px-4 py-2', hideOnMobile: true },
+                                        { header: 'Nama', render: (row) => <span className="font-medium text-gray-900">{row.nama}</span>, className: 'px-4 py-2', hideOnMobile: true },
+                                        { 
+                                            header: 'Kelas Saat Ini', 
+                                            render: (row) => {
+                                                const currentKelas = kelasList.find(k => k.id === row.kelas_id)
+                                                return <span className="text-gray-500">{currentKelas?.nama || <span className="text-gray-400 italic">Belum ada</span>}</span>
+                                            }, 
+                                            className: 'px-4 py-2', 
+                                            hideOnMobile: true 
+                                        }
+                                    ]}
+                                    data={filteredAvailableSantri}
+                                    emptyState={
+                                        <div className="text-center py-8 text-gray-500">Tidak ada santri ditemukan</div>
+                                    }
+                                    onRowClick={(row) => toggleSantriSelection(row.id)}
+                                    rowClassName={(row) => `cursor-pointer transition-colors ${selectedSantriIds.includes(row.id) ? 'bg-primary-50 ring-1 ring-inset ring-primary-500/20' : 'hover:bg-gray-50'}`}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex items-center gap-3">
+                                            <div>
+                                                <div className="font-bold text-gray-900 text-sm">{row.nama}</div>
+                                                <div className="text-xs text-gray-500 font-mono">{row.nis || '-'}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => {
+                                        const currentKelas = kelasList.find(k => k.id === row.kelas_id)
+                                        return (
+                                            <div className="flex flex-col gap-1 mt-2">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <span className="text-gray-500">Kelas Saat Ini</span>
+                                                    <span className="font-medium text-gray-900">{currentKelas?.nama || <span className="text-gray-400 italic">Belum ada</span>}</span>
+                                                </div>
+                                            </div>
+                                        )
+                                    }}
+                                />
                             </div>
                         </div>
 

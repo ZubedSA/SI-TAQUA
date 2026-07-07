@@ -10,6 +10,7 @@ import DateRangePicker from '../../../../components/ui/DateRangePicker'
 import { createMessage, sendWhatsApp } from '../../../../utils/whatsapp'
 import { useCalendar } from '../../../../context/CalendarContext'
 import { useToast } from '../../../../context/ToastContext'
+import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 import './Hafalan.css'
 
 const LIST_SURAH = [
@@ -657,39 +658,59 @@ const HafalanForm = () => {
                     <h3 style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Check size={20} className="text-success" /> Hafalan Hari Ini ({recentHafalan.length})
                     </h3>
-                    <div className="card">
-                        <div className="table-container">
-                            <table className="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Nama Santri</th>
-                                        <th>Juz/Surah</th>
-                                        <th>Jenis</th>
-                                        <th>Status</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {recentHafalan.map((item, index) => (
-                                        <tr key={item.id}>
-                                            <td>{index + 1}</td>
-                                            <td>{item.santri?.nama || '-'}</td>
-                                            <td>Juz {item.juz_mulai} - {item.surah_mulai}</td>
-                                            <td><span className={`badge ${item.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>{item.jenis}</span></td>
-                                            <td><span className={`badge ${item.status === 'Lancar' ? 'badge-success' : item.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{item.status}</span></td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <button className="btn btn-sm btn-outline" onClick={() => navigate(`/hafalan/edit/${item.id}`)} title="Edit">
-                                                        <Eye size={14} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div className="card mt-4">
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'Nama Santri', accessor: 'santri.nama', className: 'font-medium text-gray-900', render: (row) => row.santri?.nama || '-' },
+                                { header: 'Juz/Surah', render: (row) => `Juz ${row.juz_mulai} - ${row.surah_mulai}` },
+                                { 
+                                    header: 'Jenis', 
+                                    render: (row) => <span className={`badge ${row.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>{row.jenis}</span>
+                                },
+                                { 
+                                    header: 'Status', 
+                                    render: (row) => <span className={`badge ${row.status === 'Lancar' ? 'badge-success' : row.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{row.status}</span>
+                                },
+                                { 
+                                    header: 'Aksi', 
+                                    className: 'text-right',
+                                    render: (row) => (
+                                        <button className="btn btn-sm btn-outline text-emerald-600 border-emerald-600 hover:bg-emerald-50" onClick={() => navigate(`/hafalan/edit/${row.id}`)} title="Edit">
+                                            <Eye size={14} />
+                                        </button>
+                                    ) 
+                                }
+                            ]}
+                            data={recentHafalan}
+                            loading={false}
+                            emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl">Tidak ada hafalan hari ini</div>}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.santri?.nama || '-'}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{`Juz ${row.juz_mulai} - ${row.surah_mulai}`}</span>
+                                </div>
+                            )}
+                            mobileCardActions={(row) => (
+                                <button className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-600" onClick={() => navigate(`/hafalan/edit/${row.id}`)} title="Edit">
+                                    <Eye size={14} />
+                                </button>
+                            )}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500">Jenis</span>
+                                            <span className={`badge w-fit px-2 py-0.5 text-xs ${row.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>{row.jenis}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500">Status</span>
+                                            <span className={`badge w-fit px-2 py-0.5 text-xs ${row.status === 'Lancar' ? 'badge-success' : row.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{row.status}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        />
                     </div>
                 </div>
             )}

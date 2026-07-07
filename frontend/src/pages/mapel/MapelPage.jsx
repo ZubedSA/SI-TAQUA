@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Edit, Trash2, BookOpen, Search, RefreshCw, BookMarked, GraduationCap } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -236,119 +237,93 @@ const MapelPage = () => {
                     </div>
                 </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50/50 text-gray-400 font-black uppercase tracking-widest text-[10px] border-b border-gray-100">
-                            <tr>
-                                <th className="px-8 py-5">Kode & Mata Pelajaran</th>
-                                <th className="px-8 py-5">Kategori</th>
-                                <th className="px-8 py-5">Deskripsi</th>
-                                {canEdit && <th className="px-8 py-5 text-right">Aksi</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan={canEdit ? 4 : 3} className="px-8 py-20 text-center"><Spinner label="Menyelaraskan kurikulum..." /></td></tr>
-                            ) : filteredMapel.length === 0 ? (
-                                <tr>
-                                    <td colSpan={canEdit ? 4 : 3} className="px-8 py-20">
-                                        <EmptyState
-                                            icon={BookOpen}
-                                            title="Data tidak ditemukan"
-                                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}"` : "Belum ada mata pelajaran yang terdaftar."}
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredMapel.map(mapel => (
-                                    <tr key={mapel.id} className="hover:bg-gray-50/50 transition-all cursor-pointer group border-b border-gray-50 last:border-0" onClick={() => canEdit && handleEdit(mapel)}>
-                                        <td className="px-8 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="px-2 py-1 rounded-lg bg-gray-100 text-gray-500 font-mono text-[10px] font-black border border-gray-200 uppercase">
-                                                    {mapel.kode}
-                                                </div>
-                                                <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">{mapel.nama}</div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tight border ${mapel.kategori === 'Tahfizhiyah' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                                                {mapel.kategori || 'Madrosiyah'}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5 text-xs text-gray-500 max-w-xs truncate font-medium">
-                                            {mapel.deskripsi || '-'}
-                                        </td>
-                                        {canEdit && (
-                                            <td className="px-8 py-5 text-right" onClick={e => e.stopPropagation()}>
-                                                <div className="flex items-center justify-end gap-2 transition-all">
-                                                    <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-600 hover:bg-amber-50 rounded-xl" onClick={() => handleEdit(mapel)} title="Edit">
-                                                        <Edit size={18} />
-                                                    </Button>
-                                                    <button onClick={() => confirmDelete(mapel)} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus">
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden">
-                    <div className="divide-y divide-gray-50">
-                        {loading ? (
-                            <div className="py-20 text-center"><Spinner label="Memuat..." /></div>
-                        ) : filteredMapel.length === 0 ? (
-                            <div className="p-12"><EmptyState icon={BookOpen} title="Tidak ditemukan" /></div>
-                        ) : (
-                            filteredMapel.map((item) => (
-                                <div 
-                                    key={item.id} 
-                                    onClick={() => canEdit && handleEdit(item)}
-                                    className="p-6 space-y-4 active:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
-                                            <div className="font-black text-gray-900 text-base leading-tight">{item.nama}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono">Kode: {item.kode}</div>
-                                        </div>
-                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${item.kategori === 'Tahfizhiyah' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                                            {item.kategori}
-                                        </span>
+                <ResponsiveTable
+                    columns={[
+                        { 
+                            header: 'Kode & Mata Pelajaran', 
+                            render: (row) => (
+                                <div className="flex items-center gap-4">
+                                    <div className="px-2 py-1 rounded-lg bg-gray-100 text-gray-500 font-mono text-[10px] font-black border border-gray-200 uppercase">
+                                        {row.kode}
                                     </div>
-
-                                    {item.deskripsi && (
-                                        <div className="text-[11px] text-gray-500 font-medium leading-relaxed italic bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                            {item.deskripsi}
-                                        </div>
-                                    )}
-
-                                    {canEdit && (
-                                        <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                                            <button 
-                                                onClick={() => handleEdit(item)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100"
-                                            >
-                                                <Edit size={14} /> Edit Mapel
-                                            </button>
-                                            <button 
-                                                onClick={() => confirmDelete(item)}
-                                                className="p-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    )}
+                                    <div className="font-black text-gray-900 leading-tight">{row.nama}</div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Kategori', 
+                            render: (row) => (
+                                <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tight border ${row.kategori === 'Tahfizhiyah' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                    {row.kategori || 'Madrosiyah'}
+                                </span>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Deskripsi', 
+                            render: (row) => row.deskripsi || '-',
+                            className: 'px-8 py-5 text-xs text-gray-500 max-w-xs truncate font-medium',
+                            hideOnMobile: true
+                        },
+                        ...(canEdit ? [{ 
+                            header: 'Aksi', 
+                            className: 'px-8 py-5 text-right',
+                            render: (row) => (
+                                <div className="flex items-center justify-end gap-2 transition-all">
+                                    <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-600 hover:bg-amber-50 rounded-xl" onClick={(e) => { e.stopPropagation(); handleEdit(row) }} title="Edit">
+                                        <Edit size={18} />
+                                    </Button>
+                                    <button onClick={(e) => { e.stopPropagation(); confirmDelete(row) }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus">
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+                            ) 
+                        }] : [])
+                    ]}
+                    data={filteredMapel}
+                    loading={loading}
+                    emptyState={
+                        <EmptyState
+                            icon={BookOpen}
+                            title="Data tidak ditemukan"
+                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}"` : "Belum ada mata pelajaran yang terdaftar."}
+                        />
+                    }
+                    mobileCardHeader={(row) => (
+                        <div className="flex flex-col">
+                            <div className="font-black text-gray-900 text-base leading-tight">{row.nama}</div>
+                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest font-mono mt-0.5">Kode: {row.kode}</div>
+                        </div>
+                    )}
+                    mobileCardActions={(row) => {
+                        if (!canEdit) return null;
+                        return (
+                            <MobileActionMenu
+                                actions={[
+                                    { icon: <Edit size={16} />, label: 'Edit', onClick: () => handleEdit(row) },
+                                    { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(row), danger: true }
+                                ]}
+                            />
+                        );
+                    }}
+                    mobileCardContent={(row) => (
+                        <div className="flex flex-col gap-3 w-full mt-1">
+                            <div className="flex items-center justify-between">
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${row.kategori === 'Tahfizhiyah' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                    {row.kategori}
+                                </span>
+                            </div>
+                            {row.deskripsi && (
+                                <div className="text-[11px] text-gray-500 font-medium leading-relaxed italic bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    {row.deskripsi}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                />
             </Card>
 
             {showModal && createPortal(

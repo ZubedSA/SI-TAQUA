@@ -214,12 +214,14 @@ const AgendaMengajar = () => {
             const jurnalId = headerData.id
             await supabase.from('presensi_mapel_detil').delete().eq('presensi_mapel_id', jurnalId)
 
-            const detailsPayload = santriList.map(s => ({
+            const isTerlaksana = formData.status === 'Terlaksana'
+
+            const detailsPayload = isTerlaksana ? santriList.map(s => ({
                 presensi_mapel_id: jurnalId,
                 santri_id: s.id,
                 status: attendanceMap[s.id].status,
                 keterangan: attendanceMap[s.id].keterangan
-            }))
+            })) : []
 
             if (detailsPayload.length > 0) {
                 const { error: detilError } = await supabase.from('presensi_mapel_detil').insert(detailsPayload)
@@ -228,40 +230,51 @@ const AgendaMengajar = () => {
 
             // ── Sync ke tabel 'presensi' agar muncul di Admin Rekap Santri ──
             try {
-                // Siapkan data presensi untuk sinkronisasi
-                const isHalaqoh = !!selectedJadwal.halaqoh_id
-                const presensiPayload = santriList.map(s => {
-                    const subjectName = selectedJadwal.tipe === 'HALAQOH' 
-                        ? (selectedJadwal.halaqoh?.nama || 'Halaqoh')
-                        : (selectedJadwal.mapel?.nama || 'Madrosah');
+                if (!isTerlaksana) {
+                    // Jika Kosong/Libur, hapus semua presensi santri di kelas ini pada jam tsb
+                    if (santriList.length > 0) {
+                        await supabase.from('presensi')
+                            .delete()
+                            .eq('tanggal', selectedDate)
+                            .eq('jam_ke', selectedJadwal.jam_ke || 1)
+                            .in('santri_id', santriList.map(s => s.id))
+                    }
+                } else {
+                    // Siapkan data presensi untuk sinkronisasi
+                    const isHalaqoh = !!selectedJadwal.halaqoh_id
+                    const presensiPayload = santriList.map(s => {
+                        const subjectName = selectedJadwal.tipe === 'HALAQOH' 
+                            ? (selectedJadwal.halaqoh?.nama || 'Halaqoh')
+                            : (selectedJadwal.mapel?.nama || 'Madrosah');
+                            
+                        return {
+                            santri_id: s.id,
+                            tanggal: selectedDate,
+                            jam_ke: selectedJadwal.jam_ke || 1,
+                            status: attendanceMap[s.id].status,
+                            keterangan: isHalaqoh 
+                                ? `[Quraniyah] ${subjectName}: ${attendanceMap[s.id].keterangan || ''}`.trim()
+                                : `${subjectName}: ${attendanceMap[s.id].keterangan || ''}`.trim(),
+                            nama_pengabsen: userProfile?.nama || user?.user_metadata?.nama || user?.email || 'Sistem'
+                        };
+                    })
+
+                    // 1. Hapus data presensi santri ini di tanggal dan jam yang sama agar tidak bentrok
+                    if (presensiPayload.length > 0) {
+                        await supabase.from('presensi')
+                            .delete()
+                            .eq('tanggal', selectedDate)
+                            .eq('jam_ke', selectedJadwal.jam_ke || 1)
+                            .in('santri_id', presensiPayload.map(p => p.santri_id))
+
+                        // 2. Insert record presensi baru
+                        const { error: presensiError } = await supabase
+                            .from('presensi')
+                            .insert(presensiPayload)
                         
-                    return {
-                        santri_id: s.id,
-                        tanggal: selectedDate,
-                        jam_ke: selectedJadwal.jam_ke || 1,
-                        status: attendanceMap[s.id].status,
-                        keterangan: isHalaqoh 
-                            ? `[Quraniyah] ${subjectName}: ${attendanceMap[s.id].keterangan || ''}`.trim()
-                            : `${subjectName}: ${attendanceMap[s.id].keterangan || ''}`.trim(),
-                        nama_pengabsen: userProfile?.nama || user?.user_metadata?.nama || user?.email || 'Sistem'
-                    };
-                })
-
-                // 1. Hapus data presensi santri ini di tanggal dan jam yang sama agar tidak bentrok
-                if (presensiPayload.length > 0) {
-                    await supabase.from('presensi')
-                        .delete()
-                        .eq('tanggal', selectedDate)
-                        .eq('jam_ke', selectedJadwal.jam_ke || 1)
-                        .in('santri_id', presensiPayload.map(p => p.santri_id))
-
-                    // 2. Insert record presensi baru
-                    const { error: presensiError } = await supabase
-                        .from('presensi')
-                        .insert(presensiPayload)
-                    
-                    if (presensiError) {
-                        console.warn('Sync ke tabel presensi gagal:', presensiError.message)
+                        if (presensiError) {
+                            console.warn('Sync ke tabel presensi gagal:', presensiError.message)
+                        }
                     }
                 }
             } catch (syncErr) {
@@ -270,73 +283,75 @@ const AgendaMengajar = () => {
 
             showToast.success('Jurnal berhasil disimpan')
 
-            // === Push Notification: Kirim ke wali santri yang alpha ===
-            try {
-                const alphaSantri = santriList.filter(s => {
-                    const st = (attendanceMap[s.id]?.status || '').toLowerCase()
-                    return ['alfa', 'alpha', 'alpa'].includes(st)
-                })
-                if (alphaSantri.length > 0) {
-                    const mapelNama = selectedJadwal.tipe === 'HALAQOH'
-                        ? (selectedJadwal.halaqoh?.nama || 'Halaqoh')
-                        : (selectedJadwal.mapel?.nama || 'Pelajaran')
+            // === Push Notification: Kirim ke wali santri yang alpha (Hanya jika Terlaksana) ===
+            if (isTerlaksana) {
+                try {
+                    const alphaSantri = santriList.filter(s => {
+                        const st = (attendanceMap[s.id]?.status || '').toLowerCase()
+                        return ['alfa', 'alpha', 'alpa'].includes(st)
+                    })
+                    if (alphaSantri.length > 0) {
+                        const mapelNama = selectedJadwal.tipe === 'HALAQOH'
+                            ? (selectedJadwal.halaqoh?.nama || 'Halaqoh')
+                            : (selectedJadwal.mapel?.nama || 'Pelajaran')
 
-                    // Ambil wali_id untuk santri yang alpha
-                    const { data: santriWithWali } = await supabase
-                        .from('santri')
-                        .select('id, nama, wali_id')
-                        .in('id', alphaSantri.map(s => s.id))
-                        .not('wali_id', 'is', null)
+                        // Ambil wali_id untuk santri yang alpha
+                        const { data: santriWithWali } = await supabase
+                            .from('santri')
+                            .select('id, nama, wali_id')
+                            .in('id', alphaSantri.map(s => s.id))
+                            .not('wali_id', 'is', null)
 
-                    if (santriWithWali && santriWithWali.length > 0) {
-                        // Kirim notif per wali
-                        for (const santri of santriWithWali) {
-                            sendPushNotification({
-                                type: 'santri_alpha',
-                                target_user_ids: [santri.wali_id],
-                                title: `${santri.nama} Tidak Hadir`,
-                                body: `Ananda ${santri.nama} tercatat tidak hadir (Alpha) pada ${mapelNama}, ${selectedDate}`,
-                                url: '/wali'
-                            }).catch(() => {}) // Non-blocking
+                        if (santriWithWali && santriWithWali.length > 0) {
+                            // Kirim notif per wali
+                            for (const santri of santriWithWali) {
+                                sendPushNotification({
+                                    type: 'santri_alpha',
+                                    target_user_ids: [santri.wali_id],
+                                    title: `${santri.nama} Tidak Hadir`,
+                                    body: `Ananda ${santri.nama} tercatat tidak hadir (Alpha) pada ${mapelNama}, ${selectedDate}`,
+                                    url: '/wali'
+                                }).catch(() => {}) // Non-blocking
+                            }
                         }
                     }
+                } catch (notifErr) {
+                    console.warn('[Push] Notification warning:', notifErr.message)
                 }
-            } catch (notifErr) {
-                console.warn('[Push] Notification warning:', notifErr.message)
-            }
 
-            // === WhatsApp Notification via Fonnte (Absent Students) ===
-            try {
-                const absentSantri = santriList.filter(s => {
-                    const st = attendanceMap[s.id]?.status || 'Hadir'
-                    return st !== 'Hadir' && st !== 'Terlambat'
-                })
-                
-                if (absentSantri.length > 0) {
-                    const mapelNama = selectedJadwal.tipe === 'HALAQOH'
-                        ? (selectedJadwal.halaqoh?.nama || 'Halaqoh')
-                        : (selectedJadwal.mapel?.nama || 'Pelajaran')
-                        
-                    const formattedDateStr = new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                // === WhatsApp Notification via Fonnte (Absent Students) ===
+                try {
+                    const absentSantri = santriList.filter(s => {
+                        const st = attendanceMap[s.id]?.status || 'Hadir'
+                        return st !== 'Hadir' && st !== 'Terlambat'
+                    })
                     
-                    for (const santri of absentSantri) {
-                        if (santri.no_telp_wali) {
-                            const msg = templateAbsensiWali({
-                                namaSantri: santri.nama,
-                                namaWali: santri.nama_wali,
-                                status: attendanceMap[santri.id].status,
-                                tanggal: formattedDateStr,
-                                sesi: `${selectedJadwal.tipe || 'Madrosah'} (${mapelNama})`,
-                                keterangan: attendanceMap[santri.id].keterangan
-                            })
-                            sendWhatsAppViaFonnte(santri.no_telp_wali, msg).catch(err => {
-                                console.error('Gagal kirim WA Fonnte:', err)
-                            })
+                    if (absentSantri.length > 0) {
+                        const mapelNama = selectedJadwal.tipe === 'HALAQOH'
+                            ? (selectedJadwal.halaqoh?.nama || 'Halaqoh')
+                            : (selectedJadwal.mapel?.nama || 'Pelajaran')
+                            
+                        const formattedDateStr = new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                        
+                        for (const santri of absentSantri) {
+                            if (santri.no_telp_wali) {
+                                const msg = templateAbsensiWali({
+                                    namaSantri: santri.nama,
+                                    namaWali: santri.nama_wali,
+                                    status: attendanceMap[santri.id].status,
+                                    tanggal: formattedDateStr,
+                                    sesi: `${selectedJadwal.tipe || 'Madrosah'} (${mapelNama})`,
+                                    keterangan: attendanceMap[santri.id].keterangan
+                                })
+                                sendWhatsAppViaFonnte(santri.no_telp_wali, msg).catch(err => {
+                                    console.error('Gagal kirim WA Fonnte:', err)
+                                })
+                            }
                         }
                     }
+                } catch (waErr) {
+                    console.warn('[WA] Fonnte error:', waErr.message)
                 }
-            } catch (waErr) {
-                console.warn('[WA] Fonnte error:', waErr.message)
             }
 
             setSelectedJadwal(null)
@@ -364,38 +379,30 @@ const AgendaMengajar = () => {
     if (selectedJadwal) {
         return (
             <div className="min-h-screen bg-gray-50 flex flex-col overflow-x-hidden">
-                <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30">
-                    <div className="max-w-5xl mx-auto px-4 h-16 md:h-20 flex items-center justify-between gap-2">
+                <header className="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30">
+                    <div className="max-w-5xl mx-auto px-4 h-16 md:h-20 flex items-center justify-between relative">
                         <button 
                             onClick={() => setSelectedJadwal(null)}
-                            className="flex items-center gap-2 text-gray-500 hover:text-emerald-600 transition-colors font-black text-[10px] md:text-sm uppercase tracking-widest shrink-0"
+                            className="flex items-center justify-center w-10 h-10 -ml-2 rounded-full text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors z-10"
                         >
-                            <ArrowLeft size={18} />
-                            <span className="hidden sm:inline">Batal</span>
+                            <ArrowLeft size={20} strokeWidth={2.5} />
                         </button>
                         
-                        <div className="text-center min-w-0 flex-1 px-2">
-                            <h1 className="font-black text-gray-900 leading-tight tracking-tight uppercase text-[8px] md:text-xs opacity-40">Formulir Jurnal</h1>
-                            <p className="text-sm md:text-lg font-black text-emerald-600 truncate">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-12">
+                            <h1 className="font-black text-gray-400 tracking-[0.2em] uppercase text-[9px] md:text-[10px] mb-0.5">Formulir Jurnal</h1>
+                            <p className="text-sm md:text-base font-black text-gray-900 truncate w-full text-center">
                                 {selectedJadwal.tipe === 'HALAQOH' ? `Halaqoh Jam Ke-${selectedJadwal.jam_ke}` : (selectedJadwal.mapel?.nama || '-')}
                             </p>
                         </div>
-
-                        <button 
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 md:px-6 md:py-2.5 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-50 shrink-0"
-                        >
-                            {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                            <span className="hidden sm:inline">Simpan</span>
-                        </button>
+                        
+                        <div className="w-10 z-10 shrink-0"></div>
                     </div>
                 </header>
 
-                <main className="flex-1 max-w-5xl w-full mx-auto px-4 md:px-6 space-y-8 pb-32">
+                <main className="flex-1 max-w-5xl w-full mx-auto px-3 md:px-6 space-y-6 md:space-y-8 pb-32">
                     {/* Jurnal Section */}
-                    <div className="bg-white rounded-3xl md:rounded-[3rem] shadow-xl shadow-gray-200/50 border border-gray-50 p-5 md:p-10 space-y-8">
-                        <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
+                    <div className="bg-white rounded-3xl md:rounded-[3rem] shadow-xl shadow-gray-200/50 border border-gray-50 p-4 md:p-10 space-y-6 md:space-y-8">
+                        <div className="flex items-center gap-3 md:gap-4 border-b border-gray-50 pb-4 md:pb-6">
                             <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                                 <BookOpen size={24} className="md:w-7 md:h-7" />
                             </div>
@@ -407,21 +414,26 @@ const AgendaMengajar = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                     Materi Pembelajaran
                                 </label>
                                 <textarea
-                                    className="w-full px-6 py-5 rounded-3xl border border-gray-100 focus:ring-4 focus:ring-emerald-50 focus:border-emerald-200 transition-all outline-none bg-gray-50/50 text-sm font-medium leading-relaxed"
+                                    className={`w-full px-5 py-4 rounded-2xl border-2 transition-all outline-none text-sm font-semibold leading-relaxed resize-none ${
+                                        formData.status === 'Terlaksana'
+                                        ? 'border-gray-100 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 bg-white text-gray-700 placeholder:text-gray-300'
+                                        : 'border-gray-50 bg-gray-50/50 text-gray-400 cursor-not-allowed'
+                                    }`}
                                     rows="4"
-                                    placeholder="Apa saja yang dipelajari hari ini?"
+                                    placeholder={formData.status === 'Terlaksana' ? "Tulis materi yang diajarkan hari ini..." : `Sesi ${formData.status} (opsional)`}
                                     value={formData.materi}
                                     onChange={e => setFormData({ ...formData, materi: e.target.value })}
-                                    required
+                                    required={formData.status === 'Terlaksana'}
+                                    disabled={formData.status !== 'Terlaksana'}
                                 ></textarea>
                             </div>
                             <div className="space-y-6">
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         Status Sesi
                                     </label>
                                     <div className="grid grid-cols-3 gap-2">
@@ -430,10 +442,10 @@ const AgendaMengajar = () => {
                                                 key={st}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, status: st })}
-                                                className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                className={`py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all active:scale-95 ${
                                                     formData.status === st 
-                                                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100' 
-                                                    : 'bg-white border-gray-100 text-gray-400 hover:bg-gray-50'
+                                                    ? 'bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200' 
+                                                    : 'bg-white border-gray-100 text-gray-400 hover:border-gray-200 hover:text-gray-600'
                                                 }`}
                                             >
                                                 {st}
@@ -442,13 +454,13 @@ const AgendaMengajar = () => {
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                    <label className="text-[11px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                                         Catatan Guru
                                     </label>
                                     <textarea
-                                        className="w-full px-6 py-4 rounded-3xl border border-gray-100 focus:ring-4 focus:ring-emerald-50 focus:border-emerald-200 transition-all outline-none bg-gray-50/50 text-sm font-medium"
+                                        className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all outline-none bg-white text-sm font-semibold text-gray-700 leading-relaxed placeholder:text-gray-300 resize-none"
                                         rows="2"
-                                        placeholder="Catatan hambatan atau evaluasi..."
+                                        placeholder="Hambatan atau evaluasi (opsional)..."
                                         value={formData.catatan}
                                         onChange={e => setFormData({ ...formData, catatan: e.target.value })}
                                     ></textarea>
@@ -458,76 +470,124 @@ const AgendaMengajar = () => {
                     </div>
 
                     {/* Attendance Section */}
-                    <div className="space-y-6">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-2 gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                                    <Users size={20} />
+                    <div className={`transition-all duration-500 overflow-hidden ${formData.status === 'Terlaksana' ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mt-8 md:mt-12 border-t border-gray-100 pt-8 md:pt-12 mb-6">
+                            <div className="flex items-center gap-3 md:gap-4">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                                    <Users size={20} className="md:w-6 md:h-6" />
                                 </div>
-                                <h3 className="font-black text-gray-900 tracking-tight">Presensi Santri</h3>
+                                <div>
+                                    <h3 className="text-lg md:text-xl font-black text-gray-900 tracking-tight">Presensi Santri</h3>
+                                    <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-widest">{santriList.length} Santri Terdaftar</p>
+                                </div>
                             </div>
                             <button 
-                                onClick={() => markAll('Hadir')}
-                                className="w-full sm:w-auto text-[10px] font-black text-emerald-600 bg-emerald-50 px-6 py-3 rounded-2xl hover:bg-emerald-100 transition-all uppercase tracking-widest text-center"
+                                onClick={() => {
+                                    const newMap = {}
+                                    santriList.forEach(s => {
+                                        newMap[s.id] = { status: 'Hadir', keterangan: '' }
+                                    })
+                                    setAttendanceMap(newMap)
+                                }}
+                                className="w-full md:w-auto px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
                             >
-                                Set Semua Hadir
+                                <CheckCircle size={14} /> Set Semua Hadir
                             </button>
                         </div>
 
                         {loadingSantri ? (
                             <div className="py-20 flex justify-center"><Spinner label="Memuat santri..." /></div>
                         ) : (
-                            <div className="grid gap-4 md:gap-6">
+                            <div className="grid gap-3 md:gap-6">
                                 {santriList.map((s, idx) => {
                                     const current = attendanceMap[s.id] || { status: 'Hadir', keterangan: '' }
                                     return (
-                                        <div key={s.id} className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center justify-between group hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-500/5 transition-all">
-                                            <div className="flex items-center gap-4 w-full md:w-auto">
-                                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 font-black text-xs md:text-sm group-hover:bg-emerald-50 group-hover:text-emerald-400 transition-colors shrink-0">
-                                                    {idx + 1}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="font-black text-sm md:text-base text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{s.nama}</h4>
-                                                    <p className="text-[9px] md:text-[10px] text-gray-400 font-black tracking-[0.2em] uppercase">{s.nis}</p>
+                                        <div key={s.id} className="bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-4 group hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-500/5 transition-all">
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-3 md:gap-4">
+                                                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-[0.8rem] md:rounded-2xl bg-gray-50 flex items-center justify-center text-gray-300 font-black text-xs md:text-sm group-hover:bg-emerald-50 group-hover:text-emerald-400 transition-colors shrink-0">
+                                                        {idx + 1}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="font-black text-sm md:text-base text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{s.nama}</h4>
+                                                        <p className="text-[9px] md:text-[10px] text-gray-400 font-black tracking-[0.2em] uppercase">{s.nis}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
-                                            <div className="w-full md:w-auto space-y-3">
-                                                <div className="flex flex-wrap gap-1 md:gap-1.5 p-1 bg-gray-50/80 rounded-xl md:rounded-2xl border border-gray-100">
-                                                    {STATUS_OPTIONS.map(opt => (
-                                                        <button
-                                                            key={opt.value}
-                                                            onClick={() => setAttendanceMap(prev => ({
-                                                                ...prev,
-                                                                [s.id]: { ...prev[s.id], status: opt.value }
-                                                            }))}
-                                                            className={`flex-1 md:flex-none px-2 md:px-4 py-2 md:py-2.5 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-tighter transition-all ${
-                                                                current.status === opt.value 
-                                                                ? 'bg-emerald-600 text-white shadow-md' 
-                                                                : 'text-gray-400 hover:text-gray-600 hover:bg-white'
-                                                            }`}
-                                                        >
-                                                            {opt.label}
-                                                        </button>
-                                                    ))}
+                                            <div className="w-full space-y-3">
+                                                <div className="grid grid-cols-3 md:flex md:flex-wrap gap-1.5 md:gap-2 p-1.5 bg-gray-50/80 rounded-[1.2rem] md:rounded-2xl border border-gray-100">
+                                                    {STATUS_OPTIONS.map(opt => {
+                                                        const isSelected = current.status === opt.value
+                                                        return (
+                                                            <button
+                                                                key={opt.value}
+                                                                onClick={() => setAttendanceMap(prev => ({
+                                                                    ...prev,
+                                                                    [s.id]: { ...prev[s.id], status: opt.value }
+                                                                }))}
+                                                                className={`w-full md:flex-none px-1 md:px-4 py-2.5 md:py-2.5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-tighter transition-all ${
+                                                                    isSelected 
+                                                                    ? `${opt.color} shadow-sm border`
+                                                                    : 'text-gray-400 hover:text-gray-600 hover:bg-white border border-transparent'
+                                                                }`}
+                                                            >
+                                                                {opt.label}
+                                                            </button>
+                                                        )
+                                                    })}
                                                 </div>
-                                                <input 
-                                                    type="text"
-                                                    placeholder="Keterangan (opsional)..."
-                                                    value={current.keterangan}
-                                                    onChange={e => setAttendanceMap(prev => ({
-                                                        ...prev,
-                                                        [s.id]: { ...prev[s.id], keterangan: e.target.value }
-                                                    }))}
-                                                    className="w-full text-[10px] md:text-xs font-bold px-4 py-2 md:py-3 rounded-lg md:rounded-xl border border-gray-100 focus:border-emerald-200 bg-gray-50/30 transition-all outline-none"
-                                                />
+                                                
+                                                <div className={`transition-all duration-300 overflow-hidden ${current.status === 'Hadir' && !current.keterangan ? 'max-h-0 opacity-0' : 'max-h-24 opacity-100 mt-2'}`}>
+                                                    <input 
+                                                        type="text"
+                                                        placeholder={`Keterangan ${current.status} (opsional)...`}
+                                                        value={current.keterangan}
+                                                        onChange={e => setAttendanceMap(prev => ({
+                                                            ...prev,
+                                                            [s.id]: { ...prev[s.id], keterangan: e.target.value }
+                                                        }))}
+                                                        className={`w-full text-xs font-bold px-4 py-3 rounded-xl border transition-all outline-none ${
+                                                            current.status === 'Hadir' 
+                                                                ? 'border-gray-100 focus:border-emerald-200 bg-gray-50/30'
+                                                                : 'border-amber-200 focus:border-amber-400 bg-amber-50/30 text-amber-900 placeholder:text-amber-300'
+                                                        }`}
+                                                    />
+                                                </div>
+                                                
+                                                {current.status === 'Hadir' && !current.keterangan && (
+                                                    <button 
+                                                        onClick={() => setAttendanceMap(prev => ({ ...prev, [s.id]: { ...prev[s.id], keterangan: ' ' } }))}
+                                                        className="w-full text-left text-[10px] font-bold text-gray-400 px-2 pt-1 flex items-center gap-1 hover:text-emerald-500 transition-colors uppercase tracking-widest"
+                                                    >
+                                                        + Tambah catatan khusus
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     )
                                 })}
                             </div>
+                            )}
+                        </div>
+                        
+                        {/* Inline Save Button below the list */}
+                        {!loadingSantri && (
+                            <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-gray-100">
+                                <div className="text-center md:text-left w-full md:w-auto">
+                                    <h4 className="text-sm font-black text-gray-900 tracking-tight">Sudah Selesai?</h4>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pastikan data presensi sudah benar</p>
+                                </div>
+                                <button 
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="w-full md:w-auto flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl md:rounded-[1.5rem] font-black text-xs md:text-sm uppercase tracking-widest transition-all shadow-xl shadow-emerald-200 active:scale-95 disabled:opacity-50"
+                                >
+                                    {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
+                                    <span>Simpan Jurnal & Presensi</span>
+                                </button>
+                            </div>
                         )}
-                    </div>
                 </main>
             </div>
         )

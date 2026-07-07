@@ -4,6 +4,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
 import { useCalendar } from '../../../../context/CalendarContext'
+import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 import '../../shared/styles/Nilai.css'
 
 const TahfizhSyahriPage = () => {
@@ -281,110 +282,201 @@ const TahfizhSyahriPage = () => {
                             </button>
                         </div>
 
-                        <div className="table-wrapper">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>NIS</th>
-                                        <th>Nama Santri</th>
-                                        <th style={{ textAlign: 'center' }}>Hafalan</th>
-                                        <th style={{ textAlign: 'center' }}>Tajwid</th>
-                                        <th style={{ textAlign: 'center' }}>Tilawah</th>
-                                        <th style={{ textAlign: 'center' }}>Rata-rata</th>
-                                        <th style={{ textAlign: 'center' }}>Jml Hafalan (Juz)</th>
-                                        <th style={{ textAlign: 'center' }}>Jml Hafalan (Halaman)</th>
-                                        <th style={{ textAlign: 'center', minWidth: '150px' }}>Penguji</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr><td colSpan="10" className="text-center"><RefreshCw size={20} className="spin" /> Loading...</td></tr>
-                                    ) : santri.length === 0 ? (
-                                        <tr><td colSpan="10" className="text-center">Tidak ada santri di halaqoh ini</td></tr>
-                                    ) : (
-                                        santri.map((s, i) => (
-                                            <tr key={s.id}>
-                                                <td>{i + 1}</td>
-                                                <td>{s.nis}</td>
-                                                <td className="name-cell">{s.nama}</td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        className="nilai-input"
-                                                        min="0"
-                                                        max="100"
-                                                        placeholder="0-100"
-                                                        value={nilai[s.id]?.hafalan ?? ''}
-                                                        onChange={e => handleNilaiChange(s.id, 'hafalan', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        className="nilai-input"
-                                                        min="0"
-                                                        max="100"
-                                                        placeholder="0-100"
-                                                        value={nilai[s.id]?.tajwid ?? ''}
-                                                        onChange={e => handleNilaiChange(s.id, 'tajwid', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        className="nilai-input"
-                                                        min="0"
-                                                        max="100"
-                                                        placeholder="0-100"
-                                                        value={nilai[s.id]?.tilawah ?? ''}
-                                                        onChange={e => handleNilaiChange(s.id, 'tilawah', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td style={{ textAlign: 'center', fontWeight: '600' }}>
-                                                    {calculateRataRata(s.id)}
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        className="nilai-input"
-                                                        min="0"
-                                                        max="30"
-                                                        placeholder="Juz"
-                                                        value={nilai[s.id]?.jumlah_hafalan ?? ''}
-                                                        onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        className="nilai-input"
-                                                        min="0"
-                                                        max="20"
-                                                        placeholder="Hal"
-                                                        value={nilai[s.id]?.jumlah_hafalan_halaman ?? ''}
-                                                        onChange={e => handleNilaiChange(s.id, 'jumlah_hafalan_halaman', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <select
-                                                        className="form-control"
-                                                        style={{ minWidth: '140px', padding: '6px 8px', fontSize: '0.85rem' }}
-                                                        value={nilai[s.id]?.penguji_id ?? ''}
-                                                        onChange={e => handleNilaiChange(s.id, 'penguji_id', e.target.value)}
-                                                    >
-                                                        <option value="">Pilih Penguji</option>
-                                                        {guruList.map(g => (
-                                                            <option key={g.id} value={g.id}>{g.nama}</option>
-                                                        ))}
-                                                    </select>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'NIS', accessor: 'nis', hideOnMobile: true },
+                                { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
+                                { 
+                                    header: 'Hafalan', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <input
+                                            type="number"
+                                            className="nilai-input"
+                                            min="0"
+                                            max="100"
+                                            placeholder="0-100"
+                                            value={nilai[row.id]?.hafalan ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'hafalan', e.target.value)}
+                                        />
+                                    )
+                                },
+                                { 
+                                    header: 'Tajwid', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <input
+                                            type="number"
+                                            className="nilai-input"
+                                            min="0"
+                                            max="100"
+                                            placeholder="0-100"
+                                            value={nilai[row.id]?.tajwid ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'tajwid', e.target.value)}
+                                        />
+                                    )
+                                },
+                                { 
+                                    header: 'Tilawah', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <input
+                                            type="number"
+                                            className="nilai-input"
+                                            min="0"
+                                            max="100"
+                                            placeholder="0-100"
+                                            value={nilai[row.id]?.tilawah ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'tilawah', e.target.value)}
+                                        />
+                                    )
+                                },
+                                { header: 'Rata-rata', render: (row) => calculateRataRata(row.id), className: 'text-center font-semibold' },
+                                { 
+                                    header: 'Jml Hafalan (Juz)', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <input
+                                            type="number"
+                                            className="nilai-input"
+                                            min="0"
+                                            max="30"
+                                            placeholder="Juz"
+                                            value={nilai[row.id]?.jumlah_hafalan ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan', e.target.value)}
+                                        />
+                                    )
+                                },
+                                { 
+                                    header: 'Jml Hafalan (Hal)', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <input
+                                            type="number"
+                                            className="nilai-input"
+                                            min="0"
+                                            max="20"
+                                            placeholder="Hal"
+                                            value={nilai[row.id]?.jumlah_hafalan_halaman ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan_halaman', e.target.value)}
+                                        />
+                                    )
+                                },
+                                { 
+                                    header: 'Penguji', 
+                                    className: 'text-center min-w-[150px]',
+                                    render: (row) => (
+                                        <select
+                                            className="form-control"
+                                            style={{ minWidth: '140px', padding: '6px 8px', fontSize: '0.85rem' }}
+                                            value={nilai[row.id]?.penguji_id ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'penguji_id', e.target.value)}
+                                        >
+                                            <option value="">Pilih Penguji</option>
+                                            {guruList.map(g => (
+                                                <option key={g.id} value={g.id}>{g.nama}</option>
+                                            ))}
+                                        </select>
+                                    )
+                                }
+                            ]}
+                            data={santri}
+                            loading={loading}
+                            emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Tidak ada santri di halaqoh ini</div>}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                                </div>
+                            )}
+                            mobileCardActions={() => null}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-3 w-full mt-2 pt-2 border-t border-gray-100">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Hafalan</label>
+                                            <input
+                                                type="number"
+                                                className="form-control text-sm px-2 py-1"
+                                                min="0"
+                                                max="100"
+                                                placeholder="0-100"
+                                                value={nilai[row.id]?.hafalan ?? ''}
+                                                onChange={e => handleNilaiChange(row.id, 'hafalan', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Tajwid</label>
+                                            <input
+                                                type="number"
+                                                className="form-control text-sm px-2 py-1"
+                                                min="0"
+                                                max="100"
+                                                placeholder="0-100"
+                                                value={nilai[row.id]?.tajwid ?? ''}
+                                                onChange={e => handleNilaiChange(row.id, 'tajwid', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Tilawah</label>
+                                            <input
+                                                type="number"
+                                                className="form-control text-sm px-2 py-1"
+                                                min="0"
+                                                max="100"
+                                                placeholder="0-100"
+                                                value={nilai[row.id]?.tilawah ?? ''}
+                                                onChange={e => handleNilaiChange(row.id, 'tilawah', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mt-1">
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Jml Hafalan (Juz)</label>
+                                            <input
+                                                type="number"
+                                                className="form-control text-sm px-2 py-1"
+                                                min="0"
+                                                max="30"
+                                                placeholder="Juz"
+                                                value={nilai[row.id]?.jumlah_hafalan ?? ''}
+                                                onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan', e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Jml Hafalan (Hal)</label>
+                                            <input
+                                                type="number"
+                                                className="form-control text-sm px-2 py-1"
+                                                min="0"
+                                                max="20"
+                                                placeholder="Hal"
+                                                value={nilai[row.id]?.jumlah_hafalan_halaman ?? ''}
+                                                onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan_halaman', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="mt-1">
+                                        <label className="text-xs text-gray-500 mb-1 block">Penguji</label>
+                                        <select
+                                            className="form-control text-sm px-2 py-1"
+                                            value={nilai[row.id]?.penguji_id ?? ''}
+                                            onChange={e => handleNilaiChange(row.id, 'penguji_id', e.target.value)}
+                                        >
+                                            <option value="">Pilih Penguji</option>
+                                            {guruList.map(g => (
+                                                <option key={g.id} value={g.id}>{g.nama}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex justify-between border-t border-gray-50 pt-2 mt-1">
+                                        <span className="text-gray-500 font-medium text-sm">Rata-rata:</span>
+                                        <span className="font-bold text-gray-900">{calculateRataRata(row.id)}</span>
+                                    </div>
+                                </div>
+                            )}
+                        />
                     </div>
                 )
             }

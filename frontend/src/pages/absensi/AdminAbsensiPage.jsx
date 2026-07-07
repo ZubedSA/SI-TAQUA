@@ -27,11 +27,12 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useKelas, useHalaqoh, useJurnal, useMapel } from '../../hooks/useAkademik'
 import PageHeader from '../../components/layout/PageHeader'
-import { Card } from '../../components/ui/Card'
+import { Card, CardHeader, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import { QRCodeSVG } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -766,125 +767,133 @@ const AdminAbsensiPage = () => {
                     </Card>
 
                     <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                                        <th className="px-8 py-6">Waktu</th>
-                                        <th className="px-8 py-6">Santri</th>
-                                        <th className="px-8 py-6">Grup</th>
-                                        <th className="px-8 py-6 text-center">Status</th>
-                                        <th className="px-8 py-6">Keterangan</th>
-                                        <th className="px-8 py-6">Operator</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {loading ? (
-                                        <tr><td colSpan="6" className="px-8 py-20 text-center"><Spinner label="Syncing Attendance Data..." /></td></tr>
-                                    ) : filteredPresensi.length === 0 ? (
-                                        <tr><td colSpan="6" className="px-8 py-20"><EmptyState icon={Calendar} title="No Data Found" message="Belum ada catatan presensi untuk kriteria ini." /></td></tr>
-                                    ) : (
-                                        filteredPresensi.map((p, index) => {
-                                            const isQuraniyah = p.keterangan?.includes('[Quraniyah]')
-                                            return (
-                                                <tr key={`${p.id}-${index}`} className="hover:bg-gray-50/80 transition-all group">
-                                                    <td className="px-8 py-6 whitespace-nowrap">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2 rounded-lg bg-white shadow-sm text-emerald-500 group-hover:scale-110 transition-transform">
-                                                                <Clock size={16} />
-                                                            </div>
-                                                            <span className="font-black text-gray-900">{new Date(p.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="font-black text-gray-900 text-sm group-hover:text-emerald-600 transition-colors">{p.santri?.nama}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{p.santri?.nis}</div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100/50 w-fit">
-                                                            {isQuraniyah ? <Users size={12} className="text-blue-500" /> : <BookOpen size={12} className="text-emerald-500" />}
-                                                            <span className="text-xs font-black text-gray-600 uppercase tracking-tighter">
-                                                                {isQuraniyah ? (p.santri?.halaqoh?.nama || '-') : (p.santri?.kelas?.nama || '-')}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-center">
-                                                        <Badge variant={
-                                                            (p.status || '').toLowerCase() === 'hadir' ? 'success' :
-                                                            (p.status || '').toLowerCase() === 'sakit' ? 'warning' :
-                                                            (p.status || '').toLowerCase() === 'izin' ? 'info' : 
-                                                            (p.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
-                                                        } className="px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest">
-                                                            {p.status}
-                                                        </Badge>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-gray-500 text-xs font-medium italic max-w-[200px] truncate">
-                                                        {p.keterangan?.replace('[Quraniyah] ', '') || '-'}
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-[10px] font-black uppercase shadow-lg shadow-slate-200">
-                                                                {p.nama_pengabsen?.charAt(0) || '?'}
-                                                            </div>
-                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{p.nama_pengabsen || '-'}</span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile List View */}
-                        <div className="md:hidden">
-                            <div className="grid grid-cols-2 bg-gray-50/50 border-b border-gray-100 px-6 py-4">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Waktu</div>
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Santri</div>
-                            </div>
-                            <div className="divide-y divide-gray-50">
-                                {loading ? (
-                                    <div className="px-8 py-10 text-center"><Spinner label="Syncing..." /></div>
-                                ) : filteredPresensi.length === 0 ? (
-                                    <div className="px-8 py-10"><EmptyState icon={Calendar} title="No Data Found" /></div>
-                                ) : (
-                                    filteredPresensi.map((p, index) => {
-                                        const isQuraniyah = p.keterangan?.includes('[Quraniyah]')
+                        <ResponsiveTable
+                            columns={[
+                                { 
+                                    header: 'Waktu', 
+                                    render: (row) => (
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-white shadow-sm text-emerald-500 group-hover:scale-110 transition-transform">
+                                                <Clock size={16} />
+                                            </div>
+                                            <span className="font-black text-gray-900">{new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                    ), 
+                                    className: 'px-8 py-6 whitespace-nowrap', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Santri', 
+                                    render: (row) => (
+                                        <>
+                                            <div className="font-black text-gray-900 text-sm group-hover:text-emerald-600 transition-colors">{row.santri?.nama}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.santri?.nis}</div>
+                                        </>
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Grup', 
+                                    render: (row) => {
+                                        const isQuraniyah = row.keterangan?.includes('[Quraniyah]')
                                         return (
-                                            <div key={`${p.id}-${index}`} className="grid grid-cols-2 gap-4 px-6 py-6 items-center hover:bg-gray-50/50 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 text-emerald-500">
-                                                        <Clock size={16} />
-                                                    </div>
-                                                    <span className="font-black text-gray-900 text-sm">
-                                                        {new Date(p.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="font-black text-gray-900 text-sm leading-tight">{p.santri?.nama}</div>
-                                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{p.santri?.nis}</div>
-                                                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                                                        <Badge variant={
-                                                            (p.status || '').toLowerCase() === 'hadir' ? 'success' :
-                                                            (p.status || '').toLowerCase() === 'sakit' ? 'warning' :
-                                                            (p.status || '').toLowerCase() === 'izin' ? 'info' : 
-                                                            (p.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
-                                                        } className="px-2 py-0.5 rounded-lg font-black uppercase text-[8px] tracking-widest">
-                                                            {p.status}
-                                                        </Badge>
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">
-                                                            {isQuraniyah ? (p.santri?.halaqoh?.nama || '-') : (p.santri?.kelas?.nama || '-')}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100/50 w-fit">
+                                                {isQuraniyah ? <Users size={12} className="text-blue-500" /> : <BookOpen size={12} className="text-emerald-500" />}
+                                                <span className="text-xs font-black text-gray-600 uppercase tracking-tighter">
+                                                    {isQuraniyah ? (row.santri?.halaqoh?.nama || '-') : (row.santri?.kelas?.nama || '-')}
+                                                </span>
                                             </div>
                                         )
-                                    })
-                                )}
-                            </div>
-                        </div>
+                                    }, 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Status', 
+                                    render: (row) => (
+                                        <Badge variant={
+                                            (row.status || '').toLowerCase() === 'hadir' ? 'success' :
+                                            (row.status || '').toLowerCase() === 'sakit' ? 'warning' :
+                                            (row.status || '').toLowerCase() === 'izin' ? 'info' : 
+                                            (row.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
+                                        } className="px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest">
+                                            {row.status}
+                                        </Badge>
+                                    ), 
+                                    className: 'px-8 py-6 text-center', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Keterangan', 
+                                    render: (row) => <span className="text-gray-500 text-xs font-medium italic max-w-[200px] truncate">{row.keterangan?.replace('[Quraniyah] ', '') || '-'}</span>, 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Operator', 
+                                    render: (row) => (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-[10px] font-black uppercase shadow-lg shadow-slate-200">
+                                                {row.nama_pengabsen?.charAt(0) || '?'}
+                                            </div>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{row.nama_pengabsen || '-'}</span>
+                                        </div>
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                }
+                            ]}
+                            data={filteredPresensi}
+                            loading={loading}
+                            emptyState={<div className="px-8 py-20"><EmptyState icon={Calendar} title="No Data Found" message="Belum ada catatan presensi untuk kriteria ini." /></div>}
+                            mobileCardHeader={(row) => (
+                                <div className="flex items-center gap-3 w-full">
+                                    <div className="p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 text-emerald-500 shrink-0">
+                                        <Clock size={16} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start">
+                                            <div className="font-black text-gray-900 text-sm leading-tight">{row.santri?.nama}</div>
+                                            <span className="font-black text-gray-900 text-sm">
+                                                {new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.santri?.nis}</div>
+                                    </div>
+                                </div>
+                            )}
+                            mobileCardContent={(row) => {
+                                const isQuraniyah = row.keterangan?.includes('[Quraniyah]')
+                                return (
+                                    <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 text-xs">Grup</span>
+                                            <span className="text-[10px] font-black text-gray-600 uppercase tracking-tighter">
+                                                {isQuraniyah ? (row.santri?.halaqoh?.nama || '-') : (row.santri?.kelas?.nama || '-')}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 text-xs">Status</span>
+                                            <Badge variant={
+                                                (row.status || '').toLowerCase() === 'hadir' ? 'success' :
+                                                (row.status || '').toLowerCase() === 'sakit' ? 'warning' :
+                                                (row.status || '').toLowerCase() === 'izin' ? 'info' : 
+                                                (row.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
+                                            } className="px-2 py-0.5 rounded-lg font-black uppercase text-[9px] tracking-widest">
+                                                {row.status}
+                                            </Badge>
+                                        </div>
+                                        {row.keterangan && row.keterangan !== '[Quraniyah] ' && (
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-500 text-xs">Ket</span>
+                                                <span className="text-xs italic text-gray-600">{row.keterangan.replace('[Quraniyah] ', '')}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            }}
+                        />
                     </Card>
                 </div>
             ) : activeTab === 'staf' ? (
@@ -905,112 +914,112 @@ const AdminAbsensiPage = () => {
                     </Card>
 
                     <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                                        <th className="px-8 py-6">Waktu Scan</th>
-                                        <th className="px-8 py-6">Staf Pengajar</th>
-                                        <th className="px-8 py-6">Kategori</th>
-                                        <th className="px-8 py-6">Lokasi / Grup</th>
-                                        <th className="px-8 py-6 text-center">Status Kehadiran</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {loading ? (
-                                        <tr><td colSpan="5" className="px-8 py-20 text-center"><Spinner label="Fetching Staff Records..." /></td></tr>
-                                    ) : presensiStaf.length === 0 ? (
-                                        <tr><td colSpan="5" className="px-8 py-20"><EmptyState icon={Clock} title="No Check-ins Today" message="Belum ada pengajar yang melakukan scan QR hari ini." /></td></tr>
-                                    ) : (
-                                        presensiStaf.map((p) => (
-                                            <tr key={p.id} className="hover:bg-gray-50/80 transition-all group">
-                                                <td className="px-8 py-6 whitespace-nowrap">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 rounded-lg bg-white shadow-sm text-blue-500 group-hover:scale-110 transition-transform">
-                                                            <Clock size={16} />
-                                                        </div>
-                                                        <span className="font-black text-gray-900">{new Date(p.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="font-black text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{p.guru?.nama}</div>
-                                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{p.guru?.email}</div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <Badge variant={p.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest">
-                                                        {p.tipe}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-2 font-black text-gray-600 uppercase tracking-tighter text-xs">
-                                                        {p.tipe === 'MADROSAH' 
-                                                            ? (kelasList.find(k => k.id === p.referensi_id)?.nama || 'Kelas')
-                                                            : (halaqohList.find(h => h.id === p.referensi_id)?.nama || 'Halaqoh')
-                                                        }
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6 text-center">
-                                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
-                                                        <CheckCircle2 size={12} />
-                                                        Terverifikasi QR
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile List View */}
-                        <div className="md:hidden">
-                            <div className="grid grid-cols-2 bg-gray-50/50 border-b border-gray-100 px-6 py-4">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Waktu Scan</div>
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Staf Pengajar</div>
-                            </div>
-                            <div className="divide-y divide-gray-50">
-                                {loading ? (
-                                    <div className="px-8 py-10 text-center"><Spinner label="Fetching..." /></div>
-                                ) : presensiStaf.length === 0 ? (
-                                    <div className="px-8 py-10"><EmptyState icon={Clock} title="No Check-ins" /></div>
-                                ) : (
-                                    presensiStaf.map((p) => (
-                                        <div key={p.id} className="grid grid-cols-2 gap-4 px-6 py-6 items-center hover:bg-gray-50/50 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 text-blue-500">
-                                                    <Clock size={16} />
-                                                </div>
-                                                <span className="font-black text-gray-900 text-sm">
-                                                    {new Date(p.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
+                        <ResponsiveTable
+                            columns={[
+                                { 
+                                    header: 'Waktu Scan', 
+                                    render: (row) => (
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-white shadow-sm text-blue-500 group-hover:scale-110 transition-transform">
+                                                <Clock size={16} />
                                             </div>
-                                            <div className="space-y-1">
-                                                <div className="font-black text-gray-900 text-sm leading-tight">{p.guru?.nama}</div>
-                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest truncate">{p.guru?.email}</div>
-                                                <div className="flex flex-wrap items-center gap-2 pt-1">
-                                                    <Badge variant={p.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-2 py-0.5 rounded-lg font-black uppercase text-[8px] tracking-widest">
-                                                        {p.tipe}
-                                                    </Badge>
-                                                    <span className="text-[9px] font-black text-gray-600 uppercase tracking-tighter">
-                                                        {p.tipe === 'MADROSAH' 
-                                                            ? (kelasList.find(k => k.id === p.referensi_id)?.nama || 'Kelas')
-                                                            : (halaqohList.find(h => h.id === p.referensi_id)?.nama || 'Halaqoh')
-                                                        }
-                                                    </span>
-                                                </div>
-                                                <div className="pt-1">
-                                                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 font-black text-[8px] uppercase tracking-widest border border-emerald-100">
-                                                        <CheckCircle2 size={10} />
-                                                        Terverifikasi
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <span className="font-black text-gray-900">{new Date(row.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                                    ), 
+                                    className: 'px-8 py-6 whitespace-nowrap', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Staf Pengajar', 
+                                    render: (row) => (
+                                        <>
+                                            <div className="font-black text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{row.guru?.nama}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.guru?.email}</div>
+                                        </>
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Kategori', 
+                                    render: (row) => (
+                                        <Badge variant={row.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest">
+                                            {row.tipe}
+                                        </Badge>
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Lokasi / Grup', 
+                                    render: (row) => (
+                                        <div className="flex items-center gap-2 font-black text-gray-600 uppercase tracking-tighter text-xs">
+                                            {row.tipe === 'MADROSAH' 
+                                                ? (kelasList.find(k => k.id === row.referensi_id)?.nama || 'Kelas')
+                                                : (halaqohList.find(h => h.id === row.referensi_id)?.nama || 'Halaqoh')
+                                            }
+                                        </div>
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Status Kehadiran', 
+                                    render: (row) => (
+                                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
+                                            <CheckCircle2 size={12} />
+                                            Terverifikasi QR
+                                        </div>
+                                    ), 
+                                    className: 'px-8 py-6 text-center', 
+                                    hideOnMobile: true 
+                                }
+                            ]}
+                            data={presensiStaf}
+                            loading={loading}
+                            emptyState={<div className="px-8 py-20"><EmptyState icon={Clock} title="No Check-ins Today" message="Belum ada pengajar yang melakukan scan QR hari ini." /></div>}
+                            mobileCardHeader={(row) => (
+                                <div className="flex items-center gap-3 w-full">
+                                    <div className="p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 text-blue-500 shrink-0">
+                                        <Clock size={16} />
+                                    </div>
+                                    <div className="flex-1 overflow-hidden">
+                                        <div className="flex justify-between items-start">
+                                            <div className="font-black text-gray-900 text-sm leading-tight truncate">{row.guru?.nama}</div>
+                                            <span className="font-black text-gray-900 text-sm shrink-0 ml-2">
+                                                {new Date(row.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest truncate">{row.guru?.email}</div>
+                                    </div>
+                                </div>
+                            )}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500 text-xs">Kategori</span>
+                                        <Badge variant={row.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-2 py-0.5 rounded-lg font-black uppercase text-[8px] tracking-widest">
+                                            {row.tipe}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500 text-xs">Lokasi / Grup</span>
+                                        <span className="text-[9px] font-black text-gray-600 uppercase tracking-tighter">
+                                            {row.tipe === 'MADROSAH' 
+                                                ? (kelasList.find(k => k.id === row.referensi_id)?.nama || 'Kelas')
+                                                : (halaqohList.find(h => h.id === row.referensi_id)?.nama || 'Halaqoh')
+                                            }
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-end pt-1">
+                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 font-black text-[8px] uppercase tracking-widest border border-emerald-100">
+                                            <CheckCircle2 size={10} />
+                                            Terverifikasi
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        />
                     </Card>
                 </div>
             ) : activeTab === 'jurnal' ? (
@@ -1043,145 +1052,145 @@ const AdminAbsensiPage = () => {
                     </Card>
 
                     <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50/50">
-                                    <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                                        <th className="px-8 py-6">Jadwal & Waktu</th>
-                                        <th className="px-8 py-6">Staf Pengajar</th>
-                                        <th className="px-8 py-6">Mata Pelajaran</th>
-                                        <th className="px-8 py-6">Grup</th>
-                                        <th className="px-8 py-6">Status Log</th>
-                                        <th className="px-8 py-6 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {loadingAgenda ? (
-                                        <tr><td colSpan="6" className="px-8 py-20 text-center"><Spinner label="Syncing Class Logs..." /></td></tr>
-                                    ) : agendaList.length === 0 ? (
-                                        <tr><td colSpan="6" className="px-8 py-20"><EmptyState icon={BookOpen} title="No Active Classes" message="Tidak ada jadwal mengajar terdaftar untuk kriteria ini." /></td></tr>
-                                    ) : (
-                                        agendaList.map((j) => (
-                                            <tr key={j.id} className="hover:bg-gray-50/80 transition-all group">
-                                                <td className="px-8 py-6 whitespace-nowrap">
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-lg w-fit uppercase tracking-tighter">
-                                                            Jam Ke-{j.jam_ke}
-                                                        </div>
-                                                        <div className="text-gray-900 font-black text-sm ml-1 uppercase">
-                                                            {j.jam_mulai.slice(0, 5)} — {j.jam_selesai.slice(0, 5)}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="font-black text-gray-900 text-sm group-hover:text-amber-600 transition-colors">{j.guru?.nama || '-'}</div>
-                                                </td>
-                                                <td className="px-8 py-6 font-bold text-gray-600">
-                                                    {j.mapel?.nama || (j.tipe === 'HALAQOH' ? 'Halaqoh' : '-')}
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100/50 w-fit">
-                                                        {j.tipe === 'HALAQOH' ? <Users size={12} className="text-blue-500" /> : <BookOpen size={12} className="text-emerald-500" />}
-                                                        <span className="text-xs font-black text-gray-600 uppercase tracking-tighter">
-                                                            {j.tipe === 'HALAQOH' ? (j.halaqoh?.nama || 'Halaqoh') : (j.kelas?.nama || 'Kelas')}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    {j.jurnal ? (
-                                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
-                                                            <CheckCircle2 size={12} />
-                                                            Terisi
-                                                        </div>
-                                                    ) : (
-                                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 font-black text-[10px] uppercase tracking-widest border border-amber-100">
-                                                            <AlertTriangle size={12} />
-                                                            Kosong
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="px-8 py-6 text-center">
-                                                    <button 
-                                                        className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg
-                                                            ${j.jurnal 
-                                                                ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' 
-                                                                : 'bg-amber-500 text-white shadow-amber-200 hover:bg-amber-600'}
-                                                        `}
-                                                        onClick={() => navigate(`/absensi/agenda?jadwal_id=${j.id}&tanggal=${filterDate}`)}
-                                                    >
-                                                        {j.jurnal ? 'Update Jurnal' : 'Input Absensi'}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile List View */}
-                        <div className="md:hidden">
-                            <div className="grid grid-cols-2 bg-gray-50/50 border-b border-gray-100 px-6 py-4">
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Jadwal</div>
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pengajar & Mapel</div>
-                            </div>
-                            <div className="divide-y divide-gray-50">
-                                {loadingAgenda ? (
-                                    <div className="px-8 py-10 text-center"><Spinner label="Syncing..." /></div>
-                                ) : agendaList.length === 0 ? (
-                                    <div className="px-8 py-10"><EmptyState icon={BookOpen} title="No Active Classes" /></div>
-                                ) : (
-                                    agendaList.map((j) => (
-                                        <div key={j.id} className="p-6 space-y-4 hover:bg-gray-50/50 transition-colors">
-                                            <div className="grid grid-cols-2 gap-4 items-start">
-                                                <div className="space-y-1">
-                                                    <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg w-fit uppercase tracking-tighter">
-                                                        Jam Ke-{j.jam_ke}
-                                                    </div>
-                                                    <div className="text-gray-900 font-black text-sm">
-                                                        {j.jam_mulai.slice(0, 5)} — {j.jam_selesai.slice(0, 5)}
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="font-black text-gray-900 text-sm leading-tight">{j.guru?.nama || '-'}</div>
-                                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                                                        {j.mapel?.nama || (j.tipe === 'HALAQOH' ? 'Halaqoh' : '-')}
-                                                    </div>
-                                                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                                                        <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-tighter">
-                                                            {j.tipe === 'HALAQOH' ? <Users size={10} className="text-blue-500" /> : <BookOpen size={10} className="text-emerald-500" />}
-                                                            {j.tipe === 'HALAQOH' ? (j.halaqoh?.nama || 'Halaqoh') : (j.kelas?.nama || 'Kelas')}
-                                                        </div>
-                                                        {j.jurnal ? (
-                                                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 font-black text-[8px] uppercase tracking-widest border border-emerald-100">
-                                                                <CheckCircle2 size={10} />
-                                                                Terisi
-                                                            </div>
-                                                        ) : (
-                                                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 font-black text-[8px] uppercase tracking-widest border border-amber-100">
-                                                                <AlertTriangle size={10} />
-                                                                Kosong
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
+                        <ResponsiveTable
+                            columns={[
+                                { 
+                                    header: 'Jadwal & Waktu', 
+                                    render: (row) => (
+                                        <div className="flex flex-col gap-1">
+                                            <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-lg w-fit uppercase tracking-tighter">
+                                                Jam Ke-{row.jam_ke}
                                             </div>
-                                            <button 
-                                                className={`w-full py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg
-                                                    ${j.jurnal 
-                                                        ? 'bg-slate-100 text-slate-500' 
-                                                        : 'bg-amber-500 text-white shadow-amber-200'}
-                                                `}
-                                                onClick={() => navigate(`/absensi/agenda?jadwal_id=${j.id}&tanggal=${filterDate}`)}
-                                            >
-                                                {j.jurnal ? 'Update Jurnal' : 'Input Absensi'}
-                                            </button>
+                                            <div className="text-gray-900 font-black text-sm ml-1 uppercase">
+                                                {row.jam_mulai.slice(0, 5)} — {row.jam_selesai.slice(0, 5)}
+                                            </div>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                                    ), 
+                                    className: 'px-8 py-6 whitespace-nowrap', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Staf Pengajar', 
+                                    render: (row) => <div className="font-black text-gray-900 text-sm group-hover:text-amber-600 transition-colors">{row.guru?.nama || '-'}</div>, 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Mata Pelajaran', 
+                                    render: (row) => <span className="font-bold text-gray-600">{row.mapel?.nama || (row.tipe === 'HALAQOH' ? 'Halaqoh' : '-')}</span>, 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Grup', 
+                                    render: (row) => (
+                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100/50 w-fit">
+                                            {row.tipe === 'HALAQOH' ? <Users size={12} className="text-blue-500" /> : <BookOpen size={12} className="text-emerald-500" />}
+                                            <span className="text-xs font-black text-gray-600 uppercase tracking-tighter">
+                                                {row.tipe === 'HALAQOH' ? (row.halaqoh?.nama || 'Halaqoh') : (row.kelas?.nama || 'Kelas')}
+                                            </span>
+                                        </div>
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Status Log', 
+                                    render: (row) => (
+                                        row.jurnal ? (
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
+                                                <CheckCircle2 size={12} />
+                                                Terisi
+                                            </div>
+                                        ) : (
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 font-black text-[10px] uppercase tracking-widest border border-amber-100">
+                                                <AlertTriangle size={12} />
+                                                Kosong
+                                            </div>
+                                        )
+                                    ), 
+                                    className: 'px-8 py-6', 
+                                    hideOnMobile: true 
+                                },
+                                { 
+                                    header: 'Aksi', 
+                                    render: (row) => (
+                                        <button 
+                                            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg w-full md:w-auto
+                                                ${row.jurnal 
+                                                    ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' 
+                                                    : 'bg-amber-500 text-white shadow-amber-200 hover:bg-amber-600'}
+                                            `}
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/absensi/agenda?jadwal_id=${row.id}&tanggal=${filterDate}`); }}
+                                        >
+                                            {row.jurnal ? 'Update Jurnal' : 'Input Absensi'}
+                                        </button>
+                                    ), 
+                                    className: 'px-8 py-6 text-center', 
+                                    hideOnMobile: false 
+                                }
+                            ]}
+                            data={agendaList}
+                            loading={loadingAgenda}
+                            emptyState={<div className="px-8 py-20"><EmptyState icon={BookOpen} title="No Active Classes" message="Tidak ada jadwal mengajar terdaftar untuk kriteria ini." /></div>}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col gap-1 w-full">
+                                    <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg w-fit uppercase tracking-tighter">
+                                        Jam Ke-{row.jam_ke}
+                                    </div>
+                                    <div className="text-gray-900 font-black text-sm uppercase">
+                                        {row.jam_mulai.slice(0, 5)} — {row.jam_selesai.slice(0, 5)}
+                                    </div>
+                                </div>
+                            )}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500 text-xs">Pengajar</span>
+                                        <span className="font-black text-gray-900 text-sm leading-tight">{row.guru?.nama || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500 text-xs">Mata Pelajaran</span>
+                                        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                            {row.mapel?.nama || (row.tipe === 'HALAQOH' ? 'Halaqoh' : '-')}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500 text-xs">Grup</span>
+                                        <div className="flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-tighter">
+                                            {row.tipe === 'HALAQOH' ? <Users size={10} className="text-blue-500" /> : <BookOpen size={10} className="text-emerald-500" />}
+                                            {row.tipe === 'HALAQOH' ? (row.halaqoh?.nama || 'Halaqoh') : (row.kelas?.nama || 'Kelas')}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500 text-xs">Status</span>
+                                        {row.jurnal ? (
+                                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 font-black text-[8px] uppercase tracking-widest border border-emerald-100">
+                                                <CheckCircle2 size={10} />
+                                                Terisi
+                                            </div>
+                                        ) : (
+                                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 font-black text-[8px] uppercase tracking-widest border border-amber-100">
+                                                <AlertTriangle size={10} />
+                                                Kosong
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            mobileCardPrimaryAction={(row) => (
+                                <button 
+                                    className={`w-full py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all
+                                        ${row.jurnal 
+                                            ? 'bg-slate-100 text-slate-500 active:scale-95' 
+                                            : 'bg-amber-500 text-white shadow-lg shadow-amber-200 active:scale-95'}
+                                    `}
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/absensi/agenda?jadwal_id=${row.id}&tanggal=${filterDate}`); }}
+                                >
+                                    {row.jurnal ? 'Update Jurnal' : 'Input Absensi'}
+                                </button>
+                            )}
+                        />
                     </Card>
                 </div>
             ) : activeTab === 'laporan' ? (
@@ -1224,117 +1233,104 @@ const AdminAbsensiPage = () => {
                     {laporanSubTab === 'staf' ? (
                         <div className="space-y-6 animate-slide-up">
                              <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                                 {/* Desktop Table View */}
-                                 <div className="hidden md:block overflow-x-auto">
-                                     <table className="w-full text-sm text-left">
-                                         <thead className="bg-indigo-50/30">
-                                             <tr className="text-[10px] font-black text-indigo-400 uppercase tracking-widest border-b border-indigo-50">
-                                                 <th className="px-8 py-6">Nama Pengajar</th>
-                                                 <th className="px-8 py-6 text-center text-emerald-600">Hadir</th>
-                                                 <th className="px-8 py-6 text-center text-red-600">Alpha</th>
-                                                 <th className="px-8 py-6 text-center">Score</th>
-                                                 <th className="px-8 py-6 text-right">Details</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody className="divide-y divide-gray-50">
-                                             {aggregatedStaf.length === 0 ? (
-                                                 <tr><td colSpan="5" className="px-8 py-20 text-center text-gray-400 italic font-medium">Tidak ada data scan staf pada periode ini</td></tr>
-                                             ) : (
-                                                 aggregatedStaf.map((s) => {
-                                                     const total = s.Hadir + s.Alpha
-                                                     const score = total > 0 ? Math.round((s.Hadir / total) * 100) : 0
-                                                     return (
-                                                         <tr key={s.id} className="hover:bg-indigo-50/20 transition-all group">
-                                                             <td className="px-8 py-6">
-                                                                 <div className="flex items-center gap-4">
-                                                                     <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
-                                                                         {s.nama?.charAt(0)}
-                                                                     </div>
-                                                                     <div>
-                                                                         <div className="font-black text-gray-900">{s.nama}</div>
-                                                                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
-                                                                     </div>
-                                                                 </div>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <span className="font-black text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-xl border border-emerald-100">{s.Hadir}</span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <span className="font-black text-red-600 bg-red-50 px-4 py-1.5 rounded-xl border border-red-100">{s.Alpha}</span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <div className="flex items-center justify-center gap-3">
-                                                                     <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                                         <div className="h-full bg-indigo-500" style={{ width: `${score}%` }}></div>
-                                                                     </div>
-                                                                     <span className="text-xs font-black text-indigo-600">{score}%</span>
-                                                                 </div>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-right">
-                                                                 <button 
-                                                                     onClick={() => setSelectedGuruId(s.id)}
-                                                                     className="p-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95"
-                                                                 >
-                                                                     <Eye size={16} />
-                                                                 </button>
-                                                             </td>
-                                                         </tr>
-                                                     )
-                                                 })
-                                             )}
-                                         </tbody>
-                                     </table>
-                                 </div>
-
-                                 {/* Mobile List View */}
-                                 <div className="md:hidden">
-                                     <div className="grid grid-cols-2 bg-indigo-50/30 border-b border-indigo-50 px-6 py-4">
-                                         <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Staff</div>
-                                         <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest text-right">Metrics</div>
-                                     </div>
-                                     <div className="divide-y divide-gray-50">
-                                         {aggregatedStaf.length === 0 ? (
-                                             <div className="px-8 py-10 text-center text-gray-400 italic">No records</div>
-                                         ) : (
-                                             aggregatedStaf.map((s) => {
-                                                 const total = s.Hadir + s.Alpha
-                                                 const score = total > 0 ? Math.round((s.Hadir / total) * 100) : 0
+                                 <ResponsiveTable
+                                     columns={[
+                                         { 
+                                             header: 'Nama Pengajar', 
+                                             render: (row) => (
+                                                 <div className="flex items-center gap-4">
+                                                     <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
+                                                         {row.nama?.charAt(0)}
+                                                     </div>
+                                                     <div>
+                                                         <div className="font-black text-gray-900">{row.nama}</div>
+                                                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
+                                                     </div>
+                                                 </div>
+                                             ), 
+                                             className: 'px-8 py-6', 
+                                             hideOnMobile: true 
+                                         },
+                                         { 
+                                             header: 'Hadir', 
+                                             render: (row) => <span className="font-black text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-xl border border-emerald-100">{row.Hadir}</span>, 
+                                             className: 'px-8 py-6 text-center text-emerald-600', 
+                                             hideOnMobile: true 
+                                         },
+                                         { 
+                                             header: 'Alpha', 
+                                             render: (row) => <span className="font-black text-red-600 bg-red-50 px-4 py-1.5 rounded-xl border border-red-100">{row.Alpha}</span>, 
+                                             className: 'px-8 py-6 text-center text-red-600', 
+                                             hideOnMobile: true 
+                                         },
+                                         { 
+                                             header: 'Score', 
+                                             render: (row) => {
+                                                 const total = row.Hadir + row.Alpha
+                                                 const score = total > 0 ? Math.round((row.Hadir / total) * 100) : 0
                                                  return (
-                                                     <div key={s.id} className="p-6 space-y-4 hover:bg-indigo-50/10 transition-colors">
-                                                         <div className="flex items-center justify-between">
-                                                             <div className="flex items-center gap-3">
-                                                                 <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm">
-                                                                     {s.nama?.charAt(0)}
-                                                                 </div>
-                                                                 <div className="font-black text-gray-900 text-sm leading-tight">{s.nama}</div>
-                                                             </div>
-                                                             <button 
-                                                                 onClick={() => setSelectedGuruId(s.id)}
-                                                                 className="p-2.5 rounded-xl bg-slate-900 text-white shadow-lg active:scale-90"
-                                                             >
-                                                                 <Eye size={14} />
-                                                             </button>
+                                                     <div className="flex items-center justify-center gap-3">
+                                                         <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                             <div className="h-full bg-indigo-500" style={{ width: `${score}%` }}></div>
                                                          </div>
-                                                         <div className="grid grid-cols-3 gap-2">
-                                                             <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-center">
-                                                                 <div className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Hadir</div>
-                                                                 <div className="text-sm font-black text-emerald-600">{s.Hadir}</div>
-                                                             </div>
-                                                             <div className="bg-red-50 p-2 rounded-xl border border-red-100 text-center">
-                                                                 <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Alpha</div>
-                                                                 <div className="text-sm font-black text-red-600">{s.Alpha}</div>
-                                                             </div>
-                                                             <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100 text-center">
-                                                                 <div className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Score</div>
-                                                                 <div className="text-sm font-black text-indigo-600">{score}%</div>
-                                                             </div>
-                                                         </div>
+                                                         <span className="text-xs font-black text-indigo-600">{score}%</span>
                                                      </div>
                                                  )
-                                             })
-                                         )}
-                                     </div>
-                                 </div>
+                                             }, 
+                                             className: 'px-8 py-6 text-center', 
+                                             hideOnMobile: true 
+                                         },
+                                         { 
+                                             header: 'Details', 
+                                             render: (row) => (
+                                                 <button 
+                                                     onClick={(e) => { e.stopPropagation(); setSelectedGuruId(row.id); }}
+                                                     className="p-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
+                                                 >
+                                                     <Eye size={16} />
+                                                 </button>
+                                             ), 
+                                             className: 'px-8 py-6 text-right', 
+                                             hideOnMobile: false 
+                                         }
+                                     ]}
+                                     data={aggregatedStaf}
+                                     loading={false}
+                                     emptyState={<div className="px-8 py-20 text-center text-gray-400 italic font-medium">Tidak ada data scan staf pada periode ini</div>}
+                                     mobileCardHeader={(row) => (
+                                         <div className="flex items-center gap-3 w-full">
+                                             <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0">
+                                                 {row.nama?.charAt(0)}
+                                             </div>
+                                             <div className="flex-1">
+                                                 <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
+                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
+                                             </div>
+                                         </div>
+                                     )}
+                                     mobileCardContent={(row) => {
+                                         const total = row.Hadir + row.Alpha
+                                         const score = total > 0 ? Math.round((row.Hadir / total) * 100) : 0
+                                         return (
+                                             <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
+                                                 <div className="grid grid-cols-3 gap-2">
+                                                     <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-center">
+                                                         <div className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Hadir</div>
+                                                         <div className="text-sm font-black text-emerald-600">{row.Hadir}</div>
+                                                     </div>
+                                                     <div className="bg-red-50 p-2 rounded-xl border border-red-100 text-center">
+                                                         <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Alpha</div>
+                                                         <div className="text-sm font-black text-red-600">{row.Alpha}</div>
+                                                     </div>
+                                                     <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100 text-center">
+                                                         <div className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Score</div>
+                                                         <div className="text-sm font-black text-indigo-600">{score}%</div>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         )
+                                     }}
+                                 />
                              </Card>
                         </div>
                     ) : (
@@ -1386,118 +1382,114 @@ const AdminAbsensiPage = () => {
                                     <h4 className="font-black text-gray-900 uppercase tracking-widest text-xs">Detailed Student Metrics</h4>
                                 </div>
                                  <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                                     {/* Desktop Table View */}
-                                     <div className="hidden md:block overflow-x-auto">
-                                         <table className="w-full text-sm text-left">
-                                             <thead className="bg-gray-50/50">
-                                                 <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50">
-                                                     <th className="px-8 py-6">Student Profil</th>
-                                                     <th className="px-8 py-6">Group / Class</th>
-                                                     <th className="px-8 py-6 text-center text-emerald-600">Hadir</th>
-                                                     <th className="px-8 py-6 text-center text-amber-600">Sakit</th>
-                                                     <th className="px-8 py-6 text-center text-blue-600">Izin</th>
-                                                     <th className="px-8 py-6 text-center text-red-600">Alpha</th>
-                                                     <th className="px-8 py-6 text-right">Action</th>
-                                                 </tr>
-                                             </thead>
-                                             <tbody className="divide-y divide-gray-50">
-                                                 {aggregatedSantri.length === 0 ? (
-                                                     <tr><td colSpan="7" className="px-8 py-20 text-center text-gray-400 italic font-medium">No record found for selected period</td></tr>
-                                                 ) : (
-                                                     aggregatedSantri.map((s) => (
-                                                         <tr key={s.id} className="hover:bg-emerald-50/10 transition-all group">
-                                                             <td className="px-8 py-6">
-                                                                 <div className="font-black text-gray-900 group-hover:text-emerald-600 transition-colors">{s.nama}</div>
-                                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{s.nis}</div>
-                                                             </td>
-                                                             <td className="px-8 py-6">
-                                                                 <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">{s.grup || '-'}</span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${s.Hadir > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                                     {s.Hadir}
-                                                                 </span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${s.Sakit > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                                     {s.Sakit}
-                                                                 </span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${s.Izin > 0 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                                     {s.Izin}
-                                                                 </span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-center">
-                                                                 <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${s.Alpha > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                                     {s.Alpha}
-                                                                 </span>
-                                                             </td>
-                                                             <td className="px-8 py-6 text-right">
-                                                                 <button 
-                                                                     onClick={() => setSelectedSantriId(s.id)}
-                                                                     className="p-3 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95"
-                                                                 >
-                                                                     <Eye size={16} />
-                                                                 </button>
-                                                             </td>
-                                                         </tr>
-                                                     ))
-                                                 )}
-                                             </tbody>
-                                         </table>
-                                     </div>
-
-                                     {/* Mobile List View */}
-                                     <div className="md:hidden">
-                                         <div className="grid grid-cols-2 bg-gray-50/50 border-b border-gray-100 px-6 py-4">
-                                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Student</div>
-                                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Attendance</div>
-                                         </div>
-                                         <div className="divide-y divide-gray-50">
-                                             {aggregatedSantri.length === 0 ? (
-                                                 <div className="px-8 py-10 text-center text-gray-400 italic">No records</div>
-                                             ) : (
-                                                 aggregatedSantri.map((s) => (
-                                                     <div key={s.id} className="p-6 space-y-4 hover:bg-emerald-50/10 transition-colors">
-                                                         <div className="flex items-center justify-between">
-                                                             <div>
-                                                                 <div className="font-black text-gray-900 text-sm leading-tight">{s.nama}</div>
-                                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{s.nis}</div>
-                                                                 <div className="mt-2">
-                                                                     <span className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-500 text-[8px] font-black uppercase tracking-widest">{s.grup || '-'}</span>
-                                                                 </div>
-                                                             </div>
-                                                             <button 
-                                                                 onClick={() => setSelectedSantriId(s.id)}
-                                                                 className="p-2.5 rounded-xl bg-slate-900 text-white shadow-lg active:scale-90"
-                                                             >
-                                                                 <Eye size={14} />
-                                                             </button>
-                                                         </div>
-                                                         <div className="grid grid-cols-4 gap-2">
-                                                             <div className={`${s.Hadir > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                                 <div className={`text-[8px] font-black ${s.Hadir > 0 ? 'text-emerald-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>H</div>
-                                                                 <div className={`text-xs font-black ${s.Hadir > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{s.Hadir}</div>
-                                                             </div>
-                                                             <div className={`${s.Sakit > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                                 <div className={`text-[8px] font-black ${s.Sakit > 0 ? 'text-amber-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>S</div>
-                                                                 <div className={`text-xs font-black ${s.Sakit > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{s.Sakit}</div>
-                                                             </div>
-                                                             <div className={`${s.Izin > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                                 <div className={`text-[8px] font-black ${s.Izin > 0 ? 'text-blue-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>I</div>
-                                                                 <div className={`text-xs font-black ${s.Izin > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{s.Izin}</div>
-                                                             </div>
-                                                             <div className={`${s.Alpha > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                                 <div className={`text-[8px] font-black ${s.Alpha > 0 ? 'text-red-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>A</div>
-                                                                 <div className={`text-xs font-black ${s.Alpha > 0 ? 'text-red-600' : 'text-gray-300'}`}>{s.Alpha}</div>
-                                                             </div>
-                                                         </div>
+                                     <ResponsiveTable
+                                         columns={[
+                                             { 
+                                                 header: 'Student Profil', 
+                                                 render: (row) => (
+                                                     <>
+                                                         <div className="font-black text-gray-900 group-hover:text-emerald-600 transition-colors">{row.nama}</div>
+                                                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.nis}</div>
+                                                     </>
+                                                 ), 
+                                                 className: 'px-8 py-6', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Group / Class', 
+                                                 render: (row) => <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">{row.grup || '-'}</span>, 
+                                                 className: 'px-8 py-6', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Hadir', 
+                                                 render: (row) => (
+                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Hadir > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                         {row.Hadir}
+                                                     </span>
+                                                 ), 
+                                                 className: 'px-8 py-6 text-center text-emerald-600', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Sakit', 
+                                                 render: (row) => (
+                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Sakit > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                         {row.Sakit}
+                                                     </span>
+                                                 ), 
+                                                 className: 'px-8 py-6 text-center text-amber-600', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Izin', 
+                                                 render: (row) => (
+                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Izin > 0 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                         {row.Izin}
+                                                     </span>
+                                                 ), 
+                                                 className: 'px-8 py-6 text-center text-blue-600', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Alpha', 
+                                                 render: (row) => (
+                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Alpha > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                         {row.Alpha}
+                                                     </span>
+                                                 ), 
+                                                 className: 'px-8 py-6 text-center text-red-600', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Action', 
+                                                 render: (row) => (
+                                                     <button 
+                                                         onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
+                                                         className="p-3 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
+                                                     >
+                                                         <Eye size={16} />
+                                                     </button>
+                                                 ), 
+                                                 className: 'px-8 py-6 text-right', 
+                                                 hideOnMobile: false 
+                                             }
+                                         ]}
+                                         data={aggregatedSantri}
+                                         loading={false}
+                                         emptyState={<div className="px-8 py-20 text-center text-gray-400 italic font-medium">No record found for selected period</div>}
+                                         mobileCardHeader={(row) => (
+                                             <div className="flex-1 w-full">
+                                                 <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
+                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{row.nis}</div>
+                                                 <div className="mt-2">
+                                                     <span className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-500 text-[8px] font-black uppercase tracking-widest">{row.grup || '-'}</span>
+                                                 </div>
+                                             </div>
+                                         )}
+                                         mobileCardContent={(row) => (
+                                             <div className="flex flex-col gap-2 w-full mt-4 pt-4 border-t border-gray-50">
+                                                 <div className="grid grid-cols-4 gap-2">
+                                                     <div className={`${row.Hadir > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Hadir > 0 ? 'text-emerald-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>H</div>
+                                                         <div className={`text-xs font-black ${row.Hadir > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.Hadir}</div>
                                                      </div>
-                                                 ))
-                                             )}
-                                         </div>
-                                     </div>
+                                                     <div className={`${row.Sakit > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Sakit > 0 ? 'text-amber-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>S</div>
+                                                         <div className={`text-xs font-black ${row.Sakit > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{row.Sakit}</div>
+                                                     </div>
+                                                     <div className={`${row.Izin > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Izin > 0 ? 'text-blue-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>I</div>
+                                                         <div className={`text-xs font-black ${row.Izin > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{row.Izin}</div>
+                                                     </div>
+                                                     <div className={`${row.Alpha > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Alpha > 0 ? 'text-red-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>A</div>
+                                                         <div className={`text-xs font-black ${row.Alpha > 0 ? 'text-red-600' : 'text-gray-300'}`}>{row.Alpha}</div>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         )}
+                                     />
                                  </Card>
                             </div>
                         </div>

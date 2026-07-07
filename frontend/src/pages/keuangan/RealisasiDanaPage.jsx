@@ -8,6 +8,7 @@ import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import { useToast } from '../../context/ToastContext'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import DateRangePicker from '../../components/ui/DateRangePicker'
@@ -280,128 +281,51 @@ const RealisasiDanaPage = () => {
                 ) : data.length === 0 ? (
                     <div className="empty-state">Belum ada realisasi dana</div>
                 ) : (
-                    <>
-                        {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Program</th>
-                                        <th>Keperluan</th>
-                                        <th>Jumlah</th>
-                                        {canEditKas && <th>Aksi</th>}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.map((item, i) => (
-                                        <tr key={item.id}>
-                                            <td>{i + 1}</td>
-                                            <td>{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                            <td><span className="badge blue">{item.anggaran?.nama_program || '-'}</span></td>
-                                            <td>{item.keperluan || '-'}</td>
-                                            <td className="amount red">Rp {Number(item.jumlah_terpakai).toLocaleString('id-ID')}</td>
-                                            {canEditKas && (
-                                                <td>
-                                                    <MobileActionMenu
-                                                        actions={[
-                                                            { label: 'Edit', icon: <Edit2 size={14} />, onClick: () => openEdit(item) },
-                                                            { label: 'Hapus', icon: <Trash2 size={14} />, onClick: () => confirmDelete(item), danger: true }
-                                                        ]}
-                                                    >
-                                                        <button
-                                                            onClick={() => openEdit(item)}
-                                                            title="Edit"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '32px',
-                                                                height: '32px',
-                                                                borderRadius: '6px',
-                                                                background: '#fef3c7',
-                                                                color: '#d97706',
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                marginRight: '4px'
-                                                            }}
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => confirmDelete(item)}
-                                                            title="Hapus"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '32px',
-                                                                height: '32px',
-                                                                borderRadius: '6px',
-                                                                background: '#fee2e2',
-                                                                color: '#dc2626',
-                                                                border: 'none',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </MobileActionMenu>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {data.map((item, i) => (
-                                <div key={item.id} className="mobile-data-card">
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title text-gray-900 font-bold">{item.keperluan || 'Pengeluaran'}</h4>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 mt-1">
-                                                {item.anggaran?.nama_program || '-'}
-                                            </span>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="mobile-card-amount text-red-600 font-bold">
-                                                Rp {Number(item.jumlah_terpakai).toLocaleString('id-ID')}
-                                            </div>
-                                            <div className="text-[10px] text-gray-500 mt-1">
-                                                {new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                            </div>
-                                        </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'Tanggal', render: (row) => new Date(row.tanggal).toLocaleDateString('id-ID') },
+                            { 
+                                header: 'Program', 
+                                render: (row) => (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                        {row.anggaran?.nama_program || '-'}
+                                    </span>
+                                )
+                            },
+                            { header: 'Keperluan', accessor: 'keperluan', className: 'font-medium text-gray-900', hideOnMobile: true },
+                            { 
+                                header: 'Jumlah', 
+                                render: (row) => <span className="font-mono font-bold text-red-600 whitespace-nowrap">Rp {Number(row.jumlah_terpakai).toLocaleString('id-ID')}</span>
+                            },
+                            ...(canEditKas ? [{
+                                header: 'Aksi',
+                                hideOnMobile: true,
+                                className: 'text-right',
+                                render: (row) => (
+                                    <div className="flex items-center justify-end gap-1">
+                                        <button onClick={() => openEdit(row)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>
+                                        <button onClick={() => confirmDelete(row)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 size={16} /></button>
                                     </div>
-
-                                    <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1">
-                                        <div className="mobile-card-meta">
-                                            <span>No: {i + 1}</span>
-                                        </div>
-                                        {canEditKas && (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => openEdit(item)}
-                                                    className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-bold transition-colors"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => confirmDelete(item)}
-                                                    className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-bold transition-colors"
-                                                >
-                                                    Hapus
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </>
+                                )
+                            }] : [])
+                        ]}
+                        data={data}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.keperluan || 'Pengeluaran'}</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold mt-1 w-max bg-blue-50 text-blue-700 border border-blue-200">
+                                    {row.anggaran?.nama_program || '-'}
+                                </span>
+                            </div>
+                        )}
+                        mobileCardActions={(row) => canEditKas ? (
+                            <>
+                                <button onClick={() => openEdit(row)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                                <button onClick={() => confirmDelete(row)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                            </>
+                        ) : null}
+                    />
                 )}
             </div>
 

@@ -17,6 +17,7 @@ import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import DateRangePicker from '../../../../components/ui/DateRangePicker'
 import { useCalendar } from '../../../../context/CalendarContext'
 import { createMessage, sendWhatsApp as sendWhatsAppGlobal } from '../../../../utils/whatsapp'
+import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 
 
 const HafalanList = () => {
@@ -745,106 +746,135 @@ const HafalanList = () => {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                <tr>
-                                    <th className="px-6 py-3 whitespace-nowrap">Tanggal</th>
-                                    <th className="px-6 py-3">Nama Santri</th>
-                                    <th className="px-6 py-3">Kelas</th>
-                                    <th className="px-6 py-3">Hafalan</th>
-                                    <th className="px-6 py-3">Jenis</th>
-                                    <th className="px-6 py-3">Status</th>
-                                    <th className="px-6 py-3">Penguji</th>
-                                    <th className="px-6 py-3 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {loading ? (
-                                    <tr><td colSpan="8"><Spinner className="py-12" label="Memuat data hafalan..." /></td></tr>
-                                ) : filteredHafalan.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className="p-8">
-                                            <EmptyState
-                                                icon={FileText}
-                                                title="Belum ada data hafalan"
-                                                message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada data hafalan yang tercatat."}
-                                                actionLabel="Catat Hafalan"
-                                                onAction={() => window.location.href = '/hafalan/create?jenis=Setoran'}
-                                            />
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredHafalan.map((item) => (
-                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-600">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                                            <td className="px-6 py-4 font-medium text-gray-900">{item.santri_nama}</td>
-                                            <td className="px-6 py-4 text-gray-600">{item.kelas_nama}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-gray-900">Juz {item.juz_mulai || item.juz || '-'}{(item.juz_selesai && item.juz_selesai !== item.juz_mulai) ? ` - ${item.juz_selesai}` : ''}</span>
-                                                    <span className="text-gray-600">{item.surah_mulai || item.surah || '-'}{(item.surah_selesai && item.surah_selesai !== item.surah_mulai) ? ` s/d ${item.surah_selesai}` : ''}</span>
-                                                    <span className="text-xs text-gray-500">Ayat {item.ayat_mulai || 1}-{item.ayat_selesai || 1}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge variant={
-                                                    item.jenis === 'Setoran' ? 'info' :
-                                                        item.jenis === "Muroja'ah" ? 'warning' :
-                                                            item.jenis === 'Ziyadah Ulang' ? 'success' : 'default'
-                                                }>
-                                                    {item.jenis || 'Setoran'}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge variant={
-                                                    ['Lancar', 'Mutqin'].includes(item.status) ? 'success' :
-                                                        ['Sedang', 'Proses'].includes(item.status) ? 'info' :
-                                                            ['Lemah', 'Perlu Perbaikan'].includes(item.status) ? 'warning' : 'error'
-                                                }>
-                                                    {item.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-600">{item.penguji_nama}</td>
-                                            <td className="px-6 py-4 text-right">
-                                                <MobileActionMenu
-                                                    actions={[
-                                                        { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(item) },
-                                                        { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${item.id}/edit` },
-                                                        { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(item); setShowDeleteModal(true) }, danger: true }
-                                                    ]}
-                                                >
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button
-                                                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                            title="Kirim WhatsApp"
-                                                            onClick={() => sendWhatsApp(item)}
-                                                        >
-                                                            <MessageCircle size={18} />
-                                                        </button>
-                                                        <Link
-                                                            to={`/hafalan/${item.id}/edit`}
-                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit size={18} />
-                                                        </Link>
-                                                        <button
-                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Hapus"
-                                                            onClick={() => { setSelectedHafalan(item); setShowDeleteModal(true) }}
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </div>
-                                                </MobileActionMenu>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'Tanggal', render: (row) => new Date(row.tanggal).toLocaleDateString('id-ID'), className: 'whitespace-nowrap text-gray-600', hideOnMobile: true },
+                            { header: 'Nama Santri', accessor: 'santri_nama', className: 'font-medium text-gray-900' },
+                            { header: 'Kelas', accessor: 'kelas_nama', className: 'text-gray-600', hideOnMobile: true },
+                            { 
+                                header: 'Hafalan', 
+                                render: (row) => (
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                        <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
+                                        <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
+                                    </div>
+                                )
+                            },
+                            { 
+                                header: 'Jenis', 
+                                className: 'text-center',
+                                render: (row) => (
+                                    <Badge variant={
+                                        row.jenis === 'Setoran' ? 'info' :
+                                            row.jenis === "Muroja'ah" ? 'warning' :
+                                                row.jenis === 'Ziyadah Ulang' ? 'success' : 'default'
+                                    }>
+                                        {row.jenis || 'Setoran'}
+                                    </Badge>
+                                ) 
+                            },
+                            { 
+                                header: 'Status', 
+                                className: 'text-center',
+                                render: (row) => (
+                                    <Badge variant={
+                                        ['Lancar', 'Mutqin'].includes(row.status) ? 'success' :
+                                            ['Sedang', 'Proses'].includes(row.status) ? 'info' :
+                                                ['Lemah', 'Perlu Perbaikan'].includes(row.status) ? 'warning' : 'error'
+                                    }>
+                                        {row.status}
+                                    </Badge>
+                                ) 
+                            },
+                            { header: 'Penguji', accessor: 'penguji_nama', className: 'text-gray-600', hideOnMobile: true },
+                            { 
+                                header: 'Aksi', 
+                                className: 'text-right',
+                                render: (row) => (
+                                    <MobileActionMenu
+                                        actions={[
+                                            { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(row) },
+                                            { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${row.id}/edit` },
+                                            { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(row); setShowDeleteModal(true) }, danger: true }
+                                        ]}
+                                    >
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                title="Kirim WhatsApp"
+                                                onClick={() => sendWhatsApp(row)}
+                                            >
+                                                <MessageCircle size={18} />
+                                            </button>
+                                            <Link
+                                                to={`/hafalan/${row.id}/edit`}
+                                                className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit size={18} />
+                                            </Link>
+                                            <button
+                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Hapus"
+                                                onClick={() => { setSelectedHafalan(row); setShowDeleteModal(true) }}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </MobileActionMenu>
+                                ) 
+                            }
+                        ]}
+                        data={filteredHafalan}
+                        loading={loading}
+                        emptyState={
+                            <EmptyState
+                                icon={FileText}
+                                title="Belum ada data hafalan"
+                                message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada data hafalan yang tercatat."}
+                                actionLabel="Catat Hafalan"
+                                onAction={() => window.location.href = '/hafalan/create?jenis=Setoran'}
+                            />
+                        }
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.santri_nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{new Date(row.tanggal).toLocaleDateString('id-ID')}</span>
+                            </div>
+                        )}
+                        mobileCardActions={(row) => (
+                            <MobileActionMenu
+                                actions={[
+                                    { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(row) },
+                                    { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${row.id}/edit` },
+                                    { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(row); setShowDeleteModal(true) }, danger: true }
+                                ]}
+                            />
+                        )}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Kelas</span>
+                                        <span className="font-medium text-gray-900">{row.kelas_nama}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Penguji</span>
+                                        <span className="font-medium text-gray-900">{row.penguji_nama}</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Hafalan</span>
+                                        <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                        <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
+                                        <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    />
                 </div>
             )}
 
@@ -918,72 +948,89 @@ const HafalanList = () => {
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                <tr>
-                                    <th className="px-6 py-3 w-16">No</th>
-                                    <th className="px-6 py-3 whitespace-nowrap">Tanggal</th>
-                                    <th className="px-6 py-3">Nama Santri</th>
-                                    <th className="px-6 py-3">Halaqoh</th>
-                                    <th className="px-6 py-3">Hafalan</th>
-                                    <th className="px-6 py-3">Jenis</th>
-                                    <th className="px-6 py-3">Status</th>
-                                    <th className="px-6 py-3">Penguji</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {loading ? (
-                                    <tr><td colSpan="8"><Spinner className="py-12" label="Memuat data rekap..." /></td></tr>
-                                ) : rekapData.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="8" className="p-8">
-                                            <EmptyState
-                                                icon={FileText}
-                                                title="Tidak ada data"
-                                                message="Sesuaikan filter untuk melihat data rekap."
-                                            />
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    rekapData.map((item, idx) => (
-                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 text-gray-500">{idx + 1}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-600">{item.tanggal}</td>
-                                            <td className="px-6 py-4 font-medium text-gray-900">{item.santri_nama}</td>
-                                            <td className="px-6 py-4 text-gray-600">{item.halaqoh_nama}</td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-gray-900">Juz {item.juz_mulai || item.juz || '-'}{(item.juz_selesai && item.juz_selesai !== item.juz_mulai) ? ` - ${item.juz_selesai}` : ''}</span>
-                                                    <span className="text-gray-600">{item.surah_mulai || item.surah || '-'}{(item.surah_selesai && item.surah_selesai !== item.surah_mulai) ? ` s/d ${item.surah_selesai}` : ''}</span>
-                                                    <span className="text-xs text-gray-500">Ayat {item.ayat_mulai || 1}-{item.ayat_selesai || 1}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge variant={
-                                                    item.jenis === 'Setoran' ? 'info' :
-                                                        item.jenis === "Muroja'ah" ? 'warning' :
-                                                            item.jenis === 'Ziyadah Ulang' ? 'success' : 'default'
-                                                }>
-                                                    {item.jenis || 'Setoran'}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <Badge variant={
-                                                    ['Lancar', 'Mutqin'].includes(item.status) ? 'success' :
-                                                        ['Sedang', 'Proses'].includes(item.status) ? 'info' :
-                                                            ['Lemah', 'Perlu Perbaikan'].includes(item.status) ? 'warning' : 'error'
-                                                }>
-                                                    {item.status}
-                                                </Badge>
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-600">{item.penguji_nama}</td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'Tanggal', render: (row) => row.tanggal, className: 'whitespace-nowrap text-gray-600', hideOnMobile: true },
+                            { header: 'Nama Santri', accessor: 'santri_nama', className: 'font-medium text-gray-900' },
+                            { header: 'Halaqoh', accessor: 'halaqoh_nama', className: 'text-gray-600', hideOnMobile: true },
+                            { 
+                                header: 'Hafalan', 
+                                render: (row) => (
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                        <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
+                                        <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
+                                    </div>
+                                )
+                            },
+                            { 
+                                header: 'Jenis', 
+                                className: 'text-center',
+                                render: (row) => (
+                                    <Badge variant={
+                                        row.jenis === 'Setoran' ? 'info' :
+                                            row.jenis === "Muroja'ah" ? 'warning' :
+                                                row.jenis === 'Ziyadah Ulang' ? 'success' : 'default'
+                                    }>
+                                        {row.jenis || 'Setoran'}
+                                    </Badge>
+                                ) 
+                            },
+                            { 
+                                header: 'Status', 
+                                className: 'text-center',
+                                render: (row) => (
+                                    <Badge variant={
+                                        ['Lancar', 'Mutqin'].includes(row.status) ? 'success' :
+                                            ['Sedang', 'Proses'].includes(row.status) ? 'info' :
+                                                ['Lemah', 'Perlu Perbaikan'].includes(row.status) ? 'warning' : 'error'
+                                    }>
+                                        {row.status}
+                                    </Badge>
+                                ) 
+                            },
+                            { header: 'Penguji', accessor: 'penguji_nama', className: 'text-gray-600', hideOnMobile: true }
+                        ]}
+                        data={rekapData}
+                        loading={loading}
+                        emptyState={
+                            <EmptyState
+                                icon={FileText}
+                                title="Tidak ada data"
+                                message="Sesuaikan filter untuk melihat data rekap."
+                            />
+                        }
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.santri_nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{row.tanggal}</span>
+                            </div>
+                        )}
+                        mobileCardActions={() => null}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Halaqoh</span>
+                                        <span className="font-medium text-gray-900">{row.halaqoh_nama}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Penguji</span>
+                                        <span className="font-medium text-gray-900">{row.penguji_nama}</span>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Hafalan</span>
+                                        <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                        <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
+                                        <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    />
                 </div>
             )}
 
@@ -1245,100 +1292,144 @@ const HafalanList = () => {
                         </div>
 
                         {/* Table Content */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                    <tr>
-                                        <th className="px-6 py-3 w-16">No</th>
-                                        <th className="px-6 py-3">Nama Santri</th>
-                                        <th className="px-6 py-3">Kelas</th>
-                                        {pencapaianSubTab === 'input' ? (
-                                            <>
-                                                <th className="px-6 py-3 w-48">Jumlah Hafalan (Semester)</th>
-                                                <th className="px-6 py-3 w-40">Predikat</th>
-                                                <th className="px-6 py-3 w-48">Total Hafalan (Keseluruhan)</th>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <th className="px-6 py-3">Halaqoh</th>
-                                                <th className="px-6 py-3">Musyrif</th>
-                                                <th className="px-6 py-3">Jumlah Hafalan</th>
-                                                <th className="px-6 py-3">Predikat</th>
-                                                <th className="px-6 py-3">Total Hafalan</th>
-                                            </>
-                                        )}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {santriList.filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh))).length === 0 ? (
-                                        <tr><td colSpan={pencapaianSubTab === 'input' ? 6 : 8} className="p-8 text-center text-gray-500">Tidak ada data santri yang sesuai filter</td></tr>
+                        <ResponsiveTable
+                            columns={pencapaianSubTab === 'input' ? [
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900', hideOnMobile: true },
+                                { header: 'Kelas', accessor: 'kelas', className: 'text-gray-600', hideOnMobile: true },
+                                {
+                                    header: 'Jumlah Hafalan (Semester)',
+                                    className: 'w-48',
+                                    render: (row) => (
+                                        <input
+                                            type="text"
+                                            placeholder="Contoh: 3 Juz"
+                                            value={getCurrentPencapaianData()[row.id]?.jumlah_hafalan || ''}
+                                            onChange={(e) => handlePencapaianChange(row.id, 'jumlah_hafalan', e.target.value)}
+                                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                        />
+                                    )
+                                },
+                                {
+                                    header: 'Predikat',
+                                    className: 'w-40',
+                                    render: (row) => (
+                                        <select
+                                            value={getCurrentPencapaianData()[row.id]?.predikat || 'Baik'}
+                                            onChange={(e) => handlePencapaianChange(row.id, 'predikat', e.target.value)}
+                                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                        >
+                                            <option value="Sangat Baik">Sangat Baik</option>
+                                            <option value="Baik">Baik</option>
+                                            <option value="Cukup">Cukup</option>
+                                            <option value="Kurang">Kurang</option>
+                                            <option value="Buruk">Buruk</option>
+                                        </select>
+                                    )
+                                },
+                                {
+                                    header: 'Total Hafalan (Keseluruhan)',
+                                    className: 'w-48',
+                                    render: (row) => (
+                                        <input
+                                            type="text"
+                                            placeholder="Contoh: 10 Juz"
+                                            value={getCurrentPencapaianData()[row.id]?.total_hafalan || ''}
+                                            onChange={(e) => handlePencapaianChange(row.id, 'total_hafalan', e.target.value)}
+                                            className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                        />
+                                    )
+                                }
+                            ] : [
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900', hideOnMobile: true },
+                                { header: 'Kelas', accessor: 'kelas', className: 'text-gray-600', hideOnMobile: true },
+                                { header: 'Halaqoh', accessor: 'halaqoh_nama', className: 'text-gray-600', hideOnMobile: true },
+                                { header: 'Musyrif', accessor: 'musyrif_nama', className: 'text-gray-600', hideOnMobile: true },
+                                { header: 'Jumlah Hafalan', render: (row) => <span className="text-gray-900">{getCurrentPencapaianData()[row.id]?.jumlah_hafalan || '-'}</span> },
+                                {
+                                    header: 'Predikat',
+                                    render: (row) => (
+                                        <Badge variant={
+                                            getCurrentPencapaianData()[row.id]?.predikat === 'Sangat Baik' ? 'success' :
+                                                getCurrentPencapaianData()[row.id]?.predikat === 'Baik' ? 'info' :
+                                                    getCurrentPencapaianData()[row.id]?.predikat === 'Kurang' ? 'warning' :
+                                                        getCurrentPencapaianData()[row.id]?.predikat === 'Buruk' ? 'error' : 'default'
+                                        }>
+                                            {getCurrentPencapaianData()[row.id]?.predikat || 'Belum dinilai'}
+                                        </Badge>
+                                    )
+                                },
+                                { header: 'Total Hafalan', render: (row) => <span className="text-gray-900">{getCurrentPencapaianData()[row.id]?.total_hafalan || '-'}</span> }
+                            ]}
+                            data={santriList.filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh)))}
+                            loading={loading}
+                            emptyState={<div className="p-8 text-center text-gray-500">Tidak ada data santri yang sesuai filter</div>}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{row.kelas}</span>
+                                </div>
+                            )}
+                            mobileCardActions={() => null}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
+                                    {pencapaianSubTab === 'input' ? (
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex flex-col">
+                                                <label className="text-[10px] text-gray-500 mb-1">Jumlah Hafalan (Semester)</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Contoh: 3 Juz"
+                                                    value={getCurrentPencapaianData()[row.id]?.jumlah_hafalan || ''}
+                                                    onChange={(e) => handlePencapaianChange(row.id, 'jumlah_hafalan', e.target.value)}
+                                                    className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="flex flex-col">
+                                                    <label className="text-[10px] text-gray-500 mb-1">Predikat</label>
+                                                    <select
+                                                        value={getCurrentPencapaianData()[row.id]?.predikat || 'Baik'}
+                                                        onChange={(e) => handlePencapaianChange(row.id, 'predikat', e.target.value)}
+                                                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                                    >
+                                                        <option value="Sangat Baik">Sangat Baik</option>
+                                                        <option value="Baik">Baik</option>
+                                                        <option value="Cukup">Cukup</option>
+                                                        <option value="Kurang">Kurang</option>
+                                                        <option value="Buruk">Buruk</option>
+                                                    </select>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <label className="text-[10px] text-gray-500 mb-1">Total Hafalan</label>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Contoh: 10 Juz"
+                                                        value={getCurrentPencapaianData()[row.id]?.total_hafalan || ''}
+                                                        onChange={(e) => handlePencapaianChange(row.id, 'total_hafalan', e.target.value)}
+                                                        className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        santriList
-                                            .filter(s => s.nama.toLowerCase().includes(pencapaianSearch.toLowerCase()) && (pencapaianHalaqoh === '' || String(s.halaqoh_id) === String(pencapaianHalaqoh)))
-                                            .map((santri, index) => (
-                                                <tr key={santri.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4 text-gray-500">{index + 1}</td>
-                                                    <td className="px-6 py-4 font-medium text-gray-900">{santri.nama}</td>
-                                                    <td className="px-6 py-4 text-gray-600">{santri.kelas}</td>
-
-                                                    {pencapaianSubTab === 'input' ? (
-                                                        <>
-                                                            <td className="px-6 py-4">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Contoh: 3 Juz"
-                                                                    value={getCurrentPencapaianData()[santri.id]?.jumlah_hafalan || ''}
-                                                                    onChange={(e) => handlePencapaianChange(santri.id, 'jumlah_hafalan', e.target.value)}
-                                                                    className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                                />
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <select
-                                                                    value={getCurrentPencapaianData()[santri.id]?.predikat || 'Baik'}
-                                                                    onChange={(e) => handlePencapaianChange(santri.id, 'predikat', e.target.value)}
-                                                                    className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                                >
-                                                                    <option value="Sangat Baik">Sangat Baik</option>
-                                                                    <option value="Baik">Baik</option>
-                                                                    <option value="Cukup">Cukup</option>
-                                                                    <option value="Kurang">Kurang</option>
-                                                                    <option value="Buruk">Buruk</option>
-                                                                </select>
-                                                            </td>
-                                                            <td className="px-6 py-4">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Contoh: 10 Juz"
-                                                                    value={getCurrentPencapaianData()[santri.id]?.total_hafalan || ''}
-                                                                    onChange={(e) => handlePencapaianChange(santri.id, 'total_hafalan', e.target.value)}
-                                                                    className="w-full px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                                />
-                                                            </td>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <td className="px-6 py-4 text-gray-600">{santri.halaqoh_nama}</td>
-                                                            <td className="px-6 py-4 text-gray-600">{santri.musyrif_nama}</td>
-                                                            <td className="px-6 py-4 text-gray-900">{getCurrentPencapaianData()[santri.id]?.jumlah_hafalan || '-'}</td>
-                                                            <td className="px-6 py-4">
-                                                                <Badge variant={
-                                                                    getCurrentPencapaianData()[santri.id]?.predikat === 'Sangat Baik' ? 'success' :
-                                                                        getCurrentPencapaianData()[santri.id]?.predikat === 'Baik' ? 'info' :
-                                                                            getCurrentPencapaianData()[santri.id]?.predikat === 'Kurang' ? 'warning' :
-                                                                                getCurrentPencapaianData()[santri.id]?.predikat === 'Buruk' ? 'error' : 'default'
-                                                                }>
-                                                                    {getCurrentPencapaianData()[santri.id]?.predikat || 'Belum dinilai'}
-                                                                </Badge>
-                                                            </td>
-                                                            <td className="px-6 py-4 text-gray-900">{getCurrentPencapaianData()[santri.id]?.total_hafalan || '-'}</td>
-                                                        </>
-                                                    )}
-                                                </tr>
-                                            ))
+                                        <>
+                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-gray-500">Halaqoh</span>
+                                                    <span className="font-medium text-gray-900">{row.halaqoh_nama}</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-gray-500">Musyrif</span>
+                                                    <span className="font-medium text-gray-900">{row.musyrif_nama}</span>
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
+                            )}
+                        />
                     </div>
                 </div>
             )}

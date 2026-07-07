@@ -6,6 +6,7 @@ import Spinner from '../../components/ui/Spinner'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTA.css'
 
 const styles = {
@@ -525,41 +526,70 @@ const OTALaporanPenyaluranPage = () => {
                             <Spinner label="Memuat data..." />
                         </div>
                     ) : data.length > 0 ? (
-                        <table className="ota-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Tanggal</th>
-                                    <th>Nama Santri</th>
-                                    <th>NIS</th>
-                                    <th className="text-right">Nominal</th>
-                                    <th>Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((item, idx) => (
-                                    <tr key={item.id}>
-                                        <td>{idx + 1}</td>
-                                        <td>{formatDate(item.tanggal)}</td>
-                                        <td style={{ fontWeight: 500 }}>{item.santri?.nama || '-'}</td>
-                                        <td>{item.santri?.nis || '-'}</td>
-                                        <td className="text-right" style={{ fontWeight: 600, color: '#10b981' }}>
-                                            {formatCurrency(item.nominal)}
-                                        </td>
-                                        <td style={{ color: '#6b7280' }}>{item.keterangan || '-'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr style={{ background: '#f8fafc', fontWeight: 600 }}>
-                                    <td colSpan={4}>Total</td>
-                                    <td className="text-right" style={{ color: '#10b981' }}>
-                                        {formatCurrency(filteredTotal)}
-                                    </td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                        <div className="w-full">
+                            <ResponsiveTable
+                                columns={[
+                                    {
+                                        header: 'No',
+                                        render: (row, index) => index + 1,
+                                        className: 'w-16',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Tanggal',
+                                        render: (row) => formatDate(row.tanggal),
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Nama Santri',
+                                        render: (row) => <div style={{ fontWeight: 500 }}>{row.santri?.nama || '-'}</div>
+                                    },
+                                    {
+                                        header: 'NIS',
+                                        render: (row) => row.santri?.nis || '-',
+                                        hideOnMobile: true
+                                    },
+                                    {
+                                        header: 'Nominal',
+                                        render: (row) => formatCurrency(row.nominal),
+                                        className: 'text-right text-emerald-600 font-semibold'
+                                    },
+                                    {
+                                        header: 'Keterangan',
+                                        render: (row) => row.keterangan || '-',
+                                        className: 'text-gray-500 max-w-[200px] truncate',
+                                        hideOnMobile: true
+                                    }
+                                ]}
+                                data={data}
+                                mobileCardHeader={(row) => (
+                                    <div className="flex justify-between items-start w-full">
+                                        <div className="space-y-1">
+                                            <div className="font-bold text-gray-900">{row.santri?.nama || '-'}</div>
+                                            <div className="text-xs text-gray-500">NIS: {row.santri?.nis || '-'}</div>
+                                            <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                                <Calendar size={12} /> {formatDate(row.tanggal)}
+                                            </div>
+                                        </div>
+                                        <div className="font-bold text-emerald-600 text-sm">
+                                            {formatCurrency(row.nominal)}
+                                        </div>
+                                    </div>
+                                )}
+                                mobileCardContent={(row) => (
+                                    <div className="w-full mt-3">
+                                        <div className="text-sm text-gray-600">
+                                            <span className="font-medium">Keterangan:</span><br/>
+                                            {row.keterangan || '-'}
+                                        </div>
+                                    </div>
+                                )}
+                            />
+                            <div className="p-4 bg-gray-50 rounded-xl mt-4 flex justify-between items-center border border-gray-100">
+                                <div className="font-bold text-gray-700">Total</div>
+                                <div className="font-bold text-emerald-600 text-lg">{formatCurrency(filteredTotal)}</div>
+                            </div>
+                        </div>
                     ) : (
                         <div className="ota-empty-state">
                             <FileBarChart size={48} />

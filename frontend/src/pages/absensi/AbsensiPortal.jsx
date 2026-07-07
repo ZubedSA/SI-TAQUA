@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-    Calendar, 
-    Clock, 
-    BookOpen, 
-    Users, 
-    CheckCircle, 
-    AlertTriangle, 
-    ArrowRight, 
+import {
+    Calendar,
+    Clock,
+    BookOpen,
+    Users,
+    CheckCircle,
+    AlertTriangle,
+    ArrowRight,
     QrCode,
     Sparkles,
     ChevronRight,
@@ -39,16 +39,16 @@ const AbsensiPortal = () => {
                 setGuruId(userProfile.guru_id)
                 return
             }
-            
+
             if (!user?.email) return
-            
+
             try {
                 const { data, error } = await supabase
                     .from('guru')
                     .select('id')
                     .eq('email', user.email)
                     .maybeSingle()
-                
+
                 if (data) {
                     setGuruId(data.id)
                 } else if (error) {
@@ -60,6 +60,13 @@ const AbsensiPortal = () => {
         }
         fetchGuruId()
     }, [user, userProfile])
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 1000)
+        return () => clearInterval(timer)
+    }, [])
 
     const todayDate = format(currentTime, 'yyyy-MM-dd')
     const { data: jurnalList = [] } = useJurnal({
@@ -210,7 +217,7 @@ const AbsensiPortal = () => {
 
                 sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
                 sessionStorage.setItem(`SITAQUA_SCAN_${match.id}`, 'true')
-                
+
                 showToast.success(`Berhasil! Terverifikasi untuk ${match.kelas?.nama || 'Kelas'}`)
                 navigate(`/absensi/agenda?jadwal_id=${match.id}`)
             } else if (isAdmin() || isAdminAkademik()) {
@@ -242,7 +249,7 @@ const AbsensiPortal = () => {
                         console.warn('Gagal mencatat presensi staf Admin:', dbErr.message)
                     }
                 }
-                
+
                 sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
                 showToast.success('QR Terverifikasi (Mode Admin)')
                 navigate(`/absensi/agenda?kelas_id=${qrId}`)
@@ -258,8 +265,7 @@ const AbsensiPortal = () => {
         }
     }
 
-    const todayStr = globalFormatDate(currentTime, { weekday: 'long', day: 'numeric', month: 'long' })
-    const yearStr = format(currentTime, 'yyyy')
+    const todayStr = globalFormatDate(currentTime, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     const timeStr = format(currentTime, 'HH:mm')
     const secondStr = format(currentTime, 'ss')
 
@@ -271,10 +277,22 @@ const AbsensiPortal = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-12 pb-24 px-2">
-            {/* Background Blob Decorations - Optimized for performance (hidden on small mobile) */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 hidden sm:block">
-                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-100/30 rounded-full blur-[100px]"></div>
-                <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-indigo-100/30 rounded-full blur-[80px]"></div>
+            {/* Background Decorations */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                {/* Custom Image Background */}
+                <div
+                    className="absolute inset-0 opacity-[0.07]"
+                    style={{
+                        backgroundImage: "url('/bg-islamic.jpg')",
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}
+                ></div>
+
+                {/* Blob Decorations (hidden on small mobile) */}
+                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-100/30 rounded-full blur-[100px] hidden sm:block"></div>
+                <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-indigo-100/30 rounded-full blur-[80px] hidden sm:block"></div>
             </div>
 
             <div className="relative z-10 space-y-10">
@@ -287,7 +305,7 @@ const AbsensiPortal = () => {
 
                     <div className="space-y-2">
                         <h1 className="text-3xl md:text-6xl font-black text-gray-900 tracking-tight leading-[1.1]">
-                            Ahlan wa Sahlan, <br/>
+                            Ahlan wa Sahlan, <br />
                             <span className="inline-block whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-400 drop-shadow-sm text-2xl md:text-6xl">
                                 {getUserName()}
                             </span>
@@ -299,7 +317,7 @@ const AbsensiPortal = () => {
 
                     {/* Gerbang Pijar Trigger Button */}
                     <div className="flex justify-center mb-6">
-                        <button 
+                        <button
                             onClick={() => navigate('/absensi/gerbang-pijar')}
                             className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
                         >
@@ -315,7 +333,7 @@ const AbsensiPortal = () => {
                             <Calendar size={18} className="text-emerald-500" />
                             <div className="text-left">
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter leading-none">Hari Ini</p>
-                                <p className="text-xs font-bold text-gray-800">{todayStr}, {yearStr}</p>
+                                <p className="text-xs font-bold text-gray-800">{todayStr}</p>
                             </div>
                         </div>
                         <div className="px-5 py-3 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-sm flex items-center gap-3">
@@ -332,21 +350,21 @@ const AbsensiPortal = () => {
 
                 {/* Primary Action Card - Redesigned for Premium Look */}
                 <section className="relative">
-                    <button 
+                    <button
                         onClick={() => setIsScannerOpen(true)}
                         className="group w-full relative overflow-hidden rounded-[3.5rem] p-8 md:p-12 text-left transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-[0_30px_60px_-15px_rgba(16,185,129,0.25)] hover:shadow-[0_40px_80px_-15px_rgba(16,185,129,0.35)]"
                     >
                         {/* Gradient Background */}
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500"></div>
-                        
+
                         {/* Glass Overlay Patterns */}
                         <div className="absolute top-0 right-0 w-1/2 h-full bg-white/10 skew-x-12 translate-x-24 transition-transform duration-1000 group-hover:translate-x-32"></div>
-                        
+
                         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12">
                             <div className="w-20 h-20 md:w-32 md:h-32 rounded-[2.5rem] bg-white/20 backdrop-blur-xl flex items-center justify-center text-white shrink-0 shadow-inner border border-white/30 group-hover:rotate-6 transition-all duration-500 group-hover:scale-110">
                                 <QrCode size={48} strokeWidth={1.5} />
                             </div>
-                            
+
                             <div className="flex-1 space-y-4 text-center md:text-left">
                                 <div className="flex items-center justify-center md:justify-start gap-2">
                                     <span className="px-3 py-1 rounded-full bg-white/20 text-white text-[10px] font-black uppercase tracking-[0.1em] backdrop-blur-sm">Scanner Aktif</span>
@@ -358,7 +376,7 @@ const AbsensiPortal = () => {
                                         Lakukan pemindaian kode QR di lokasi untuk langsung menuju pengisian jurnal dan presensi santri.
                                     </p>
                                 </div>
-                                
+
                                 <div className="pt-4 inline-flex items-center gap-2 text-white font-black text-xs uppercase tracking-[0.2em] group-hover:gap-4 transition-all duration-300">
                                     <span>Pindai Sekarang</span>
                                     <ArrowRight size={18} />
@@ -377,7 +395,7 @@ const AbsensiPortal = () => {
                 </section>
 
                 <section className="relative opacity-60 hover:opacity-100 transition-opacity">
-                    <button 
+                    <button
                         onClick={() => navigate('/absensi/agenda')}
                         className="group w-full relative overflow-hidden rounded-[2.5rem] p-6 text-left border border-gray-200 bg-white hover:border-emerald-500 transition-all duration-300"
                     >
@@ -429,8 +447,8 @@ const AbsensiPortal = () => {
                                     </p>
                                 </div>
                             </div>
-                            
-                            <a 
+
+                            <a
                                 href="https://wa.me/6281717594886"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -444,10 +462,10 @@ const AbsensiPortal = () => {
                 </div>
             </div>
 
-            <QRScannerModal 
-                isOpen={isScannerOpen} 
-                onClose={() => setIsScannerOpen(false)} 
-                onScanSuccess={handleScanSuccess} 
+            <QRScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScanSuccess={handleScanSuccess}
             />
 
             {/* Simple Footer Label */}

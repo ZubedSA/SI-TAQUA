@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
@@ -359,165 +360,132 @@ const HalaqohPage = () => {
                         </div>
                     </div>
 
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block overflow-x-auto">
-                        {filteredData.length > 0 ? (
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50/50 text-gray-400 font-black uppercase tracking-widest text-[10px] border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-8 py-5 w-20 text-center">No</th>
-                                        <th className="px-8 py-5">Informasi Halaqoh</th>
-                                        <th className="px-8 py-5">Guru Pengajar / Musyrif</th>
-                                        <th className="px-8 py-5 text-right">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {filteredData.map((item, idx) => (
-                                        <tr key={item.id} className="hover:bg-gray-50/50 transition-all cursor-pointer group border-b border-gray-50 last:border-0" onClick={(e) => openDetail(item, e)}>
-                                            <td className="px-8 py-5 text-center text-gray-400 font-bold">{idx + 1}</td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-primary-100 group-hover:scale-110 transition-transform">
-                                                        {item.nama?.substring(0, 2).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">{item.nama}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Tahfidz Quraniyah</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                {item.musyrifs && item.musyrifs.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1.5 items-center">
-                                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1"></div>
-                                                        {item.musyrifs.map(m => (
-                                                            <span key={m.user_id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black text-primary-700 bg-primary-50 border border-primary-100 uppercase tracking-tight">
-                                                                {m.nama}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ) : item.guru?.nama ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                                        <span className="text-xs font-black text-gray-700 uppercase tracking-tight">{item.guru.nama}</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest border border-amber-100">
-                                                        Belum ditentukan
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex items-center justify-end gap-2 transition-all">
-                                                    <button
-                                                        type="button"
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm bg-white border border-gray-100"
-                                                        onClick={(e) => openDetail(item, e)}
-                                                        title="Detail Anggota"
-                                                    >
-                                                        <Users size={18} />
-                                                    </button>
-                                                    {canEdit && (
-                                                        <>
-                                                            <button
-                                                                type="button"
-                                                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all shadow-sm bg-white border border-gray-100"
-                                                                onClick={(e) => openEdit(item, e)}
-                                                                title="Edit"
-                                                            >
-                                                                <Edit2 size={18} />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm bg-white border border-gray-100"
-                                                                onClick={(e) => openDelete(item, e)}
-                                                                title="Hapus"
-                                                            >
-                                                                <Trash2 size={18} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <EmptyState icon={Circle} title="Tidak ada halaqoh" />
-                        )}
-                    </div>
-
-                    {/* Mobile Card View */}
-                    <div className="md:hidden">
-                        <div className="divide-y divide-gray-50">
-                            {filteredData.length > 0 ? (
-                                filteredData.map((item) => (
-                                    <div 
-                                        key={item.id} 
-                                        onClick={(e) => openDetail(item, e)}
-                                        className="p-6 space-y-4 active:bg-gray-50 transition-colors"
-                                    >
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white font-black text-sm shadow-xl shadow-primary-100">
-                                                    {item.nama?.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div className="space-y-0.5">
-                                                    <div className="font-black text-gray-900 text-lg leading-tight">{item.nama}</div>
-                                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tahfidz Quraniyah</div>
-                                                </div>
-                                            </div>
+                    <ResponsiveTable
+                        columns={[
+                            { 
+                                header: 'Informasi Halaqoh', 
+                                render: (row) => (
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-primary-100 group-hover:scale-110 transition-transform">
+                                            {row.nama?.substring(0, 2).toUpperCase()}
                                         </div>
-
-                                        <div className="flex flex-wrap gap-2 pt-1">
-                                            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-100 w-full">
-                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter shrink-0">Musyrif:</span>
-                                                {item.musyrifs && item.musyrifs.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {item.musyrifs.map(m => (
-                                                            <span key={m.user_id} className="text-[10px] font-black text-primary-700 bg-primary-50 border border-primary-100 px-1.5 py-0.5 rounded-lg">
-                                                                {m.nama}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[10px] font-black text-gray-700">{item.guru?.nama || 'Belum ditentukan'}</span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                                            <button 
-                                                onClick={(e) => openDetail(item, e)}
-                                                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-gray-200"
-                                            >
-                                                <Users size={14} /> Anggota
-                                            </button>
-                                            {canEdit && (
-                                                <>
-                                                    <button 
-                                                        onClick={(e) => openEdit(item, e)}
-                                                        className="p-3 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 shadow-sm"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={(e) => openDelete(item, e)}
-                                                        className="p-3 rounded-xl bg-red-50 text-red-600 border border-red-100 shadow-sm"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </>
-                                            )}
+                                        <div>
+                                            <div className="font-black text-gray-900 leading-tight">{row.nama}</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">Tahfidz Quraniyah</div>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="p-12"><EmptyState icon={Circle} title="Tidak ditemukan" /></div>
-                            )}
-                        </div>
-                    </div>
+                                ),
+                                className: 'px-8 py-5',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Guru Pengajar / Musyrif', 
+                                render: (row) => (
+                                    row.musyrifs && row.musyrifs.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1.5 items-center">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-1"></div>
+                                            {row.musyrifs.map(m => (
+                                                <span key={m.user_id} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black text-primary-700 bg-primary-50 border border-primary-100 uppercase tracking-tight">
+                                                    {m.nama}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : row.guru?.nama ? (
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            <span className="text-xs font-black text-gray-700 uppercase tracking-tight">{row.guru.nama}</span>
+                                        </div>
+                                    ) : (
+                                        <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest border border-amber-100">
+                                            Belum ditentukan
+                                        </span>
+                                    )
+                                ),
+                                className: 'px-8 py-5',
+                                hideOnMobile: true
+                            },
+                            { 
+                                header: 'Aksi', 
+                                className: 'px-8 py-5 text-right',
+                                render: (row) => (
+                                    <div className="flex items-center justify-end gap-2 transition-all">
+                                        <button
+                                            type="button"
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm bg-white border border-gray-100"
+                                            onClick={(e) => { e.stopPropagation(); openDetail(row, e); }}
+                                            title="Detail Anggota"
+                                        >
+                                            <Users size={18} />
+                                        </button>
+                                        {canEdit && (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all shadow-sm bg-white border border-gray-100"
+                                                    onClick={(e) => { e.stopPropagation(); openEdit(row, e); }}
+                                                    title="Edit"
+                                                >
+                                                    <Edit2 size={18} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm bg-white border border-gray-100"
+                                                    onClick={(e) => { e.stopPropagation(); openDelete(row, e); }}
+                                                    title="Hapus"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                ) 
+                            }
+                        ]}
+                        data={filteredData}
+                        loading={false}
+                        emptyState={
+                            <EmptyState icon={Circle} title="Tidak ada halaqoh" />
+                        }
+                        mobileCardHeader={(row) => (
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-primary-600 flex items-center justify-center text-white font-black text-sm shadow-xl shadow-primary-100 shrink-0">
+                                    {row.nama?.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="space-y-0.5">
+                                    <div className="font-black text-gray-900 text-base leading-tight">{row.nama}</div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Tahfidz Quraniyah</div>
+                                </div>
+                            </div>
+                        )}
+                        mobileCardActions={(row) => {
+                            const actions = [
+                                { icon: <Users size={16} />, label: 'Anggota', onClick: () => openDetail(row) }
+                            ];
+                            if (canEdit) {
+                                actions.push({ icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(row) });
+                                actions.push({ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => openDelete(row), danger: true });
+                            }
+                            return <MobileActionMenu actions={actions} />;
+                        }}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-wrap gap-2 pt-1 w-full mt-1">
+                                <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-100 w-full">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter shrink-0">Musyrif:</span>
+                                    {row.musyrifs && row.musyrifs.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1">
+                                            {row.musyrifs.map(m => (
+                                                <span key={m.user_id} className="text-[10px] font-black text-primary-700 bg-primary-50 border border-primary-100 px-1.5 py-0.5 rounded-lg">
+                                                    {m.nama}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span className="text-[10px] font-black text-gray-700">{row.guru?.nama || 'Belum ditentukan'}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    />
                 </Card>
             )}
 
@@ -691,43 +659,50 @@ const HalaqohPage = () => {
                             {/* Members List Table */}
                             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex-1 flex flex-col shadow-sm">
                                 <div className="overflow-y-auto flex-1">
-                                    <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0">
-                                            <tr>
-                                                <th className="px-5 py-3 w-12 text-center">No</th>
-                                                <th className="px-5 py-3">NIS</th>
-                                                <th className="px-5 py-3">Nama Santri</th>
-                                                <th className="px-5 py-3">Kelas</th>
-                                                <th className="px-5 py-3 text-center w-16">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {loadingMembers ? (
-                                                <tr><td colSpan="5" className="text-center py-12 text-gray-500">Memuat data anggota...</td></tr>
-                                            ) : members.length === 0 ? (
-                                                <tr><td colSpan="5" className="text-center py-12 text-gray-500">Belum ada anggota di halaqoh ini.</td></tr>
-                                            ) : (
-                                                members.map((m, idx) => (
-                                                    <tr key={m.id} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="px-5 py-3 text-center text-gray-500">{idx + 1}</td>
-                                                        <td className="px-5 py-3 font-mono text-gray-600">{m.nis}</td>
-                                                        <td className="px-5 py-3 font-medium text-gray-900">{m.nama}</td>
-                                                        <td className="px-5 py-3 text-gray-600">{m.kelas?.nama || '-'}</td>
-                                                        <td className="px-5 py-3 text-center">
-                                                            <button
-                                                                type="button"
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                                title="Keluarkan dari halaqoh"
-                                                                onClick={() => confirmRemoveMember(m.id)}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'NIS', accessor: 'nis', className: 'px-5 py-3 font-mono text-gray-600', hideOnMobile: true },
+                                        { header: 'Nama Santri', accessor: 'nama', className: 'px-5 py-3 font-medium text-gray-900', hideOnMobile: true },
+                                        { header: 'Kelas', render: (row) => row.kelas?.nama || '-', className: 'px-5 py-3 text-gray-600', hideOnMobile: true },
+                                        { 
+                                            header: 'Aksi', 
+                                            className: 'px-5 py-3 text-center w-16',
+                                            render: (row) => (
+                                                <button
+                                                    type="button"
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Keluarkan dari halaqoh"
+                                                    onClick={(e) => { e.stopPropagation(); confirmRemoveMember(row.id); }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            ) 
+                                        }
+                                    ]}
+                                    data={members}
+                                    loading={loadingMembers}
+                                    loadingComponent={<div className="text-center py-12 text-gray-500">Memuat data anggota...</div>}
+                                    emptyState={<div className="text-center py-12 text-gray-500">Belum ada anggota di halaqoh ini.</div>}
+                                    mobileCardHeader={(row) => (
+                                        <div className="font-medium text-gray-900">{row.nama}</div>
+                                    )}
+                                    mobileCardActions={(row) => (
+                                        <button
+                                            type="button"
+                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Keluarkan dari halaqoh"
+                                            onClick={(e) => { e.stopPropagation(); confirmRemoveMember(row.id); }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="flex flex-col gap-1 text-sm text-gray-600 mt-1">
+                                            <div><span className="font-medium">NIS:</span> {row.nis}</div>
+                                            <div><span className="font-medium">Kelas:</span> {row.kelas?.nama || '-'}</div>
+                                        </div>
+                                    )}
+                                />
                                 </div>
                             </div>
                         </div>

@@ -7,6 +7,7 @@ import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import DateRangePicker from '../../../../../components/ui/DateRangePicker'
 import { useCalendar } from '../../../../../context/CalendarContext'
+import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanRekapMingguanPage = () => {
@@ -384,75 +385,77 @@ const LaporanRekapMingguanPage = () => {
                         <p>Tidak ada data untuk periode yang dipilih</p>
                     </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th style={{ textAlign: 'center' }}>Setoran Baru</th>
-                                    <th style={{ textAlign: 'center' }}>Muroja'ah</th>
-                                    <th style={{ textAlign: 'center' }}>Ziyadah Ulang</th>
-                                    <th style={{ textAlign: 'center' }}>Total Ayat</th>
-                                    <th style={{ textAlign: 'center' }}>Kehadiran</th>
-                                    <th style={{ textAlign: 'center' }}>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportData.map((row, index) => (
-                                    <tr key={row.id}>
-                                        <td>{index + 1}</td>
-                                        <td>{row.nis}</td>
-                                        <td>{row.nama}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {row.setoran_count}x ({row.setoran_ayat} ayat)
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {row.murajaah_count}x ({row.murajaah_ayat} ayat)
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {row.ziyadah_count}x ({row.ziyadah_ayat} ayat)
-                                        </td>
-                                        <td style={{ textAlign: 'center', fontWeight: '600' }}>
-                                            {row.total_ayat}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            {row.kehadiran}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <span className={`badge ${getStatusBadgeClass(row.status)}`}>
-                                                {row.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot style={{ backgroundColor: '#f8f9fa', fontWeight: '600' }}>
-                                <tr>
-                                    <td colSpan={3} style={{ textAlign: 'right', paddingRight: '12px' }}>
-                                        <strong>TOTAL ({reportData.length} santri)</strong>
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        {reportData.reduce((sum, r) => sum + r.setoran_count, 0)}x
-                                        ({reportData.reduce((sum, r) => sum + r.setoran_ayat, 0)} ayat)
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        {reportData.reduce((sum, r) => sum + r.murajaah_count, 0)}x
-                                        ({reportData.reduce((sum, r) => sum + r.murajaah_ayat, 0)} ayat)
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        {reportData.reduce((sum, r) => sum + r.ziyadah_count, 0)}x
-                                        ({reportData.reduce((sum, r) => sum + r.ziyadah_ayat, 0)} ayat)
-                                    </td>
-                                    <td style={{ textAlign: 'center', color: '#059669' }}>
-                                        {reportData.reduce((sum, r) => sum + r.total_ayat, 0)}
-                                    </td>
-                                    <td colSpan={2}></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'NIS', accessor: 'nis', hideOnMobile: true },
+                            { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
+                            { header: 'Setoran Baru', render: (row) => `${row.setoran_count}x (${row.setoran_ayat} ayat)`, className: 'text-center' },
+                            { header: "Muroja'ah", render: (row) => `${row.murajaah_count}x (${row.murajaah_ayat} ayat)`, className: 'text-center' },
+                            { header: 'Ziyadah Ulang', render: (row) => `${row.ziyadah_count}x (${row.ziyadah_ayat} ayat)`, className: 'text-center' },
+                            { header: 'Total Ayat', accessor: 'total_ayat', className: 'text-center font-semibold' },
+                            { header: 'Kehadiran', accessor: 'kehadiran', className: 'text-center' },
+                            { 
+                                header: 'Status', 
+                                className: 'text-center',
+                                render: (row) => <span className={`badge ${getStatusBadgeClass(row.status)}`}>{row.status}</span>
+                            }
+                        ]}
+                        data={reportData}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                            </div>
+                        )}
+                        mobileCardActions={() => null}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-1 w-full text-xs mt-2 pt-2 border-t border-gray-100">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-gray-500 font-medium">Status</span>
+                                    <span className={`badge ${getStatusBadgeClass(row.status)} !text-[10px] !py-0.5 !px-2`}>{row.status}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Setoran Baru:</span>
+                                    <span className="font-semibold">{row.setoran_count}x ({row.setoran_ayat} ayat)</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Muroja'ah:</span>
+                                    <span className="font-semibold">{row.murajaah_count}x ({row.murajaah_ayat} ayat)</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Ziyadah Ulang:</span>
+                                    <span className="font-semibold">{row.ziyadah_count}x ({row.ziyadah_ayat} ayat)</span>
+                                </div>
+                                <div className="flex justify-between border-t border-gray-50 pt-1 mt-0.5">
+                                    <span className="text-gray-500 font-medium">Total Ayat:</span>
+                                    <span className="font-bold text-[#059669]">{row.total_ayat}</span>
+                                </div>
+                                <div className="flex justify-between border-t border-gray-50 pt-1 mt-0.5">
+                                    <span className="text-gray-500">Kehadiran:</span>
+                                    <span className="font-semibold">{row.kehadiran}</span>
+                                </div>
+                            </div>
+                        )}
+                        footer={
+                            <tr>
+                                <td colSpan={3} className="text-right pr-4 font-bold">TOTAL ({reportData.length} santri)</td>
+                                <td className="text-center font-medium">
+                                    {reportData.reduce((sum, r) => sum + r.setoran_count, 0)}x ({reportData.reduce((sum, r) => sum + r.setoran_ayat, 0)} ayat)
+                                </td>
+                                <td className="text-center font-medium">
+                                    {reportData.reduce((sum, r) => sum + r.murajaah_count, 0)}x ({reportData.reduce((sum, r) => sum + r.murajaah_ayat, 0)} ayat)
+                                </td>
+                                <td className="text-center font-medium">
+                                    {reportData.reduce((sum, r) => sum + r.ziyadah_count, 0)}x ({reportData.reduce((sum, r) => sum + r.ziyadah_ayat, 0)} ayat)
+                                </td>
+                                <td className="text-center font-bold text-[#059669]">
+                                    {reportData.reduce((sum, r) => sum + r.total_ayat, 0)}
+                                </td>
+                                <td colSpan={2}></td>
+                            </tr>
+                        }
+                    />
                 )}
             </div>
         </div>

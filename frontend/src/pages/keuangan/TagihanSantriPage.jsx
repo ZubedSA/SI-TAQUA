@@ -8,6 +8,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { sendWhatsApp, createMessage } from '../../utils/whatsapp'
 import { logCreate, logUpdate, logDelete } from '../../lib/auditLog'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
@@ -486,135 +487,80 @@ const TagihanSantriPage = () => {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop Table View */}
-                            <div className="overflow-x-auto custom-scrollbar desktop-table-only">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
-                                        <tr>
-                                            <th className="px-6 py-4 font-medium text-center w-12">No</th>
-                                            <th className="px-6 py-4 font-medium">Santri</th>
-                                            <th className="px-6 py-4 font-medium">Kategori</th>
-                                            <th className="px-6 py-4 font-medium">Jumlah</th>
-                                            <th className="px-6 py-4 font-medium">Periode</th>
-                                            <th className="px-6 py-4 font-medium">Status</th>
-                                            <th className="px-6 py-4 font-medium text-right">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredData.map((item, i) => (
-                                            <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' ? 'bg-red-50/30' : ''}`}>
-                                                <td className="px-6 py-4 text-center text-gray-500">{i + 1}</td>
-                                                <td className="px-6 py-4">
-                                                    <div>
-                                                        <div className="font-medium text-gray-900">{item.santri?.nama}</div>
-                                                        <div className="text-xs text-gray-500">{item.santri?.nis} • {item.santri?.kelas?.nama || '-'}</div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <Badge variant="neutral">{item.kategori?.nama || '-'}</Badge>
-                                                </td>
-                                                <td className="px-6 py-4 font-mono font-medium text-gray-700">
-                                                    Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-gray-700">{formatDate(item.jatuh_tempo, { month: 'long', year: 'numeric' })}</span>
-                                                        {isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' && (
-                                                            <span className="text-[10px] text-red-600 font-bold">Terlambat</span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <Badge variant={getStatusClass(item.status)}>{item.status}</Badge>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <MobileActionMenu
-                                                        actions={[
-                                                            { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => handleSendWhatsApp(item) },
-                                                            ...(canUpdate('tagihan') ? [{ icon: <Edit2 size={16} />, label: 'Edit', onClick: () => openEdit(item) }] : []),
-                                                            ...(canDelete('tagihan') ? [{ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => confirmDelete(item), danger: true }] : [])
-                                                        ]}
-                                                    >
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => handleSendWhatsApp(item)} title="Kirim WhatsApp">
-                                                            <MessageCircle size={16} />
-                                                        </Button>
-                                                        {canUpdate('tagihan') && (
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => openEdit(item)} title="Edit">
-                                                                <Edit2 size={16} />
-                                                            </Button>
-                                                        )}
-                                                        {canDelete('tagihan') && (
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => confirmDelete(item)} title="Hapus">
-                                                                <Trash2 size={16} />
-                                                            </Button>
-                                                        )}
-                                                    </MobileActionMenu>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Mobile Card View */}
-                            <div className="mobile-card-only hidden mobile-card-list p-4">
-                                {filteredData.map((item, i) => (
-                                    <div key={item.id} className={`mobile-data-card ${isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' ? 'border-red-200 bg-red-50/10' : ''}`}>
-                                        <div className="mobile-card-row">
-                                            <div>
-                                                <h4 className="mobile-card-title text-gray-900 font-bold">{item.santri?.nama}</h4>
-                                                <div className="text-[10px] text-gray-500 mt-0.5">{item.santri?.nis} • {item.santri?.kelas?.nama || '-'}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="mobile-card-amount text-gray-900">
-                                                    Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                                </div>
-                                                <div className="mt-1">
-                                                    <Badge variant={getStatusClass(item.status)}>{item.status}</Badge>
-                                                </div>
-                                            </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-12 text-center' },
+                                { 
+                                    header: 'Santri', 
+                                    hideOnMobile: true,
+                                    render: (row) => (
+                                        <div>
+                                            <div className="font-medium text-gray-900">{row.santri?.nama}</div>
+                                            <div className="text-xs text-gray-500">{row.santri?.nis} • {row.santri?.kelas?.nama || '-'}</div>
                                         </div>
-
-                                        <div className="mobile-card-row items-center mt-2 pt-2 border-t border-gray-100">
-                                            <div className="mobile-card-meta">
-                                                <Badge variant="neutral">{item.kategori?.nama || '-'}</Badge>
-                                                <span>{formatDate(item.jatuh_tempo, { month: 'short', year: 'numeric' })}</span>
-                                                {isOverdue(item.jatuh_tempo) && item.status !== 'Lunas' && (
-                                                    <span className="text-[10px] text-red-600 font-bold">Terlambat</span>
-                                                )}
-                                            </div>
-                                            
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleSendWhatsApp(item)}
-                                                    className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                                                    title="Kirim WhatsApp"
-                                                >
-                                                    <MessageCircle size={14} />
-                                                </button>
-                                                {canUpdate('tagihan') && (
-                                                    <button
-                                                        onClick={() => openEdit(item)}
-                                                        className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                                                        title="Edit"
-                                                    >
-                                                        <Edit2 size={14} />
-                                                    </button>
-                                                )}
-                                                {canDelete('tagihan') && (
-                                                    <button
-                                                        onClick={() => confirmDelete(item)}
-                                                        className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                                                        title="Hapus"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
+                                    )
+                                },
+                                { 
+                                    header: 'Kategori', 
+                                    render: (row) => <Badge variant="neutral">{row.kategori?.nama || '-'}</Badge>
+                                },
+                                { 
+                                    header: 'Jumlah', 
+                                    render: (row) => <span className="font-mono font-medium text-gray-700">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span>
+                                },
+                                { 
+                                    header: 'Periode', 
+                                    render: (row) => (
+                                        <div className="flex flex-col">
+                                            <span className="text-gray-700">{formatDate(row.jatuh_tempo, { month: 'long', year: 'numeric' })}</span>
+                                            {isOverdue(row.jatuh_tempo) && row.status !== 'Lunas' && (
+                                                <span className="text-[10px] text-red-600 font-bold">Terlambat</span>
+                                            )}
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    )
+                                },
+                                { 
+                                    header: 'Status', 
+                                    render: (row) => <Badge variant={getStatusClass(row.status)}>{row.status}</Badge>
+                                },
+                                {
+                                    header: 'Aksi',
+                                    hideOnMobile: true,
+                                    className: 'text-right',
+                                    render: (row) => (
+                                        <div className="flex justify-end gap-1">
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => handleSendWhatsApp(row)} title="Kirim WhatsApp">
+                                                <MessageCircle size={16} />
+                                            </Button>
+                                            {canUpdate('tagihan') && (
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => openEdit(row)} title="Edit">
+                                                    <Edit2 size={16} />
+                                                </Button>
+                                            )}
+                                            {canDelete('tagihan') && (
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => confirmDelete(row)} title="Hapus">
+                                                    <Trash2 size={16} />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )
+                                }
+                            ]}
+                            data={filteredData}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.santri?.nama}</span>
+                                    <span className="text-xs text-gray-500 font-normal">{row.santri?.nis} • {row.santri?.kelas?.nama || '-'}</span>
+                                </div>
+                            )}
+                            mobileCardActions={(row) => (
+                                <>
+                                    <button onClick={() => handleSendWhatsApp(row)} className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"><MessageCircle size={16} /></button>
+                                    {canUpdate('tagihan') && <button onClick={() => openEdit(row)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>}
+                                    {canDelete('tagihan') && <button onClick={() => confirmDelete(row)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={16} /></button>}
+                                </>
+                            )}
+                        />
                         </>
                     )}
                 </div>

@@ -5,6 +5,7 @@ import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import { useCalendar } from '../../../../../context/CalendarContext'
 import DateDisplay from '../../../../../components/common/DateDisplay'
+import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanAkademikSantriPage = () => {
@@ -351,36 +352,19 @@ const LaporanAkademikSantriPage = () => {
                                 <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <BookMarked size={20} /> Progress Hafalan
                                 </h3>
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Juz</th>
-                                            <th>Status</th>
-                                            <th>Tanggal Terakhir</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {hafalanData.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                    Belum ada data hafalan
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            hafalanData.map((h, i) => (
-                                                <tr key={i}>
-                                                    <td>Juz {h.juz}</td>
-                                                    <td>
-                                                        <span className={`badge ${h.status === 'Lancar' ? 'badge-success' : h.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>
-                                                            {h.status}
-                                                        </span>
-                                                    </td>
-                                                    <td><DateDisplay date={h.tanggal} /></td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'Juz', render: (row) => `Juz ${row.juz}` },
+                                        { 
+                                            header: 'Status', 
+                                            render: (row) => <span className={`badge ${row.status === 'Lancar' ? 'badge-success' : row.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{row.status}</span>
+                                        },
+                                        { header: 'Tanggal Terakhir', render: (row) => <DateDisplay date={row.tanggal} /> }
+                                    ]}
+                                    data={hafalanData}
+                                    emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data hafalan</div>}
+                                    mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">Juz {row.juz}</span>}
+                                />
                             </div>
 
                             {/* Nilai Tahfizh Section */}
@@ -388,28 +372,16 @@ const LaporanAkademikSantriPage = () => {
                                 <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <FileText size={20} /> Nilai Tahfizhiyah (Semester)
                                 </h3>
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Komponen</th>
-                                            <th style={{ textAlign: 'center' }}>Nilai</th>
-                                            <th style={{ textAlign: 'center' }}>Predikat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {(!nilaiTahfizh || nilaiTahfizh.length === 0) ? (
-                                            <tr><td colSpan="3" className="text-center text-gray-500">Belum ada data nilai tahfizh</td></tr>
-                                        ) : (
-                                            nilaiTahfizh.map((row, idx) => (
-                                                <tr key={idx}>
-                                                    <td>{row.mapel?.nama || row.komponen}</td>
-                                                    <td style={{ textAlign: 'center' }}>{row.nilai_akhir ?? row.nilai ?? '-'}</td>
-                                                    <td style={{ textAlign: 'center' }}>{row.predikat}</td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'Komponen', render: (row) => row.mapel?.nama || row.komponen, className: 'font-medium' },
+                                        { header: 'Nilai', render: (row) => row.nilai_akhir ?? row.nilai ?? '-', className: 'text-center font-semibold' },
+                                        { header: 'Predikat', accessor: 'predikat', className: 'text-center' }
+                                    ]}
+                                    data={nilaiTahfizh || []}
+                                    emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data nilai tahfizh</div>}
+                                    mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">{row.mapel?.nama || row.komponen}</span>}
+                                />
                             </div>
 
                             {/* Nilai Madros Section */}
@@ -417,32 +389,16 @@ const LaporanAkademikSantriPage = () => {
                                 <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <FileText size={20} /> Nilai Madrosiyah
                                 </h3>
-                                <table className="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Mapel</th>
-                                            <th style={{ textAlign: 'center' }}>Nilai Akhir</th>
-                                            <th style={{ textAlign: 'center' }}>Predikat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {nilaiMadros.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                    Belum ada data nilai
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            nilaiMadros.map((m, i) => (
-                                                <tr key={i}>
-                                                    <td>{m.mapel?.nama || m.nama}</td>
-                                                    <td style={{ textAlign: 'center', fontWeight: '600' }}>{m.nilai_akhir ?? m.rata_rata}</td>
-                                                    <td style={{ textAlign: 'center' }}>{m.predikat}</td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                <ResponsiveTable
+                                    columns={[
+                                        { header: 'Mapel', render: (row) => row.mapel?.nama || row.nama, className: 'font-medium' },
+                                        { header: 'Nilai Akhir', render: (row) => row.nilai_akhir ?? row.rata_rata ?? '-', className: 'text-center font-semibold' },
+                                        { header: 'Predikat', accessor: 'predikat', className: 'text-center' }
+                                    ]}
+                                    data={nilaiMadros}
+                                    emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data nilai madrosiyah</div>}
+                                    mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">{row.mapel?.nama || row.nama}</span>}
+                                />
                             </div>
 
                             {/* Kehadiran Section */}

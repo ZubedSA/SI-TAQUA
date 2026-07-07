@@ -5,6 +5,7 @@ import { generateLaporanPDF } from '../../utils/pdfGenerator'
 import { useToast } from '../../context/ToastContext'
 import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './Keuangan.css'
 
 const LaporanPenyaluranPage = () => {
@@ -153,101 +154,82 @@ const LaporanPenyaluranPage = () => {
                     <div className="empty-state">Belum ada data anggaran</div>
                 ) : (
                     <>
-                        {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Program</th>
-                                        <th>Diajukan</th>
-                                        <th>Disetujui</th>
-                                        <th>Terealisasi</th>
-                                        <th>Sisa</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {anggaran.map((item, i) => {
-                                        const realisasiProgram = realisasi
-                                            .filter(r => r.anggaran_id === item.id)
-                                            .reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0)
-                                        const sisa = (Number(item.jumlah_disetujui) || 0) - realisasiProgram
-
-                                        return (
-                                            <tr key={item.id}>
-                                                <td>{i + 1}</td>
-                                                <td>
-                                                    <div className="cell-santri">
-                                                        <strong>{item.nama_program}</strong>
-                                                        <small>{item.deskripsi?.substring(0, 40) || '-'}</small>
-                                                    </div>
-                                                </td>
-                                                <td className="amount">Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}</td>
-                                                <td className="amount blue">
-                                                    {item.jumlah_disetujui ? `Rp ${Number(item.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
-                                                </td>
-                                                <td className="amount green">Rp {realisasiProgram.toLocaleString('id-ID')}</td>
-                                                <td className={`amount ${sisa >= 0 ? '' : 'red'}`}>Rp {sisa.toLocaleString('id-ID')}</td>
-                                                <td>
-                                                    <span className={`status-badge ${item.status === 'Disetujui' ? 'disetujui' : item.status === 'Ditolak' ? 'ditolak' : 'pending'}`}>
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {anggaran.map((item, i) => {
-                                const realisasiProgram = realisasi
-                                    .filter(r => r.anggaran_id === item.id)
-                                    .reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0)
-                                const sisa = (Number(item.jumlah_disetujui) || 0) - realisasiProgram
-
-                                return (
-                                    <div key={item.id} className="mobile-data-card">
-                                        <div className="mobile-card-row">
-                                            <div>
-                                                <h4 className="mobile-card-title text-gray-900 font-bold">{item.nama_program}</h4>
-                                                <div className="text-[10px] text-gray-500 mt-1">
-                                                    Diajukan: Rp {Number(item.jumlah_diajukan).toLocaleString('id-ID')}
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className={`status-badge ${item.status === 'Disetujui' ? 'disetujui' : item.status === 'Ditolak' ? 'ditolak' : 'pending'}`}>
-                                                    {item.status}
-                                                </span>
-                                            </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { 
+                                    header: 'Program', 
+                                    hideOnMobile: true,
+                                    render: (row) => (
+                                        <div className="flex flex-col">
+                                            <strong className="text-gray-900">{row.nama_program}</strong>
+                                            <span className="text-xs text-gray-500">{row.deskripsi?.substring(0, 40) || '-'}</span>
                                         </div>
-
-                                        <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1">
-                                            <div className="flex flex-col gap-1 w-full text-xs">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-500">Disetujui:</span>
-                                                    <span className="font-semibold text-blue-600">
-                                                        {item.jumlah_disetujui ? `Rp ${Number(item.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-500">Realisasi:</span>
-                                                    <span className="font-semibold text-emerald-600">Rp {realisasiProgram.toLocaleString('id-ID')}</span>
-                                                </div>
-                                                <div className="flex justify-between border-t border-gray-50 pt-1 mt-0.5">
-                                                    <span className="text-gray-500 font-medium">Sisa:</span>
-                                                    <span className={`font-bold ${sisa >= 0 ? 'text-gray-900' : 'text-red-600'}`}>Rp {sisa.toLocaleString('id-ID')}</span>
-                                                </div>
-                                            </div>
+                                    )
+                                },
+                                { 
+                                    header: 'Diajukan', 
+                                    render: (row) => <span className="font-mono text-gray-600">Rp {Number(row.jumlah_diajukan).toLocaleString('id-ID')}</span>
+                                },
+                                { 
+                                    header: 'Disetujui', 
+                                    render: (row) => <span className="font-mono font-medium text-blue-600">{row.jumlah_disetujui ? `Rp ${Number(row.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}</span>
+                                },
+                                { 
+                                    header: 'Terealisasi', 
+                                    render: (row) => {
+                                        const realisasiProgram = realisasi.filter(r => r.anggaran_id === row.id).reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0);
+                                        return <span className="font-mono font-medium text-emerald-600">Rp {realisasiProgram.toLocaleString('id-ID')}</span>;
+                                    }
+                                },
+                                { 
+                                    header: 'Sisa', 
+                                    render: (row) => {
+                                        const realisasiProgram = realisasi.filter(r => r.anggaran_id === row.id).reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0);
+                                        const sisa = (Number(row.jumlah_disetujui) || 0) - realisasiProgram;
+                                        return <span className={`font-mono font-bold ${sisa >= 0 ? 'text-gray-900' : 'text-red-600'}`}>Rp {sisa.toLocaleString('id-ID')}</span>;
+                                    }
+                                },
+                                { 
+                                    header: 'Status', 
+                                    render: (row) => <span className={`status-badge ${row.status === 'Disetujui' ? 'disetujui' : row.status === 'Ditolak' ? 'ditolak' : 'pending'}`}>{row.status}</span>
+                                }
+                            ]}
+                            data={anggaran}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.nama_program}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">Diajukan: Rp {Number(row.jumlah_diajukan).toLocaleString('id-ID')}</span>
+                                </div>
+                            )}
+                            mobileCardActions={(row) => null}
+                            mobileCardContent={(row) => {
+                                const realisasiProgram = realisasi.filter(r => r.anggaran_id === row.id).reduce((sum, r) => sum + Number(r.jumlah_terpakai), 0);
+                                const sisa = (Number(row.jumlah_disetujui) || 0) - realisasiProgram;
+                                return (
+                                    <div className="flex flex-col gap-1 w-full text-xs mt-2 pt-2 border-t border-gray-100">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-gray-500 font-medium">Status</span>
+                                            <span className={`status-badge ${row.status === 'Disetujui' ? 'disetujui' : row.status === 'Ditolak' ? 'ditolak' : 'pending'} !text-[10px] !py-0.5 !px-2`}>{row.status}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Disetujui:</span>
+                                            <span className="font-semibold text-blue-600">
+                                                {row.jumlah_disetujui ? `Rp ${Number(row.jumlah_disetujui).toLocaleString('id-ID')}` : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Realisasi:</span>
+                                            <span className="font-semibold text-emerald-600">Rp {realisasiProgram.toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between border-t border-gray-50 pt-1 mt-0.5">
+                                            <span className="text-gray-500 font-medium">Sisa:</span>
+                                            <span className={`font-bold ${sisa >= 0 ? 'text-gray-900' : 'text-red-600'}`}>Rp {sisa.toLocaleString('id-ID')}</span>
                                         </div>
                                     </div>
-                                )
-                            })}
-                        </div>
-                    </>
+                                );
+                            }}
+                        /></>
                 )}
             </div>
         </div>

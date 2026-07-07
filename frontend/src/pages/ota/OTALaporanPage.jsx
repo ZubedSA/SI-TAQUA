@@ -10,6 +10,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTA.css'
 
 /**
@@ -477,37 +478,64 @@ const OTALaporanPage = () => {
                 {activeTab === 'pemasukan' && (
                     <div className="ota-table-container">
                         {filteredPemasukan.length > 0 ? (
-                            <table className="ota-table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Nama OTA</th>
-                                        <th className="text-right">Nominal</th>
-                                        <th>Keterangan</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredPemasukan.map((item, idx) => (
-                                        <tr key={item.id}>
-                                            <td>{idx + 1}</td>
-                                            <td>{formatDate(item.tanggal)}</td>
-                                            <td style={{ fontWeight: 500 }}>{item.ota?.nama || '-'}</td>
-                                            <td className="text-right" style={{ color: '#16a34a', fontWeight: 600 }}>
-                                                {formatRupiah(item.jumlah)}
-                                            </td>
-                                            <td style={{ color: '#64748b' }}>{item.keterangan || '-'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr style={{ background: '#f0fdf4', fontWeight: 600 }}>
-                                        <td colSpan={3}>Total</td>
-                                        <td className="text-right" style={{ color: '#16a34a' }}>{formatRupiah(totalPemasukan)}</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                            <div className="w-full">
+                                <ResponsiveTable
+                                    columns={[
+                                        {
+                                            header: 'No',
+                                            render: (row, index) => index + 1,
+                                            className: 'w-16',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Tanggal',
+                                            render: (row) => formatDate(row.tanggal),
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Nama OTA',
+                                            render: (row) => <div style={{ fontWeight: 500 }}>{row.ota?.nama || '-'}</div>
+                                        },
+                                        {
+                                            header: 'Nominal',
+                                            render: (row) => formatRupiah(row.jumlah),
+                                            className: 'text-right text-emerald-600 font-semibold'
+                                        },
+                                        {
+                                            header: 'Keterangan',
+                                            render: (row) => row.keterangan || '-',
+                                            className: 'text-gray-500 max-w-[200px] truncate',
+                                            hideOnMobile: true
+                                        }
+                                    ]}
+                                    data={filteredPemasukan}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <div className="space-y-1">
+                                                <div className="font-bold text-gray-900">{row.ota?.nama || '-'}</div>
+                                                <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                                    <Calendar size={12} /> {formatDate(row.tanggal)}
+                                                </div>
+                                            </div>
+                                            <div className="font-bold text-emerald-600 text-sm">
+                                                {formatRupiah(row.jumlah)}
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="w-full mt-3">
+                                            <div className="text-sm text-gray-600">
+                                                <span className="font-medium">Keterangan:</span><br/>
+                                                {row.keterangan || '-'}
+                                            </div>
+                                        </div>
+                                    )}
+                                />
+                                <div className="p-4 bg-green-50 rounded-xl mt-4 flex justify-between items-center border border-green-100">
+                                    <div className="font-bold text-green-800">Total</div>
+                                    <div className="font-bold text-emerald-600 text-lg">{formatRupiah(totalPemasukan)}</div>
+                                </div>
+                            </div>
                         ) : (
                             <div className="ota-empty">
                                 <EmptyState icon={TrendingUp} message="Tidak ada data pemasukan pada periode ini" />
@@ -519,37 +547,64 @@ const OTALaporanPage = () => {
                 {activeTab === 'pengeluaran' && (
                     <div className="ota-table-container">
                         {filteredPengeluaran.length > 0 ? (
-                            <table className="ota-table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Keperluan</th>
-                                        <th className="text-right">Nominal</th>
-                                        <th>Keterangan</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredPengeluaran.map((item, idx) => (
-                                        <tr key={item.id}>
-                                            <td>{idx + 1}</td>
-                                            <td>{formatDate(item.tanggal)}</td>
-                                            <td style={{ fontWeight: 500 }}>{item.keperluan || '-'}</td>
-                                            <td className="text-right" style={{ color: '#ea580c', fontWeight: 600 }}>
-                                                {formatRupiah(item.jumlah)}
-                                            </td>
-                                            <td style={{ color: '#64748b' }}>{item.keterangan || '-'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr style={{ background: '#fff7ed', fontWeight: 600 }}>
-                                        <td colSpan={3}>Total</td>
-                                        <td className="text-right" style={{ color: '#ea580c' }}>{formatRupiah(totalPengeluaran)}</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                            <div className="w-full">
+                                <ResponsiveTable
+                                    columns={[
+                                        {
+                                            header: 'No',
+                                            render: (row, index) => index + 1,
+                                            className: 'w-16',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Tanggal',
+                                            render: (row) => formatDate(row.tanggal),
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Keperluan',
+                                            render: (row) => <div style={{ fontWeight: 500 }}>{row.keperluan || '-'}</div>
+                                        },
+                                        {
+                                            header: 'Nominal',
+                                            render: (row) => formatRupiah(row.jumlah),
+                                            className: 'text-right text-orange-600 font-semibold'
+                                        },
+                                        {
+                                            header: 'Keterangan',
+                                            render: (row) => row.keterangan || '-',
+                                            className: 'text-gray-500 max-w-[200px] truncate',
+                                            hideOnMobile: true
+                                        }
+                                    ]}
+                                    data={filteredPengeluaran}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <div className="space-y-1">
+                                                <div className="font-bold text-gray-900">{row.keperluan || '-'}</div>
+                                                <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                                    <Calendar size={12} /> {formatDate(row.tanggal)}
+                                                </div>
+                                            </div>
+                                            <div className="font-bold text-orange-600 text-sm">
+                                                {formatRupiah(row.jumlah)}
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="w-full mt-3">
+                                            <div className="text-sm text-gray-600">
+                                                <span className="font-medium">Keterangan:</span><br/>
+                                                {row.keterangan || '-'}
+                                            </div>
+                                        </div>
+                                    )}
+                                />
+                                <div className="p-4 bg-orange-50 rounded-xl mt-4 flex justify-between items-center border border-orange-100">
+                                    <div className="font-bold text-orange-800">Total</div>
+                                    <div className="font-bold text-orange-600 text-lg">{formatRupiah(totalPengeluaran)}</div>
+                                </div>
+                            </div>
                         ) : (
                             <div className="ota-empty">
                                 <EmptyState icon={TrendingDown} message="Tidak ada data pengeluaran pada periode ini" />

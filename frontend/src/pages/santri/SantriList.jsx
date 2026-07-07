@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { logDelete } from '../../lib/auditLog'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import EmptyState from '../../components/ui/EmptyState'
 import Spinner from '../../components/ui/Spinner'
 import * as XLSX from 'xlsx'
@@ -13,7 +14,6 @@ import DownloadButton from '../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../utils/exportUtils'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import { generateLaporanPDF } from '../../utils/pdfGenerator'
-// useSantri removed
 import { useSantriList } from '../../hooks/features/useSantriList'
 import PageHeader from '../../components/layout/PageHeader'
 import Badge from '../../components/ui/Badge'
@@ -75,8 +75,6 @@ const SantriList = () => {
     }, [error])
 
     const fetchSantri = () => refetch()
-
-    // Manual fetch removed in favor of useSantri hook
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0]
@@ -434,135 +432,117 @@ const SantriList = () => {
                     </div>
                 </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50/50 text-gray-400 font-black uppercase tracking-widest text-[10px] border-b border-gray-100">
-                            <tr>
-                                <th className="px-8 py-5">Identitas Santri</th>
-                                <th className="px-8 py-5">Gender</th>
-                                <th className="px-8 py-5">Angkatan</th>
-                                <th className="px-8 py-5">Kelas / Halaqoh</th>
-                                <th className="px-8 py-5 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan={5}><Spinner className="py-20" label="Menyelaraskan data..." /></td></tr>
-                            ) : filteredSantri.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="p-12">
-                                        <EmptyState
-                                            icon={Search}
-                                            title="Data tidak ditemukan"
-                                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}" di kategori ${activeStatus}` : `Belum ada data santri dengan status ${activeStatus}.`}
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredSantri.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => navigate(`/santri/${item.id}`)}
-                                        className="hover:bg-gray-50/50 transition-all cursor-pointer group border-b border-gray-50 last:border-0"
-                                    >
-                                        <td className="px-8 py-5">
-                                            <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">{item.nama}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">NIS: {item.nis}</div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${item.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
-                                                {item.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="text-xs font-bold text-gray-600">{item.angkatan || '-'}</div>
-                                            {item.raw_angkatan_id && (
-                                                <div className="text-[9px] text-gray-300 font-medium">#{String(item.raw_angkatan_id).substring(0, 6)}</div>
-                                            )}
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="flex flex-wrap gap-2">
-                                                <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-tight border border-emerald-100">
-                                                    {item.kelas || 'No Class'}
-                                                </span>
-                                                <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-tight border border-indigo-100">
-                                                    {item.halaqoh || 'No Group'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-2 transition-all">
-                                                <Link to={`/santri/${item.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Detail"><Eye size={18} /></Link>
-                                                <Link to={`/santri/${item.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="Edit"><Edit size={18} /></Link>
-                                                <button onClick={() => { setSelectedSantri(item); setShowDeleteModal(true) }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus"><Trash2 size={18} /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile Grid View */}
-                <div className="md:hidden">
-                    <div className="divide-y divide-gray-50">
-                        {loading ? (
-                            <div className="py-20 text-center"><Spinner label="Memuat..." /></div>
-                        ) : filteredSantri.length === 0 ? (
-                            <div className="p-12"><EmptyState icon={Search} title="Tidak ditemukan" /></div>
-                        ) : (
-                            filteredSantri.map((item) => (
-                                <div 
-                                    key={item.id} 
-                                    onClick={() => navigate(`/santri/${item.id}`)}
-                                    className="p-6 space-y-4 active:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
-                                            <div className="font-black text-gray-900 text-base leading-tight">{item.nama}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">NIS: {item.nis}</div>
-                                        </div>
-                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${item.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
-                                            {item.jenis_kelamin}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-50 border border-gray-100">
-                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Angkatan:</span>
-                                            <span className="text-[10px] font-black text-gray-600 italic">{item.angkatan || '-'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-100">
-                                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter">Kelas:</span>
-                                            <span className="text-[10px] font-black text-emerald-600">{item.kelas || '-'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-100">
-                                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">Grup:</span>
-                                            <span className="text-[10px] font-black text-indigo-600 truncate max-w-[100px]">{item.halaqoh || '-'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                                        <Link to={`/santri/${item.id}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-gray-200">
-                                            <Eye size={14} /> Detail
-                                        </Link>
-                                        <Link to={`/santri/${item.id}/edit`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100">
-                                            <Edit size={14} /> Edit
-                                        </Link>
-                                        <button 
-                                            onClick={() => { setSelectedSantri(item); setShowDeleteModal(true) }}
-                                            className="p-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
+                <ResponsiveTable
+                    columns={[
+                        { 
+                            header: 'Identitas Santri', 
+                            render: (row) => (
+                                <div className="flex flex-col">
+                                    <div className="font-black text-gray-900 leading-tight">{row.nama}</div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">NIS: {row.nis}</div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Gender', 
+                            render: (row) => (
+                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${row.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
+                                    {row.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
+                                </span>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Angkatan', 
+                            render: (row) => (
+                                <div className="flex flex-col">
+                                    <div className="text-xs font-bold text-gray-600">{row.angkatan || '-'}</div>
+                                    {row.raw_angkatan_id && (
+                                        <div className="text-[9px] text-gray-300 font-medium">#{String(row.raw_angkatan_id).substring(0, 6)}</div>
+                                    )}
+                                </div>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Kelas / Halaqoh', 
+                            render: (row) => (
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-tight border border-emerald-100">
+                                        {row.kelas || 'No Class'}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-tight border border-indigo-100">
+                                        {row.halaqoh || 'No Group'}
+                                    </span>
+                                </div>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Aksi', 
+                            className: 'px-8 py-5 text-right',
+                            render: (row) => (
+                                <div className="flex items-center justify-end gap-2 transition-all">
+                                    <Link to={`/santri/${row.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Detail"><Eye size={18} /></Link>
+                                    <Link to={`/santri/${row.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="Edit"><Edit size={18} /></Link>
+                                    <button onClick={(e) => { e.stopPropagation(); setSelectedSantri(row); setShowDeleteModal(true) }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus"><Trash2 size={18} /></button>
+                                </div>
+                            ) 
+                        }
+                    ]}
+                    data={filteredSantri}
+                    loading={loading}
+                    emptyState={
+                        <EmptyState
+                            icon={Search}
+                            title="Data tidak ditemukan"
+                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}" di kategori ${activeStatus}` : `Belum ada data santri dengan status ${activeStatus}.`}
+                        />
+                    }
+                    mobileCardHeader={(row) => (
+                        <div className="flex flex-col" onClick={() => navigate(`/santri/${row.id}`)}>
+                            <div className="font-black text-gray-900 text-base leading-tight">{row.nama}</div>
+                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">NIS: {row.nis}</div>
+                        </div>
+                    )}
+                    mobileCardActions={(row) => (
+                        <MobileActionMenu
+                            actions={[
+                                { icon: <Eye size={16} />, label: 'Detail', path: `/santri/${row.id}` },
+                                { icon: <Edit size={16} />, label: 'Edit', path: `/santri/${row.id}/edit` },
+                                { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedSantri(row); setShowDeleteModal(true) }, danger: true }
+                            ]}
+                        />
+                    )}
+                    mobileCardContent={(row) => (
+                        <div className="flex flex-col gap-3 w-full mt-1" onClick={() => navigate(`/santri/${row.id}`)}>
+                            <div className="flex items-center justify-between">
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${row.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
+                                    {row.jenis_kelamin}
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-50 border border-gray-100">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Angkatan:</span>
+                                    <span className="text-[10px] font-black text-gray-600 italic">{row.angkatan || '-'}</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-100">
+                                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-tighter">Kelas:</span>
+                                    <span className="text-[10px] font-black text-emerald-600">{row.kelas || '-'}</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-100">
+                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">Grup:</span>
+                                    <span className="text-[10px] font-black text-indigo-600 truncate max-w-[100px]">{row.halaqoh || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                />
 
                 <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
                     <p className="text-sm text-gray-600">Menampilkan {filteredSantri.length} dari {santri.length} santri</p>
@@ -605,43 +585,54 @@ const SantriList = () => {
 
                                     {/* Preview Table */}
                                     <div className="max-h-[280px] overflow-auto border border-gray-200 rounded-lg">
-                                        <table className="w-full text-xs text-left">
-                                            <thead className="sticky top-0 bg-gray-50 border-b border-gray-200 text-gray-600">
-                                                <tr>
-                                                    <th className="px-3 py-2 w-12">#</th>
-                                                    <th className="px-3 py-2">NIS</th>
-                                                    <th className="px-3 py-2">Nama</th>
-                                                    <th className="px-3 py-2">No HP</th>
-                                                    <th className="px-3 py-2">Angkatan</th>
-                                                    <th className="px-3 py-2">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-100">
-                                                {importData.map((row, i) => (
-                                                    <tr
-                                                        key={i}
-                                                        className={!row.isValid ? 'bg-red-50' : ''}
-                                                    >
-                                                        <td className="px-3 py-2 text-gray-500">{row.rowNum}</td>
-                                                        <td className="px-3 py-2 font-mono">{row.nis || <span className="text-red-500">-</span>}</td>
-                                                        <td className="px-3 py-2">{row.nama || <span className="text-red-500">-</span>}</td>
-                                                        <td className={`px-3 py-2 ${row.no_telp_wali ? 'text-emerald-600' : 'text-amber-500 italic'}`}>
-                                                            {row.no_telp_wali || 'kosong'}
-                                                        </td>
-                                                        <td className="px-3 py-2">{row.nama_angkatan || <span className="text-red-500">-</span>}</td>
-                                                        <td className="px-3 py-2">
-                                                            {row.isValid ? (
-                                                                <span className="text-emerald-600 font-medium">✓ OK</span>
-                                                            ) : (
-                                                                <span className="text-red-600">
-                                                                    {row.errors.join(', ')}
-                                                                </span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        <ResponsiveTable
+                                            columns={[
+                                                { header: '#', render: (row) => <span className="text-gray-500">{row.rowNum}</span>, className: 'px-3 py-2 w-12 text-center', hideOnMobile: true },
+                                                { header: 'NIS', render: (row) => <span className="font-mono">{row.nis || <span className="text-red-500">-</span>}</span>, className: 'px-3 py-2' },
+                                                { header: 'Nama', render: (row) => row.nama || <span className="text-red-500">-</span>, className: 'px-3 py-2' },
+                                                { header: 'No HP', render: (row) => <span className={row.no_telp_wali ? 'text-emerald-600' : 'text-amber-500 italic'}>{row.no_telp_wali || 'kosong'}</span>, className: 'px-3 py-2', hideOnMobile: true },
+                                                { header: 'Angkatan', render: (row) => row.nama_angkatan || <span className="text-red-500">-</span>, className: 'px-3 py-2', hideOnMobile: true },
+                                                { header: 'Status', render: (row) => (
+                                                    row.isValid ? (
+                                                        <span className="text-emerald-600 font-medium">✓ OK</span>
+                                                    ) : (
+                                                        <span className="text-red-600">{row.errors.join(', ')}</span>
+                                                    )
+                                                ), className: 'px-3 py-2' }
+                                            ]}
+                                            data={importData}
+                                            rowClassName={(row) => !row.isValid ? 'bg-red-50' : ''}
+                                            mobileCardHeader={(row) => (
+                                                <div className="flex justify-between items-center w-full">
+                                                    <div>
+                                                        <div className="font-bold text-gray-900">{row.nama || <span className="text-red-500">-</span>}</div>
+                                                        <div className="font-mono text-xs text-gray-500">{row.nis || <span className="text-red-500">-</span>}</div>
+                                                    </div>
+                                                    <div>
+                                                        {row.isValid ? (
+                                                            <span className="text-emerald-600 font-medium text-xs">✓ OK</span>
+                                                        ) : (
+                                                            <span className="text-red-600 text-xs">Error</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            mobileCardContent={(row) => (
+                                                <div className="flex flex-col gap-1 text-xs text-gray-600 mt-2">
+                                                    {!row.isValid && (
+                                                        <div className="text-red-600 mb-2">{row.errors.join(', ')}</div>
+                                                    )}
+                                                    <div className="flex justify-between">
+                                                        <span>No HP:</span>
+                                                        <span className={row.no_telp_wali ? 'text-emerald-600' : 'text-amber-500 italic'}>{row.no_telp_wali || 'kosong'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Angkatan:</span>
+                                                        <span>{row.nama_angkatan || '-'}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        />
                                     </div>
 
                                     {importData.some(d => !d.isValid) && (

@@ -17,6 +17,7 @@ import { useKasPemasukan } from '../../hooks/features/useKasPemasukan'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import PageHeader from '../../components/layout/PageHeader'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import StatsCard from '../../components/ui/StatsCard'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
@@ -388,107 +389,54 @@ const KasPemasukanPage = () => {
                     />
                 ) : (
                     <>
-                        {/* Desktop Table View */}
-                        <div className="overflow-x-auto desktop-table-only">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
-                                    <tr>
-                                        <th className="px-6 py-3 w-16">No</th>
-                                        <th className="px-6 py-3">Tanggal</th>
-                                        <th className="px-6 py-3">Sumber</th>
-                                        <th className="px-6 py-3">Kategori</th>
-                                        <th className="px-6 py-3">Jumlah</th>
-                                        <th className="px-6 py-3">Keterangan</th>
-                                        {canEditKas && <th className="px-6 py-3 text-right">Aksi</th>}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {filteredData.map((item, i) => (
-                                        <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${editItem?.id === item.id ? 'bg-amber-50' : ''}`}>
-                                            <td className="px-6 py-4 text-gray-500">{i + 1}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-gray-700">{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-                                            <td className="px-6 py-4 font-medium text-gray-900">{item.sumber}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    {item.kategori || '-'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 font-mono font-medium text-emerald-600 whitespace-nowrap">
-                                                Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                            </td>
-                                            <td className="px-6 py-4 text-gray-500 truncate max-w-xs" title={item.keterangan}>{item.keterangan || '-'}</td>
-                                            {canEditKas && (
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button
-                                                            onClick={() => openEdit(item)}
-                                                            className={`p-1.5 rounded-lg transition-colors ${editItem?.id === item.id ? 'bg-amber-100 text-amber-700' : 'text-amber-600 hover:bg-amber-50'}`}
-                                                            title="Edit"
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => confirmDelete(item)}
-                                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                            title="Hapus"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {filteredData.map((item, i) => (
-                                <div key={item.id} className={`mobile-data-card ${editItem?.id === item.id ? 'bg-amber-50/50 border-amber-200' : ''}`}>
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title">{item.sumber}</h4>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1">
-                                                {item.kategori || '-'}
-                                            </span>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                                { header: 'Tanggal', render: (row) => new Date(row.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                                { header: 'Sumber', accessor: 'sumber', className: 'font-medium text-gray-900', hideOnMobile: true },
+                                { 
+                                    header: 'Kategori', 
+                                    render: (row) => (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            {row.kategori || '-'}
+                                        </span>
+                                    )
+                                },
+                                { 
+                                    header: 'Jumlah', 
+                                    render: (row) => <span className="font-mono font-bold text-emerald-600 whitespace-nowrap">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span> 
+                                },
+                                { 
+                                    header: 'Keterangan', 
+                                    className: 'text-gray-500 truncate max-w-xs',
+                                    render: (row) => <span title={row.keterangan}>{row.keterangan || '-'}</span>
+                                },
+                                ...(canEditKas ? [{
+                                    header: 'Aksi',
+                                    hideOnMobile: true,
+                                    className: 'text-right',
+                                    render: (row) => (
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button onClick={() => openEdit(row)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit"><Edit2 size={16} /></button>
+                                            <button onClick={() => confirmDelete(row)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus"><Trash2 size={16} /></button>
                                         </div>
-                                        <div className="mobile-card-amount green">
-                                            Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                        </div>
-                                    </div>
-                                    
-                                    {item.keterangan && (
-                                        <p className="mobile-card-desc">{item.keterangan}</p>
-                                    )}
-                                    
-                                    <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1">
-                                        <div className="mobile-card-meta">
-                                            <span>No: {i + 1}</span>
-                                            <span>•</span>
-                                            <span>{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                        </div>
-                                        {canEditKas && (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => openEdit(item)}
-                                                    className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-xs font-bold transition-colors"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => confirmDelete(item)}
-                                                    className="px-2.5 py-1 bg-red-50 text-red-600 rounded-md text-xs font-bold transition-colors"
-                                                >
-                                                    Hapus
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                                    )
+                                }] : [])
+                            ]}
+                            data={filteredData}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.sumber}</span>
+                                    <span className="text-xs text-gray-500 font-normal">{new Date(row.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            mobileCardActions={(row) => canEditKas ? (
+                                <>
+                                    <button onClick={() => openEdit(row)} className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"><Edit2 size={16} /></button>
+                                    <button onClick={() => confirmDelete(row)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                </>
+                            ) : null}
+                        />
                     </>
                 )}
             </div>

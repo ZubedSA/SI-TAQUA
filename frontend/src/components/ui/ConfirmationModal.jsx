@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { X, AlertTriangle, CheckCircle, Info, AlertCircle } from 'lucide-react'
 import Button from './Button'
@@ -17,41 +17,33 @@ const ConfirmationModal = ({
 }) => {
     const [shouldRender, setShouldRender] = useState(false)
     const [isVisible, setIsVisible] = useState(false)
-    const [container] = useState(() => {
-        const el = document.createElement('div')
-        el.setAttribute('data-portal-id', 'confirmation-modal-' + Math.random().toString(36).substring(2, 9))
-        // Ensure the portal container has full viewport bounds so mobile touch hit-testing routes events correctly
-        el.style.position = 'fixed'
-        el.style.inset = '0'
-        el.style.zIndex = '99999'
-        return el
-    })
+    const uniqueId = useId()
 
     useEffect(() => {
         let timer;
         if (isOpen) {
             setShouldRender(true)
-            document.body.appendChild(container)
-            document.body.classList.add('modal-open')
+            // Delay visibility to allow CSS transition
             timer = setTimeout(() => setIsVisible(true), 10)
         } else {
             setIsVisible(false)
+            // Wait for transition to finish before unmounting
             timer = setTimeout(() => {
                 setShouldRender(false)
-                document.body.classList.remove('modal-open')
-                if (container.parentNode) {
-                    container.parentNode.removeChild(container)
-                }
             }, 300)
         }
 
         return () => {
             if (timer) clearTimeout(timer)
-            if (container.parentNode) {
-                container.parentNode.removeChild(container)
-            }
         }
-    }, [isOpen, container])
+    }, [isOpen])
+
+    // Cleanup body class on unmount
+    useEffect(() => {
+        return () => {
+            // removed modal-open cleanup
+        }
+    }, [])
 
     if (!shouldRender) return null
 
@@ -67,38 +59,33 @@ const ConfirmationModal = ({
     const getConfirmButtonVariant = () => {
         switch (variant) {
             case 'danger': return 'dangerPrimary'
-            case 'warning': return 'primary' // styling warning as primary usually works or add warning variant to Button if needed. Using primary for now or generic style? Button has valid variants.
-            // Let's check Button variants again. It has 'dangerPrimary'. It doesn't have explicit 'warning' or 'success' button styles in the snippet I saw, 
-            // but I can use 'primary' for general or class overrides.
-            // Actually, for semantic meaning, if Button doesn't support 'warning' yet, I'll stick to 'primary' or custom className. 
-            // The user wanted premium. Let's stick to Safe defaults from Button.jsx: primary, dangerPrimary.
-            // If variant is success, maybe primary is fine (usually blue/green overlap in some designs) or I should add specific coloring?
-            // "primary" is defined as blue. "success" implies green. 
-            // I'll stick to 'primary' for success/default, and 'dangerPrimary' for danger.
+            case 'warning': return 'primary'
             default: return 'primary'
         }
     }
 
-    // Custom button styling for success/warning if not in Button component
     const customConfirmClass = () => {
         if (variant === 'success') return '!bg-emerald-600 hover:!bg-emerald-700 focus:!ring-emerald-500'
-        if (variant === 'warning') return '!bg-amber-500 hover:!bg-amber-600 focus:!ring-amber-500' // amber for warning
+        if (variant === 'warning') return '!bg-amber-500 hover:!bg-amber-600 focus:!ring-amber-500'
         return ''
     }
 
     return createPortal(
-        <div
-            className={`modal-overlay transition-all duration-300 ${isVisible ? 'visible opacity-100' : 'invisible opacity-0'}`}
-        >
-            {/* Backdrop */}
+        <div id={`confirmation-modal-wrapper-${uniqueId}`} className="fixed inset-0 z-[999999] flex items-center justify-center">
             <div
-                className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity duration-300"
-                onClick={!isLoading ? onClose : undefined}
-            />
+                className={`absolute inset-0 transition-all duration-300 ${isVisible ? 'visible opacity-100' : 'invisible opacity-0'}`}
+            >
+                {/* Backdrop */}
+                <div
+                    className="absolute inset-0 bg-black/40 transition-opacity duration-300"
+                    onClick={!isLoading ? onClose : undefined}
+                />
+            </div>
 
-            {/* Modal */}
+            {/* Modal Box */}
             <div
-                className={`modal-box relative bg-white shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}`}
+                className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all duration-300 ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
+                style={{ zIndex: 1 }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -152,7 +139,7 @@ const ConfirmationModal = ({
                 </div>
             </div>
         </div>,
-        container
+        document.body
     )
 }
 

@@ -9,6 +9,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import EmptyState from '../../components/ui/EmptyState';
 import Spinner from '../../components/ui/Spinner';
+import ResponsiveTable from '../../components/ui/ResponsiveTable';
 import FormInput from '../../components/ui/FormInput';
 
 const AuditLogPage = () => {
@@ -227,65 +228,128 @@ const AuditLogPage = () => {
                             />
                         </div>
                     ) : (
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50/50 text-gray-400">
-                                <tr>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Waktu & Tanggal</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Aktor (User)</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Aksi & Status</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Konteks Modul</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest">Detail Metadata</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredLogs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-gray-50/80 transition-colors group">
-                                        <td className="px-8 py-6">
-                                            <div className="text-sm font-bold text-gray-900">{new Date(log.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</div>
+                        <ResponsiveTable
+                            columns={[
+                                { 
+                                    header: 'Waktu & Tanggal', 
+                                    render: (row) => (
+                                        <>
+                                            <div className="text-sm font-bold text-gray-900">{new Date(row.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</div>
                                             <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                {new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                {new Date(row.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs group-hover:scale-110 transition-transform">
-                                                    {(log.user?.username || 'S')[0].toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="font-black text-gray-900 text-sm">{log.user?.username || 'System'}</div>
-                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{log.user?.role || 'AUTO'}</div>
-                                                </div>
+                                        </>
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
+                                },
+                                { 
+                                    header: 'Aktor (User)', 
+                                    render: (row) => (
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs group-hover:scale-110 transition-transform">
+                                                {(row.user?.username || 'S')[0].toUpperCase()}
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            {getActionBadge(log.action)}
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex flex-col gap-1.5">
-                                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
-                                                    {log.module || 'SYSTEM'}
-                                                </span>
-                                                {log.target_table && (
-                                                    <div className="flex items-center gap-2 text-slate-500 font-bold text-[11px] bg-slate-50 px-2.5 py-1 rounded-lg w-fit border border-slate-100">
-                                                        <Database size={12} className="text-slate-300" />
-                                                        {log.target_table}
-                                                    </div>
-                                                )}
+                                            <div>
+                                                <div className="font-black text-gray-900 text-sm">{row.user?.username || 'System'}</div>
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{row.user?.role || 'AUTO'}</div>
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            {log.meta_data ? (
-                                                <div className="max-w-xs truncate font-mono text-[11px] text-slate-400 bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200" title={JSON.stringify(log.meta_data, null, 2)}>
-                                                    {JSON.stringify(log.meta_data)}
+                                        </div>
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
+                                },
+                                { 
+                                    header: 'Aksi & Status', 
+                                    render: (row) => getActionBadge(row.action),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
+                                },
+                                { 
+                                    header: 'Konteks Modul', 
+                                    render: (row) => (
+                                        <div className="flex flex-col gap-1.5">
+                                            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">
+                                                {row.module || 'SYSTEM'}
+                                            </span>
+                                            {row.target_table && (
+                                                <div className="flex items-center gap-2 text-slate-500 font-bold text-[11px] bg-slate-50 px-2.5 py-1 rounded-lg w-fit border border-slate-100">
+                                                    <Database size={12} className="text-slate-300" />
+                                                    {row.target_table}
                                                 </div>
-                                            ) : (
-                                                <span className="text-gray-300">-</span>
                                             )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </div>
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
+                                },
+                                { 
+                                    header: 'Detail Metadata', 
+                                    render: (row) => (
+                                        row.meta_data ? (
+                                            <div className="max-w-xs truncate font-mono text-[11px] text-slate-400 bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200" title={JSON.stringify(row.meta_data, null, 2)}>
+                                                {JSON.stringify(row.meta_data)}
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-300">-</span>
+                                        )
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
+                                }
+                            ]}
+                            data={filteredLogs}
+                            loading={loading}
+                            emptyState={
+                                <div className="py-20">
+                                    <EmptyState
+                                        icon={ClipboardList}
+                                        title="Log Kosong"
+                                        message="Tidak ditemukan data aktivitas yang sesuai dengan filter Anda."
+                                    />
+                                </div>
+                            }
+                            mobileCardHeader={(row) => (
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-xs shadow-sm">
+                                        {(row.user?.username || 'S')[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div className="font-black text-gray-900 text-sm">{row.user?.username || 'System'}</div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{row.user?.role || 'AUTO'}</div>
+                                    </div>
+                                </div>
+                            )}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-3 w-full mt-2">
+                                    <div className="flex items-center justify-between border-b border-gray-50 pb-2">
+                                        {getActionBadge(row.action)}
+                                        <div className="text-right">
+                                            <div className="text-xs font-bold text-gray-900">{new Date(row.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</div>
+                                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                                {new Date(row.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-md">
+                                            {row.module || 'SYSTEM'}
+                                        </span>
+                                        {row.target_table && (
+                                            <div className="flex items-center gap-1.5 text-slate-500 font-bold text-[10px] bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                                                <Database size={10} className="text-slate-400" />
+                                                {row.target_table}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {row.meta_data && (
+                                        <div className="mt-1 font-mono text-[9px] text-slate-400 bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200 overflow-x-auto whitespace-pre">
+                                            {JSON.stringify(row.meta_data, null, 2)}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        />
                     )}
                 </div>
                 <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between">

@@ -11,6 +11,7 @@ import SantriCard from '../components/SantriCard'
 import PageHeader from '../../../components/layout/PageHeader'
 import Card from '../../../components/ui/Card'
 import EmptyState from '../../../components/ui/EmptyState'
+import ResponsiveTable from '../../../components/ui/ResponsiveTable'
 // import '../WaliPortal.css' // REMOVED
 
 /**
@@ -203,36 +204,61 @@ const EvaluasiWaliPage = () => {
                         </div>
                         {nilaiData.length > 0 ? (
                             <div className="glass-card rounded-[3rem] border border-white/50 shadow-2xl overflow-hidden">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-900/5">
-                                            <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mata Pelajaran</th>
-                                            <th className="px-4 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Angka</th>
-                                            <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Predikat</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100/50">
-                                        {nilaiData.map(nilai => (
-                                            <tr key={nilai.id} className="hover:bg-white transition-colors group">
-                                                <td className="px-8 py-6">
-                                                    <div className="font-black text-slate-900 text-lg leading-tight group-hover:text-indigo-600 transition-colors">{nilai.mapel?.nama || '-'}</div>
+                                <ResponsiveTable
+                                    columns={[
+                                        { 
+                                            header: 'Mata Pelajaran', 
+                                            render: (row) => (
+                                                <>
+                                                    <div className="font-black text-slate-900 text-lg leading-tight group-hover:text-indigo-600 transition-colors">{row.mapel?.nama || '-'}</div>
                                                     <div className="text-[10px] font-black text-slate-400 uppercase mt-1 tracking-widest flex items-center gap-2">
                                                         <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                                        {nilai.semester} • {nilai.tahun_ajaran}
+                                                        {row.semester} • {row.tahun_ajaran}
                                                     </div>
-                                                </td>
-                                                <td className={`px-4 py-6 text-center font-black text-2xl tracking-tighter ${getNilaiColor(nilai.nilai_akhir)}`}>
-                                                    {nilai.nilai_akhir || '-'}
-                                                </td>
-                                                <td className="px-8 py-6 text-center">
-                                                    <span className={`inline-block px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg ${(getNilaiBg(nilai.nilai_akhir) || 'bg-slate-50').replace('bg-', 'bg-opacity-50 bg-')} ${getNilaiColor(nilai.nilai_akhir)} border border-white/50`}>
-                                                        {getNilaiLabel(nilai.nilai_akhir)}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                </>
+                                            ), 
+                                            className: 'px-8 py-6' 
+                                        },
+                                        { 
+                                            header: 'Angka', 
+                                            render: (row) => row.nilai_akhir || '-', 
+                                            className: (row) => `px-4 py-6 text-center font-black text-2xl tracking-tighter ${getNilaiColor(row.nilai_akhir)}`, 
+                                            hideOnMobile: true 
+                                        },
+                                        { 
+                                            header: 'Predikat', 
+                                            render: (row) => (
+                                                <span className={`inline-block px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg ${(getNilaiBg(row.nilai_akhir) || 'bg-slate-50').replace('bg-', 'bg-opacity-50 bg-')} ${getNilaiColor(row.nilai_akhir)} border border-white/50`}>
+                                                    {getNilaiLabel(row.nilai_akhir)}
+                                                </span>
+                                            ), 
+                                            className: 'px-8 py-6 text-center', 
+                                            hideOnMobile: true 
+                                        }
+                                    ]}
+                                    data={nilaiData}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex justify-between items-center w-full">
+                                            <div>
+                                                <div className="font-black text-slate-900 leading-tight">{row.mapel?.nama || '-'}</div>
+                                                <div className="text-[10px] font-black text-slate-400 uppercase mt-1 tracking-widest flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                                                    {row.semester} • {row.tahun_ajaran}
+                                                </div>
+                                            </div>
+                                            <div className={`font-black text-2xl tracking-tighter ${getNilaiColor(row.nilai_akhir)}`}>
+                                                {row.nilai_akhir || '-'}
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="flex justify-end mt-2 pt-2 border-t border-slate-100/50">
+                                            <span className={`inline-block px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${(getNilaiBg(row.nilai_akhir) || 'bg-slate-50').replace('bg-', 'bg-opacity-50 bg-')} ${getNilaiColor(row.nilai_akhir)} border border-white/50`}>
+                                                {getNilaiLabel(row.nilai_akhir)}
+                                            </span>
+                                        </div>
+                                    )}
+                                />
                             </div>
                         ) : (
                             <EmptyState

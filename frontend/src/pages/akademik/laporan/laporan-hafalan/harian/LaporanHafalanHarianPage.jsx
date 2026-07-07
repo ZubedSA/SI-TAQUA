@@ -8,6 +8,7 @@ import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import DateRangePicker from '../../../../../components/ui/DateRangePicker'
 import { useCalendar } from '../../../../../context/CalendarContext'
 import { createMessage, sendWhatsApp as sendWhatsAppGlobal } from '../../../../../utils/whatsapp'
+import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanHafalanHarianPage = () => {
@@ -249,42 +250,67 @@ const LaporanHafalanHarianPage = () => {
                         <p>Tidak ada data hafalan untuk tanggal ini</p>
                     </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Santri</th>
-                                    <th>Juz/Surah</th>
-                                    <th>Ayat</th>
-                                    <th>Jenis</th>
-                                    <th>Status</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((item, i) => (
-                                    <tr key={item.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{item.santri?.nama || '-'}</td>
-                                        <td>Juz {item.juz_mulai || item.juz} - {item.surah_mulai || item.surah}</td>
-                                        <td>{item.ayat_mulai} - {item.ayat_selesai}</td>
-                                        <td><span className={`badge ${item.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>{item.jenis}</span></td>
-                                        <td><span className={`badge ${item.status === 'Lancar' ? 'badge-success' : item.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{item.status}</span></td>
-                                        <td>
-                                            <button
-                                                className="btn btn-sm btn-success"
-                                                onClick={() => sendWhatsApp(item)}
-                                                title="Kirim ke WhatsApp"
-                                            >
-                                                <MessageCircle size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'Santri', render: (row) => row.santri?.nama || '-', className: 'font-medium text-gray-900' },
+                            { header: 'Juz/Surah', render: (row) => `Juz ${row.juz_mulai || row.juz} - ${row.surah_mulai || row.surah}` },
+                            { header: 'Ayat', render: (row) => `${row.ayat_mulai} - ${row.ayat_selesai}` },
+                            { 
+                                header: 'Jenis', 
+                                render: (row) => <span className={`badge ${row.jenis === 'Setoran' ? 'badge-success' : 'badge-info'}`}>{row.jenis}</span>
+                            },
+                            { 
+                                header: 'Status', 
+                                render: (row) => <span className={`badge ${row.status === 'Lancar' ? 'badge-success' : row.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{row.status}</span>
+                            },
+                            {
+                                header: 'Aksi',
+                                hideOnMobile: true,
+                                render: (row) => (
+                                    <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => sendWhatsApp(row)}
+                                        title="Kirim ke WhatsApp"
+                                    >
+                                        <MessageCircle size={16} />
+                                    </button>
+                                )
+                            }
+                        ]}
+                        data={data}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.santri?.nama || '-'}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">Juz {row.juz_mulai || row.juz} - {row.surah_mulai || row.surah}</span>
+                            </div>
+                        )}
+                        mobileCardActions={(row) => null}
+                        mobileCardPrimaryAction={(row) => (
+                            <button
+                                className="w-full btn btn-success flex items-center justify-center gap-2 mt-2"
+                                onClick={() => sendWhatsApp(row)}
+                            >
+                                <MessageCircle size={16} /> Kirim WhatsApp
+                            </button>
+                        )}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-1 w-full text-xs mt-2 pt-2 border-t border-gray-100">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-gray-500 font-medium">Status</span>
+                                    <span className={`badge ${row.status === 'Lancar' ? 'badge-success' : row.status === 'Sedang' ? 'badge-warning' : 'badge-danger'} !text-[10px] !py-0.5 !px-2`}>{row.status}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Ayat:</span>
+                                    <span className="font-semibold">{row.ayat_mulai} - {row.ayat_selesai}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Jenis:</span>
+                                    <span className={`badge ${row.jenis === 'Setoran' ? 'badge-success' : 'badge-info'} !text-[10px] !py-0.5 !px-2`}>{row.jenis}</span>
+                                </div>
+                            </div>
+                        )}
+                    />
                 )}
             </div>
         </div>

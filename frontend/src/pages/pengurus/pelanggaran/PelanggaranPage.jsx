@@ -23,6 +23,7 @@ import PageHeader from '../../../components/layout/PageHeader'
 import Badge from '../../../components/ui/Badge'
 import Button from '../../../components/ui/Button'
 import Spinner from '../../../components/ui/Spinner'
+import ResponsiveTable from '../../../components/ui/ResponsiveTable'
 import EmptyState from '../../../components/ui/EmptyState'
 import DeleteConfirmationModal from '../../../components/ui/DeleteConfirmationModal'
 
@@ -262,149 +263,130 @@ const PelanggaranPage = () => {
                     </div>
                 </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50/50 text-gray-400 font-black uppercase tracking-widest text-[10px] border-b border-gray-100">
-                            <tr>
-                                <th className="px-8 py-5">Tanggal</th>
-                                <th className="px-8 py-5">Santri</th>
-                                <th className="px-8 py-5">Pelanggaran</th>
-                                <th className="px-8 py-5">Poin</th>
-                                <th className="px-8 py-5">Status</th>
-                                <th className="px-8 py-5 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan={6}><Spinner className="py-20" label="Memuat data..." /></td></tr>
-                            ) : filteredData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="p-12">
-                                        <EmptyState
-                                            icon={AlertTriangle}
-                                            title="Data tidak ditemukan"
-                                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}"` : `Belum ada data pelanggaran.`}
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredData.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => navigate(`/pengurus/pelanggaran/${item.id}`)}
-                                        className="hover:bg-gray-50/50 transition-all cursor-pointer group border-b border-gray-50 last:border-0"
-                                    >
-                                        <td className="px-8 py-5">
-                                            <div className="flex items-center gap-2 text-gray-600 font-medium">
-                                                <Calendar size={14} className="text-gray-400" />
-                                                {formatDate(item.tanggal)}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">
-                                                {item.santri?.nama || '-'}
-                                            </div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
-                                                NIS: {item.santri?.nis} • {item.santri?.kelas?.nama || '-'}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="text-gray-700 font-medium">{item.jenis}</div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <span className="px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100">
-                                                {item.poin || 0} PTS
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            {getStatusBadge(item.status)}
-                                        </td>
-                                        <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link to={`/pengurus/pelanggaran/${item.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Eye size={18} /></Link>
-                                                <Link to={`/pengurus/pelanggaran/${item.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all"><Edit size={18} /></Link>
-                                                {(activeRole === 'admin' || activeRole === 'pengurus') && (
-                                                    <button onClick={() => handleDeleteClick(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile Grid View */}
-                <div className="md:hidden">
-                    <div className="divide-y divide-gray-50">
-                        {loading ? (
-                            <div className="py-20 text-center"><Spinner label="Memuat..." /></div>
-                        ) : filteredData.length === 0 ? (
-                            <div className="p-12">
-                                <EmptyState 
-                                    icon={AlertTriangle} 
-                                    title="Tidak ditemukan" 
-                                    message="Belum ada data pelanggaran."
-                                />
-                            </div>
-                        ) : (
-                            filteredData.map((item) => (
-                                <div 
-                                    key={item.id} 
-                                    onClick={() => navigate(`/pengurus/pelanggaran/${item.id}`)}
-                                    className="p-6 space-y-4 active:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
-                                            <div className="font-black text-gray-900 text-base leading-tight">{item.santri?.nama || '-'}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                NIS: {item.santri?.nis} • {item.santri?.kelas?.nama || '-'}
-                                            </div>
-                                        </div>
-                                        <div className="shrink-0">
-                                            {getStatusBadge(item.status)}
-                                        </div>
-                                    </div>
-
-                                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
-                                        <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                            <Calendar size={12} /> {formatDate(item.tanggal)}
-                                        </div>
-                                        <div className="text-sm font-bold text-gray-700 leading-tight">
-                                            {item.jenis}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-50 border border-red-100">
-                                            <span className="text-[9px] font-black text-red-400 uppercase tracking-tighter">Poin:</span>
-                                            <span className="text-[10px] font-black text-red-600">{item.poin || 0} PTS</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                                        <Link to={`/pengurus/pelanggaran/${item.id}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-gray-200">
-                                            <Eye size={14} /> Detail
-                                        </Link>
-                                        <Link to={`/pengurus/pelanggaran/${item.id}/edit`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100">
-                                            <Edit size={14} /> Edit
-                                        </Link>
-                                        {(activeRole === 'admin' || activeRole === 'pengurus') && (
-                                            <button 
-                                                onClick={() => handleDeleteClick(item.id)}
-                                                className="p-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        )}
-                                    </div>
+                {/* Responsive Table View */}
+                <ResponsiveTable
+                    columns={[
+                        { 
+                            header: 'Tanggal', 
+                            render: (row) => (
+                                <div className="flex items-center gap-2 text-gray-600 font-medium">
+                                    <Calendar size={14} className="text-gray-400" />
+                                    {formatDate(row.tanggal)}
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                            ), 
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Santri', 
+                            render: (row) => (
+                                <>
+                                    <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">
+                                        {row.santri?.nama || '-'}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                                        NIS: {row.santri?.nis} • {row.santri?.kelas?.nama || '-'}
+                                    </div>
+                                </>
+                            ), 
+                            className: 'px-8 py-5'
+                        },
+                        { 
+                            header: 'Pelanggaran', 
+                            render: (row) => <div className="text-gray-700 font-medium">{row.jenis}</div>, 
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Poin', 
+                            render: (row) => (
+                                <span className="px-3 py-1 rounded-full bg-red-50 text-red-600 text-xs font-black border border-red-100">
+                                    {row.poin || 0} PTS
+                                </span>
+                            ), 
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Status', 
+                            render: (row) => getStatusBadge(row.status), 
+                            className: 'px-8 py-5'
+                        },
+                        { 
+                            header: 'Aksi', 
+                            render: (row) => (
+                                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <Link to={`/pengurus/pelanggaran/${row.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><Eye size={18} /></Link>
+                                    <Link to={`/pengurus/pelanggaran/${row.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all"><Edit size={18} /></Link>
+                                    {(activeRole === 'admin' || activeRole === 'pengurus') && (
+                                        <button onClick={() => handleDeleteClick(row.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                    )}
+                                </div>
+                            ), 
+                            className: 'px-8 py-5 text-right',
+                            hideOnMobile: false
+                        }
+                    ]}
+                    data={filteredData}
+                    loading={loading}
+                    onRowClick={(row) => navigate(`/pengurus/pelanggaran/${row.id}`)}
+                    emptyState={
+                        <EmptyState
+                            icon={AlertTriangle}
+                            title="Data tidak ditemukan"
+                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}"` : `Belum ada data pelanggaran.`}
+                        />
+                    }
+                    mobileCardHeader={(row) => (
+                        <div className="flex items-start justify-between gap-4 w-full">
+                            <div className="space-y-1">
+                                <div className="font-black text-gray-900 text-base leading-tight">{row.santri?.nama || '-'}</div>
+                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                    NIS: {row.santri?.nis} • {row.santri?.kelas?.nama || '-'}
+                                </div>
+                            </div>
+                            <div className="shrink-0">
+                                {getStatusBadge(row.status)}
+                            </div>
+                        </div>
+                    )}
+                    mobileCardContent={(row) => (
+                        <div className="w-full mt-4 space-y-3">
+                            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <Calendar size={12} /> {formatDate(row.tanggal)}
+                                </div>
+                                <div className="text-sm font-bold text-gray-700 leading-tight">
+                                    {row.jenis}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-1">
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-50 border border-red-100">
+                                    <span className="text-[9px] font-black text-red-400 uppercase tracking-tighter">Poin:</span>
+                                    <span className="text-[10px] font-black text-red-600">{row.poin || 0} PTS</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
+                                <Link to={`/pengurus/pelanggaran/${row.id}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-gray-200">
+                                    <Eye size={14} /> Detail
+                                </Link>
+                                <Link to={`/pengurus/pelanggaran/${row.id}/edit`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100">
+                                    <Edit size={14} /> Edit
+                                </Link>
+                                {(activeRole === 'admin' || activeRole === 'pengurus') && (
+                                    <button 
+                                        onClick={() => handleDeleteClick(row.id)}
+                                        className="p-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                />
 
                 {/* Delete Confirmation Modal */}
                 <DeleteConfirmationModal

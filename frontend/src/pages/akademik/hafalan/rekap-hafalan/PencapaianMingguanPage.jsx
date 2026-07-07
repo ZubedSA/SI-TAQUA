@@ -4,6 +4,7 @@ import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
 import { useCalendar } from '../../../../context/CalendarContext'
+import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 import '../input-hafalan/Hafalan.css'
 
 const PencapaianMingguanPage = () => {
@@ -156,36 +157,49 @@ const PencapaianMingguanPage = () => {
                         <p>Tidak ada data santri</p>
                     </div>
                 ) : (
-                    <div className="table-container">
-                        <div className="table-wrapper">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>NIS</th>
-                                        <th>Nama Santri</th>
-                                        <th>Target (Ayat)</th>
-                                        <th>Tercapai</th>
-                                        <th>Persentase</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.map((s, i) => (
-                                        <tr key={s.id}>
-                                            <td>{i + 1}</td>
-                                            <td>{s.nis}</td>
-                                            <td>{s.nama}</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td>-</td>
-                                            <td><span className="badge badge-pending">Belum Ada Data</span></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'NIS', accessor: 'nis', hideOnMobile: true },
+                            { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
+                            { header: 'Target (Ayat)', render: () => '-', className: 'text-center' },
+                            { header: 'Tercapai', render: () => '-', className: 'text-center' },
+                            { header: 'Persentase', render: () => '-', className: 'text-center' },
+                            { header: 'Status', render: () => <span className="badge badge-pending">Belum Ada Data</span>, className: 'text-center' }
+                        ]}
+                        data={data}
+                        loading={loading}
+                        emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Tidak ada data santri</div>}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                            </div>
+                        )}
+                        mobileCardActions={() => null}
+                        mobileCardContent={(row) => (
+                            <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Target (Ayat)</span>
+                                        <span className="font-medium">-</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Tercapai</span>
+                                        <span className="font-medium">-</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Persentase</span>
+                                        <span className="font-medium">-</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-gray-500">Status</span>
+                                        <span className="badge badge-pending w-fit text-xs px-2 py-0.5">Belum Ada Data</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    />
                 )}
             </div>
         </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Eye, RefreshCw, MoreVertical, UserX } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, RefreshCw } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import { logDelete } from '../../lib/auditLog'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -222,134 +223,109 @@ const GuruList = () => {
                     </div>
                 </div>
 
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50/50 text-gray-400 font-black uppercase tracking-widest text-[10px] border-b border-gray-100">
-                            <tr>
-                                <th className="px-8 py-5">Identitas Guru</th>
-                                <th className="px-8 py-5">Jabatan / Peran</th>
-                                <th className="px-8 py-5">Kontak</th>
-                                <th className="px-8 py-5 text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan={4}><Spinner className="py-20" label="Menyelaraskan data guru..." /></td></tr>
-                            ) : filteredGuru.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="p-12">
-                                        <EmptyState
-                                            icon={Search}
-                                            title="Data tidak ditemukan"
-                                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}" di kategori ${activeStatus}` : `Belum ada data guru dengan status ${activeStatus}.`}
-                                        />
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredGuru.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => navigate(`/guru/${item.id}`)}
-                                        className="hover:bg-gray-50/50 transition-all cursor-pointer group border-b border-gray-50 last:border-0"
-                                    >
-                                        <td className="px-8 py-5">
-                                            <div className="font-black text-gray-900 group-hover:text-primary-600 transition-colors leading-tight">{item.nama}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
-                                                NIP: {item.nip || 'N/A'} 
-                                                <span className={`px-1.5 py-0.5 rounded text-[8px] ${item.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
-                                                    {item.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tight border ${item.jabatan === 'Wali Kelas'
-                                                ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                                : item.jabatan === 'Kepala Sekolah' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                }`}>
-                                                {item.jabatan}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="text-xs font-bold text-gray-600">{item.no_telp || '-'}</div>
-                                            <div className="text-[10px] text-gray-400 font-medium">{item.email || '-'}</div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-2 transition-all">
-                                                <Link to={`/guru/${item.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Detail"><Eye size={18} /></Link>
-                                                {canEdit && (
-                                                    <>
-                                                        <Link to={`/guru/${item.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="Edit"><Edit size={18} /></Link>
-                                                        <button onClick={() => { setSelectedGuru(item); setShowDeleteModal(true) }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus"><Trash2 size={18} /></button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Mobile Grid View */}
-                <div className="md:hidden">
-                    <div className="divide-y divide-gray-50">
-                        {loading ? (
-                            <div className="py-20 text-center"><Spinner label="Memuat..." /></div>
-                        ) : filteredGuru.length === 0 ? (
-                            <div className="p-12"><EmptyState icon={Search} title="Tidak ditemukan" /></div>
-                        ) : (
-                            filteredGuru.map((item) => (
-                                <div 
-                                    key={item.id} 
-                                    onClick={() => navigate(`/guru/${item.id}`)}
-                                    className="p-6 space-y-4 active:bg-gray-50 transition-colors"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
-                                            <div className="font-black text-gray-900 text-base leading-tight">{item.nama}</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">NIP: {item.nip || 'N/A'}</div>
-                                        </div>
-                                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${item.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
-                                            {item.jenis_kelamin}
+                <ResponsiveTable
+                    columns={[
+                        { 
+                            header: 'Identitas Guru', 
+                            render: (row) => (
+                                <div className="flex flex-col">
+                                    <div className="font-black text-gray-900 leading-tight">{row.nama}</div>
+                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 flex items-center gap-2">
+                                        NIP: {row.nip || 'N/A'} 
+                                        <span className={`px-1.5 py-0.5 rounded text-[8px] ${row.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
+                                            {row.jenis_kelamin === 'Laki-laki' ? 'L' : 'P'}
                                         </span>
                                     </div>
-
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-100">
-                                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">Jabatan:</span>
-                                            <span className="text-[10px] font-black text-indigo-600">{item.jabatan || '-'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-50 border border-gray-100">
-                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Telp:</span>
-                                            <span className="text-[10px] font-black text-gray-600">{item.no_telp || '-'}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
-                                        <Link to={`/guru/${item.id}`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-gray-200">
-                                            <Eye size={14} /> Detail
-                                        </Link>
-                                        {canEdit && (
-                                            <>
-                                                <Link to={`/guru/${item.id}/edit`} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100">
-                                                    <Edit size={14} /> Edit
-                                                </Link>
-                                                <button 
-                                                    onClick={() => { setSelectedGuru(item); setShowDeleteModal(true) }}
-                                                    className="p-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                </div>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Jabatan / Peran', 
+                            render: (row) => (
+                                <span className={`inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tight border ${row.jabatan === 'Wali Kelas'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-100'
+                                    : row.jabatan === 'Kepala Sekolah' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                    }`}>
+                                    {row.jabatan}
+                                </span>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Kontak', 
+                            render: (row) => (
+                                <div className="flex flex-col">
+                                    <div className="text-xs font-bold text-gray-600">{row.no_telp || '-'}</div>
+                                    <div className="text-[10px] text-gray-400 font-medium">{row.email || '-'}</div>
+                                </div>
+                            ),
+                            className: 'px-8 py-5',
+                            hideOnMobile: true
+                        },
+                        { 
+                            header: 'Aksi', 
+                            className: 'px-8 py-5 text-right',
+                            render: (row) => (
+                                <div className="flex items-center justify-end gap-2 transition-all">
+                                    <Link to={`/guru/${row.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Detail"><Eye size={18} /></Link>
+                                    {canEdit && (
+                                        <>
+                                            <Link to={`/guru/${row.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="Edit"><Edit size={18} /></Link>
+                                            <button onClick={(e) => { e.stopPropagation(); setSelectedGuru(row); setShowDeleteModal(true) }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus"><Trash2 size={18} /></button>
+                                        </>
+                                    )}
+                                </div>
+                            ) 
+                        }
+                    ]}
+                    data={filteredGuru}
+                    loading={loading}
+                    emptyState={
+                        <EmptyState
+                            icon={Search}
+                            title="Data tidak ditemukan"
+                            message={searchTerm ? `Tidak ditemukan hasil untuk "${searchTerm}" di kategori ${activeStatus}` : `Belum ada data guru dengan status ${activeStatus}.`}
+                        />
+                    }
+                    mobileCardHeader={(row) => (
+                        <div className="flex flex-col" onClick={() => navigate(`/guru/${row.id}`)}>
+                            <div className="font-black text-gray-900 text-base leading-tight">{row.nama}</div>
+                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">NIP: {row.nip || 'N/A'}</div>
+                        </div>
+                    )}
+                    mobileCardActions={(row) => {
+                        const actions = [
+                            { icon: <Eye size={16} />, label: 'Detail', path: `/guru/${row.id}` }
+                        ];
+                        if (canEdit) {
+                            actions.push({ icon: <Edit size={16} />, label: 'Edit', path: `/guru/${row.id}/edit` });
+                            actions.push({ icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedGuru(row); setShowDeleteModal(true) }, danger: true });
+                        }
+                        return <MobileActionMenu actions={actions} />;
+                    }}
+                    mobileCardContent={(row) => (
+                        <div className="flex flex-col gap-3 w-full mt-1" onClick={() => navigate(`/guru/${row.id}`)}>
+                            <div className="flex items-center justify-between">
+                                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${row.jenis_kelamin === 'Laki-laki' ? 'bg-blue-50 text-blue-600' : 'bg-pink-50 text-pink-600'}`}>
+                                    {row.jenis_kelamin}
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-100">
+                                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter">Jabatan:</span>
+                                    <span className="text-[10px] font-black text-indigo-600">{row.jabatan || '-'}</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-50 border border-gray-100">
+                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Telp:</span>
+                                    <span className="text-[10px] font-black text-gray-600">{row.no_telp || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                />
 
                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
                     <p className="text-sm text-gray-500">Menampilkan {filteredGuru.length} dari {guru.length} guru</p>

@@ -13,6 +13,7 @@ import 'jspdf-autotable'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTA.css'
 
 /**
@@ -511,59 +512,97 @@ const OTAPenyaluranPage = () => {
                 <div className="table-container">
                     <div className="table-wrapper">
                         {filteredData.length > 0 ? (
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Tanggal</th>
-                                        <th>Santri</th>
-                                        <th className="text-right">Nominal</th>
-                                        <th>Keterangan</th>
-                                        <th className="text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredData.map((item, idx) => (
-                                        <tr key={item.id}>
-                                            <td>{idx + 1}</td>
-                                            <td>{formatDate(item.tanggal)}</td>
-                                            <td>
-                                                <div style={{ fontWeight: 500 }}>{item.santri?.nama || '-'}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                                                    {item.santri?.nis || '-'}
-                                                </div>
-                                            </td>
-                                            <td className="text-right" style={{ color: '#10b981', fontWeight: 600 }}>
-                                                {formatRupiah(item.nominal)}
-                                            </td>
-                                            <td style={{ color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {item.keterangan || '-'}
-                                            </td>
-                                            <td>
-                                                <div className="ota-action-buttons desktop">
-                                                    <button className="ota-action-btn edit" onClick={() => openEdit(item)} title="Edit">
+                            <div className="w-full">
+                                <ResponsiveTable
+                                    columns={[
+                                        {
+                                            header: 'No',
+                                            render: (row, index) => index + 1,
+                                            className: 'w-16',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Tanggal',
+                                            render: (row) => formatDate(row.tanggal),
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Santri',
+                                            render: (row) => (
+                                                <>
+                                                    <div style={{ fontWeight: 500 }}>{row.santri?.nama || '-'}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                        {row.santri?.nis || '-'}
+                                                    </div>
+                                                </>
+                                            )
+                                        },
+                                        {
+                                            header: 'Nominal',
+                                            render: (row) => formatRupiah(row.nominal),
+                                            className: 'text-right text-emerald-500 font-semibold',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Keterangan',
+                                            render: (row) => row.keterangan || '-',
+                                            className: 'text-gray-500 max-w-[200px] truncate',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Aksi',
+                                            render: (row) => (
+                                                <div className="flex items-center gap-2 justify-center" onClick={(e) => e.stopPropagation()}>
+                                                    <button className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" onClick={() => openEdit(row)} title="Edit">
                                                         <Edit2 size={16} />
                                                     </button>
-                                                    <button className="ota-action-btn delete" onClick={() => openDeleteModal(item)} title="Hapus">
+                                                    <button className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" onClick={() => openDeleteModal(row)} title="Hapus">
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </div>
-                                                <MobileActionMenu
-                                                    onEdit={() => openEdit(item)}
-                                                    onDelete={() => openDeleteModal(item)}
-                                                />
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr style={{ background: '#f8fafc', fontWeight: 600 }}>
-                                        <td colSpan={3}>Total Periode Ini</td>
-                                        <td className="text-right" style={{ color: '#10b981' }}>{formatRupiah(filteredTotal)}</td>
-                                        <td colSpan={2}></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                                            ),
+                                            className: 'text-center',
+                                            hideOnMobile: false
+                                        }
+                                    ]}
+                                    data={filteredData}
+                                    loading={loading}
+                                    mobileCardHeader={(row, index) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <div className="space-y-1">
+                                                <div className="font-bold text-gray-900">{row.santri?.nama || '-'}</div>
+                                                <div className="text-xs text-gray-500">{row.santri?.nis || '-'}</div>
+                                                <div className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                                    <Calendar size={12} /> {formatDate(row.tanggal)}
+                                                </div>
+                                            </div>
+                                            <div className="font-bold text-emerald-600 text-sm">
+                                                {formatRupiah(row.nominal)}
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => (
+                                        <div className="w-full mt-3 space-y-3">
+                                            <div className="text-sm text-gray-600">
+                                                <span className="font-medium">Keterangan:</span><br/>
+                                                {row.keterangan || '-'}
+                                            </div>
+                                            <div className="flex items-center gap-2 pt-2 border-t border-gray-100 justify-end" onClick={(e) => e.stopPropagation()}>
+                                                <button className="p-2 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" onClick={() => openEdit(row)}>
+                                                    <Edit2 size={14} /> Edit
+                                                </button>
+                                                <button className="p-2 flex items-center gap-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" onClick={() => openDeleteModal(row)}>
+                                                    <Trash2 size={14} /> Hapus
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                />
+                                <div className="p-4 bg-gray-50 rounded-xl mt-4 flex justify-between items-center border border-gray-100">
+                                    <div className="font-bold text-gray-700">Total Periode Ini</div>
+                                    <div className="font-bold text-emerald-600 text-lg">{formatRupiah(filteredTotal)}</div>
+                                </div>
+                            </div>
                         ) : (
                             <div className="ota-empty">
                                 <EmptyState

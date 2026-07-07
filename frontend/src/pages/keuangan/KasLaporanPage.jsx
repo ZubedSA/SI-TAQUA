@@ -9,6 +9,7 @@ import { useCalendar } from '../../context/CalendarContext'
 import DateDisplay from '../../components/common/DateDisplay'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 import SmartMonthYearFilter from '../../components/common/SmartMonthYearFilter'
+import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './Keuangan.css'
 
 const KasLaporanPage = () => {
@@ -209,97 +210,71 @@ const KasLaporanPage = () => {
                     <div className="table-container">
                         <h3 className="card-title green"><ArrowUpCircle size={20} /> Pemasukan ({pemasukan.length})</h3>
                         
-                        {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr><th>Tanggal</th><th>Sumber</th><th>Jumlah</th></tr>
-                                </thead>
-                                <tbody>
-                                    {pemasukan.slice(0, 10).map(item => (
-                                        <tr key={item.id}>
-                                            <td><DateDisplay date={item.tanggal} /></td>
-                                            <td>{item.sumber}</td>
-                                            <td className="amount green">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {pemasukan.slice(0, 10).map((item, i) => (
-                                <div key={item.id} className="mobile-data-card">
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title text-gray-900 font-bold">{item.sumber}</h4>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1">
-                                                {item.kategori || 'Umum'}
-                                            </span>
-                                        </div>
-                                        <div className="mobile-card-amount green">
-                                            Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                        </div>
-                                    </div>
-                                    <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1 text-xs text-gray-500">
-                                        <div className="mobile-card-meta">
-                                            <span>No: {i + 1}</span>
-                                            <span>•</span>
-                                            <span><DateDisplay date={item.tanggal} /></span>
-                                        </div>
-                                    </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'Tanggal', render: (row) => <DateDisplay date={row.tanggal} /> },
+                                { header: 'Sumber', accessor: 'sumber' },
+                                { 
+                                    header: 'Jumlah', 
+                                    render: (row) => <span className="font-mono font-medium text-emerald-600">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span>
+                                }
+                            ]}
+                            data={pemasukan.slice(0, 10)}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.sumber}</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1 w-max">
+                                        {row.kategori || 'Umum'}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            mobileCardActions={(row) => null}
+                            mobileCardContent={(row, i) => (
+                                <div className="flex justify-between items-center w-full mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500">
+                                    <div className="flex gap-1 items-center">
+                                        <span>No: {i + 1}</span>
+                                        <span>•</span>
+                                        <span><DateDisplay date={row.tanggal} /></span>
+                                    </div>
+                                    <span className="font-mono font-bold text-emerald-600">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span>
+                                </div>
+                            )}
+                        />
                     </div>
 
                     <div className="table-container">
                         <h3 className="card-title red"><ArrowDownCircle size={20} /> Pengeluaran ({pengeluaran.length})</h3>
                         
-                        {/* Desktop Table View */}
-                        <div className="table-wrapper desktop-table-only">
-                            <table className="table">
-                                <thead>
-                                    <tr><th>Tanggal</th><th>Keperluan</th><th>Jumlah</th></tr>
-                                </thead>
-                                <tbody>
-                                    {pengeluaran.slice(0, 10).map(item => (
-                                        <tr key={item.id}>
-                                            <td><DateDisplay date={item.tanggal} /></td>
-                                            <td>{item.keperluan}</td>
-                                            <td className="amount red">Rp {Number(item.jumlah).toLocaleString('id-ID')}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Mobile Card View */}
-                        <div className="mobile-card-only hidden mobile-card-list">
-                            {pengeluaran.slice(0, 10).map((item, i) => (
-                                <div key={item.id} className="mobile-data-card">
-                                    <div className="mobile-card-row">
-                                        <div>
-                                            <h4 className="mobile-card-title text-gray-900 font-bold">{item.keperluan}</h4>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 mt-1">
-                                                {item.kategori || 'Umum'}
-                                            </span>
-                                        </div>
-                                        <div className="mobile-card-amount red">
-                                            Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                                        </div>
-                                    </div>
-                                    <div className="mobile-card-row items-center pt-2 border-t border-gray-100 mt-1 text-xs text-gray-500">
-                                        <div className="mobile-card-meta">
-                                            <span>No: {i + 1}</span>
-                                            <span>•</span>
-                                            <span><DateDisplay date={item.tanggal} /></span>
-                                        </div>
-                                    </div>
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'Tanggal', render: (row) => <DateDisplay date={row.tanggal} /> },
+                                { header: 'Keperluan', accessor: 'keperluan' },
+                                { 
+                                    header: 'Jumlah', 
+                                    render: (row) => <span className="font-mono font-medium text-red-600">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span>
+                                }
+                            ]}
+                            data={pengeluaran.slice(0, 10)}
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.keperluan}</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200 mt-1 w-max">
+                                        {row.kategori || 'Umum'}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            mobileCardActions={(row) => null}
+                            mobileCardContent={(row, i) => (
+                                <div className="flex justify-between items-center w-full mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500">
+                                    <div className="flex gap-1 items-center">
+                                        <span>No: {i + 1}</span>
+                                        <span>•</span>
+                                        <span><DateDisplay date={row.tanggal} /></span>
+                                    </div>
+                                    <span className="font-mono font-bold text-red-600">Rp {Number(row.jumlah).toLocaleString('id-ID')}</span>
+                                </div>
+                            )}
+                        />
                     </div>
                 </div>
             )}

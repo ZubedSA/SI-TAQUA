@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, RefreshCw, Download, Calendar } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
+import ResponsiveTable from '../../../components/ui/ResponsiveTable'
 
 import '../shared/styles/Nilai.css'
 
@@ -112,36 +113,50 @@ const RekapSyahriPage = () => {
                         <p>Pilih halaqoh untuk melihat rekap nilai</p>
                     </div>
                 ) : (
-                    <div className="table-container">
-                        <table className="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>NIS</th>
-                                    <th>Nama Santri</th>
-                                    <th>Hafalan</th>
-                                    <th>Tajwid</th>
-                                    <th>Kelancaran</th>
-                                    <th>Rata-rata</th>
-                                    <th>Predikat</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.map((s, i) => (
-                                    <tr key={s.id}>
-                                        <td>{i + 1}</td>
-                                        <td>{s.nis}</td>
-                                        <td>{s.nama}</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                        <td>-</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <ResponsiveTable
+                        columns={[
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-16' },
+                            { header: 'NIS', accessor: 'nis', hideOnMobile: true },
+                            { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
+                            { header: 'Hafalan', render: () => '-' },
+                            { header: 'Tajwid', render: () => '-' },
+                            { header: 'Kelancaran', render: () => '-' },
+                            { header: 'Rata-rata', render: () => '-' },
+                            { header: 'Predikat', render: () => '-' }
+                        ]}
+                        data={data}
+                        mobileCardHeader={(row) => (
+                            <div className="flex flex-col">
+                                <span className="font-bold text-[#0A2619]">{row.nama}</span>
+                                <span className="text-[10px] text-gray-500 mt-0.5">{row.nis}</span>
+                            </div>
+                        )}
+                        mobileCardActions={() => null}
+                        mobileCardContent={() => (
+                            <div className="flex flex-col gap-1 w-full text-xs mt-2 pt-2 border-t border-gray-100">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Hafalan:</span>
+                                    <span className="font-semibold">-</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Tajwid:</span>
+                                    <span className="font-semibold">-</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Kelancaran:</span>
+                                    <span className="font-semibold">-</span>
+                                </div>
+                                <div className="flex justify-between border-t border-gray-50 pt-1 mt-0.5">
+                                    <span className="text-gray-500 font-medium">Rata-rata:</span>
+                                    <span className="font-bold">-</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">Predikat:</span>
+                                    <span className="font-semibold">-</span>
+                                </div>
+                            </div>
+                        )}
+                    />
                 )}
             </div>
         </div>
