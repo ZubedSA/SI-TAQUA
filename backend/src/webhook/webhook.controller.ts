@@ -128,8 +128,8 @@ export class WebhookController {
     // Catat pesan yang dikirim oleh bot untuk mendeteksi loop saat self-chat
     this.sentMessages.set(this.normalizeText(message), Date.now());
 
-    // Gunakan fallback hardcoded agar tetap berjalan di Vercel serverless
-    const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
+    // FIX #5: Gunakan token yang sesuai dengan .env terbaru
+    const token = process.env.FONNTE_TOKEN || 'ytZayjjW1QaTtx4EQn4d';
 
     const formData = new URLSearchParams();
     formData.append('target', target);
@@ -508,7 +508,8 @@ export class WebhookController {
           case 'chitchat':
           default:
             executedQuery = 'N/A (Chitchat)';
-            dbResult = { status: 'chitchat', reply: parsed.parameters?.pesan || 'Halo! Ada yang bisa saya bantu?' };
+            // FIX #3: Pesan statis yang aman, bukan teks bebas Gemini
+            dbResult = { status: 'chitchat' };
             break;
         }
       } catch (dbError) {
@@ -530,7 +531,17 @@ export class WebhookController {
         reply = `Maaf, data ${type} ${cleanName} tidak ditemukan.`;
       } else {
         if (parsed.intent === 'chitchat') {
-          reply = dbResult.reply;
+          // FIX #3: Pesan statis aman — JANGAN PERNAH pakai teks bebas Gemini untuk chitchat
+          reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
+
+Saya bisa membantu Anda dengan:
+📖 Cek hafalan santri
+💰 Status pembayaran SPP
+📊 Nilai akademis
+✅ Data kehadiran
+💳 Rincian tagihan
+
+Silakan tanyakan kebutuhan Anda! 🤲`;
         } else {
           reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);
         }
