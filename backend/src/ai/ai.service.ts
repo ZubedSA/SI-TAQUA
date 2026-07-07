@@ -12,15 +12,154 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
   private conversationMemory: Record<string, ChatContext> = {};
   private genAI: GoogleGenerativeAI | null = null;
-  private geminiModel: any = null;
+  private geminiParserModel: any = null;
+  private geminiResponseModel: any = null;
 
   constructor() {
     const geminiKey = process.env.GEMINI_API_KEY || 'AIzaSyADWtSmMkfPKwcEnkUMEB0iNEPRbNcpCV4';
     if (geminiKey) {
       try {
         this.genAI = new GoogleGenerativeAI(geminiKey);
-        this.geminiModel = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        this.logger.log('AiService initialized: Gemini 1.5 Flash mode AKTIF.');
+        this.geminiParserModel = this.genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          tools: [{
+            functionDeclarations: [
+              {
+                name: 'cekPembayaran',
+                description: 'Mengecek status tagihan atau pembayaran SPP/uang makan/asrama santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja (tanpa kata tanya/kata kerja)' },
+                    bulan: { type: 'STRING', description: 'Bulan tagihan (misal: "Juli" atau "bulan ini")' }
+                  }
+                }
+              },
+              {
+                name: 'cekHafalan',
+                description: 'Mengecek progress atau riwayat setoran hafalan santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'cekNilai',
+                description: 'Mengecek nilai akademis atau pelajaran santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'cekAbsensi',
+                description: 'Mengecek rekap kehadiran atau absensi santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'cekSantri',
+                description: 'Mengecek detail profil atau informasi pribadi santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'cekTagihan',
+                description: 'Mengecek rincian tagihan aktif santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'cekPrestasi',
+                description: 'Mengecek prestasi akademis atau pujian santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'cekPerizinan',
+                description: 'Mengecek status izin keluar/pulang santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                  }
+                }
+              },
+              {
+                name: 'tambahPembayaran',
+                description: 'Input atau catat transaksi pembayaran baru untuk santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' },
+                    nominal: { type: 'NUMBER', description: 'Nominal uang pembayaran' },
+                    kategori: { type: 'STRING', description: 'Kategori pembayaran (SPP Bulanan, Uang Makan, Uang Asrama)' }
+                  },
+                  required: ['santri_name', 'nominal']
+                }
+              },
+              {
+                name: 'tambahHafalan',
+                description: 'Input setoran hafalan baru santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' },
+                    juz: { type: 'NUMBER', description: 'Nomor juz (1-30)' },
+                    surah: { type: 'STRING', description: 'Nama surah' },
+                    ayat_awal: { type: 'NUMBER', description: 'Nomor ayat mulai' },
+                    ayat_akhir: { type: 'NUMBER', description: 'Nomor ayat selesai (opsional)' }
+                  },
+                  required: ['santri_name', 'juz', 'surah', 'ayat_awal']
+                }
+              },
+              {
+                name: 'tambahAbsensi',
+                description: 'Input absensi kehadiran santri',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    santri_name: { type: 'STRING', description: 'Nama santri saja' },
+                    status: { type: 'STRING', description: 'Status (hadir, sakit, izin, alpha)' }
+                  },
+                  required: ['santri_name', 'status']
+                }
+              },
+              {
+                name: 'chitchat',
+                description: 'Percakapan umum, salam pembuka, sapaan, terima kasih, chitchat',
+                parameters: {
+                  type: 'OBJECT',
+                  properties: {
+                    pesan: { type: 'STRING', description: 'Pesan balasan ramah' }
+                  }
+                }
+              }
+            ]
+          }]
+        });
+        this.geminiResponseModel = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        this.logger.log('AiService initialized: Gemini 1.5 Flash Parser & Response mode AKTIF.');
       } catch (e) {
         this.logger.warn('Gemini init gagal, fallback ke Local NLP:', e);
         this.genAI = null;
@@ -65,80 +204,45 @@ export class AiService {
   // =====================================================================
   private async parseIntentWithGemini(userPrompt: string, sender: string): Promise<any> {
     const ctx = this.getContext(sender);
-    const systemPrompt = `Kamu adalah parser intent untuk sistem informasi pondok pesantren SI-TAQUA.
-Tugasmu: Analisis pesan pengguna dan keluarkan JSON dengan format:
-{
-  "intent": "<intent_name>",
-  "parameters": {
-    "santri_name": "<NAMA SANTRI SAJA, contoh: 'Ahmad Fauzi' atau 'Abdullah'. DILARANG KERAS memasukkan kata tanya, kata kerja, kata depan, nominal, atau keterangan lain seperti 'apakah sudah lunas', 'sudah bayar', 'bulan ini'>",
-    "nominal": <angka jika ada>,
-    "kategori": "<kategori jika ada>",
-    "juz": <nomor juz jika ada>,
-    "surah": "<nama surah jika ada>",
-    "ayat_awal": <ayat awal jika ada>,
-    "ayat_akhir": <ayat akhir jika ada>,
-    "status": "<status jika ada>",
-    "keterangan": "<keterangan jika ada>",
-    "isi_catatan": "<isi catatan jika ada>",
-    "mapel": "<mata pelajaran jika ada>",
-    "nilai": <angka nilai jika ada>
-  }
-}
+    const systemPrompt = `Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA.
+Konteks nama santri terakhir = "${ctx.lastSantriName || 'belum ada'}".
 
-Daftar intent yang valid:
-- chitchat: percakapan umum, salam, terima kasih
-- check_pembayaran: cek status tagihan/SPP santri
-- tambah_pembayaran: input/catat pembayaran SPP santri
-- get_hafalan: cek progress hafalan santri
-- tambah_hafalan: input setoran hafalan santri
-- get_tidak_setor_today: siapa yang belum setor hafalan hari ini
-- get_top_10_hafalan: santri dengan hafalan terbanyak/tertinggi
-- get_nilai: cek nilai akademis santri
-- tambah_nilai: input nilai santri
-- get_presence_today: rekap absensi/kehadiran hari ini
-- tambah_absensi: input absensi santri
-- get_santri_most_izin: santri yang paling sering izin
-- get_perkembangan_summary: ringkasan perkembangan santri
-- get_tunggakan_terbesar: santri dengan tunggakan terbesar
-- get_pemasukan_bulan: total pemasukan bulan ini
-- get_pemasukan_perbandingan: bandingkan pemasukan bulan ini vs lalu
-- get_guru_belum_absen: guru yang belum absen hari ini
-- get_jumlah_santri_aktif: jumlah total santri aktif
-- tambah_pelanggaran: input pelanggaran santri
-- tambah_prestasi: input prestasi/pujian santri
-- tambah_catatan_guru: input catatan pembinaan santri
-- konfirmasi_ya: konfirmasi "ya/ok/oke/sip/benar"
-- konfirmasi_tidak: konfirmasi "tidak/batal/cancel"
+Tugasmu: Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya.
+- Jika ada kata ganti (dia, nanda, anak saya, hafalannya, nilainya, pembayarannya) dan ada nama santri terakhir di konteks, gunakan nama tersebut untuk argumen santri_name.
+- Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi 'chitchat'.
+- Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang.`;
 
-Konteks sebelumnya: Nama santri terakhir = "${ctx.lastSantriName || 'belum ada'}", Intent terakhir = "${ctx.lastIntent}".
+    if (!this.geminiParserModel) {
+      throw new Error('Gemini Parser Model not initialized');
+    }
 
-PENTING: 
-- Parameter "santri_name" harus MURNI nama orang/santri saja (misal: 'Abdullah Ahmad Zayn'). Hapus kata-kata kelanjutan seperti 'apakah sudah lunas...', 'sudah bayar...', 'bulan ini'.
-- Jika pesan adalah konfirmasi ya/setuju (ya, ok, oke, sip, lanjut, benar, betul, yoi, heeh, yes) → intent: "konfirmasi_ya"
-- Jika pesan adalah penolakan (tidak, batal, cancel, ga, gak, ndak, no) → intent: "konfirmasi_tidak"
-- Jika ada referensi "dia" / "santri itu" / "hafalannya" / "nilainya" dan ada nama terakhir, gunakan nama terakhir.
-- Output HANYA JSON, tanpa penjelasan tambahan.`;
+    const response = await this.geminiParserModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      systemInstruction: systemPrompt,
+    });
 
-    const response = await this.geminiModel.generateContent([
-      { text: systemPrompt },
-      { text: `Pesan: "${userPrompt}"` }
-    ]);
-
-    const raw = response.response.text().trim();
-    // Extract JSON even if wrapped in markdown
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON in Gemini response');
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    // Clean up null/undefined parameters
-    if (parsed.parameters) {
-      Object.keys(parsed.parameters).forEach(k => {
-        if (parsed.parameters[k] === null || parsed.parameters[k] === undefined || parsed.parameters[k] === '') {
-          delete parsed.parameters[k];
+    const functionCalls = response.response.functionCalls;
+    if (functionCalls && functionCalls.length > 0) {
+      const call = functionCalls[0];
+      // Bersihkan dan normalize arguments
+      const args = call.args || {};
+      const cleanedArgs: any = {};
+      Object.keys(args).forEach(k => {
+        if (args[k] !== null && args[k] !== undefined && args[k] !== '') {
+          cleanedArgs[k] = args[k];
         }
       });
+      return {
+        intent: call.name,
+        parameters: cleanedArgs,
+      };
     }
-    return parsed;
+
+    // Fallback jika tidak memicu function call
+    return {
+      intent: 'chitchat',
+      parameters: { pesan: response.response.text().trim() },
+    };
   }
 
   // =====================================================================
@@ -316,7 +420,7 @@ PENTING:
   async parseIntent(userPrompt: string, sender: string): Promise<any> {
     this.addToHistory(sender, 'user', userPrompt);
 
-    if (this.geminiModel) {
+    if (this.geminiParserModel) {
       try {
         const result = await this.parseIntentWithGemini(userPrompt, sender);
         // Sync context dari Gemini result
@@ -336,9 +440,9 @@ PENTING:
   }
 
   // =====================================================================
-  // GEMINI: Generate response cerdas berbasis data
+  // GEMINI: Format response cerdas berbasis data
   // =====================================================================
-  private async generateResponseWithGemini(
+  private async formatResponseWithGemini(
     userPrompt: string,
     intent: string,
     dbResult: any,
@@ -355,39 +459,29 @@ PENTING:
       dataContext = `\nError dari database: ${dbResult.error}`;
     }
 
-    const systemPrompt = `Kamu adalah Asisten AI SI-TAQUA, asisten cerdas untuk sistem informasi pondok pesantren "PTQ Al-Usymuni Batuan".
-Kamu membantu ustadz, admin, dan wali santri mendapatkan informasi akurat dari sistem.
+    const systemPrompt = `Kamu adalah AI Assistant Sistem Manajemen Pondok.
+Tugasmu hanya memahami maksud pengguna dan menyusun jawaban berdasarkan data yang diberikan backend.
+Jangan pernah membuat data sendiri.
+Jangan pernah menebak.
+Jangan pernah mengarang.
+Jika backend tidak memberikan data maka katakan data tidak ditemukan.
+Semua jawaban harus berasal dari database.
 
-ATURAN MUTLAK KEBENARAN DATA (ZERO-HALLUCINATION RULE):
-1. Kamu HANYA BOLEH menjawab berdasarkan data yang ada pada bagian "Data dari database" di bawah ini.
-2. JANGAN PERNAH mengarang, menebak, atau mengasumsikan detail keuangan (seperti nominal SPP, status lunas, tagihan listrik, air, dll.) jika tidak tertera di database.
-3. Kategori pembayaran resmi di pesantren ini adalah: SPP Bulanan, Uang Makan, Uang Asrama, Daftar Ulang, Seragam, dan Kegiatan. Di luar kategori ini (seperti tagihan listrik, air, dsb.), JANGAN PERNAH dibuat-buat sendiri.
-4. Jika database mengembalikan error (misalnya "Santri tidak ditemukan..."), atau jika data dari database kosong ([]), sampaikan dengan jujur dan sopan kepada user bahwa data tidak ditemukan di sistem, nama santri tidak terdaftar, atau belum diinput oleh pengurus. Jangan buat laporan fiktif.
+ATURAN FORMAT WHATSAPP:
+- Gunakan bahasa yang sopan, Islami, dan ramah (salam pembuka/penutup).
+- Gunakan *bold* untuk penegasan (misal: *Ahmad Fauzi*, *Lunas*, *SPP Bulanan*).
+- Jangan gunakan markdown lain seperti HTML/backticks.
+- Jika data kosong atau error, sampaikan dengan jujur bahwa data tidak ditemukan. Jangan berhalusinasi.`;
 
-Karakter kamu:
-- Ramah, sopan, Islami (gunakan salam, lafadz Arab sesekali)
-- Informatif dan akurat berdasarkan data yang diberikan
-- Gunakan emoji yang sesuai untuk mempercantik pesan
-- Format WhatsApp: gunakan *bold* untuk penegasan, bukan markdown lain
-- Bahasa Indonesia yang baik dan mudah dipahami
-
-Intent yang ditangani: ${intent}
+    const promptText = `Pesan user: "${userPrompt}"
 Nama santri konteks: ${santriName || 'tidak ada'}
-${dataContext}
+Fungsi dijalankan: ${intent}
+${dataContext}`;
 
-Riwayat percakapan terakhir:
-${ctx.history.slice(-6).map(h => `${h.role === 'user' ? 'User' : 'Bot'}: ${h.parts}`).join('\n')}
-
-Pesan user: "${userPrompt}"
-
-Buat respons yang:
-1. Sesuai dengan data asli dari database di atas (TIDAK BOLEH BERHALUSINASI DATA BARU)
-2. Format WhatsApp friendly (bukan HTML/markdown, gunakan *bold* dan _italic_)
-3. Singkat tapi lengkap (maksimal 500 kata)
-4. Jika data error atau tidak ditemukan, sampaikan dengan sopan dan jelaskan kendalanya
-5. Akhiri dengan tawaran bantuan jika sesuai`;
-
-    const response = await this.geminiModel.generateContent(systemPrompt);
+    const response = await this.geminiResponseModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: promptText }] }],
+      systemInstruction: systemPrompt,
+    });
     return response.response.text().trim();
   }
 
@@ -570,9 +664,9 @@ Buat respons yang:
   async generateResponse(userPrompt: string, intent: string, dbResult: any, sender: string): Promise<string> {
     let reply = '';
 
-    if (this.geminiModel && intent !== 'konfirmasi_ya' && intent !== 'konfirmasi_tidak') {
+    if (this.geminiResponseModel && intent !== 'konfirmasi_ya' && intent !== 'konfirmasi_tidak') {
       try {
-        reply = await this.generateResponseWithGemini(userPrompt, intent, dbResult, sender);
+        reply = await this.formatResponseWithGemini(userPrompt, intent, dbResult, sender);
       } catch (e) {
         this.logger.warn(`[Gemini] Gagal generate response, fallback ke local: ${e.message}`);
         reply = this.generateResponseLocal(userPrompt, intent, dbResult, sender);

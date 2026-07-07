@@ -2,7 +2,8 @@ export declare class AiService {
     private readonly logger;
     private conversationMemory;
     private genAI;
-    private geminiModel;
+    private geminiParserModel;
+    private geminiResponseModel;
     constructor();
     private getContext;
     private setContext;
@@ -10,7 +11,7 @@ export declare class AiService {
     private parseIntentWithGemini;
     private parseIntentLocal;
     parseIntent(userPrompt: string, sender: string): Promise<any>;
-    private generateResponseWithGemini;
+    private formatResponseWithGemini;
     private generateResponseLocal;
     generateResponse(userPrompt: string, intent: string, dbResult: any, sender: string): Promise<string>;
 }

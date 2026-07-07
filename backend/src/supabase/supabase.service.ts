@@ -21,7 +21,7 @@ export class SupabaseService {
   async findSantriByName(name: string) {
     let queryBuilder = this.supabase
       .from('santri')
-      .select('id, nama, nis, status, kelas_id, halaqoh_id')
+      .select('id, nama, nis, status, kelas_id, halaqoh_id, kelas(nama)')
       .eq('status', 'Aktif');
 
     const words = name.trim().split(/\s+/);
@@ -815,5 +815,98 @@ export class SupabaseService {
     } catch (err) {
       this.logger.error('Error saat memastikan data sample:', err);
     }
+  }
+
+  // Check if phone number belongs to an active teacher/guru
+  async isGuru(phone: string): Promise<boolean> {
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone) return false;
+    const suffix = cleanPhone.slice(-9);
+
+    const { data, error } = await this.supabase
+      .from('guru')
+      .select('id, no_telp')
+      .eq('status', 'Aktif');
+
+    if (error || !data) return false;
+
+    return data.some(g => {
+      if (!g.no_telp) return false;
+      const cleanGuruPhone = g.no_telp.replace(/\D/g, '');
+      return cleanGuruPhone.endsWith(suffix);
+    });
+  }
+
+  // Validate if the sender has access to a specific student's data
+  async hasAccessToSantri(phone: string, santriId: string): Promise<boolean> {
+    // 1. Guru/Ustadz has full access
+    const isGuru = await this.isGuru(phone);
+    if (isGuru) return true;
+
+    // 2. Wali santri has access ONLY to their own registered children
+    const myChildren = await this.findSantriByWaliPhone(phone);
+    if (myChildren && myChildren.length > 0) {
+      return myChildren.some(c => c.id === santriId);
+    }
+
+    return false;
+  }
+
+  // Log AI interactions for debugging and history tracking
+  async logAiInteraction(
+    userPrompt: string,
+    intent: string,
+    functionName: string,
+    parameters: any,
+    query: string,
+    queryResult: any,
+    finalReply: string,
+    responseTimeMs: number,
+    errorMsg: string = ''
+  ) {
+    try {
+      await this.supabase
+        .from('audit_log')
+        .insert({
+          action: 'whatsapp_ai_log',
+          table_name: 'fonnte_webhook',
+          new_data: {
+            user_prompt: userPrompt,
+            intent: intent,
+            function_name: functionName,
+            parameters: parameters,
+            query: query,
+            query_result: queryResult,
+            final_reply: finalReply,
+            response_time_ms: responseTimeMs,
+            error: errorMsg
+          }
+        });
+    } catch (e) {
+      this.logger.error('Gagal mencatat log interaksi AI ke audit_log:', e);
+    }
+  }
+
+  // Get pelanggaran history of student
+  async getPelanggaran(santriId: string) {
+    const { data, error } = await this.supabase
+      .from('pelanggaran')
+      .select('*')
+      .eq('santri_id', santriId)
+      .order('tanggal', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  // Get prestasi history of student
+  async getPrestasi(santriId: string) {
+    const { data, error } = await this.supabase
+      .from('catatan_pembinaan')
+      .select('*')
+      .eq('santri_id', santriId)
+      .eq('jenis', 'PUJIAN')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
   }
 }
