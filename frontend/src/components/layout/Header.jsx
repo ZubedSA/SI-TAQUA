@@ -204,6 +204,17 @@ const Header = ({ onMenuClick }) => {
                         <span className="text-gray-600">{formatDate()}</span>
                     </div>
 
+                    {/* Mobile Search Button (< md) */}
+                    {!location.pathname.startsWith('/absensi') && (
+                        <button
+                            className="flex md:hidden p-2.5 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-90"
+                            onClick={() => setShowSearch(true)}
+                            title="Pencarian Global"
+                        >
+                            <Search size={22} strokeWidth={1.8} />
+                        </button>
+                    )}
+
                     {/* Notification Button */}
                     <div className="relative" ref={notificationRef}>
                         <button

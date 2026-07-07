@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vite.dev/config/
+// https://vite.dev/config/ - cache cleared// Trigger reload for mobile touch fix test
 export default defineConfig({
   plugins: [
     react(),

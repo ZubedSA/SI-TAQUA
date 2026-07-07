@@ -324,10 +324,13 @@ const BottomNav = () => {
 
             {/* Bottom Sheet Menu */}
             <div 
-                className={`fixed left-0 right-0 bottom-0 bg-[#0A2619] rounded-t-3xl z-[9999] shadow-2xl transition-transform duration-300 ease-out md:hidden
-                    ${activeSheet ? 'translate-y-0' : 'translate-y-full'}
+                className={`fixed left-4 right-4 bg-[#0A2619]/95 backdrop-blur-md rounded-[2rem] z-[9999] shadow-2xl border border-[#143d2a] transition-all duration-300 ease-in-out md:hidden
+                    ${activeSheet 
+                        ? 'bottom-24 opacity-100 translate-y-0 scale-100 pointer-events-auto' 
+                        : 'bottom-0 opacity-0 translate-y-10 scale-95 pointer-events-none'
+                    }
                 `}
-                style={{ maxHeight: '70vh', overflowY: 'auto' }}
+                style={{ maxHeight: '60vh', overflowY: 'auto' }}
             >
                 <div className="sticky top-0 bg-[#0A2619] px-6 py-4 border-b border-[#143d2a] flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -353,10 +356,10 @@ const BottomNav = () => {
                             key={idx}
                             onClick={() => handleSubMenuClick(child)}
                             className={`
-                                flex flex-col items-center gap-2 p-4 rounded-2xl transition-all
+                                flex flex-col items-center gap-2 p-4 rounded-2xl transition-all active:scale-95
                                 ${location.pathname === child.path 
-                                    ? 'bg-[#BCF32F] text-black ring-1 ring-[#BCF32F]' 
-                                    : 'bg-[#143d2a] text-gray-300 hover:bg-[#1a4a35]'
+                                    ? 'bg-[#BCF32F] text-black shadow-md shadow-[#BCF32F]/10 scale-[1.02]' 
+                                    : 'bg-[#143d2a] text-gray-300 hover:bg-[#1a4a35] hover:text-white'
                                 }
                             `}
                         >
@@ -370,12 +373,12 @@ const BottomNav = () => {
                         </button>
                     ))}
                 </div>
-                <div className="h-20" />
+                <div className="h-4" />
             </div>
 
-            {/* Bottom Navbar Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#0A2619] border-t border-[#143d2a] px-2 py-1 z-[10000] shadow-[0_-4px_12px_rgba(0,0,0,0.2)]">
-                <div className="flex justify-around items-center h-16 max-w-md mx-auto">
+            {/* Floating Bottom Navbar Bar */}
+            <div className="lg:hidden fixed bottom-4 left-4 right-4 bg-[#0A2619]/95 backdrop-blur-md border border-[#143d2a]/80 px-2 py-1.5 z-[10000] shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-[1.5rem]">
+                <div className="flex justify-around items-center h-14 max-w-md mx-auto">
                     {navItems.map((item) => {
                         const active = isActive(item)
                         return (
@@ -389,7 +392,7 @@ const BottomNav = () => {
                                 <div className={`p-1 rounded-xl transition-all duration-300 ${active ? 'scale-110' : ''}`}>
                                     <item.icon size={22} className={active ? 'stroke-[2.5px]' : 'stroke-[2px]'} />
                                 </div>
-                                <span className={`text-[10px] font-bold mt-0.5 tracking-tight ${active ? 'opacity-100' : 'opacity-80'}`}>
+                                <span className={`text-[10px] font-bold mt-0.5 tracking-tight ${active ? 'opacity-100' : 'opacity-85'}`}>
                                     {item.label}
                                 </span>
                                 
@@ -400,14 +403,7 @@ const BottomNav = () => {
                         )
                     })}
                 </div>
-                <div className="h-safe-area-bottom pb-2" />
             </div>
-
-            <style>{`
-                .h-safe-area-bottom {
-                    height: env(safe-area-inset-bottom);
-                }
-            `}</style>
         </>
     )
 }

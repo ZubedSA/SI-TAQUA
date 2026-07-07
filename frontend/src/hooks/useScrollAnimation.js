@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 
 /**
  * Custom hook for scroll-triggered animations
@@ -20,6 +21,7 @@ import { useEffect, useRef } from 'react'
  */
 export const useScrollAnimation = (options = {}) => {
     const observerRef = useRef(null)
+    const location = useLocation()
 
     useEffect(() => {
         // Default options
@@ -51,7 +53,7 @@ export const useScrollAnimation = (options = {}) => {
                 observerRef.current.disconnect()
             }
         }
-    }, [])
+    }, [location.pathname]) // Re-run when navigation occurs!
 
     return observerRef
 }

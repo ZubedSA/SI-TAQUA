@@ -11,7 +11,7 @@ const Button = ({
     type = 'button',
     ...props
 }) => {
-    const baseStyles = "inline-flex items-center justify-center gap-2 !rounded-full font-bold uppercase tracking-wide transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
+    const baseStyles = "inline-flex items-center justify-center gap-2 !rounded-full font-bold uppercase tracking-wide transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
 
     const variants = {
         primary: "!bg-[#0A2619] !text-[#BCF32F] hover:!bg-[#BCF32F] hover:!text-[#0A2619] !shadow-lg !shadow-[#0A2619]/10 hover:!shadow-[#BCF32F]/30",

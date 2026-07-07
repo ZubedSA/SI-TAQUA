@@ -29,8 +29,8 @@ const roleConfig = {
     guru: {
         label: 'Guru/Akademik',
         icon: GraduationCap,
-        color: '#3b82f6',
-        bgColor: 'rgba(59, 130, 246, 0.1)',
+        color: '#0A2619',
+        bgColor: 'rgba(10, 38, 25, 0.1)',
         path: '/dashboard/akademik',
         description: 'Kelola akademik & santri'
     },
@@ -53,24 +53,24 @@ const roleConfig = {
     pengurus: {
         label: 'Pengurus',
         icon: Shield,
-        color: '#ea4335',
-        bgColor: 'rgba(234, 67, 53, 0.1)',
+        color: '#059669',
+        bgColor: 'rgba(5, 150, 105, 0.1)',
         path: '/dashboard/pengurus',
         description: 'Pembinaan santri'
     },
     wali: {
         label: 'Wali Santri',
         icon: Users,
-        color: '#8b5cf6',
-        bgColor: 'rgba(139, 92, 246, 0.1)',
+        color: '#74A708',
+        bgColor: 'rgba(116, 167, 8, 0.1)',
         path: '/wali/beranda',
         description: 'Pantau perkembangan anak'
     },
     ota: {
         label: 'Orang Tua Asuh',
         icon: Users,
-        color: '#f97316',
-        bgColor: 'rgba(249, 115, 22, 0.1)',
+        color: '#9BD814',
+        bgColor: 'rgba(155, 216, 20, 0.1)',
         path: '/dashboard/ota',
         description: 'Pantau dana & santri'
     },

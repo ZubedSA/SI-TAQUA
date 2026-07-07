@@ -6,7 +6,7 @@
 /* Animations base classes */
 .animate-on-scroll {
     opacity: 0;
-    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
 .animate-on-scroll.is-visible {
@@ -15,7 +15,7 @@
 
 /* Animation directions */
 .fade-up {
-    transform: translateY(40px);
+    transform: translateY(12px);
 }
 
 .fade-up.is-visible {
@@ -23,7 +23,7 @@
 }
 
 .fade-left {
-    transform: translateX(-40px);
+    transform: translateX(-12px);
 }
 
 .fade-left.is-visible {
@@ -31,7 +31,7 @@
 }
 
 .fade-right {
-    transform: translateX(40px);
+    transform: translateX(12px);
 }
 
 .fade-right.is-visible {
@@ -39,11 +39,11 @@
 }
 
 /* Delays */
-.delay-100 { transition-delay: 0.1s; }
-.delay-200 { transition-delay: 0.2s; }
-.delay-300 { transition-delay: 0.3s; }
-.delay-400 { transition-delay: 0.4s; }
-.delay-500 { transition-delay: 0.5s; }
+.delay-100 { transition-delay: 0.05s; }
+.delay-200 { transition-delay: 0.1s; }
+.delay-300 { transition-delay: 0.15s; }
+.delay-400 { transition-delay: 0.2s; }
+.delay-500 { transition-delay: 0.25s; }
 
 /* Landing Page Specific Utils */
 .landing-container p {

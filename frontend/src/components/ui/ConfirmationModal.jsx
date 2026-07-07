@@ -15,28 +15,43 @@ const ConfirmationModal = ({
     variant = 'primary', // primary, success, danger, warning
     isLoading = false
 }) => {
-    const [isVisible, setIsVisible] = useState(false)
     const [shouldRender, setShouldRender] = useState(false)
+    const [isVisible, setIsVisible] = useState(false)
+    const [container] = useState(() => {
+        const el = document.createElement('div')
+        el.setAttribute('data-portal-id', 'confirmation-modal-' + Math.random().toString(36).substring(2, 9))
+        // Ensure the portal container has full viewport bounds so mobile touch hit-testing routes events correctly
+        el.style.position = 'fixed'
+        el.style.inset = '0'
+        el.style.zIndex = '99999'
+        return el
+    })
 
     useEffect(() => {
         let timer;
         if (isOpen) {
             setShouldRender(true)
+            document.body.appendChild(container)
             document.body.classList.add('modal-open')
             timer = setTimeout(() => setIsVisible(true), 10)
         } else {
             setIsVisible(false)
-            // Wait for animation to finish before unmounting
             timer = setTimeout(() => {
                 setShouldRender(false)
                 document.body.classList.remove('modal-open')
+                if (container.parentNode) {
+                    container.parentNode.removeChild(container)
+                }
             }, 300)
         }
 
         return () => {
             if (timer) clearTimeout(timer)
+            if (container.parentNode) {
+                container.parentNode.removeChild(container)
+            }
         }
-    }, [isOpen])
+    }, [isOpen, container])
 
     if (!shouldRender) return null
 
@@ -137,7 +152,7 @@ const ConfirmationModal = ({
                 </div>
             </div>
         </div>,
-        document.body
+        container
     )
 }
 

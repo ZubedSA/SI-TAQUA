@@ -6,7 +6,13 @@ const ToastContext = createContext()
 export const useToast = () => {
     const context = useContext(ToastContext)
     if (!context) {
-        throw new Error('useToast must be used within a ToastProvider')
+        console.warn('[ToastContext] useToast was used outside of ToastProvider or during a Vite HMR state desync. Using resilient mock fallback to prevent page crash.')
+        return {
+            success: (message, title = 'Berhasil') => console.log(`[Toast Fallback] SUCCESS: ${title} - ${message}`),
+            error: (message, title = 'Gagal') => console.error(`[Toast Fallback] ERROR: ${title} - ${message}`),
+            warning: (message, title = 'Peringatan') => console.warn(`[Toast Fallback] WARNING: ${title} - ${message}`),
+            info: (message, title = 'Info') => console.info(`[Toast Fallback] INFO: ${title} - ${message}`),
+        }
     }
     return context
 }

@@ -81,13 +81,13 @@ const LandingPage = () => {
             const animatedElements = document.querySelectorAll('.animate-on-scroll');
             animatedElements.forEach(el => observer.observe(el));
 
-            // Second fallback: if still not visible after 2.5s, force it
+            // Second fallback: if still not visible after 500ms, force it
             setTimeout(() => {
                 document.querySelectorAll('.animate-on-scroll:not(.is-visible)').forEach(el => {
                     el.classList.add('is-visible');
                 });
-            }, 2500);
-        }, 500);
+            }, 500);
+        }, 50);
 
         return () => {
             observer.disconnect();
@@ -185,7 +185,7 @@ const LandingPage = () => {
                         transparansi, dan akselerasi kualitas penghafal Al-Qur'an.
                     </p>
 
-                    <div className="flex flex-wrap justify-center gap-4 animate-on-scroll fade-up delay-300">
+                    <div className="flex flex-wrap justify-center gap-4">
                         <button
                             onClick={() => navigate('/login')}
                             className="px-8 py-4 bg-[#0A2619] text-[#BCF32F] rounded-2xl font-bold text-lg shadow-xl shadow-[#0A2619]/20 hover:bg-[#143d2a] hover:shadow-2xl hover:shadow-[#0A2619]/40 transition-all hover:-translate-y-1"

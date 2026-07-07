@@ -56,7 +56,34 @@ export const AuthProvider = ({ children }) => {
                 // 2. Handle session if exists
                 if (session?.user) {
                     setUser(session.user)
-                    await fetchUserProfile(session.user.id)
+                    
+                    // SWR (Stale-While-Revalidate) Cache Optimization:
+                    // Try to load cached user profile from localStorage instantly so the page loads immediately
+                    const cachedProfileRaw = localStorage.getItem('sitaqua_user_profile')
+                    let hasResolvedCache = false
+                    if (cachedProfileRaw) {
+                        try {
+                            const cachedProfile = JSON.parse(cachedProfileRaw)
+                            if (cachedProfile && cachedProfile.user_id === session.user.id) {
+                                setUserProfile(cachedProfile)
+                                setLoading(false) // Resolve loading instantly!
+                                hasResolvedCache = true
+                            }
+                        } catch (e) {
+                            console.warn('[AuthContext] Failed to parse cached profile:', e)
+                        }
+                    }
+
+                    // Fetch fresh profile in the background to update the state silently
+                    if (hasResolvedCache) {
+                        // Background refresh (non-blocking)
+                        fetchUserProfile(session.user.id).catch(err => {
+                            console.warn('[AuthContext] Background profile refresh failed:', err)
+                        })
+                    } else {
+                        // Blocking fetch (if no cache exists)
+                        await fetchUserProfile(session.user.id)
+                    }
                 } else {
                     setUser(null)
                     setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
@@ -66,7 +93,7 @@ export const AuthProvider = ({ children }) => {
                 setUser(null)
                 setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
             } finally {
-                // 3. ONLY set loading false after everything is ready
+                // 3. Ensure loading is false
                 setLoading(false)
             }
         }
@@ -103,9 +130,9 @@ export const AuthProvider = ({ children }) => {
     }, [])
 
     const fetchUserProfile = async (userId) => {
-        // Coba fetch profile dengan timeout 5 detik (lebih responsif)
+        // Coba fetch profile dengan timeout 1.5 detik (lebih responsif)
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout')), 10000)
+            setTimeout(() => reject(new Error('Timeout')), 1500)
         )
 
         const fetchPromise = supabase
@@ -148,12 +175,14 @@ export const AuthProvider = ({ children }) => {
             
             const activeRole = isValidSavedRole ? savedRole : (data.active_role || data.role || (roles.length > 0 ? roles[0] : 'guest'))
 
-            setUserProfile({
+            const profileData = {
                 ...data,
                 roles: roles,
                 activeRole: activeRole,
                 role: activeRole
-            })
+            }
+            setUserProfile(profileData)
+            localStorage.setItem('sitaqua_user_profile', JSON.stringify(profileData))
         } catch (err) {
             console.error('Profile fetch failed or timed out:', err.message)
             setUserProfile(prev => {
@@ -180,12 +209,16 @@ export const AuthProvider = ({ children }) => {
             // Save selection to localStorage to persist across refreshes
             localStorage.setItem('sitaqua_active_role', newRole)
 
-            setUserProfile(prev => ({
-                ...prev,
-                activeRole: newRole,
-                role: newRole, // Legacy
-                scopeId: scopeId
-            }))
+            setUserProfile(prev => {
+                const updated = {
+                    ...prev,
+                    activeRole: newRole,
+                    role: newRole, // Legacy
+                    scopeId: scopeId
+                }
+                localStorage.setItem('sitaqua_user_profile', JSON.stringify(updated))
+                return updated
+            })
 
             return { success: true, activeRole: newRole, scopeId }
         } catch (error) {
@@ -219,12 +252,14 @@ export const AuthProvider = ({ children }) => {
                 finalRoles = ['admin', 'admin_akademik', 'admin_absensi', 'guru', 'bendahara', 'pengurus', 'wali', 'ota', 'musyrif']
             }
 
-            setUserProfile({
+            const profileData = {
                 ...result.profile,
                 roles: finalRoles,
                 activeRole: activeRole || 'guest',
                 role: activeRole || 'guest'
-            })
+            }
+            setUserProfile(profileData)
+            localStorage.setItem('sitaqua_user_profile', JSON.stringify(profileData))
 
             // Auto-subscribe to push notifications (silent, non-blocking)
             if (isPushSupported()) {
@@ -269,6 +304,7 @@ export const AuthProvider = ({ children }) => {
             // 3. ALWAYS clear local state and redirect
             setUser(null)
             setUserProfile({ roles: [], activeRole: 'guest', role: 'guest' })
+            localStorage.removeItem('sitaqua_user_profile')
             localStorage.removeItem('sitaqua_absensi_mode')
             localStorage.removeItem('sitaqua_last_absensi_path')
             localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token')
