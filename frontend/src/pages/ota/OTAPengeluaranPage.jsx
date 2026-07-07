@@ -12,7 +12,6 @@ import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import DeleteConfirmationModal from '../../components/ui/DeleteConfirmationModal'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
-import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import './OTA.css'
 
