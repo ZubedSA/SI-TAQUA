@@ -194,21 +194,73 @@ export const useJurnal = (filters = {}) => {
             let dayName = format(dateObj, 'eeee', { locale: localeId })
             if (dayName === 'Minggu') dayName = 'Ahad'
 
-            let query = supabase.from('jadwal_pelajaran').select('*').eq('hari', dayName).order('jam_ke')
-            if (filters.guru_id) query = query.eq('guru_id', filters.guru_id)
+            let query = supabase.from('jadwal_pelajaran').select('*').eq('hari', dayName)
             if (filters.tahun_ajaran) query = query.eq('tahun_ajaran', filters.tahun_ajaran)
 
-            const { data: jadwalData, error: jadwalError } = await query
+            const { data: rawJadwalData, error: jadwalError } = await query
             if (jadwalError) throw jadwalError
-            if (!jadwalData || jadwalData.length === 0) return []
+            
+            let finalJadwalData = rawJadwalData || []
 
-            const joinedData = await manualJoin(jadwalData, 'jadwal_pelajaran')
+            // Handle Substitutions and Make-up Classes
+            try {
+                const { data: pergantianData } = await supabase
+                    .from('pergantian_jadwal')
+                    .select('*, jadwal_asli:jadwal_asli_id(*)')
+                    .eq('status', 'Disetujui')
+                    .or(`tanggal_absen.eq.${filters.tanggal},tanggal_pengganti.eq.${filters.tanggal}`)
+                
+                const gantiList = pergantianData || []
+                
+                gantiList.forEach(g => {
+                    // 1. Jika hari ini adalah hari guru absen
+                    if (g.tanggal_absen === filters.tanggal) {
+                        if (g.jenis === 'Guru Pengganti') {
+                            finalJadwalData = finalJadwalData.map(j => 
+                                j.id === g.jadwal_asli_id 
+                                    ? { ...j, guru_id: g.guru_pengganti_id, is_pengganti: true, original_guru_id: g.guru_pemohon_id } 
+                                    : j
+                            )
+                        } else if (g.jenis === 'Ganti Jam') {
+                            // Hapus jadwal dari hari ini karena diganti ke hari lain
+                            finalJadwalData = finalJadwalData.filter(j => j.id !== g.jadwal_asli_id)
+                        }
+                    }
+                    
+                    // 2. Jika hari ini adalah hari pengganti (Make-up class)
+                    if (g.tanggal_pengganti === filters.tanggal && g.jenis === 'Ganti Jam') {
+                        if (g.jadwal_asli) {
+                            finalJadwalData.push({
+                                ...g.jadwal_asli,
+                                id: g.jadwal_asli.id, // Keep original ID for foreign key in presensi_mapel
+                                jam_ke: g.jam_ke_pengganti,
+                                jam_mulai: g.jam_mulai_pengganti,
+                                jam_selesai: g.jam_selesai_pengganti,
+                                is_ganti_jam: true
+                            })
+                        }
+                    }
+                })
+            } catch (err) {
+                console.error('Failed to process pergantian jadwal:', err)
+            }
+
+            // Filter by guru_id after processing substitutions
+            if (filters.guru_id) {
+                finalJadwalData = finalJadwalData.filter(j => j.guru_id === filters.guru_id)
+            }
+
+            finalJadwalData.sort((a, b) => a.jam_ke - b.jam_ke)
+
+            if (finalJadwalData.length === 0) return []
+
+            const joinedData = await manualJoin(finalJadwalData, 'jadwal_pelajaran')
 
             const { data: jurnalData } = await supabase
                 .from('presensi_mapel')
                 .select('*')
                 .eq('tanggal', filters.tanggal)
-                .in('jadwal_id', jadwalData.map(j => j.id))
+                .in('jadwal_id', finalJadwalData.map(j => j.id))
 
             return joinedData.map(j => ({
                 ...j,

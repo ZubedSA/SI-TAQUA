@@ -19,6 +19,8 @@ const AgendaMengajar = lazy(() => import('./pages/absensi/AgendaMengajar'));
 const AbsensiQuraniyah = lazy(() => import('./pages/absensi/AbsensiQuraniyah'));
 const GerbangPijar = lazy(() => import('./pages/absensi/GerbangPijar'));
 const AdminAbsensiPage = lazy(() => import('./pages/absensi/AdminAbsensiPage'));
+const IzinPengajarPage = lazy(() => import('./pages/absensi/IzinPengajarPage'));
+const KelolaIzinPage = lazy(() => import('./pages/absensi/KelolaIzinPage'));
 
 // Dashboard Components
 const AdminDashboard = lazy(() => import('./pages/dashboards/AdminDashboard'));
@@ -169,10 +171,16 @@ function App() {
                       <Route path="home" element={<AbsensiPortal />} />
                       <Route path="agenda" element={<AgendaMengajar />} />
                       <Route path="quraniyah" element={<AbsensiQuraniyah />} />
+                      <Route path="izin" element={<IzinPengajarPage />} />
                       <Route path="gerbang-pijar" element={<GerbangPijar />} />
                       <Route path="admin" element={
                         <ProtectedRoute roles={['admin', 'admin_absensi']} fallbackRedirect="/absensi/home">
                           <AdminAbsensiPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="admin-izin" element={
+                        <ProtectedRoute roles={['admin', 'admin_absensi', 'admin_akademik']} fallbackRedirect="/absensi/home">
+                          <KelolaIzinPage />
                         </ProtectedRoute>
                       } />
                     </Route>

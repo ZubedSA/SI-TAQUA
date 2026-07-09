@@ -673,9 +673,21 @@ const AgendaMengajar = () => {
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-start">
                                                 <div className="space-y-2">
-                                                    <Badge variant={jadwal.tipe === 'HALAQOH' ? 'info' : 'success'} className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-lg">
-                                                        {jadwal.tipe || 'MADROSAH'}
-                                                    </Badge>
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        <Badge variant={jadwal.tipe === 'HALAQOH' ? 'info' : 'success'} className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-lg">
+                                                            {jadwal.tipe || 'MADROSAH'}
+                                                        </Badge>
+                                                        {jadwal.is_ganti_jam && (
+                                                            <span className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-lg bg-amber-100 text-amber-800">
+                                                                GANTI JAM
+                                                            </span>
+                                                        )}
+                                                        {jadwal.is_pengganti && (
+                                                            <span className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] rounded-lg bg-indigo-100 text-indigo-800">
+                                                                GURU PENGGANTI
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <h3 className="text-2xl font-black text-gray-900 leading-tight group-hover:text-emerald-900 transition-colors">
                                                         {jadwal.tipe === 'HALAQOH' ? `Halaqoh Jam Ke-${jadwal.jam_ke}` : (jadwal.mapel?.nama || '-')}
                                                     </h3>

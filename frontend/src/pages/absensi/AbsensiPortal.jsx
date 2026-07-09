@@ -276,7 +276,7 @@ const AbsensiPortal = () => {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-12 pb-24 px-2">
+        <div className="max-w-4xl mx-auto space-y-12 pb-36 px-4">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
                 {/* Custom Image Background */}
@@ -406,6 +406,24 @@ const AbsensiPortal = () => {
                             <div className="flex-1">
                                 <h3 className="font-black text-gray-900">Lihat Semua Agenda</h3>
                                 <p className="text-xs text-gray-400 font-medium">Buka daftar jadwal mengajar Anda tanpa scan QR (Manual).</p>
+                            </div>
+                            <ChevronRight size={20} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
+                        </div>
+                    </button>
+                </section>
+
+                <section className="relative opacity-60 hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={() => navigate('/absensi/izin')}
+                        className="group w-full relative overflow-hidden rounded-[2.5rem] p-6 text-left border border-gray-200 bg-white hover:border-emerald-500 transition-all duration-300"
+                    >
+                        <div className="flex items-center gap-6">
+                            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                                <Calendar size={24} />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-black text-gray-900">Pengajuan Izin & Jadwal</h3>
+                                <p className="text-xs text-gray-400 font-medium">Ajukan izin tidak mengajar, guru pengganti, atau ganti jam.</p>
                             </div>
                             <ChevronRight size={20} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
                         </div>

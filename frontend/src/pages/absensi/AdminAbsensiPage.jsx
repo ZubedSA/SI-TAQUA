@@ -644,9 +644,19 @@ const AdminAbsensiPage = () => {
                     Users
                 }
                 actions={
-                    activeTab === 'laporan' && (
-                        <div className="relative">
-                            <Button 
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="primary" 
+                            size="sm" 
+                            onClick={() => navigate('/absensi/admin-izin')} 
+                            className="rounded-xl flex items-center gap-2"
+                        >
+                            <Calendar size={18} /> 
+                            <span className="hidden md:inline">Kelola Izin & Jadwal</span>
+                        </Button>
+                        {activeTab === 'laporan' && (
+                            <div className="relative">
+                                <Button 
                                 variant="secondary" 
                                 size="sm" 
                                 onClick={() => setShowDownloadDropdown(!showDownloadDropdown)} 
@@ -694,8 +704,9 @@ const AdminAbsensiPage = () => {
                                 </>
                             )}
                         </div>
-                    )
-                }
+                    )}
+                </div>
+            }
             />
 
             {/* Quick Stats Row - Premium Siohioma Style */}
