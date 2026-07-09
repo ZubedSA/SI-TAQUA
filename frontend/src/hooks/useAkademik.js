@@ -206,7 +206,7 @@ export const useJurnal = (filters = {}) => {
             try {
                 const { data: pergantianData } = await supabase
                     .from('pergantian_jadwal')
-                    .select('*, jadwal_asli:jadwal_asli_id(*)')
+                    .select('*, jadwal_asli:jadwal_asli_id(*), jadwal_tujuan:jadwal_tujuan_id(*)')
                     .eq('status', 'Disetujui')
                     .or(`tanggal_absen.eq.${filters.tanggal},tanggal_pengganti.eq.${filters.tanggal}`)
                 
@@ -215,7 +215,7 @@ export const useJurnal = (filters = {}) => {
                 gantiList.forEach(g => {
                     // 1. Jika hari ini adalah hari guru absen
                     if (g.tanggal_absen === filters.tanggal) {
-                        if (g.jenis === 'Guru Pengganti') {
+                        if (g.jenis === 'Guru Pengganti' || g.jenis === 'Tukar Jam') {
                             finalJadwalData = finalJadwalData.map(j => 
                                 j.id === g.jadwal_asli_id 
                                     ? { ...j, guru_id: g.guru_pengganti_id, is_pengganti: true, original_guru_id: g.guru_pemohon_id } 
@@ -227,9 +227,9 @@ export const useJurnal = (filters = {}) => {
                         }
                     }
                     
-                    // 2. Jika hari ini adalah hari pengganti (Make-up class)
-                    if (g.tanggal_pengganti === filters.tanggal && g.jenis === 'Ganti Jam') {
-                        if (g.jadwal_asli) {
+                    // 2. Jika hari ini adalah hari pengganti (Make-up class atau Tukar Jam bagian ke-2)
+                    if (g.tanggal_pengganti === filters.tanggal) {
+                        if (g.jenis === 'Ganti Jam' && g.jadwal_asli) {
                             finalJadwalData.push({
                                 ...g.jadwal_asli,
                                 id: g.jadwal_asli.id, // Keep original ID for foreign key in presensi_mapel
@@ -238,6 +238,12 @@ export const useJurnal = (filters = {}) => {
                                 jam_selesai: g.jam_selesai_pengganti,
                                 is_ganti_jam: true
                             })
+                        } else if (g.jenis === 'Tukar Jam' && g.jadwal_tujuan) {
+                            finalJadwalData = finalJadwalData.map(j => 
+                                j.id === g.jadwal_tujuan_id
+                                    ? { ...j, guru_id: g.guru_pemohon_id, is_pengganti: true, original_guru_id: g.guru_pengganti_id }
+                                    : j
+                            )
                         }
                     }
                 })

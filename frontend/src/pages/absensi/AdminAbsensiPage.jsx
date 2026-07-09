@@ -54,6 +54,7 @@ const AdminAbsensiPage = () => {
 
     const hasAccess = isAdmin() || isAdminAbsensi()
     const [presensiStaf, setPresensiStaf] = useState([])
+    const [izinGuruList, setIzinGuruList] = useState([])
     const [loading, setLoading] = useState(false)
     const [presensiData, setPresensiData] = useState([])
     
@@ -113,25 +114,27 @@ const AdminAbsensiPage = () => {
         let tableHeaders, tableRows, columnStyles;
 
         if (isStaf) {
-            tableHeaders = [["No", "Nama Pengajar", "Email", "Hadir", "Alpha", "Score Kehadiran (%)"]];
+            tableHeaders = [["No", "Nama Pengajar", "Email", "Hadir", "Izin", "Alpha", "Score Kehadiran (%)"]];
             tableRows = aggregatedStaf.map((item, index) => {
-                const total = item.Hadir + item.Alpha;
-                const score = total > 0 ? Math.round((item.Hadir / total) * 100) : 0;
+                const total = item.Hadir + item.Izin + item.Alpha;
+                const score = total > 0 ? Math.round(((item.Hadir + item.Izin) / total) * 100) : 0;
                 return [
                     index + 1,
                     item.nama,
                     item.email || '-',
                     item.Hadir,
+                    item.Izin,
                     item.Alpha,
                     `${score}%`
                 ];
             });
             columnStyles = {
-                0: { cellWidth: 12, halign: 'center' },
+                0: { cellWidth: 10, halign: 'center' },
                 1: { fontStyle: 'bold' },
-                3: { cellWidth: 24, halign: 'center' },
-                4: { cellWidth: 24, halign: 'center' },
-                5: { cellWidth: 40, halign: 'center' }
+                3: { cellWidth: 15, halign: 'center' },
+                4: { cellWidth: 15, halign: 'center' },
+                5: { cellWidth: 15, halign: 'center' },
+                6: { cellWidth: 35, halign: 'center' }
             };
         } else {
             tableHeaders = [["No", "Nama Santri", "NIS", "Kelas / Halaqoh", "Hadir", "Sakit", "Izin", "Alpha"]];
@@ -188,13 +191,14 @@ const AdminAbsensiPage = () => {
         if (isStaf) {
             sheetName = "Laporan Kehadiran Staf";
             dataToExport = aggregatedStaf.map((item, index) => {
-                const total = item.Hadir + item.Alpha;
-                const score = total > 0 ? Math.round((item.Hadir / total) * 100) : 0;
+                const total = item.Hadir + item.Izin + item.Alpha;
+                const score = total > 0 ? Math.round(((item.Hadir + item.Izin) / total) * 100) : 0;
                 return {
                     "No": index + 1,
                     "Nama Pengajar": item.nama,
                     "Email": item.email || '-',
                     "Hadir": item.Hadir,
+                    "Izin": item.Izin,
                     "Alpha": item.Alpha,
                     "Score Kehadiran": `${score}%`
                 };
@@ -204,6 +208,7 @@ const AdminAbsensiPage = () => {
                 { wch: 30 },  // Nama
                 { wch: 25 },  // Email
                 { wch: 10 },  // Hadir
+                { wch: 10 },  // Izin
                 { wch: 10 },  // Alpha
                 { wch: 18 }   // Score
             ];
@@ -255,19 +260,21 @@ const AdminAbsensiPage = () => {
                     <th>Nama Pengajar</th>
                     <th>Email</th>
                     <th>Hadir</th>
+                    <th>Izin</th>
                     <th>Alpha</th>
                     <th>Score Kehadiran</th>
                 </tr>
             `;
             aggregatedStaf.forEach((item, index) => {
-                const total = item.Hadir + item.Alpha;
-                const score = total > 0 ? Math.round((item.Hadir / total) * 100) : 0;
+                const total = item.Hadir + item.Izin + item.Alpha;
+                const score = total > 0 ? Math.round(((item.Hadir + item.Izin) / total) * 100) : 0;
                 tableBodyHtml += `
                     <tr>
                         <td class="center">${index + 1}</td>
                         <td><b>${item.nama}</b></td>
                         <td>${item.email || '-'}</td>
                         <td class="center">${item.Hadir}</td>
+                        <td class="center">${item.Izin}</td>
                         <td class="center">${item.Alpha}</td>
                         <td class="center">${score}%</td>
                     </tr>
@@ -373,20 +380,34 @@ const AdminAbsensiPage = () => {
                 .from('presensi_staf')
                 .select('*, guru:guru!staf_id(nama, email)')
             
+            let queryIzin = supabase
+                .from('izin_guru')
+                .select('*')
+                .eq('status', 'Disetujui')
+
             if (activeTab === 'laporan') {
                 query = query.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
+                queryIzin = queryIzin.lte('tanggal_mulai', filterEndDate).gte('tanggal_selesai', filterStartDate)
             } else {
                 query = query.eq('tanggal', filterDate)
+                queryIzin = queryIzin.lte('tanggal_mulai', filterDate).gte('tanggal_selesai', filterDate)
             }
 
-            const { data, error } = await query.order('waktu_scan', { ascending: false })
+            const [resPresensi, resIzin] = await Promise.all([
+                query.order('waktu_scan', { ascending: false }),
+                queryIzin
+            ])
 
-            if (error) throw error
-            setPresensiStaf(data || [])
+            if (resPresensi.error) throw resPresensi.error
+            if (resIzin.error) throw resIzin.error
+
+            setPresensiStaf(resPresensi.data || [])
+            setIzinGuruList(resIzin.data || [])
         } catch (err) {
             console.error('Error fetching presensi staf:', err)
             // If table doesn't exist, we don't want to break the whole page
             setPresensiStaf([])
+            setIzinGuruList([])
         } finally {
             setLoading(false)
         }
@@ -504,7 +525,7 @@ const AdminAbsensiPage = () => {
         return Object.values(map)
     }, [filteredPresensi])
 
-    // Logika Agregasi untuk Laporan Staf (Cross-Check dengan Jadwal)
+    // Logika Agregasi untuk Laporan Staf (Cross-Check dengan Jadwal dan Izin)
     const aggregatedStaf = React.useMemo(() => {
         if (!allJadwal.length) return []
 
@@ -529,6 +550,7 @@ const AdminAbsensiPage = () => {
                 nama: guru?.nama || 'Unknown',
                 email: guru?.email || '-',
                 Hadir: 0,
+                Izin: 0,
                 Alpha: 0,
                 details: []
             }
@@ -545,7 +567,7 @@ const AdminAbsensiPage = () => {
             jadwalHariIni.forEach(j => {
                 if (!stafSummary[j.guru_id]) return
 
-                // Cek apakah ada scan untuk jadwal ini (berdasarkan Guru, Tanggal, dan Jam Ke/Waktu)
+                // Cek apakah ada scan untuk jadwal ini
                 const hasScan = presensiStaf.some(p => {
                     const isSameGuru = p.staf_id === j.guru_id
                     const isSameDate = p.tanggal === dateStr
@@ -582,20 +604,110 @@ const AdminAbsensiPage = () => {
                         status: 'Hadir'
                     })
                 } else {
-                    stafSummary[j.guru_id].Alpha++
-                    stafSummary[j.guru_id].details.push({
-                        tanggal: dateStr,
-                        jam_ke: j.jam_ke,
-                        tipe: j.tipe,
-                        referensi_id: j.referensi_id,
-                        status: 'Alpha'
+                    // Jika tidak scan, cek izin
+                    const hasIzin = izinGuruList.some(izin => {
+                        return izin.guru_id === j.guru_id && 
+                               izin.tanggal_mulai <= dateStr && 
+                               izin.tanggal_selesai >= dateStr
                     })
+
+                    if (hasIzin) {
+                        stafSummary[j.guru_id].Izin++
+                        stafSummary[j.guru_id].details.push({
+                            tanggal: dateStr,
+                            jam_ke: j.jam_ke,
+                            tipe: j.tipe,
+                            referensi_id: j.referensi_id,
+                            status: 'Izin'
+                        })
+                    } else {
+                        stafSummary[j.guru_id].Alpha++
+                        stafSummary[j.guru_id].details.push({
+                            tanggal: dateStr,
+                            jam_ke: j.jam_ke,
+                            tipe: j.tipe,
+                            referensi_id: j.referensi_id,
+                            status: 'Alpha'
+                        })
+                    }
                 }
             })
         })
 
         return Object.values(stafSummary).sort((a, b) => b.Alpha - a.Alpha)
-    }, [presensiStaf, allJadwal, filterStartDate, filterEndDate, guruList])
+    }, [presensiStaf, allJadwal, filterStartDate, filterEndDate, guruList, izinGuruList])
+
+    // Logika untuk Kehadiran Staf Harian (Daftar seluruh jadwal hari ini + status kehadirannya)
+    const dailyStaffAttendance = React.useMemo(() => {
+        if (!allJadwal.length) return []
+        
+        const dateObj = new Date(filterDate)
+        const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+        const dayName = dayMap[dateObj.getDay()]
+        
+        // 1. Ambil jadwal hari ini
+        const jadwalHariIni = allJadwal.filter(j => j.hari === dayName).map(j => {
+            const guru = guruList.find(g => g.id === j.guru_id)
+            
+            // Cari scan yang cocok
+            const scan = presensiStaf.find(p => {
+                const isSameGuru = p.staf_id === j.guru_id
+                if (!isSameGuru) return false
+                if (Number(p.jam_ke) === Number(j.jam_ke)) return true
+                if (p.waktu_scan && j.jam_mulai && j.jam_selesai) {
+                    const scanTime = new Date(p.waktu_scan)
+                    const scanMinutes = scanTime.getHours() * 60 + scanTime.getMinutes()
+                    const [hM, mM] = j.jam_mulai.split(':').map(Number)
+                    const [hS, mS] = j.jam_selesai.split(':').map(Number)
+                    return scanMinutes >= (hM * 60 + mM - 30) && scanMinutes <= (hS * 60 + mS + 30)
+                }
+                return false
+            })
+
+            // Cek Izin
+            const isIzin = izinGuruList.some(izin => izin.guru_id === j.guru_id)
+
+            let status = 'Alpha'
+            if (scan) status = 'Hadir'
+            else if (isIzin) status = 'Izin'
+
+            return {
+                id: j.id,
+                guru: guru || { nama: 'Unknown', email: '-' },
+                tipe: j.tipe,
+                referensi_id: j.referensi_id,
+                waktu_scan: scan ? scan.waktu_scan : null,
+                jam_ke: j.jam_ke,
+                jam_mulai: j.jam_mulai,
+                jam_selesai: j.jam_selesai,
+                status
+            }
+        })
+
+        // 2. Tambahkan jika ada scan yang diluar jadwal reguler (misal: guru pengganti/badal)
+        const presensiLuarJadwal = presensiStaf.filter(p => !jadwalHariIni.some(j => j.guru?.id === p.staf_id && j.jam_ke === p.jam_ke)).map(p => {
+            return {
+                id: p.id,
+                guru: p.guru || { nama: 'Unknown', email: '-' },
+                tipe: p.tipe,
+                referensi_id: p.referensi_id,
+                waktu_scan: p.waktu_scan,
+                jam_ke: p.jam_ke,
+                jam_mulai: null,
+                jam_selesai: null,
+                status: 'Hadir',
+                is_tambahan: true
+            }
+        })
+
+        const combined = [...jadwalHariIni, ...presensiLuarJadwal]
+        
+        // Sort by Waktu Scan (jika ada), lalu by Jam Ke
+        return combined.sort((a, b) => {
+            if (a.jam_ke !== b.jam_ke) return Number(a.jam_ke) - Number(b.jam_ke)
+            return (a.guru?.nama || '').localeCompare(b.guru?.nama || '')
+        })
+    }, [allJadwal, filterDate, guruList, presensiStaf, izinGuruList])
 
     const handlePrintQR = () => {
         window.print()
@@ -645,15 +757,6 @@ const AdminAbsensiPage = () => {
                 }
                 actions={
                     <div className="flex gap-2">
-                        <Button 
-                            variant="primary" 
-                            size="sm" 
-                            onClick={() => navigate('/absensi/admin-izin')} 
-                            className="rounded-xl flex items-center gap-2"
-                        >
-                            <Calendar size={18} /> 
-                            <span className="hidden md:inline">Kelola Izin & Jadwal</span>
-                        </Button>
                         {activeTab === 'laporan' && (
                             <div className="relative">
                                 <Button 
@@ -928,41 +1031,53 @@ const AdminAbsensiPage = () => {
                         <ResponsiveTable
                             columns={[
                                 { 
-                                    header: 'Waktu Scan', 
+                                    header: 'Jadwal & Waktu', 
                                     render: (row) => (
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded-lg bg-white shadow-sm text-blue-500 group-hover:scale-110 transition-transform">
-                                                <Clock size={16} />
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-tighter border border-blue-100">
+                                                    Jam {row.jam_ke}
+                                                </div>
+                                                {(row.jam_mulai && row.jam_selesai) && (
+                                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
+                                                        {row.jam_mulai.slice(0, 5)} - {row.jam_selesai.slice(0, 5)}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span className="font-black text-gray-900">{new Date(row.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            {row.waktu_scan ? (
+                                                <div className="flex items-center gap-1.5 mt-0.5 text-emerald-600 font-bold text-xs">
+                                                    <Clock size={12} />
+                                                    {new Date(row.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5 mt-0.5 text-gray-400 font-bold text-xs">
+                                                    <Clock size={12} />
+                                                    -
+                                                </div>
+                                            )}
                                         </div>
                                     ), 
-                                    className: 'px-8 py-6 whitespace-nowrap', 
+                                    className: 'px-8 py-4 whitespace-nowrap', 
                                     hideOnMobile: true 
                                 },
                                 { 
                                     header: 'Staf Pengajar', 
                                     render: (row) => (
                                         <>
-                                            <div className="font-black text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{row.guru?.nama}</div>
+                                            <div className="font-black text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
+                                                {row.guru?.nama}
+                                                {row.is_tambahan && (
+                                                    <span className="ml-2 text-[9px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md border border-purple-100 uppercase tracking-widest">Tambahan</span>
+                                                )}
+                                            </div>
                                             <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.guru?.email}</div>
                                         </>
                                     ), 
-                                    className: 'px-8 py-6', 
+                                    className: 'px-8 py-4', 
                                     hideOnMobile: true 
                                 },
                                 { 
-                                    header: 'Kategori', 
-                                    render: (row) => (
-                                        <Badge variant={row.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest">
-                                            {row.tipe}
-                                        </Badge>
-                                    ), 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
-                                },
-                                { 
-                                    header: 'Lokasi / Grup', 
+                                    header: 'Grup / Lokasi', 
                                     render: (row) => (
                                         <div className="flex items-center gap-2 font-black text-gray-600 uppercase tracking-tighter text-xs">
                                             {row.tipe === 'MADROSAH' 
@@ -971,62 +1086,93 @@ const AdminAbsensiPage = () => {
                                             }
                                         </div>
                                     ), 
-                                    className: 'px-8 py-6', 
+                                    className: 'px-8 py-4', 
                                     hideOnMobile: true 
                                 },
                                 { 
                                     header: 'Status Kehadiran', 
-                                    render: (row) => (
-                                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
-                                            <CheckCircle2 size={12} />
-                                            Terverifikasi QR
-                                        </div>
-                                    ), 
-                                    className: 'px-8 py-6 text-center', 
+                                    render: (row) => {
+                                        if (row.status === 'Hadir') {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100 shadow-sm shadow-emerald-100/50">
+                                                    <CheckCircle2 size={12} />
+                                                    Hadir
+                                                </div>
+                                            )
+                                        } else if (row.status === 'Izin') {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 font-black text-[10px] uppercase tracking-widest border border-amber-100 shadow-sm shadow-amber-100/50">
+                                                    <ClipboardList size={12} />
+                                                    Izin
+                                                </div>
+                                            )
+                                        } else {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest border border-red-100 shadow-sm shadow-red-100/50">
+                                                    <XCircle size={12} />
+                                                    Alfa
+                                                </div>
+                                            )
+                                        }
+                                    }, 
+                                    className: 'px-8 py-4 text-center', 
                                     hideOnMobile: true 
                                 }
                             ]}
-                            data={presensiStaf}
+                            data={dailyStaffAttendance}
                             loading={loading}
-                            emptyState={<div className="px-8 py-20"><EmptyState icon={Clock} title="No Check-ins Today" message="Belum ada pengajar yang melakukan scan QR hari ini." /></div>}
+                            emptyState={<div className="px-8 py-20"><EmptyState icon={Clock} title="Tidak Ada Jadwal" message="Belum ada jadwal mengajar atau scan QR di hari ini." /></div>}
                             mobileCardHeader={(row) => (
                                 <div className="flex items-center gap-3 w-full">
-                                    <div className="p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 text-blue-500 shrink-0">
-                                        <Clock size={16} />
+                                    <div className={`p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 shrink-0 ${
+                                        row.status === 'Hadir' ? 'text-emerald-500' :
+                                        row.status === 'Izin' ? 'text-amber-500' : 'text-red-500'
+                                    }`}>
+                                        {row.status === 'Hadir' ? <CheckCircle2 size={16} /> :
+                                         row.status === 'Izin' ? <ClipboardList size={16} /> : <XCircle size={16} />}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
                                         <div className="flex justify-between items-start">
-                                            <div className="font-black text-gray-900 text-sm leading-tight truncate">{row.guru?.nama}</div>
-                                            <span className="font-black text-gray-900 text-sm shrink-0 ml-2">
-                                                {new Date(row.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                            <div className="font-black text-gray-900 text-sm leading-tight truncate">
+                                                {row.guru?.nama}
+                                            </div>
+                                            <span className={`font-black text-sm shrink-0 ml-2 ${
+                                                row.status === 'Hadir' ? 'text-emerald-600' :
+                                                row.status === 'Izin' ? 'text-amber-600' : 'text-red-600'
+                                            }`}>
+                                                {row.status}
                                             </span>
                                         </div>
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest truncate">{row.guru?.email}</div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex justify-between items-center mt-0.5">
+                                            <span className="truncate">{row.guru?.email}</span>
+                                            {row.waktu_scan && (
+                                                <span className="text-gray-500 shrink-0 bg-gray-50 px-1.5 py-0.5 rounded ml-2 border border-gray-100">
+                                                    {new Date(row.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}
                             mobileCardContent={(row) => (
                                 <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-500 text-xs">Kategori</span>
-                                        <Badge variant={row.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-2 py-0.5 rounded-lg font-black uppercase text-[8px] tracking-widest">
-                                            {row.tipe}
-                                        </Badge>
+                                        <span className="text-gray-500 text-xs">Jadwal</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <Badge variant={row.tipe === 'QURANIYAH' ? 'info' : 'success'} className="px-2 py-0.5 rounded-lg font-black uppercase text-[8px] tracking-widest">
+                                                {row.tipe}
+                                            </Badge>
+                                            <span className="text-[9px] font-black text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded uppercase tracking-tighter">Jam {row.jam_ke}</span>
+                                        </div>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-500 text-xs">Lokasi / Grup</span>
+                                        <span className="text-gray-500 text-xs">Grup / Lokasi</span>
                                         <span className="text-[9px] font-black text-gray-600 uppercase tracking-tighter">
                                             {row.tipe === 'MADROSAH' 
                                                 ? (kelasList.find(k => k.id === row.referensi_id)?.nama || 'Kelas')
                                                 : (halaqohList.find(h => h.id === row.referensi_id)?.nama || 'Halaqoh')
                                             }
                                         </span>
-                                    </div>
-                                    <div className="flex justify-end pt-1">
-                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-600 font-black text-[8px] uppercase tracking-widest border border-emerald-100">
-                                            <CheckCircle2 size={10} />
-                                            Terverifikasi
-                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1341,6 +1487,14 @@ const AdminAbsensiPage = () => {
                                              </div>
                                          )
                                      }}
+                                     mobileCardPrimaryAction={(row) => (
+                                         <button 
+                                             onClick={(e) => { e.stopPropagation(); setSelectedGuruId(row.id); }}
+                                             className="w-full py-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                                         >
+                                             <Eye size={14} /> Lihat Detail
+                                         </button>
+                                     )}
                                  />
                              </Card>
                         </div>
@@ -1499,6 +1653,14 @@ const AdminAbsensiPage = () => {
                                                      </div>
                                                  </div>
                                              </div>
+                                         )}
+                                         mobileCardPrimaryAction={(row) => (
+                                             <button 
+                                                 onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
+                                                 className="w-full py-3 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                                             >
+                                                 <Eye size={14} /> Lihat Detail
+                                             </button>
                                          )}
                                      />
                                  </Card>

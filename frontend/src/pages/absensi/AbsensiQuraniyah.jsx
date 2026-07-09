@@ -87,7 +87,7 @@ const AbsensiQuraniyah = () => {
             sData.forEach(s => {
                 const existing = aData?.find(a => a.santri_id === s.id)
                 initialMap[s.id] = {
-                    status: existing?.status || 'Hadir',
+                    status: existing?.status || '',
                     keterangan: existing?.keterangan?.replace('[Quraniyah] ', '') || ''
                 }
             })
@@ -103,6 +103,13 @@ const AbsensiQuraniyah = () => {
 
     const handleSave = async () => {
         if (!selectedHalaqohId) return
+
+        const hasEmptyStatus = santriList.some(s => !attendanceMap[s.id]?.status)
+        if (hasEmptyStatus) {
+            showToast.error('Mohon lengkapi status kehadiran untuk seluruh santri')
+            return
+        }
+
         setSaving(true)
         try {
             const payloads = santriList.map(s => ({

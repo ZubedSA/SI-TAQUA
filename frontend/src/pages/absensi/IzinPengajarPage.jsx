@@ -39,6 +39,7 @@ const IzinPengajarPage = () => {
         jadwal_asli_id: '',
         tanggal_absen: '',
         guru_pengganti_id: '',
+        jadwal_tujuan_id: '',
         tanggal_pengganti: '',
         jam_ke_pengganti: '',
         jam_mulai_pengganti: '',
@@ -49,9 +50,37 @@ const IzinPengajarPage = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
 
+    // State untuk jadwal guru pengganti
+    const [selectedGuruJadwal, setSelectedGuruJadwal] = useState([])
+    const [loadingGuruJadwal, setLoadingGuruJadwal] = useState(false)
+
     useEffect(() => {
         fetchInitialData()
     }, [user])
+
+    useEffect(() => {
+        const fetchJadwalPengganti = async () => {
+            if (!pergantianForm.guru_pengganti_id) {
+                setSelectedGuruJadwal([])
+                return
+            }
+            setLoadingGuruJadwal(true)
+            try {
+                const { data } = await supabase
+                    .from('jadwal_pelajaran')
+                    .select('*, kelas(nama), mapel(nama), halaqoh(nama)')
+                    .eq('guru_id', pergantianForm.guru_pengganti_id)
+                    .order('hari')
+                    .order('jam_ke')
+                setSelectedGuruJadwal(data || [])
+            } catch (err) {
+                console.error(err)
+            } finally {
+                setLoadingGuruJadwal(false)
+            }
+        }
+        fetchJadwalPengganti()
+    }, [pergantianForm.guru_pengganti_id])
 
     const fetchInitialData = async () => {
         if (!user?.email) return
@@ -140,6 +169,16 @@ const IzinPengajarPage = () => {
                 payload.jam_ke_pengganti = parseInt(pergantianForm.jam_ke_pengganti)
                 payload.jam_mulai_pengganti = pergantianForm.jam_mulai_pengganti
                 payload.jam_selesai_pengganti = pergantianForm.jam_selesai_pengganti
+            } else if (pergantianForm.jenis === 'Tukar Jam') {
+                payload.guru_pengganti_id = pergantianForm.guru_pengganti_id
+                payload.jadwal_tujuan_id = pergantianForm.jadwal_tujuan_id
+                payload.tanggal_pengganti = pergantianForm.tanggal_pengganti
+                
+                if (!payload.jadwal_tujuan_id) {
+                    showToast.error('Pilih jadwal guru pengganti yang akan ditukar!')
+                    setIsSaving(false)
+                    return
+                }
             }
 
             const { error } = await supabase.from('pergantian_jadwal').insert(payload)
@@ -335,21 +374,94 @@ const IzinPengajarPage = () => {
                                             <select value={pergantianForm.jenis} onChange={e => setPergantianForm({...pergantianForm, jenis: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all">
                                                 <option value="Guru Pengganti">Cari Guru Pengganti (Inval)</option>
                                                 <option value="Ganti Jam">Ganti Jam (Make-up Class)</option>
-                                                {/* <option value="Tukar Jam">Tukar Jam (Swap)</option> */}
+                                                <option value="Tukar Jam">Tukar Jam (Swap)</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    {pergantianForm.jenis === 'Guru Pengganti' && (
+                                    {(pergantianForm.jenis === 'Guru Pengganti' || pergantianForm.jenis === 'Tukar Jam') && (
                                         <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-3">
-                                            <label className="block text-xs font-bold text-indigo-900">Pilih Guru Pengganti</label>
-                                            <select required value={pergantianForm.guru_pengganti_id} onChange={e => setPergantianForm({...pergantianForm, guru_pengganti_id: e.target.value})} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none">
+                                            <label className="block text-xs font-bold text-indigo-900">
+                                                {pergantianForm.jenis === 'Tukar Jam' ? 'Pilih Guru untuk Bertukar' : 'Pilih Guru Pengganti'}
+                                            </label>
+                                            <select required value={pergantianForm.guru_pengganti_id} onChange={e => setPergantianForm({...pergantianForm, guru_pengganti_id: e.target.value, jadwal_tujuan_id: ''})} className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none">
                                                 <option value="">-- Pilih Guru --</option>
                                                 {guruList.map(g => (
                                                     <option key={g.id} value={g.id}>{g.nama}</option>
                                                 ))}
                                             </select>
-                                            <p className="text-[11px] text-indigo-600 font-medium">Sistem akan meminta persetujuan Admin terkait usulan guru pengganti ini.</p>
+                                            
+                                            {/* Preview Jadwal Guru Pengganti */}
+                                            {pergantianForm.guru_pengganti_id && (
+                                                <div className="mt-3 bg-white rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
+                                                    <div className="px-3 py-2 bg-indigo-50/50 border-b border-indigo-100">
+                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                                                            {pergantianForm.jenis === 'Tukar Jam' ? 'Pilih Jadwal yang Akan Anda Ambil:' : 'Jadwal Mengajar Guru Terpilih:'}
+                                                        </h4>
+                                                    </div>
+                                                    <div className="p-3">
+                                                        {loadingGuruJadwal ? (
+                                                            <div className="text-center py-4 text-xs font-bold text-gray-400">Memuat jadwal...</div>
+                                                        ) : selectedGuruJadwal.length === 0 ? (
+                                                            <div className="text-center py-4 text-xs font-bold text-gray-400 italic">Guru ini tidak memiliki jadwal terdaftar.</div>
+                                                        ) : (
+                                                            <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                                                                {selectedGuruJadwal.map(jadwal => {
+                                                                    const isSelected = pergantianForm.jadwal_tujuan_id === jadwal.id;
+                                                                    return (
+                                                                        <div 
+                                                                            key={jadwal.id} 
+                                                                            onClick={() => {
+                                                                                if (pergantianForm.jenis === 'Tukar Jam') {
+                                                                                    setPergantianForm({...pergantianForm, jadwal_tujuan_id: jadwal.id})
+                                                                                }
+                                                                            }}
+                                                                            className={`flex justify-between items-center transition-colors p-2.5 rounded-lg border ${
+                                                                                pergantianForm.jenis === 'Tukar Jam' ? 'cursor-pointer hover:bg-indigo-50/50' : ''
+                                                                            } ${isSelected ? 'bg-indigo-50 border-indigo-500 shadow-[0_0_0_1px_rgba(99,102,241,1)]' : 'bg-gray-50 border-gray-100'}`}
+                                                                        >
+                                                                            <div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    {pergantianForm.jenis === 'Tukar Jam' && (
+                                                                                        <div className={`w-3 h-3 rounded-full border flex items-center justify-center ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'}`}>
+                                                                                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                                                                                        </div>
+                                                                                    )}
+                                                                                    <div className={`font-bold text-xs ${isSelected ? 'text-indigo-900' : 'text-gray-800'}`}>
+                                                                                        {jadwal.hari}, Jam Ke-{jadwal.jam_ke}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className={`text-[10px] font-medium mt-0.5 ${pergantianForm.jenis === 'Tukar Jam' ? 'ml-5' : ''} ${isSelected ? 'text-indigo-700' : 'text-gray-500'}`}>
+                                                                                    {jadwal.mapel?.nama || 'Halaqoh'} | {jadwal.kelas?.nama || jadwal.halaqoh?.nama}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${isSelected ? 'bg-indigo-200/50 text-indigo-800' : 'bg-indigo-100/50 text-indigo-700'}`}>
+                                                                                {jadwal.jam_mulai.slice(0,5)} - {jadwal.jam_selesai.slice(0,5)}
+                                                                            </div>
+                                                                        </div>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {pergantianForm.jenis === 'Tukar Jam' && pergantianForm.jadwal_tujuan_id && (
+                                                <div className="mt-4 animate-fade-in">
+                                                    <label className="block text-xs font-bold text-indigo-900 mb-1">Tanggal Anda Menggantikan</label>
+                                                    <input 
+                                                        type="date" 
+                                                        required 
+                                                        value={pergantianForm.tanggal_pengganti} 
+                                                        onChange={e => setPergantianForm({...pergantianForm, tanggal_pengganti: e.target.value})} 
+                                                        className="w-full border border-indigo-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20" 
+                                                    />
+                                                    <p className="text-[10px] text-indigo-600 mt-1">Pilih tanggal aktual di mana Anda akan mengajar pada jadwal tersebut.</p>
+                                                </div>
+                                            )}
+                                            
+                                            <p className="text-[11px] text-indigo-600 font-medium">Sistem akan meminta persetujuan Admin terkait usulan {pergantianForm.jenis === 'Tukar Jam' ? 'tukar jadwal' : 'guru pengganti'} ini.</p>
                                         </div>
                                     )}
 

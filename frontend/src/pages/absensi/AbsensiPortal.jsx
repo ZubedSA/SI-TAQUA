@@ -21,6 +21,7 @@ import { useJurnal } from '../../hooks/useAkademik'
 import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
 import QRScannerModal from '../../components/absensi/QRScannerModal'
+import UpdateNotificationModal from '../../components/absensi/UpdateNotificationModal'
 
 const AbsensiPortal = () => {
     const navigate = useNavigate()
@@ -31,6 +32,21 @@ const AbsensiPortal = () => {
     const [isScannerOpen, setIsScannerOpen] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [guruId, setGuruId] = useState(null)
+    const [showUpdateModal, setShowUpdateModal] = useState(false)
+
+    useEffect(() => {
+        // Cek apakah user adalah staf/pengajar dan belum pernah melihat notifikasi update
+        // Kita tampilkan modal untuk semua user (karena Admin juga butuh tahu, atau bisa dibatasi untuk non-santri)
+        const hasSeenUpdate = localStorage.getItem('has_seen_update_izin_v1')
+        if (!hasSeenUpdate) {
+            setShowUpdateModal(true)
+        }
+    }, [])
+
+    const handleCloseUpdateModal = () => {
+        localStorage.setItem('has_seen_update_izin_v1', 'true')
+        setShowUpdateModal(false)
+    }
 
     useEffect(() => {
         const fetchGuruId = async () => {
@@ -412,23 +428,6 @@ const AbsensiPortal = () => {
                     </button>
                 </section>
 
-                <section className="relative opacity-60 hover:opacity-100 transition-opacity">
-                    <button
-                        onClick={() => navigate('/absensi/izin')}
-                        className="group w-full relative overflow-hidden rounded-[2.5rem] p-6 text-left border border-gray-200 bg-white hover:border-emerald-500 transition-all duration-300"
-                    >
-                        <div className="flex items-center gap-6">
-                            <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                                <Calendar size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-black text-gray-900">Pengajuan Izin & Jadwal</h3>
-                                <p className="text-xs text-gray-400 font-medium">Ajukan izin tidak mengajar, guru pengganti, atau ganti jam.</p>
-                            </div>
-                            <ChevronRight size={20} className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                        </div>
-                    </button>
-                </section>
 
                 {/* Secondary Actions / Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -484,6 +483,11 @@ const AbsensiPortal = () => {
                 isOpen={isScannerOpen}
                 onClose={() => setIsScannerOpen(false)}
                 onScanSuccess={handleScanSuccess}
+            />
+
+            <UpdateNotificationModal 
+                isOpen={showUpdateModal}
+                onClose={handleCloseUpdateModal}
             />
 
             {/* Simple Footer Label */}

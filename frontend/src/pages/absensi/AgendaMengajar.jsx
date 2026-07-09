@@ -165,13 +165,13 @@ const AgendaMengajar = () => {
                 sData?.forEach(s => {
                     const existing = detilData?.find(d => d.santri_id === s.id)
                     initialMap[s.id] = {
-                        status: existing?.status || 'Hadir',
+                        status: existing?.status || '',
                         keterangan: existing?.keterangan || ''
                     }
                 })
             } else {
                 sData?.forEach(s => {
-                    initialMap[s.id] = { status: 'Hadir', keterangan: '' }
+                    initialMap[s.id] = { status: '', keterangan: '' }
                 })
             }
             setAttendanceMap(initialMap)
@@ -185,6 +185,16 @@ const AgendaMengajar = () => {
 
     const handleSave = async (e) => {
         if (e) e.preventDefault()
+        
+        // Cek jika status pembelajaran "Terlaksana", pastikan semua absensi terisi
+        if (formData.status === 'Terlaksana') {
+            const hasEmptyStatus = santriList.some(s => !attendanceMap[s.id]?.status)
+            if (hasEmptyStatus) {
+                showToast.error('Mohon lengkapi status kehadiran untuk seluruh santri')
+                return
+            }
+        }
+
         setSaving(true)
         try {
             const headerPayload = {
