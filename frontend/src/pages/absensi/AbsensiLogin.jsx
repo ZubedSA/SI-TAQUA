@@ -82,19 +82,17 @@ const AbsensiLogin = () => {
                         localStorage.removeItem('sitaqua_last_absensi_path')
                         navigate('/')
                     }}
-                    className="flex items-center gap-3 text-gray-400 hover:text-[#0A2619] font-black text-[10px] uppercase tracking-[0.3em] mb-10 transition-all group"
+                    className="group inline-flex items-center gap-2 mb-8 bg-white/60 backdrop-blur-md border border-gray-200 hover:border-[#0A2619]/30 hover:bg-white text-gray-500 hover:text-[#0A2619] px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest transition-all shadow-sm hover:shadow-md"
                 >
-                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-[#BCF32F]/20 transition-colors">
-                        <ArrowLeft size={14} />
-                    </div>
-                    <span>Halaman Utama</span>
+                    <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                    Kembali
                 </button>
 
                 <div className="bg-white/80 backdrop-blur-xl rounded-3xl md:rounded-[3.5rem] shadow-2xl shadow-black/10 overflow-hidden border border-white/50">
                     {/* Header */}
                     <div className="p-6 md:p-10 text-center pb-6">
                         <div className="inline-block p-4 rounded-[2.5rem] bg-[#0A2619]/5 mb-6 md:mb-8 shadow-inner">
-                            <img src={logoFile} alt="Logo" className="h-16 md:h-20" width="80" height="80" />
+                            <img src={logoFile} alt="Logo" className="h-16 w-auto sm:h-20 object-contain mx-auto" />
                         </div>
                         <div className="flex flex-col items-center">
                             <h2 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight mb-3">Portal Absensi</h2>

@@ -57,29 +57,64 @@ CREATE INDEX IF NOT EXISTS idx_pergantian_pengganti ON pergantian_jadwal(guru_pe
 ALTER TABLE izin_guru ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pergantian_jadwal ENABLE ROW LEVEL SECURITY;
 
+-- Helper Functions (Bypass RLS on auth.users)
+CREATE OR REPLACE FUNCTION is_guru_or_admin()
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM auth.users 
+    WHERE id = auth.uid() 
+    AND raw_user_meta_data->>'role' IN ('admin', 'guru', 'admin_absensi')
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION is_admin_absensi()
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM auth.users 
+    WHERE id = auth.uid() 
+    AND raw_user_meta_data->>'role' IN ('admin', 'admin_absensi')
+  );
+$$;
+
 -- Policy untuk Izin Guru
+DROP POLICY IF EXISTS "Izin Guru viewable by authenticated" ON izin_guru;
 CREATE POLICY "Izin Guru viewable by authenticated" ON izin_guru FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Izin Guru insertable by guru/admin" ON izin_guru;
 CREATE POLICY "Izin Guru insertable by guru/admin" ON izin_guru FOR INSERT WITH CHECK (
-  auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' IN ('admin', 'guru', 'admin_absensi'))
+  is_guru_or_admin()
 );
+
+DROP POLICY IF EXISTS "Izin Guru updatable by creator or admin" ON izin_guru;
 CREATE POLICY "Izin Guru updatable by creator or admin" ON izin_guru FOR UPDATE USING (
-  created_by = auth.uid() OR auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' IN ('admin', 'admin_absensi'))
+  created_by = auth.uid() OR is_admin_absensi()
 );
 
 -- Policy untuk Pergantian Jadwal
+DROP POLICY IF EXISTS "Pergantian Jadwal viewable by authenticated" ON pergantian_jadwal;
 CREATE POLICY "Pergantian Jadwal viewable by authenticated" ON pergantian_jadwal FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Pergantian Jadwal insertable by guru/admin" ON pergantian_jadwal;
 CREATE POLICY "Pergantian Jadwal insertable by guru/admin" ON pergantian_jadwal FOR INSERT WITH CHECK (
-  auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' IN ('admin', 'guru', 'admin_absensi'))
+  is_guru_or_admin()
 );
+
+DROP POLICY IF EXISTS "Pergantian Jadwal updatable by creator, rekan, or admin" ON pergantian_jadwal;
 CREATE POLICY "Pergantian Jadwal updatable by creator, rekan, or admin" ON pergantian_jadwal FOR UPDATE USING (
-  created_by = auth.uid() OR auth.uid() IN (SELECT id FROM auth.users WHERE raw_user_meta_data->>'role' IN ('admin', 'admin_absensi'))
+  created_by = auth.uid() OR is_admin_absensi()
 );
 
 -- 4. Triggers for updated_at
+DROP TRIGGER IF EXISTS update_izin_guru_updated_at ON izin_guru;
 CREATE TRIGGER update_izin_guru_updated_at 
 BEFORE UPDATE ON izin_guru 
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_pergantian_jadwal_updated_at ON pergantian_jadwal;
 CREATE TRIGGER update_pergantian_jadwal_updated_at 
 BEFORE UPDATE ON pergantian_jadwal 
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

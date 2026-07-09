@@ -70,17 +70,17 @@ const Login = () => {
                 {/* Back Link */}
                 <button 
                     onClick={() => navigate('/')}
-                    className="flex items-center gap-2 text-[#BCF32F] hover:text-white font-bold mb-6 transition-colors group"
+                    className="group inline-flex items-center gap-2 mb-8 bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-lg"
                 >
-                    <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform flex-shrink-0" />
-                    <span className="text-sm sm:text-base">Kembali ke Halaman Utama</span>
+                    <ArrowLeft size={16} className="text-[#BCF32F] group-hover:-translate-x-1 transition-transform flex-shrink-0" />
+                    Kembali
                 </button>
 
                 <div className="bg-white rounded-[2rem] shadow-2xl shadow-black/30 overflow-hidden border border-white/20">
 
                     {/* Header */}
                     <div className="p-6 sm:p-8 text-center bg-white border-b border-gray-100">
-                        <img src={logoFile} alt="Logo PTQA Batuan" className="mx-auto h-16 sm:h-20 mb-6" width="80" height="80" />
+                        <img src={logoFile} alt="Logo PTQA Batuan" className="mx-auto h-16 w-auto sm:h-20 object-contain mb-6" />
                         <h2 className="!text-[22px] sm:!text-2xl md:!text-3xl font-bold text-gray-900 whitespace-nowrap tracking-tight">Assalamualaikum</h2>
                         <p className="text-[#0A2619] font-black mt-1.5 text-[11px] sm:text-sm uppercase tracking-wider">Sistem Informasi PTQA Batuan</p>
                     </div>

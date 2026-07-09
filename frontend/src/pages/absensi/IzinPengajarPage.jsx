@@ -138,6 +138,16 @@ const IzinPengajarPage = () => {
             if (error) throw error
             
             showToast.success('Pengajuan izin berhasil dikirim')
+            
+            // Redirect ke WhatsApp Admin
+            const textWa = `Assalamualaikum Admin, saya telah mengajukan izin tidak mengajar.
+Jenis Izin: ${izinForm.jenis_izin}
+Tanggal: ${izinForm.tanggal_mulai} s/d ${izinForm.tanggal_selesai}
+Keterangan: ${izinForm.keterangan}
+
+Mohon untuk segera dikonfirmasi. Terima kasih.`;
+            window.open(`https://wa.me/6281717594886?text=${encodeURIComponent(textWa)}`, '_blank');
+            
             setShowIzinForm(false)
             setIzinForm({ tanggal_mulai: '', tanggal_selesai: '', jenis_izin: 'Sakit', keterangan: '' })
             fetchHistory(guruId)
@@ -185,6 +195,30 @@ const IzinPengajarPage = () => {
             if (error) throw error
 
             showToast.success('Pengajuan pergantian jadwal berhasil dikirim')
+            
+            // Redirect ke WhatsApp Admin
+            let extraDetails = ''
+            const jadwalAsli = jadwalList.find(j => j.id === pergantianForm.jadwal_asli_id)
+            const mapelInfo = jadwalAsli ? `${jadwalAsli.mapel?.nama || 'Halaqoh'} (Kelas ${jadwalAsli.kelas?.nama || jadwalAsli.halaqoh?.nama}) - Jam Ke-${jadwalAsli.jam_ke}` : ''
+
+            if (pergantianForm.jenis === 'Guru Pengganti') {
+                const pengganti = guruList.find(g => g.id === pergantianForm.guru_pengganti_id)
+                extraDetails = `Jadwal Kelas: ${mapelInfo}\nGuru Pengganti: ${pengganti?.nama || '-'}`
+            } else if (pergantianForm.jenis === 'Ganti Jam') {
+                extraDetails = `Jadwal Asli: ${mapelInfo}\nDiganti Pada: ${pergantianForm.tanggal_pengganti} (Jam Ke-${pergantianForm.jam_ke_pengganti}, ${pergantianForm.jam_mulai_pengganti}-${pergantianForm.jam_selesai_pengganti})`
+            } else if (pergantianForm.jenis === 'Tukar Jam') {
+                const pengganti = guruList.find(g => g.id === pergantianForm.guru_pengganti_id)
+                extraDetails = `Jadwal Asli: ${mapelInfo}\nDitukar Dengan: ${pengganti?.nama || '-'}\nSaya Akan Mengajar Pada: ${pergantianForm.tanggal_pengganti}`
+            }
+
+            const textWa = `Assalamualaikum Admin, saya telah mengajukan usulan ${pergantianForm.jenis}.
+Tanggal Absen: ${pergantianForm.tanggal_absen}
+${extraDetails}
+Alasan: ${pergantianForm.alasan}
+
+Mohon untuk segera dikonfirmasi melalui SI-TAQUA. Terima kasih.`;
+            window.open(`https://wa.me/6281717594886?text=${encodeURIComponent(textWa)}`, '_blank');
+            
             setShowPergantianForm(false)
             fetchHistory(guruId)
         } catch (err) {

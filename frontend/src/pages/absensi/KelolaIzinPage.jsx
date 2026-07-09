@@ -34,7 +34,7 @@ const KelolaIzinPage = () => {
         try {
             const [izinRes, gantiRes] = await Promise.all([
                 supabase.from('izin_guru').select('*, guru:guru_id(nama)').order('created_at', { ascending: false }),
-                supabase.from('pergantian_jadwal').select('*, guru_pemohon:guru_pemohon_id(nama), jadwal_asli:jadwal_asli_id(hari, jam_ke, kelas(nama), mapel(nama)), guru_pengganti:guru_pengganti_id(nama)').order('created_at', { ascending: false })
+                supabase.from('pergantian_jadwal').select('*, guru_pemohon:guru_pemohon_id(nama), jadwal_asli:jadwal_asli_id(hari, jam_ke, kelas(nama), halaqoh(nama), mapel(nama)), guru_pengganti:guru_pengganti_id(nama), jadwal_tujuan:jadwal_tujuan_id(hari, jam_ke, kelas(nama), halaqoh(nama), mapel(nama))').order('created_at', { ascending: false })
             ])
             
             if (izinRes.error) throw izinRes.error
@@ -199,7 +199,7 @@ const KelolaIzinPage = () => {
                                                     <Calendar size={18} className="text-gray-400 shrink-0" />
                                                     <p className="text-xs">
                                                         <span className="font-black text-gray-900 uppercase tracking-widest text-[10px] block mb-1">Jadwal Asli ({format(new Date(item.tanggal_absen), 'dd MMM yyyy')})</span>
-                                                        {item.jadwal_asli?.hari}, Jam ke-{item.jadwal_asli?.jam_ke} | {item.jadwal_asli?.kelas?.nama} | <span className="font-bold">{item.jadwal_asli?.mapel?.nama || 'Halaqoh'}</span>
+                                                        {item.jadwal_asli?.hari}, Jam ke-{item.jadwal_asli?.jam_ke} | {item.jadwal_asli?.kelas?.nama || item.jadwal_asli?.halaqoh?.nama} | <span className="font-bold">{item.jadwal_asli?.mapel?.nama || 'Halaqoh'}</span>
                                                     </p>
                                                 </div>
                                                 
@@ -212,6 +212,18 @@ const KelolaIzinPage = () => {
                                                 {item.jenis === 'Ganti Jam' && item.tanggal_pengganti && (
                                                     <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 p-3 rounded-xl border border-emerald-100 mt-2">
                                                         <span className="font-black text-[10px] uppercase tracking-widest">Ganti Pada:</span> <span className="font-bold text-sm">{format(new Date(item.tanggal_pengganti), 'dd MMM yyyy')}</span> (Jam ke-{item.jam_ke_pengganti}, {item.jam_mulai_pengganti} - {item.jam_selesai_pengganti})
+                                                    </div>
+                                                )}
+
+                                                {item.jenis === 'Tukar Jam' && item.tanggal_pengganti && (
+                                                    <div className="flex items-center gap-2 text-blue-700 bg-blue-50 p-3 rounded-xl border border-blue-100 mt-2">
+                                                        <div>
+                                                            <span className="font-black text-[10px] uppercase tracking-widest block mb-1">Ditukar Dengan: {item.guru_pengganti?.nama}</span>
+                                                            <span className="text-xs">
+                                                                Tukar Kelas: {item.jadwal_tujuan?.hari}, Jam ke-{item.jadwal_tujuan?.jam_ke} | {item.jadwal_tujuan?.kelas?.nama || item.jadwal_tujuan?.halaqoh?.nama} | <span className="font-bold">{item.jadwal_tujuan?.mapel?.nama || 'Halaqoh'}</span><br/>
+                                                                Jadwal Pengganti: <span className="font-bold">{format(new Date(item.tanggal_pengganti), 'dd MMM yyyy')}</span>
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>

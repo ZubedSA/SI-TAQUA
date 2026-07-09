@@ -66,6 +66,7 @@ const AdminAbsensiPage = () => {
     const [selectedGuruId, setSelectedGuruId] = useState(null)
     const [editingSession, setEditingSession] = useState(null)
     const [manualKeterangan, setManualKeterangan] = useState('')
+    const [manualStatus, setManualStatus] = useState('Hadir')
     const [allJadwal, setAllJadwal] = useState([])
     const [filterType, setFilterType] = useState('Semua') // 'Semua', 'Madrosah', 'Quraniyah'
     const [searchTerm, setSearchTerm] = useState('')
@@ -413,27 +414,45 @@ const AdminAbsensiPage = () => {
         }
     }
 
-    const handleSaveManualHadir = async () => {
+    const handleSaveManualStatus = async () => {
         if (!editingSession || !manualKeterangan) return
 
         try {
-            const { error } = await supabase
-                .from('presensi_staf')
-                .insert({
-                    staf_id: selectedGuruId,
-                    tanggal: editingSession.tanggal,
-                    tipe: editingSession.tipe,
-                    referensi_id: editingSession.referensi_id,
-                    jam_ke: editingSession.jam_ke,
-                    waktu_scan: new Date().toISOString()
-                })
+            if (manualStatus === 'Hadir') {
+                const { error } = await supabase
+                    .from('presensi_staf')
+                    .insert({
+                        staf_id: selectedGuruId,
+                        tanggal: editingSession.tanggal,
+                        tipe: editingSession.tipe,
+                        referensi_id: editingSession.referensi_id,
+                        jam_ke: editingSession.jam_ke,
+                        waktu_scan: new Date().toISOString()
+                    })
 
-            if (error) throw error
+                if (error) throw error
+            } else {
+                const { error } = await supabase
+                    .from('izin_guru')
+                    .insert({
+                        guru_id: selectedGuruId,
+                        tanggal_mulai: editingSession.tanggal,
+                        tanggal_selesai: editingSession.tanggal,
+                        jenis_izin: manualStatus,
+                        keterangan: manualKeterangan,
+                        status: 'Disetujui',
+                        catatan_admin: 'Diinput manual oleh Admin dari Rincian Kehadiran'
+                    })
 
-            showToast.success('Status berhasil diubah menjadi Hadir')
+                if (error) throw error
+            }
+
+            showToast.success(`Status berhasil diubah menjadi ${manualStatus}`)
             setEditingSession(null)
             setManualKeterangan('')
+            setManualStatus('Hadir')
             fetchPresensiStaf()
+            fetchData() // Refresh jadwal/izin juga
         } catch (err) {
             console.error('Error manual adjustment:', err)
             showToast.error('Gagal mengubah status')
@@ -1907,7 +1926,7 @@ const AdminAbsensiPage = () => {
                                                                 <button 
                                                                     onClick={() => setEditingSession(p)}
                                                                     className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"
-                                                                    title="Ubah jadi Hadir"
+                                                                    title="Ubah Status Kehadiran"
                                                                 >
                                                                     <Edit2 size={14} />
                                                                 </button>
@@ -1934,24 +1953,39 @@ const AdminAbsensiPage = () => {
                                     </p>
                                 </div>
                                 <div className="p-8 space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan / Alasan</label>
-                                        <textarea 
-                                            value={manualKeterangan}
-                                            onChange={(e) => setManualKeterangan(e.target.value)}
-                                            placeholder="Contoh: Hadir manual, HP tertinggal / gangguan jaringan"
-                                            className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm min-h-[100px] p-4 bg-gray-50 transition-all"
-                                        />
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ubah Status Menjadi</label>
+                                            <select 
+                                                value={manualStatus}
+                                                onChange={(e) => setManualStatus(e.target.value)}
+                                                className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm p-4 bg-gray-50 transition-all font-bold text-indigo-700 outline-none"
+                                            >
+                                                <option value="Hadir">Hadir (Manual)</option>
+                                                <option value="Sakit">Sakit</option>
+                                                <option value="Izin">Izin</option>
+                                                <option value="Dinas">Dinas</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan / Alasan</label>
+                                            <textarea 
+                                                value={manualKeterangan}
+                                                onChange={(e) => setManualKeterangan(e.target.value)}
+                                                placeholder={manualStatus === 'Hadir' ? "Contoh: Lupa scan, HP tertinggal..." : "Alasan izin/sakit..."}
+                                                className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm min-h-[100px] p-4 bg-gray-50 transition-all outline-none"
+                                            />
+                                        </div>
                                     </div>
                                     <div className="flex gap-3 pt-2">
                                         <button 
-                                            onClick={() => setEditingSession(null)}
+                                            onClick={() => { setEditingSession(null); setManualStatus('Hadir'); setManualKeterangan(''); }}
                                             className="flex-1 px-6 py-3.5 rounded-2xl border border-gray-100 font-black text-xs text-gray-500 hover:bg-gray-50 transition-all uppercase tracking-widest"
                                         >
                                             Batal
                                         </button>
                                         <button 
-                                            onClick={handleSaveManualHadir}
+                                            onClick={handleSaveManualStatus}
                                             disabled={!manualKeterangan}
                                             className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest"
                                         >

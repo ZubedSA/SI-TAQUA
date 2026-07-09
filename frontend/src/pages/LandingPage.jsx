@@ -173,10 +173,10 @@ const LandingPage = () => {
                     <div className="inline-block px-4 py-1.5 mb-6 bg-[#BCF32F]/20 text-[#0A2619] rounded-full text-sm font-black uppercase tracking-widest">
                         Selamat Datang di Portal Resmi
                     </div>
-                    <h2 className="text-3xl md:text-7xl font-black text-slate-900 mb-8 tracking-tighter leading-[1.1] md:leading-[1.05]">
-                        Sistem Informasi <br className="hidden sm:block" />
-                        Tahfizh Al-Qur'an <br className="hidden md:block" />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0A2619] to-[#143d2a]">
+                    <h2 className="text-[32px] sm:text-4xl md:text-7xl font-black text-slate-900 mb-6 md:mb-8 tracking-tighter leading-[1.15] md:leading-[1.05]">
+                        Sistem Informasi <br />
+                        Tahfizh Al-Qur'an <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0A2619] to-[#143d2a] block mt-1 md:mt-2">
                             Al-Usymuni Batuan
                         </span>
                     </h2>
