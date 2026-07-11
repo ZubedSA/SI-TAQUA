@@ -82,7 +82,8 @@ const AbsensiLayout = () => {
                 // Ambil jadwal halaqoh hari ini untuk menentukan jam_ke
                 const now = new Date()
                 const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
-                const dayName = dayNameRaw === 'Minggu' ? 'Ahad' : dayNameRaw
+                const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
+                const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
                 const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
                 const { data: jadwalHalaqoh } = await supabase
@@ -139,7 +140,8 @@ const AbsensiLayout = () => {
 
             // ── MADROSAH: Alur biasa via Agenda Mengajar ──
             const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date())
-            const dayName = dayNameRaw === 'Minggu' ? 'Ahad' : dayNameRaw
+            const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
+            const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
 
             const { data: rawJadwalData } = await supabase
                 .from('jadwal_pelajaran')
