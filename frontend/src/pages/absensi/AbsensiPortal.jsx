@@ -190,7 +190,7 @@ const AbsensiPortal = () => {
             const match = jurnalList.find(j => {
                 const itemType = j.tipe || 'MADROSAH'
                 const itemId = j.kelas_id
-                return itemType === targetType && itemId === qrId
+                return itemType === targetType && String(itemId) === String(qrId)
             })
 
             if (match) {

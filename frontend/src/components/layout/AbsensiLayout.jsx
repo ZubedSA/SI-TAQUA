@@ -150,7 +150,7 @@ const AbsensiLayout = () => {
             const match = agendaData?.find(j => {
                 const itemType = j.tipe || 'MADROSAH'
                 const itemId = j.kelas_id
-                return itemType === 'MADROSAH' && itemId === qrId
+                return itemType === 'MADROSAH' && String(itemId) === String(qrId)
             })
 
             if (!match && !isAdmin() && !isAdminAkademik()) {
