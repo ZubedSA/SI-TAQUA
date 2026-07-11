@@ -58,7 +58,7 @@ export const useHalaqohList = () => {
             }
         },
         {
-            staleTime: 5 * 60 * 1000, // Cache for 5 minutes for instant page transition
+            staleTime: 0, // Cache for 0 minutes to prevent stale data
         }
     )
 }

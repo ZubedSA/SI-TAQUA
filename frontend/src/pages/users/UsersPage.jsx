@@ -130,13 +130,31 @@ const UsersPage = () => {
     const fetchHalaqoh = async () => {
         setLoadingHalaqoh(true)
         try {
-            const { data, error } = await supabase
-                .from('halaqoh')
-                .select('id, nama, guru:guru!musyrif_id(nama)')
-                .order('nama', { ascending: true })
+            const [halaqohRes, assignRes, profileRes] = await Promise.all([
+                supabase.from('halaqoh').select('id, nama, guru:guru!musyrif_id(nama)').order('nama', { ascending: true }),
+                supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
+                supabase.from('user_profiles').select('user_id, nama')
+            ])
 
-            if (error) throw error
-            setHalaqohList(data || [])
+            if (halaqohRes.error) throw halaqohRes.error
+
+            const assignments = assignRes.data || []
+            const profiles = profileRes.data || []
+
+            const enrichedList = (halaqohRes.data || []).map(h => {
+                const assigns = assignments.filter(a => a.halaqoh_id === h.id)
+                const musyrifNames = assigns.map(a => {
+                    const prof = profiles.find(p => p.user_id === a.user_id)
+                    return prof ? prof.nama : null
+                }).filter(Boolean)
+
+                return {
+                    ...h,
+                    display_guru: musyrifNames.length > 0 ? musyrifNames.join(', ') : (h.guru?.nama || '-')
+                }
+            })
+
+            setHalaqohList(enrichedList)
         } catch (error) {
             console.error('Error fetching halaqoh:', error.message)
         } finally {
@@ -1295,7 +1313,7 @@ const UsersPage = () => {
                                                     </div>
                                                     <div>
                                                         <div className="text-sm font-medium">{halaqoh.nama}</div>
-                                                        <div className="text-xs text-gray-500">Guru: {halaqoh.guru?.nama || '-'}</div>
+                                                        <div className="text-xs text-gray-500">Guru: {halaqoh.display_guru || '-'}</div>
                                                     </div>
                                                 </div>
                                             ))
