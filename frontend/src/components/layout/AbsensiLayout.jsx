@@ -141,13 +141,51 @@ const AbsensiLayout = () => {
             const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date())
             const dayName = dayNameRaw === 'Minggu' ? 'Ahad' : dayNameRaw
 
-            const { data: agendaData } = await supabase
+            const { data: rawJadwalData } = await supabase
                 .from('jadwal_pelajaran')
                 .select('*, mapel(nama), kelas(nama), halaqoh(nama)')
                 .eq('hari', dayName)
-                .eq('guru_id', guruId)
 
-            const match = agendaData?.find(j => {
+            let finalJadwalData = rawJadwalData || []
+
+            const { data: pergantianData } = await supabase
+                .from('pergantian_jadwal')
+                .select('*, jadwal_asli:jadwal_asli_id(*), jadwal_tujuan:jadwal_tujuan_id(*)')
+                .eq('status', 'Disetujui')
+                .or(`tanggal_absen.eq.${todayDate},tanggal_pengganti.eq.${todayDate}`)
+
+            const gantiList = pergantianData || []
+
+            gantiList.forEach(g => {
+                if (g.tanggal_absen === todayDate) {
+                    if (g.jenis === 'Guru Pengganti' || g.jenis === 'Tukar Jam') {
+                        finalJadwalData = finalJadwalData.map(j => 
+                            j.id === g.jadwal_asli_id ? { ...j, guru_id: g.guru_pengganti_id } : j
+                        )
+                    } else if (g.jenis === 'Ganti Jam') {
+                        finalJadwalData = finalJadwalData.filter(j => j.id !== g.jadwal_asli_id)
+                    }
+                }
+                
+                if (g.tanggal_pengganti === todayDate) {
+                    if (g.jenis === 'Ganti Jam' && g.jadwal_asli) {
+                        finalJadwalData.push({
+                            ...g.jadwal_asli,
+                            id: g.jadwal_asli.id,
+                            kelas_id: g.jadwal_asli.kelas_id,
+                            guru_id: g.jadwal_asli.guru_id
+                        })
+                    } else if (g.jenis === 'Tukar Jam' && g.jadwal_tujuan) {
+                        finalJadwalData = finalJadwalData.map(j => 
+                            j.id === g.jadwal_tujuan_id ? { ...j, guru_id: g.guru_pemohon_id } : j
+                        )
+                    }
+                }
+            })
+
+            const agendaData = finalJadwalData.filter(j => j.guru_id === guruId)
+
+            const match = agendaData.find(j => {
                 const itemType = j.tipe || 'MADROSAH'
                 const itemId = j.kelas_id
                 return itemType === 'MADROSAH' && String(itemId) === String(qrId)
