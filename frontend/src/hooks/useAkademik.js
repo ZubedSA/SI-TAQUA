@@ -22,19 +22,42 @@ const getLookups = async () => {
 
     lookupCache.promise = (async () => {
         try {
-            const [kelasRes, mapelRes, guruRes, halaqohRes, angkatanRes] = await Promise.all([
+            const [kelasRes, mapelRes, guruRes, halaqohRes, angkatanRes, assignRes, profileRes] = await Promise.all([
                 supabase.from('kelas').select('id, nama'),
                 supabase.from('mapel').select('id, nama, kode'),
-                supabase.from('guru').select('id, nama'),
-                supabase.from('halaqoh').select('id, nama'),
-                supabase.from('angkatan').select('id, nama')
+                supabase.from('guru').select('id, nama, email, status'),
+                supabase.from('halaqoh').select('id, nama, musyrif_id'),
+                supabase.from('angkatan').select('id, nama'),
+                supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
+                supabase.from('user_profiles').select('user_id, nama, email')
             ])
 
             const data = {
                 kelas: (kelasRes.data || []).reduce((acc, k) => ({ ...acc, [k.id]: k }), {}),
                 mapel: (mapelRes.data || []).reduce((acc, m) => ({ ...acc, [m.id]: m }), {}),
                 guru: (guruRes.data || []).reduce((acc, g) => ({ ...acc, [g.id]: g }), {}),
-                halaqoh: (halaqohRes.data || []).reduce((acc, h) => ({ ...acc, [h.id]: h }), {}),
+                halaqoh: (halaqohRes.data || []).reduce((acc, h) => {
+                    let trueMusyrifId = h.musyrif_id;
+                    
+                    if (!trueMusyrifId) {
+                        const assignment = (assignRes.data || []).find(a => a.halaqoh_id === h.id);
+                        if (assignment) {
+                            const profile = (profileRes.data || []).find(p => p.user_id === assignment.user_id);
+                            if (profile) {
+                                const guruList = guruRes.data || [];
+                                const matchedGuru = guruList.find(g => 
+                                    (g.email && profile.email && g.email === profile.email) ||
+                                    (g.nama.toLowerCase() === profile.nama.toLowerCase())
+                                );
+                                if (matchedGuru) {
+                                    trueMusyrifId = matchedGuru.id;
+                                }
+                            }
+                        }
+                    }
+
+                    return { ...acc, [h.id]: { ...h, musyrif_id: trueMusyrifId } }
+                }, {}),
                 angkatan: (angkatanRes.data || []).reduce((acc, a) => ({ ...acc, [a.id]: a.nama }), {})
             }
 
@@ -200,7 +223,26 @@ export const useJurnal = (filters = {}) => {
             const { data: rawJadwalData, error: jadwalError } = await query
             if (jadwalError) throw jadwalError
             
-            let finalJadwalData = rawJadwalData || []
+            const maps = await getLookups()
+            let finalJadwalData = (rawJadwalData || []).map(j => {
+                let resolvedGuruId = j.guru_id;
+                
+                if (j.tipe === 'HALAQOH' && j.halaqoh_id) {
+                    const h = maps.halaqoh[j.halaqoh_id]
+                    if (h && h.musyrif_id !== undefined) {
+                        resolvedGuruId = h.musyrif_id;
+                    }
+                }
+                
+                if (resolvedGuruId) {
+                    const guruData = maps.guru[resolvedGuruId]
+                    if (guruData && guruData.status !== 'Aktif') {
+                        resolvedGuruId = null;
+                    }
+                }
+
+                return { ...j, guru_id: resolvedGuruId }
+            })
 
             // Handle Substitutions and Make-up Classes
             try {
@@ -290,7 +332,29 @@ export const useKalenderAkademik = (filters = {}) => {
             }
             const { data, error } = await query
             if (error) throw error
-            return data
+
+            const maps = await getLookups()
+            const correctedData = (data || []).map(j => {
+                let resolvedGuruId = j.guru_id;
+                
+                if (j.tipe === 'HALAQOH' && j.halaqoh_id) {
+                    const h = maps.halaqoh[j.halaqoh_id]
+                    if (h && h.musyrif_id !== undefined) {
+                        resolvedGuruId = h.musyrif_id;
+                    }
+                }
+                
+                if (resolvedGuruId) {
+                    const guruData = maps.guru[resolvedGuruId]
+                    if (guruData && guruData.status !== 'Aktif') {
+                        resolvedGuruId = null;
+                    }
+                }
+
+                return { ...j, guru_id: resolvedGuruId }
+            })
+
+            return manualJoin(correctedData, 'jadwal_pelajaran')
         },
         staleTime: 5 * 60 * 1000
     })

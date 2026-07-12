@@ -20,7 +20,8 @@ import {
     Eye,
     X,
     Edit2,
-    ArrowLeft
+    ArrowLeft,
+    ClipboardList
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -356,8 +357,37 @@ const AdminAbsensiPage = () => {
     }, [])
 
     const fetchAllJadwal = async () => {
-        const { data } = await supabase.from('jadwal_pelajaran').select('*')
-        setAllJadwal(data || [])
+        const [jadwalRes, halaqohRes, guruRes] = await Promise.all([
+            supabase.from('jadwal_pelajaran').select('*'),
+            supabase.from('halaqoh').select('id, musyrif_id'),
+            supabase.from('guru').select('id, status')
+        ])
+        
+        const rawJadwal = jadwalRes.data || []
+        const halaqohMap = (halaqohRes.data || []).reduce((acc, h) => ({...acc, [h.id]: h}), {})
+        const guruMap = (guruRes.data || []).reduce((acc, g) => ({...acc, [g.id]: g}), {})
+        
+        const fixedJadwal = rawJadwal.map(j => {
+            let resolvedGuruId = j.guru_id;
+            
+            if (j.tipe === 'HALAQOH' && j.halaqoh_id) {
+                const h = halaqohMap[j.halaqoh_id]
+                if (h && h.musyrif_id !== undefined) {
+                    resolvedGuruId = h.musyrif_id;
+                }
+            }
+            
+            if (resolvedGuruId) {
+                const guruData = guruMap[resolvedGuruId]
+                if (guruData && guruData.status !== 'Aktif') {
+                    resolvedGuruId = null;
+                }
+            }
+            
+            return { ...j, guru_id: resolvedGuruId }
+        })
+        
+        setAllJadwal(fixedJadwal)
     }
 
     const fetchGuru = async () => {
