@@ -23,7 +23,7 @@ export class AiService {
         // Parser model: systemInstruction HARUS di getGenerativeModel(), bukan di generateContent()
         this.geminiParserModel = this.genAI.getGenerativeModel({
           model: 'gemini-1.5-flash',
-          systemInstruction: 'Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA. Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya. Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi chitchat. Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang.',
+          systemInstruction: 'Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA. Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya. Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi chitchat. Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang aslinya saja, JANGAN sertakan kata sebutan awalan seperti "santri", "siswa", "anak", "atas nama", atau "ananda".',
           tools: [{
             functionDeclarations: [
               {
@@ -316,6 +316,8 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     }
 
     if (santriName) {
+      // Hapus awalan sebutan yang sering tidak sengaja tertangkap regex
+      santriName = santriName.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
       result.parameters.santri_name = santriName;
     }
 

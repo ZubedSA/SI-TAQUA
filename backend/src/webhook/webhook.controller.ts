@@ -325,6 +325,10 @@ export class WebhookController {
       // ----------------------------------------------------------------
       try {
         parsed = await this.aiService.parseIntent(message, sender);
+        // Sanitasi tambahan lapis kedua
+        if (parsed.parameters && typeof parsed.parameters.santri_name === 'string') {
+          parsed.parameters.santri_name = parsed.parameters.santri_name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
+        }
       } catch (parseError) {
         this.logger.error('AI intent parsing gagal, fallback chitchat:', parseError);
         parsed = { intent: 'chitchat', parameters: {} };
