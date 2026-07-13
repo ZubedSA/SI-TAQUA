@@ -61,7 +61,13 @@ const AdminAbsensiPage = () => {
     
     // Filters
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
-    const [filterStartDate, setFilterStartDate] = useState(new Date().toISOString().split('T')[0])
+    
+    // Default to start of month for reports
+    const getStartOfMonth = () => {
+        const d = new Date()
+        return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
+    }
+    const [filterStartDate, setFilterStartDate] = useState(getStartOfMonth())
     const [filterEndDate, setFilterEndDate] = useState(new Date().toISOString().split('T')[0])
     const [selectedSantriId, setSelectedSantriId] = useState(null)
     const [selectedGuruId, setSelectedGuruId] = useState(null)
@@ -357,34 +363,58 @@ const AdminAbsensiPage = () => {
     }, [])
 
     const fetchAllJadwal = async () => {
-        const [jadwalRes, halaqohRes, guruRes] = await Promise.all([
+        const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes] = await Promise.all([
             supabase.from('jadwal_pelajaran').select('*'),
             supabase.from('halaqoh').select('id, musyrif_id'),
-            supabase.from('guru').select('id, status')
+            supabase.from('guru').select('id, status'),
+            supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id')
         ])
         
         const rawJadwal = jadwalRes.data || []
         const halaqohMap = (halaqohRes.data || []).reduce((acc, h) => ({...acc, [h.id]: h}), {})
         const guruMap = (guruRes.data || []).reduce((acc, g) => ({...acc, [g.id]: g}), {})
+        const mhData = musyrifHalaqohRes.data || []
         
-        const fixedJadwal = rawJadwal.map(j => {
-            let resolvedGuruId = j.guru_id;
-            
-            if (j.tipe === 'HALAQOH' && j.halaqoh_id) {
-                const h = halaqohMap[j.halaqoh_id]
-                if (h && h.musyrif_id !== undefined) {
-                    resolvedGuruId = h.musyrif_id;
+        const halaqohToMusyrifs = {}
+        mhData.forEach(mh => {
+            if (!halaqohToMusyrifs[mh.halaqoh_id]) halaqohToMusyrifs[mh.halaqoh_id] = []
+            halaqohToMusyrifs[mh.halaqoh_id].push(mh.user_id)
+        })
+        
+        const fixedJadwal = []
+        
+        rawJadwal.forEach(j => {
+            if (j.tipe === 'HALAQOH' && j.referensi_id) {
+                const musyrifs = halaqohToMusyrifs[j.referensi_id] || []
+                
+                if (musyrifs.length > 0) {
+                    musyrifs.forEach(uid => {
+                        const guruData = guruMap[uid]
+                        if (guruData && guruData.status === 'Aktif') {
+                            fixedJadwal.push({ ...j, guru_id: uid })
+                        }
+                    })
+                } else {
+                    const h = halaqohMap[j.referensi_id]
+                    if (h && h.musyrif_id) {
+                        const guruData = guruMap[h.musyrif_id]
+                        if (guruData && guruData.status === 'Aktif') {
+                            fixedJadwal.push({ ...j, guru_id: h.musyrif_id })
+                        }
+                    } else {
+                        fixedJadwal.push({ ...j, guru_id: null })
+                    }
                 }
-            }
-            
-            if (resolvedGuruId) {
-                const guruData = guruMap[resolvedGuruId]
-                if (guruData && guruData.status !== 'Aktif') {
-                    resolvedGuruId = null;
+            } else {
+                let resolvedGuruId = j.guru_id;
+                if (resolvedGuruId) {
+                    const guruData = guruMap[resolvedGuruId]
+                    if (guruData && guruData.status !== 'Aktif') {
+                        resolvedGuruId = null;
+                    }
                 }
+                fixedJadwal.push({ ...j, guru_id: resolvedGuruId })
             }
-            
-            return { ...j, guru_id: resolvedGuruId }
         })
         
         setAllJadwal(fixedJadwal)
@@ -601,6 +631,8 @@ const AdminAbsensiPage = () => {
                 Hadir: 0,
                 Izin: 0,
                 Alpha: 0,
+                BelumAbsen: 0,
+                totalSelesai: 0,
                 details: []
             }
         })
@@ -645,6 +677,7 @@ const AdminAbsensiPage = () => {
 
                 if (hasScan) {
                     stafSummary[j.guru_id].Hadir++
+                    stafSummary[j.guru_id].totalSelesai++
                     stafSummary[j.guru_id].details.push({
                         tanggal: dateStr,
                         jam_ke: j.jam_ke,
@@ -662,6 +695,7 @@ const AdminAbsensiPage = () => {
 
                     if (hasIzin) {
                         stafSummary[j.guru_id].Izin++
+                        stafSummary[j.guru_id].totalSelesai++
                         stafSummary[j.guru_id].details.push({
                             tanggal: dateStr,
                             jam_ke: j.jam_ke,
@@ -670,14 +704,36 @@ const AdminAbsensiPage = () => {
                             status: 'Izin'
                         })
                     } else {
-                        stafSummary[j.guru_id].Alpha++
-                        stafSummary[j.guru_id].details.push({
-                            tanggal: dateStr,
-                            jam_ke: j.jam_ke,
-                            tipe: j.tipe,
-                            referensi_id: j.referensi_id,
-                            status: 'Alpha'
-                        })
+                        // Cek waktu, jika belum lewat batas, status Belum Absen
+                        const now = new Date()
+                        const classDate = new Date(date)
+                        if (j.jam_selesai) {
+                            const [h, m] = j.jam_selesai.split(':').map(Number)
+                            classDate.setHours(h, m, 0, 0)
+                        } else {
+                            classDate.setHours(23, 59, 59, 999)
+                        }
+                        
+                        if (now > classDate) {
+                            stafSummary[j.guru_id].Alpha++
+                            stafSummary[j.guru_id].totalSelesai++
+                            stafSummary[j.guru_id].details.push({
+                                tanggal: dateStr,
+                                jam_ke: j.jam_ke,
+                                tipe: j.tipe,
+                                referensi_id: j.referensi_id,
+                                status: 'Alpha'
+                            })
+                        } else {
+                            stafSummary[j.guru_id].BelumAbsen++
+                            stafSummary[j.guru_id].details.push({
+                                tanggal: dateStr,
+                                jam_ke: j.jam_ke,
+                                tipe: j.tipe,
+                                referensi_id: j.referensi_id,
+                                status: 'Belum Absen'
+                            })
+                        }
                     }
                 }
             })
@@ -716,9 +772,24 @@ const AdminAbsensiPage = () => {
             // Cek Izin
             const isIzin = izinGuruList.some(izin => izin.guru_id === j.guru_id)
 
-            let status = 'Alpha'
-            if (scan) status = 'Hadir'
-            else if (isIzin) status = 'Izin'
+            let status = 'Belum Absen'
+            if (scan) {
+                status = 'Hadir'
+            } else if (isIzin) {
+                status = 'Izin'
+            } else {
+                const now = new Date()
+                const classDate = new Date(dateObj)
+                if (j.jam_selesai) {
+                    const [h, m] = j.jam_selesai.split(':').map(Number)
+                    classDate.setHours(h, m, 0, 0)
+                } else {
+                    classDate.setHours(23, 59, 59, 999)
+                }
+                if (now > classDate) {
+                    status = 'Alpha'
+                }
+            }
 
             return {
                 id: j.id,
@@ -1155,6 +1226,13 @@ const AdminAbsensiPage = () => {
                                                     Izin
                                                 </div>
                                             )
+                                        } else if (row.status === 'Belum Absen') {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-50 text-gray-500 font-black text-[10px] uppercase tracking-widest border border-gray-200 shadow-sm shadow-gray-100/50">
+                                                    <Clock size={12} />
+                                                    Belum Absen
+                                                </div>
+                                            )
                                         } else {
                                             return (
                                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest border border-red-100 shadow-sm shadow-red-100/50">
@@ -1175,10 +1253,12 @@ const AdminAbsensiPage = () => {
                                 <div className="flex items-center gap-3 w-full">
                                     <div className={`p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 shrink-0 ${
                                         row.status === 'Hadir' ? 'text-emerald-500' :
-                                        row.status === 'Izin' ? 'text-amber-500' : 'text-red-500'
+                                        row.status === 'Izin' ? 'text-amber-500' : 
+                                        row.status === 'Belum Absen' ? 'text-gray-400' : 'text-red-500'
                                     }`}>
                                         {row.status === 'Hadir' ? <CheckCircle2 size={16} /> :
-                                         row.status === 'Izin' ? <ClipboardList size={16} /> : <XCircle size={16} />}
+                                         row.status === 'Izin' ? <ClipboardList size={16} /> : 
+                                         row.status === 'Belum Absen' ? <Clock size={16} /> : <XCircle size={16} />}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
                                         <div className="flex justify-between items-start">
@@ -1187,7 +1267,8 @@ const AdminAbsensiPage = () => {
                                             </div>
                                             <span className={`font-black text-sm shrink-0 ml-2 ${
                                                 row.status === 'Hadir' ? 'text-emerald-600' :
-                                                row.status === 'Izin' ? 'text-amber-600' : 'text-red-600'
+                                                row.status === 'Izin' ? 'text-amber-600' : 
+                                                row.status === 'Belum Absen' ? 'text-gray-500' : 'text-red-600'
                                             }`}>
                                                 {row.status}
                                             </span>
@@ -1464,6 +1545,12 @@ const AdminAbsensiPage = () => {
                                              hideOnMobile: true 
                                          },
                                          { 
+                                             header: 'Izin', 
+                                             render: (row) => <span className="font-black text-amber-600 bg-amber-50 px-4 py-1.5 rounded-xl border border-amber-100">{row.Izin}</span>, 
+                                             className: 'px-8 py-6 text-center text-amber-600', 
+                                             hideOnMobile: true 
+                                         },
+                                         { 
                                              header: 'Alpha', 
                                              render: (row) => <span className="font-black text-red-600 bg-red-50 px-4 py-1.5 rounded-xl border border-red-100">{row.Alpha}</span>, 
                                              className: 'px-8 py-6 text-center text-red-600', 
@@ -1471,9 +1558,9 @@ const AdminAbsensiPage = () => {
                                          },
                                          { 
                                              header: 'Score', 
-                                             render: (row) => {
-                                                 const total = row.Hadir + row.Alpha
-                                                 const score = total > 0 ? Math.round((row.Hadir / total) * 100) : 0
+                                                 render: (row) => {
+                                                     const total = row.totalSelesai || 0
+                                                     const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
                                                  return (
                                                      <div className="flex items-center justify-center gap-3">
                                                          <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -1515,14 +1602,18 @@ const AdminAbsensiPage = () => {
                                          </div>
                                      )}
                                      mobileCardContent={(row) => {
-                                         const total = row.Hadir + row.Alpha
-                                         const score = total > 0 ? Math.round((row.Hadir / total) * 100) : 0
+                                         const total = row.totalSelesai || 0
+                                         const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
                                          return (
                                              <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
-                                                 <div className="grid grid-cols-3 gap-2">
+                                                 <div className="grid grid-cols-4 gap-2">
                                                      <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-center">
                                                          <div className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Hadir</div>
                                                          <div className="text-sm font-black text-emerald-600">{row.Hadir}</div>
+                                                     </div>
+                                                     <div className="bg-amber-50 p-2 rounded-xl border border-amber-100 text-center">
+                                                         <div className="text-[8px] font-black text-amber-400 uppercase tracking-widest mb-1">Izin</div>
+                                                         <div className="text-sm font-black text-amber-600">{row.Izin}</div>
                                                      </div>
                                                      <div className="bg-red-50 p-2 rounded-xl border border-red-100 text-center">
                                                          <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Alpha</div>

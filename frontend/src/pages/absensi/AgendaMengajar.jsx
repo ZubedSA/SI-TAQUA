@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { 
     ArrowLeft, 
     Save, 
@@ -41,12 +41,13 @@ const STATUS_OPTIONS = [
 
 const AgendaMengajar = () => {
     const navigate = useNavigate()
-    const [searchParams] = useSearchParams()
+    const location = useLocation()
+    const queryParams = new URLSearchParams(location.search)
     const { user, userProfile, isAdmin, isAdminAkademik, isAdminAbsensi, hasRole } = useAuth()
     const { formatDate: globalFormatDate } = useCalendar()
     const showToast = useToast()
     
-    const [selectedDate, setSelectedDate] = useState(searchParams.get('tanggal') || new Date().toISOString().split('T')[0])
+    const [selectedDate, setSelectedDate] = useState(queryParams.get('tanggal') || new Date().toISOString().split('T')[0])
     const [guruId, setGuruId] = useState(null)
     const [loadingGuru, setLoadingGuru] = useState(true)
 
@@ -59,7 +60,7 @@ const AgendaMengajar = () => {
     const [saving, setSaving] = useState(false)
 
     // Auto-select from URL (if scanned)
-    const scannedJadwalId = searchParams.get('jadwal_id')
+    const scannedJadwalId = queryParams.get('jadwal_id')
 
     useEffect(() => {
         const fetchGuruId = async () => {

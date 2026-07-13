@@ -59,7 +59,13 @@ export const authService = {
 
             // Determine Roles (SAFE MODE)
             // This will NEVER throw "Gagal mengambil data pengguna"
-            const { profile, roles, requiresSelection } = await this.resolveRoles(authData.user.id, authData.user)
+            const { profile, roles, requiresSelection, is_active } = await this.resolveRoles(authData.user.id, authData.user)
+
+            // BLOCK LOGIN IF ACCOUNT IS INACTIVE
+            if (is_active === false) {
+                await supabase.auth.signOut()
+                throw new Error('Akun Anda telah dinonaktifkan oleh administrator.')
+            }
 
             // 4. Log Success Activity (Fire and forget)
             this.logLoginAttempt(email, 'SUCCESS').catch(() => {
@@ -100,6 +106,9 @@ export const authService = {
 
             if (error) throw error // Trigger fallback
 
+            // Explicit boolean check (allow null or true to pass)
+            const is_active = profile.is_active !== false;
+
             // Normalize roles array
             let roles = profile.roles || (profile.role ? [profile.role] : ['guest'])
 
@@ -118,7 +127,8 @@ export const authService = {
             return {
                 profile,
                 roles,
-                requiresSelection
+                requiresSelection,
+                is_active
             }
 
         } catch {
@@ -135,10 +145,12 @@ export const authService = {
                     nama: fallbackName,
                     role: fallbackRole,
                     active_role: fallbackRole,
-                    roles: [fallbackRole]
+                    roles: [fallbackRole],
+                    is_active: true
                 },
                 roles: [fallbackRole],
-                requiresSelection: false
+                requiresSelection: false,
+                is_active: true
             }
         }
     },

@@ -16,6 +16,7 @@ const AbsensiLogin = lazy(() => import('./pages/absensi/AbsensiLogin'));
 const AbsensiLayout = lazy(() => import('./components/layout/AbsensiLayout'));
 const AbsensiPortal = lazy(() => import('./pages/absensi/AbsensiPortal'));
 const AgendaMengajar = lazy(() => import('./pages/absensi/AgendaMengajar'));
+const RiwayatKehadiranPage = lazy(() => import('./pages/absensi/RiwayatKehadiranPage'));
 const AbsensiQuraniyah = lazy(() => import('./pages/absensi/AbsensiQuraniyah'));
 const GerbangPijar = lazy(() => import('./pages/absensi/GerbangPijar'));
 const AdminAbsensiPage = lazy(() => import('./pages/absensi/AdminAbsensiPage'));
@@ -170,6 +171,7 @@ function App() {
                       <Route index element={<Navigate to="/absensi/home" replace />} />
                       <Route path="home" element={<AbsensiPortal />} />
                       <Route path="agenda" element={<AgendaMengajar />} />
+                      <Route path="riwayat" element={<RiwayatKehadiranPage />} />
                       <Route path="quraniyah" element={<AbsensiQuraniyah />} />
                       <Route path="izin" element={<IzinPengajarPage />} />
                       <Route path="gerbang-pijar" element={<GerbangPijar />} />

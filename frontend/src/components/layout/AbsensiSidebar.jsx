@@ -14,7 +14,8 @@ const AbsensiSidebar = ({ onScanClick }) => {
     const teacherMenuItems = [
         { id: 'teacher-home', path: '/absensi/home', icon: Home, label: 'Beranda' },
         { id: 'teacher-agenda', path: '/absensi/agenda', icon: Calendar, label: 'Agenda Mengajar' },
-        { id: 'teacher-izin', path: '/absensi/izin', icon: ClipboardList, label: 'Izin' },
+        { id: 'teacher-riwayat', path: '/absensi/riwayat', icon: ClipboardList, label: 'Riwayat Kehadiran' },
+        { id: 'teacher-izin', path: '/absensi/izin', icon: FileText, label: 'Izin' },
     ]
 
     const adminMenuItems = [

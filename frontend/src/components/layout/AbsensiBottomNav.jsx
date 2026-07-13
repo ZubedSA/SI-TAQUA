@@ -28,9 +28,10 @@ const AbsensiBottomNav = ({ onScanClick }) => {
 
     const teacherMenuItems = [
         { path: '/absensi/home', icon: Home, label: 'Home' },
-        { path: '/absensi/izin', icon: ClipboardList, label: 'Izin' },
+        { path: '/absensi/riwayat', icon: ClipboardList, label: 'Riwayat' },
         { id: 'scan', icon: QrCode, label: 'Scan QR' },
         { path: '/absensi/agenda', icon: Calendar, label: 'Agenda' },
+        { path: '/absensi/izin', icon: FileText, label: 'Izin' },
     ]
 
     const items = isSystemAdmin ? adminMenuItems : teacherMenuItems

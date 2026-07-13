@@ -18,11 +18,13 @@ import {
     Loader2,
     Key,
     Lock,
+    Unlock,
     User,
     CreditCard,
     Briefcase,
     Heart,
-    ChevronDown
+    ChevronDown,
+    AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useToast } from '../../context/ToastContext'
@@ -55,6 +57,8 @@ const UsersPage = () => {
     const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
     const [passwordResetUser, setPasswordResetUser] = useState(null)
     const [newPasswordReset, setNewPasswordReset] = useState('')
+    const [statusToggleOpen, setStatusToggleOpen] = useState(false)
+    const [statusToggleUser, setStatusToggleUser] = useState(null)
     const [saving, setSaving] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
 
@@ -468,6 +472,38 @@ const UsersPage = () => {
         const isValid = validateForm()
         if (!isValid) return
         setActionModal({ isOpen: true, type: 'save_user' })
+    }
+
+    const executeToggleStatus = async () => {
+        if (!statusToggleUser) return;
+        setSaving(true);
+        const newStatus = statusToggleUser.is_active === false ? true : false;
+        
+        try {
+            const { data, error } = await supabase.rpc('admin_toggle_user_status', {
+                target_user_id: statusToggleUser.user_id,
+                new_status: newStatus
+            });
+
+            if (error) throw error;
+            if (!data.success) throw new Error(data.message);
+
+            if (showToast?.success) showToast.success(data.message);
+            
+            // Update local state directly to avoid refetching
+            setUsers(prev => prev.map(u => 
+                u.user_id === statusToggleUser.user_id 
+                    ? { ...u, is_active: newStatus } 
+                    : u
+            ));
+        } catch (err) {
+            console.error('Toggle Status Error:', err);
+            if (showToast?.error) showToast.error(err.message || 'Gagal mengubah status akun');
+        } finally {
+            setSaving(false);
+            setStatusToggleOpen(false);
+            setStatusToggleUser(null);
+        }
     }
 
     const executeSaveUser = async () => {
@@ -986,11 +1022,18 @@ const UsersPage = () => {
                                 hideOnMobile: true
                             },
                             { 
-                                header: 'Kontak', 
+                                header: 'Kontak & Status', 
                                 render: (row) => (
                                     <>
                                         <div className="text-sm font-bold text-gray-700">{row.email}</div>
-                                        <div className="text-xs font-medium text-gray-400">{row.phone || '-'}</div>
+                                        <div className="text-xs font-medium text-gray-400 mb-1">{row.phone || '-'}</div>
+                                        <Badge 
+                                            variant="neutral"
+                                            className={`${row.is_active !== false ? 'badge-emerald' : 'badge-red'} px-2 py-0.5 rounded-md text-[10px] font-black uppercase border-none shadow-sm inline-flex items-center gap-1`}
+                                        >
+                                            {row.is_active !== false ? <CheckCircle size={10} /> : <Lock size={10} />}
+                                            {row.is_active !== false ? 'Aktif' : 'Nonaktif'}
+                                        </Badge>
                                     </>
                                 ),
                                 className: 'px-8 py-6',
@@ -1027,6 +1070,13 @@ const UsersPage = () => {
                                             title="Reset Password"
                                         >
                                             <Key size={18} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setStatusToggleUser(row); setStatusToggleOpen(true); }}
+                                            className={`p-2.5 rounded-xl ${row.is_active !== false ? 'bg-orange-50 text-orange-600 hover:bg-orange-600' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600'} hover:text-white transition-all shadow-sm`}
+                                            title={row.is_active !== false ? "Nonaktifkan Akun" : "Aktifkan Akun"}
+                                        >
+                                            {row.is_active !== false ? <Lock size={18} /> : <Unlock size={18} />}
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); openDeleteUser(row); }}
@@ -1066,6 +1116,7 @@ const UsersPage = () => {
                                 actions={[
                                     { icon: <Edit size={16} />, label: 'Edit', onClick: () => { setEditingUser(row); setShowAddModal(true); } },
                                     { icon: <Key size={16} />, label: 'Reset Password', onClick: () => { setPasswordResetUser(row); setResetPasswordOpen(true); } },
+                                    { icon: row.is_active !== false ? <Lock size={16} /> : <Unlock size={16} />, label: row.is_active !== false ? 'Nonaktifkan' : 'Aktifkan', onClick: () => { setStatusToggleUser(row); setStatusToggleOpen(true); } },
                                     { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => openDeleteUser(row), danger: true }
                                 ]}
                             />
@@ -1083,6 +1134,12 @@ const UsersPage = () => {
                                     ))}
                                 </div>
                                 <div className="bg-gray-50 rounded-xl p-3 space-y-2 border border-gray-100">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-gray-500">Status</span>
+                                        <span className={`text-[10px] font-black uppercase ${row.is_active !== false ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            {row.is_active !== false ? 'Aktif' : 'Nonaktif'}
+                                        </span>
+                                    </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs font-semibold text-gray-500">Email</span>
                                         <span className="text-xs font-bold text-gray-900">{row.email || '-'}</span>
@@ -1398,19 +1455,36 @@ const UsersPage = () => {
                 confirmLabel={saving ? 'Menyimpan...' : 'Ya, Simpan'}
                 cancelLabel="Batal"
                 variant="primary"
-                isLoading={saving}
+                isOpen={actionModal.isOpen}
+                onClose={() => setActionModal({ isOpen: false, type: null })}
+                onConfirm={actionModal.type === 'save_user' ? executeSaveUser : executeResetPassword}
+                title={actionModal.type === 'save_user' ? "Simpan Perubahan" : "Reset Password"}
+                message={
+                    actionModal.type === 'save_user'
+                        ? "Apakah Anda yakin data pengguna ini sudah benar?"
+                        : `Apakah Anda yakin ingin mereset password untuk ${passwordResetUser?.nama}?`
+                }
+                confirmText={actionModal.type === 'save_user' ? "Ya, Simpan" : "Ya, Reset"}
+                cancelText="Batal"
+                loading={saving}
+                variant={actionModal.type === 'save_user' ? "primary" : "warning"}
             />
 
             <ConfirmationModal
-                isOpen={actionModal.isOpen && actionModal.type === 'reset_password'}
-                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
-                onConfirm={executeResetPassword}
-                title="Konfirmasi Reset Password"
-                message={`Yakin reset password untuk user ${passwordResetUser?.nama}?`}
-                confirmLabel={saving ? 'Memproses...' : 'Ya, Reset'}
-                cancelLabel="Batal"
-                variant="warning"
-                isLoading={saving}
+                isOpen={statusToggleOpen}
+                onClose={() => { setStatusToggleOpen(false); setStatusToggleUser(null); }}
+                onConfirm={executeToggleStatus}
+                title={statusToggleUser?.is_active !== false ? "Nonaktifkan Akun" : "Aktifkan Akun"}
+                message={
+                    statusToggleUser?.is_active !== false
+                        ? `Apakah Anda yakin ingin MENONAKTIFKAN akun ${statusToggleUser?.nama}? User tidak akan bisa login ke dalam sistem lagi.`
+                        : `Apakah Anda yakin ingin MENGAKTIFKAN akun ${statusToggleUser?.nama}? User akan bisa login kembali.`
+                }
+                confirmText={statusToggleUser?.is_active !== false ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+                cancelText="Batal"
+                loading={saving}
+                variant={statusToggleUser?.is_active !== false ? "danger" : "primary"}
+                icon={statusToggleUser?.is_active !== false ? AlertTriangle : CheckCircle}
             />
 
             <DeleteConfirmationModal

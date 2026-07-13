@@ -22,6 +22,7 @@ import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
 import QRScannerModal from '../../components/absensi/QRScannerModal'
 import UpdateNotificationModal from '../../components/absensi/UpdateNotificationModal'
+import RiwayatNotificationModal from '../../components/absensi/RiwayatNotificationModal'
 
 const AbsensiPortal = () => {
     const navigate = useNavigate()
@@ -33,6 +34,7 @@ const AbsensiPortal = () => {
     const [isProcessing, setIsProcessing] = useState(false)
     const [guruId, setGuruId] = useState(null)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
+    const [showRiwayatModal, setShowRiwayatModal] = useState(false)
 
     useEffect(() => {
         // Cek apakah user adalah staf/pengajar dan belum pernah melihat notifikasi update
@@ -41,11 +43,31 @@ const AbsensiPortal = () => {
         if (!hasSeenUpdate) {
             setShowUpdateModal(true)
         }
+        
+        // Pemberitahuan Riwayat Kehadiran
+        const hasSeenRiwayat = localStorage.getItem('has_seen_riwayat_v1')
+        if (!hasSeenRiwayat) {
+            // Jangan tumpuk modal. Jika modal pertama sudah dilihat, baru tampilkan yang kedua
+            if (hasSeenUpdate) {
+                setShowRiwayatModal(true)
+            }
+        }
     }, [])
 
     const handleCloseUpdateModal = () => {
         localStorage.setItem('has_seen_update_izin_v1', 'true')
         setShowUpdateModal(false)
+        
+        // Setelah modal izin ditutup, tampilkan modal riwayat jika belum pernah dilihat
+        const hasSeenRiwayat = localStorage.getItem('has_seen_riwayat_v1')
+        if (!hasSeenRiwayat) {
+            setShowRiwayatModal(true)
+        }
+    }
+
+    const handleCloseRiwayatModal = () => {
+        localStorage.setItem('has_seen_riwayat_v1', 'true')
+        setShowRiwayatModal(false)
     }
 
     useEffect(() => {
@@ -489,6 +511,11 @@ const AbsensiPortal = () => {
             <UpdateNotificationModal 
                 isOpen={showUpdateModal}
                 onClose={handleCloseUpdateModal}
+            />
+
+            <RiwayatNotificationModal
+                isOpen={showRiwayatModal}
+                onClose={handleCloseRiwayatModal}
             />
 
             {/* Simple Footer Label */}

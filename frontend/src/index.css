@@ -787,8 +787,8 @@
   .backdrop-blur-md, 
   .backdrop-blur-lg, 
   .backdrop-blur-xl {
-    backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
+    backdrop-filter: blur(4px) !important;
   }
   
   .blur-\[100px\], 
@@ -1020,8 +1020,8 @@
   /* Increased z-index */
   background-color: rgba(0, 0, 0, 0.6) !important;
   /* Slightly darker */
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   padding: var(--space-4);
   overflow: hidden !important;
   /* Prevent scroll on overlay */
@@ -1250,6 +1250,7 @@ main h1.page-title,
 .settings-card, .avatar-card, .pengumuman-card, .glass-card, 
 .role-info-card, .user-detail-card, .export-card {
   background: rgba(255, 255, 255, 0.9) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
   backdrop-filter: blur(10px) !important;
   border-radius: 1rem !important;
   border: 1px solid rgba(0,0,0,0.04) !important;
@@ -1406,4 +1407,20 @@ textarea:focus,
   border-color: #0A2619 !important;
   box-shadow: 0 0 0 3px rgba(10, 38, 25, 0.08) !important;
   background-color: white !important;
+}
+
+/* ==========================================================================
+   DATE INPUT FIXES (OVERLAPPING & NATIVE ICON)
+   ========================================================================== */
+
+/* Fix padding override for custom left icons (Tailwind pl-* classes) */
+input[type="date"][class*="pl-8"] { padding-left: 2rem !important; }
+input[type="date"][class*="pl-10"] { padding-left: 2.5rem !important; }
+input[type="date"][class*="pl-12"] { padding-left: 3rem !important; }
+input[type="date"][class*="pl-14"] { padding-left: 3.5rem !important; }
+
+/* Hide redundant native calendar picker indicator when using custom icons */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
 }
