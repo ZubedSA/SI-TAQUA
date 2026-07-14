@@ -29,7 +29,7 @@ const getLookups = async () => {
                 supabase.from('halaqoh').select('id, nama, musyrif_id'),
                 supabase.from('angkatan').select('id, nama'),
                 supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
-                supabase.from('user_profiles').select('user_id, nama, email')
+                supabase.from('user_profiles').select('user_id, nama, email, guru_id')
             ])
 
             const data = {
@@ -42,15 +42,24 @@ const getLookups = async () => {
                     if (!trueMusyrifId) {
                         const assignment = (assignRes.data || []).find(a => a.halaqoh_id === h.id);
                         if (assignment) {
-                            const profile = (profileRes.data || []).find(p => p.user_id === assignment.user_id);
-                            if (profile) {
-                                const guruList = guruRes.data || [];
-                                const matchedGuru = guruList.find(g => 
-                                    (g.email && profile.email && g.email === profile.email) ||
-                                    (g.nama.toLowerCase() === profile.nama.toLowerCase())
-                                );
-                                if (matchedGuru) {
-                                    trueMusyrifId = matchedGuru.id;
+                            const guruList = guruRes.data || [];
+                            // First, see if user_id from assignment is directly a guru.id
+                            if (guruList.some(g => g.id === assignment.user_id)) {
+                                trueMusyrifId = assignment.user_id;
+                            } else {
+                                const profile = (profileRes.data || []).find(p => p.user_id === assignment.user_id);
+                                if (profile) {
+                                    if (profile.guru_id) {
+                                        trueMusyrifId = profile.guru_id;
+                                    } else {
+                                        const matchedGuru = guruList.find(g => 
+                                            (g.email && profile.email && g.email === profile.email) ||
+                                            (g.nama && profile.nama && g.nama.toLowerCase() === profile.nama.toLowerCase())
+                                        );
+                                        if (matchedGuru) {
+                                            trueMusyrifId = matchedGuru.id;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -227,9 +236,10 @@ export const useJurnal = (filters = {}) => {
             let finalJadwalData = (rawJadwalData || []).map(j => {
                 let resolvedGuruId = j.guru_id;
                 
-                if (j.tipe === 'HALAQOH' && j.halaqoh_id) {
-                    const h = maps.halaqoh[j.halaqoh_id]
-                    if (h && h.musyrif_id !== undefined) {
+                if (j.tipe === 'HALAQOH' && (j.halaqoh_id || j.referensi_id) && !j.guru_id) {
+                    const targetId = j.halaqoh_id || j.referensi_id;
+                    const h = maps.halaqoh[targetId];
+                    if (h && h.musyrif_id) {
                         resolvedGuruId = h.musyrif_id;
                     }
                 }
@@ -310,10 +320,14 @@ export const useJurnal = (filters = {}) => {
                 .eq('tanggal', filters.tanggal)
                 .in('jadwal_id', finalJadwalData.map(j => j.id))
 
-            return joinedData.map(j => ({
-                ...j,
-                jurnal: (jurnalData || []).find(x => x.jadwal_id === j.id) || null
-            }))
+            return joinedData.map(j => {
+                const jurnal = (jurnalData || []).find(x => x.jadwal_id === j.id) || null;
+                return {
+                    ...j,
+                    jurnal,
+                    guru: j.guru || (jurnal?.guru_id ? maps.guru[jurnal.guru_id] : null)
+                };
+            })
         },
         enabled: !!filters.tanggal,
         staleTime: 0
@@ -337,7 +351,7 @@ export const useKalenderAkademik = (filters = {}) => {
             const correctedData = (data || []).map(j => {
                 let resolvedGuruId = j.guru_id;
                 
-                if (j.tipe === 'HALAQOH' && j.halaqoh_id) {
+                if (j.tipe === 'HALAQOH' && j.halaqoh_id && !j.guru_id) {
                     const h = maps.halaqoh[j.halaqoh_id]
                     if (h && h.musyrif_id !== undefined) {
                         resolvedGuruId = h.musyrif_id;

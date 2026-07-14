@@ -529,12 +529,12 @@ const AdminAbsensiPage = () => {
                 .from('presensi')
                 .select(`
                     *,
-                    santri:santri!santri_id(
+                    santri:santri_id(
                         id, 
                         nama, 
                         nis, 
-                        kelas:kelas!kelas_id(nama),
-                        halaqoh:halaqoh!halaqoh_id(nama)
+                        kelas:kelas_id(nama),
+                        halaqoh:halaqoh_id(nama)
                     )
                 `)
 
