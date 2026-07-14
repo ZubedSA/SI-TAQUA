@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { 
     Users, 
     QrCode, 
@@ -42,7 +42,11 @@ import * as XLSX from 'xlsx'
 const AdminAbsensiPage = () => {
     const navigate = useNavigate()
     const location = useLocation()
-    const [searchParams, setSearchParams] = useSearchParams()
+    const searchParams = new URLSearchParams(location.search)
+    const setSearchParams = (params) => {
+        const newParams = new URLSearchParams(params)
+        navigate({ search: newParams.toString() })
+    }
     const isStandalone = location.pathname.startsWith('/absensi')
     const { isAdmin, isAdminAbsensi, signOut } = useAuth()
     const showToast = useToast()

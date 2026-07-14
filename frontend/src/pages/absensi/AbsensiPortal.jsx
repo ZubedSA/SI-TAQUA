@@ -126,40 +126,72 @@ const AbsensiPortal = () => {
 
             // ── QURANIYAH: Sistem Cerdas Deteksi Jam ──
             if (qrType === 'QURANIYAH') {
-                // 1. Ambil jadwal halaqoh hari ini untuk menentukan jam_ke
+                const isBypass = isAdmin() || isAdminAkademik()
+                
+                // 1. Ambil jadwal halaqoh hari ini
                 const now = new Date()
-                const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
-                const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
-                const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
                 const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
-                const { data: jadwalHalaqoh } = await supabase
-                    .from('jadwal_pelajaran')
-                    .select('id, jam_ke, jam_mulai, jam_selesai, halaqoh_id, tipe')
-                    .eq('halaqoh_id', qrId)
-                    .eq('tipe', 'HALAQOH')
-                    .eq('hari', dayName)
-                    .order('jam_ke')
+                // Cek apakah ada jadwal halaqoh ini di jurnalList (jadwal hari ini untuk guru yang login)
+                const targetType = 'HALAQOH'
+                const jadwalHalaqohMatch = jurnalList.filter(j => {
+                    const itemType = j.tipe || 'HALAQOH'
+                    const itemId = j.halaqoh_id || j.referensi_id
+                    return itemType === targetType && String(itemId) === String(qrId)
+                })
+
+                // Jika bukan admin dan tidak ada jadwal sama sekali hari ini
+                if (!isBypass && jadwalHalaqohMatch.length === 0) {
+                    showToast.error('Jadwal halaqoh Anda tidak ditemukan untuk lokasi ini pada hari ini.')
+                    setIsProcessing(false)
+                    setIsScannerOpen(false)
+                    return
+                }
+
+                // Gunakan jadwalHalaqohMatch (jika musyrif) ATAU fetch semua jika admin
+                let jadwalHalaqoh = jadwalHalaqohMatch;
+                
+                if (isBypass && jadwalHalaqoh.length === 0) {
+                    // Admin fetch semua jadwal untuk halaqoh ini tanpa peduli siapa gurunya
+                    const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
+                    const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
+                    const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
+                    
+                    const { data } = await supabase
+                        .from('jadwal_pelajaran')
+                        .select('id, jam_ke, jam_mulai, jam_selesai, halaqoh_id, tipe')
+                        .eq('halaqoh_id', qrId)
+                        .eq('tipe', 'HALAQOH')
+                        .eq('hari', dayName)
+                        .order('jam_ke')
+                        
+                    jadwalHalaqoh = data || []
+                }
 
                 let detectedJam = null
+                let targetJadwal = null
+
                 if (jadwalHalaqoh && jadwalHalaqoh.length > 0) {
                     for (const jd of jadwalHalaqoh) {
+                        if (!jd.jam_mulai || !jd.jam_selesai) continue;
                         const [hM, mM] = jd.jam_mulai.split(':').map(Number)
                         const [hS, mS] = jd.jam_selesai.split(':').map(Number)
                         const startLimit = hM * 60 + mM - 15
-                        const endLimit = hS * 60 + mS + 45
+                        const endLimit = hS * 60 + mS + 15
                         if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
                             detectedJam = jd.jam_ke
-                            sessionStorage.setItem(`SITAQUA_SCAN_${jd.id}`, 'true')
+                            targetJadwal = jd
                             break
                         }
                     }
                     if (!detectedJam) {
                         const upcoming = jadwalHalaqoh.find(jd => {
+                            if (!jd.jam_mulai) return false;
                             const [hM, mM] = jd.jam_mulai.split(':').map(Number)
                             return (hM * 60 + mM) > currentMinutes
                         })
                         detectedJam = upcoming ? upcoming.jam_ke : jadwalHalaqoh[0].jam_ke
+                        targetJadwal = upcoming || jadwalHalaqoh[0]
                     }
                 }
 
@@ -195,14 +227,13 @@ const AbsensiPortal = () => {
 
                 // 3. Simpan verifikasi QR di session & Navigasi
                 sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
-                const targetJadwal = jadwalHalaqoh?.find(j => j.jam_ke === finalJam)
 
-                if (targetJadwal) {
+                if (targetJadwal && targetJadwal.id) {
                     sessionStorage.setItem(`SITAQUA_SCAN_${targetJadwal.id}`, 'true')
                     showToast.success(`Terverifikasi: Halaqoh Jam Ke-${finalJam}`)
                     navigate(`/absensi/agenda?jadwal_id=${targetJadwal.id}`)
                 } else {
-                    showToast.success(`Terverifikasi: Halaqoh Jam Ke-${finalJam}`)
+                    showToast.success(`Terverifikasi: Halaqoh Jam Ke-${finalJam} (Mode Admin)`)
                     navigate(`/absensi/quraniyah?id=${qrId}&jam=${finalJam}`)
                 }
                 return
