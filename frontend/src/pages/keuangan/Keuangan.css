@@ -497,7 +497,6 @@
 /* Table Responsive Wrapper */
 .table-responsive {
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 /* Compact Table for Mobile */
@@ -965,6 +964,7 @@
     right: 0;
     bottom: 0;
     background: rgba(71, 85, 105, 0.5);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -1614,8 +1614,8 @@
     justify-content: center;
     gap: 6px;
     padding: 10px 16px;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: white;
+    background: #BCF32F;
+    color: #0A2619;
     border: none;
     border-radius: 10px;
     font-size: 0.85rem;
@@ -1865,9 +1865,9 @@
 }
 
 .btn.btn-wa {
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+    background: #BCF32F;
+    color: #0A2619;
+    box-shadow: 0 4px 12px rgba(188, 243, 47, 0.25);
 }
 
 /* Dark Mode for Pembayaran */
@@ -2022,8 +2022,8 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 2px solid #10b981;
+    background: rgba(188, 243, 47, 0.1);
+    border: 2px solid #BCF32F;
     border-radius: 16px;
     padding: 16px 20px;
 }
@@ -2031,8 +2031,8 @@
 .selected-santri-avatar {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-    color: white;
+    background: #BCF32F;
+    color: #0A2619;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -2237,8 +2237,8 @@
 }
 
 .btn-wa {
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: white;
+    background: #BCF32F;
+    color: #0A2619;
     border: none;
 }
 
@@ -2264,7 +2264,7 @@
 }
 
 .grouped-selected {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    background: #BCF32F;
 }
 
 .grouped-total span,
@@ -2274,6 +2274,9 @@
     color: var(--text-muted);
     margin-bottom: 4px;
 }
+.grouped-selected span {
+    color: #143d2a;
+}
 
 .grouped-total strong {
     font-size: 1.5rem;
@@ -2282,7 +2285,7 @@
 
 .grouped-selected strong {
     font-size: 1.5rem;
-    color: #059669;
+    color: #0A2619;
 }
 
 /* Tagihan Checklist */
@@ -2310,8 +2313,8 @@
 }
 
 .tagihan-check-item.selected {
-    background: #f0fdf4;
-    border-color: #10b981;
+    background: rgba(188, 243, 47, 0.1);
+    border-color: #BCF32F;
 }
 
 .tagihan-check-item.overdue {
@@ -2336,9 +2339,9 @@
 }
 
 .check-box.checked {
-    background: #10b981;
-    border-color: #10b981;
-    color: white;
+    background: #BCF32F;
+    border-color: #BCF32F;
+    color: #0A2619;
 }
 
 .check-item-content {
@@ -2380,6 +2383,7 @@
     width: 100%;
     padding: 16px;
     font-size: 1rem;
+    margin-top: 16px;
 }
 
 /* All Paid Message */
@@ -2388,19 +2392,19 @@
     flex-direction: column;
     align-items: center;
     padding: 48px;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    background: rgba(10, 38, 25, 0.05);
     border-radius: 16px;
     text-align: center;
 }
 
 .all-paid-message svg {
-    color: #10b981;
+    color: #0A2619;
     margin-bottom: 16px;
 }
 
 .all-paid-message p {
     font-size: 1.25rem;
-    color: #059669;
+    color: #0A2619;
     font-weight: 600;
     margin: 0;
 }
@@ -2441,7 +2445,7 @@
 }
 
 .lunas-total-card {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    background: #0A2619;
     padding: 20px;
     border-radius: 12px;
     display: flex;
@@ -2450,12 +2454,12 @@
 }
 
 .lunas-total-card span {
-    color: var(--text-muted);
+    color: #e2e8f0;
 }
 
 .lunas-total-card strong {
     font-size: 1.5rem;
-    color: #059669;
+    color: #BCF32F;
 }
 
 .lunas-categories {
@@ -2465,8 +2469,8 @@
 }
 
 .lunas-chip {
-    background: #d1fae5;
-    color: #059669;
+    background: rgba(188, 243, 47, 0.2);
+    color: #0A2619;
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.85rem;
@@ -2501,8 +2505,8 @@
 }
 
 .lunas-badge {
-    background: #d1fae5;
-    color: #059669;
+    background: rgba(188, 243, 47, 0.2);
+    color: #0A2619;
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.75rem;
@@ -2547,7 +2551,7 @@
 }
 
 .history-info strong.green {
-    color: #059669;
+    color: #0A2619;
 }
 
 .history-method {
@@ -2834,19 +2838,7 @@
         margin-top: var(--space-1);
     }
 
-    /* Fixed pay selected button at the bottom of the viewport on mobile */
-    .btn-pay-selected {
-        position: fixed !important;
-        bottom: 16px !important;
-        left: 16px !important;
-        right: 16px !important;
-        width: calc(100% - 32px) !important;
-        z-index: 90 !important;
-        box-shadow: 0 10px 25px -5px rgba(10, 38, 25, 0.3) !important;
-        margin: 0 !important;
-        border-radius: var(--radius-lg) !important;
-        padding: var(--space-4) !important;
-    }
+
 }
 
 @media screen and (max-width: 640px) {
