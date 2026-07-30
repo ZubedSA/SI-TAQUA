@@ -14,8 +14,56 @@ const RaportTemplate = ({
     catatanWali,
     type = 'all' // 'all', 'tahfizh', 'madrasah'
 }) => {
-    // ========== EMBEDDED GLOBAL PRINT STYLES ==========
+    // ========== EMBEDDED GLOBAL & PRINT STYLES ==========
     const printStyles = `
+        /* SCREEN & PRINT RAPORT STYLES (OVERRIDE GLOBAL SIOHIOMA THEME) */
+        .raport-sheet {
+            box-sizing: border-box !important;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            background-color: #ffffff !important;
+        }
+
+        .raport-sheet table {
+            border-collapse: collapse !important;
+            border-spacing: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            border: 1px solid #000 !important;
+            background-color: #ffffff !important;
+            margin-bottom: 0 !important;
+            width: 100% !important;
+        }
+
+        .raport-sheet th,
+        .raport-sheet table th,
+        .raport-sheet table thead th {
+            background-color: #388a73 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.02em !important;
+            padding: 6px 10px !important;
+            font-size: 11px !important;
+            border: 1px solid #000 !important;
+            text-align: center !important;
+            border-radius: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .raport-sheet td,
+        .raport-sheet table td,
+        .raport-sheet table tbody td {
+            padding: 5px 8px !important;
+            border: 1px solid #000 !important;
+            color: #111827 !important;
+            font-size: 10px !important;
+            background-color: #ffffff !important;
+            border-radius: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
         @media print {
             @page {
                 size: A4;
@@ -63,29 +111,6 @@ const RaportTemplate = ({
                 break-after: page !important;
                 height: 0 !important;
                 display: block !important;
-            }
-            
-            .raport-sheet table {
-                border-collapse: collapse !important;
-            }
-            
-            .raport-sheet table th,
-            .raport-sheet table td {
-                border: 1pt solid #000 !important;
-            }
-            
-            .raport-sheet table thead th {
-                background-color: #009B7C !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            .raport-sheet table tbody td {
-                background-color: white !important;
-                color: #000000 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
             }
         }
     `;

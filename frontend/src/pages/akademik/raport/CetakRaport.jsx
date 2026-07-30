@@ -105,7 +105,6 @@ const CetakRaport = () => {
             const { data: allMapels } = await supabase
                 .from('mapel')
                 .select('*')
-                .in('kategori', ['Madrosiyah', 'Madrasiyah'])
                 .order('nama', { ascending: true });
             const expectedMapels = allMapels || [];
 
@@ -212,10 +211,10 @@ const CetakRaport = () => {
             setNilaiTahfizh(tahfizhRows);
 
             // 5. Fetch Taujihad & Perilaku
-            const { data: taujihadData } = await supabase.from('taujihad').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).single();
+            const { data: taujihadData } = await supabase.from('taujihad').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).maybeSingle();
             setTaujihad(taujihadData);
 
-            const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).single();
+            const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).maybeSingle();
             setPerilaku(perilakuData);
 
             setKetidakhadiran({
@@ -254,35 +253,52 @@ const CetakRaport = () => {
 
         try {
             const element = raportTemplateRef.current;
-            const canvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
 
-            const imgData = canvas.toDataURL('image/png');
+            // Temporarily reset CSS scale transform for 100% full-size A4 capture
+            const originalTransform = element.style.transform;
+            const originalMarginLeft = element.style.marginLeft;
+            element.style.transform = 'none';
+            element.style.marginLeft = '0px';
+
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = canvas.width;
-            const imgHeight = (canvas.height * pdfWidth) / imgWidth;
 
-            let heightLeft = imgHeight;
-            let position = 0;
+            const sheets = element.querySelectorAll('.raport-sheet');
 
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfHeight;
+            if (sheets && sheets.length > 0) {
+                for (let i = 0; i < sheets.length; i++) {
+                    if (i > 0) pdf.addPage();
 
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-                heightLeft -= pdfHeight;
+                    const canvas = await html2canvas(sheets[i], {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+
+                    const imgData = canvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                }
+            } else {
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
             }
 
+            // Restore preview scaling
+            element.style.transform = originalTransform;
+            element.style.marginLeft = originalMarginLeft;
+
             const pageSuffix = activeTab === 'tahfizh' ? 'Tahfizh' : activeTab === 'madrasah' ? 'Madrasah' : 'Lengkap';
-            pdf.save(`Raport_${pageSuffix}_${santri.nama.replace(/\s/g, '_')}_${semester?.nama || 'Semester'}.pdf`);
+            const santriNamaClean = (santri?.nama || 'Santri').replace(/[^a-zA-Z0-9_\-]/g, '_');
+            pdf.save(`Raport_${pageSuffix}_${santriNamaClean}.pdf`);
 
         } catch (error) {
             console.error("PDF Download Error:", error);

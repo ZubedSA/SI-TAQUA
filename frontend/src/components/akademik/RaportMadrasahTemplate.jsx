@@ -38,8 +38,9 @@ const RaportMadrasahTemplate = ({
     musyrifName = ''
 }) => {
     const getPredikat = (nilai) => {
-        if (nilai === null || nilai === undefined || nilai === '' || isNaN(nilai) || nilai === '-') return '-';
+        if (nilai === null || nilai === undefined || nilai === '' || nilai === '-' || String(nilai).trim() === '-') return '-';
         const n = Number(nilai);
+        if (isNaN(n) || n === 0) return '-';
         if (n >= 9 || n >= 90) return 'A';
         if (n >= 8 || n >= 80) return 'B';
         if (n >= 7 || n >= 70) return 'C';
@@ -47,8 +48,8 @@ const RaportMadrasahTemplate = ({
         return 'E';
     };
 
-    const PRIMARY_COLOR = '#009B7C';  // Main green color
-    const PRIMARY_DARK = '#007A61';   // Darker green border
+    const PRIMARY_COLOR = '#388a73';  // Matching reference green color
+    const PRIMARY_DARK = '#2b6e5c';   // Darker green border
 
     const headerStyle = {
         backgroundColor: PRIMARY_COLOR,
@@ -91,10 +92,10 @@ const RaportMadrasahTemplate = ({
 
     const processedList = nilaiMadrasah.map(item => {
         let calc;
-        if (item.nilai_raport !== undefined && item.nilai_raport !== null && item.nilai_raport <= 10) {
+        if (item.nilai_raport !== undefined && item.nilai_raport !== null && item.nilai_raport !== '' && item.nilai_raport !== '-' && !isNaN(item.nilai_raport) && Number(item.nilai_raport) <= 10) {
             const fg = Number(item.nilai_raport);
             calc = { finalGrade: fg, isRed: fg <= 5 };
-        } else if (item.nilai_akhir !== undefined && item.nilai_akhir !== null) {
+        } else if (item.nilai_akhir !== undefined && item.nilai_akhir !== null && item.nilai_akhir !== '' && item.nilai_akhir !== '-' && !isNaN(item.nilai_akhir)) {
             const val = Number(item.nilai_akhir);
             const fg = val > 10 ? Math.round(val / 10) : Math.round(val);
             calc = { finalGrade: Math.max(3, Math.min(10, fg)), isRed: fg <= 5 };
@@ -102,43 +103,57 @@ const RaportMadrasahTemplate = ({
             calc = calculateSidogiriGrade(item.nilai_ujian, item.nilai_harian);
         }
 
+        const { finalGrade } = calc || {};
+        const rawGrade = (item.nilai_akhir !== null && item.nilai_akhir !== undefined && item.nilai_akhir !== '' && item.nilai_akhir !== '-' && item.nilai_akhir !== 'NaN' && !isNaN(item.nilai_akhir))
+            ? item.nilai_akhir
+            : (finalGrade && finalGrade !== 'NaN' && !isNaN(finalGrade) ? finalGrade : '-');
+        const displayGrade = (rawGrade === null || rawGrade === undefined || rawGrade === '-' || rawGrade === 'NaN' || isNaN(rawGrade)) ? '-' : rawGrade;
+
         return {
             ...item,
-            calc
+            calc,
+            displayGrade
         };
-    });
+    }).filter(item => item.displayGrade !== '-');
 
     return (
         <div className="raport-sheet bg-white p-6 w-full max-w-[210mm] mx-auto font-sans text-xs" style={{ printColorAdjust: 'exact' }}>
-            {/* ========== KOP YAYASAN ========== */}
+            {/* ========== KOP YAYASAN (REVAMPED FROM SCRATCH) ========== */}
             <div
-                className="text-white py-3 px-5 mb-3 text-center relative rounded-sm"
+                className="kop-header text-white py-2.5 px-4 mb-3 rounded-sm flex items-center justify-between"
                 style={{
                     backgroundColor: PRIMARY_COLOR,
                     borderBottom: `3px solid ${PRIMARY_DARK}`,
                     WebkitPrintColorAdjust: 'exact',
-                    printColorAdjust: 'exact'
+                    printColorAdjust: 'exact',
+                    width: '100%',
+                    boxSizing: 'border-box'
                 }}
             >
-                <div className="absolute left-4 top-1/2" style={{ transform: 'translateY(-50%)' }}>
-                    <img src="/logo-white.png" alt="Logo" style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                {/* Logo Left (Enlarged to 75px) */}
+                <div style={{ width: '80px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src="/logo-white.png" alt="Logo" style={{ width: '75px', height: '75px', objectFit: 'contain' }} />
                 </div>
 
-                <div style={{ paddingLeft: '80px', paddingRight: '15px' }}>
-                    <h2 style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '2px', color: 'white' }}>
+                {/* Center Titles */}
+                <div style={{ flex: 1, textAlign: 'center', paddingLeft: '5px', paddingRight: '5px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '2px', color: 'white' }}>
                         Yayasan Abdullah Dewi Hasanah
-                    </h2>
-                    <h1 style={{ fontSize: '13px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', color: 'white' }}>
+                    </div>
+                    <div style={{ fontSize: '11.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px', color: 'white', whiteSpace: 'nowrap' }}>
                         Pondok Pesantren Tahfizh Qur'an Al-Usymuni Batuan
-                    </h1>
-                    <p style={{ fontSize: '9px', opacity: 0.9, color: 'white' }}>
+                    </div>
+                    <div style={{ fontSize: '8.5px', fontWeight: '400', opacity: 0.95, color: 'white' }}>
                         Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep
-                    </p>
+                    </div>
                 </div>
+
+                {/* Right Spacer for 100% symmetry */}
+                <div style={{ width: '80px', flexShrink: 0 }} />
             </div>
 
             {/* ========== BIODATA SANTRI ========== */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '12px', padding: '0 4px', fontSize: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '14px', padding: '0 4px', fontSize: '10px' }}>
                 <div>
                     <div style={{ display: 'grid', gridTemplateColumns: '100px 10px 1fr', marginBottom: '4px' }}>
                         <span style={{ fontWeight: '600', color: '#374151' }}>Nama</span>
@@ -194,9 +209,9 @@ const RaportMadrasahTemplate = ({
                         <tbody>
                             {processedList && processedList.length > 0 ? (
                                 processedList.map((item, idx) => {
-                                    const { finalGrade, isRed } = item.calc;
-                                    const displayGrade = item.nilai_akhir ?? finalGrade ?? '-';
-                                    const predikatVal = item.predikat || getPredikat(displayGrade);
+                                    const { isRed } = item.calc || {};
+                                    const displayGrade = item.displayGrade;
+                                    const predikatVal = getPredikat(displayGrade);
 
                                     return (
                                         <tr key={idx}>
@@ -232,7 +247,7 @@ const RaportMadrasahTemplate = ({
                             </tr>
                             <tr>
                                 <th style={{ ...subHeaderStyle, textAlign: 'left' }}>Aspek</th>
-                                <th style={{ ...subHeaderStyle, width: '80px', textAlign: 'center' }}>Nilai</th>
+                                <th style={{ ...subHeaderStyle, width: '85px', textAlign: 'center' }}>Nilai</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -255,25 +270,27 @@ const RaportMadrasahTemplate = ({
                         </tbody>
                     </table>
 
-                    {/* TABLE KETIDAKHADIRAN */}
+                    {/* TABLE KETIDAKHADIRAN (Matching image layout: 4 cells with "Alpa 0", "Sakit 1", etc.) */}
                     <table style={tableStyle}>
                         <thead>
                             <tr>
                                 <th colSpan="4" style={headerStyle}>KETIDAKHADIRAN</th>
                             </tr>
-                            <tr>
-                                <th style={{ ...subHeaderStyle, width: '25%', textAlign: 'center' }}>Alpa</th>
-                                <th style={{ ...subHeaderStyle, width: '25%', textAlign: 'center' }}>Sakit</th>
-                                <th style={{ ...subHeaderStyle, width: '25%', textAlign: 'center' }}>Izin</th>
-                                <th style={{ ...subHeaderStyle, width: '25%', textAlign: 'center' }}>Pulang</th>
-                            </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{ketidakhadiran?.alpha ?? '0'}</td>
-                                <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{ketidakhadiran?.sakit ?? '0'}</td>
-                                <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{ketidakhadiran?.izin ?? '0'}</td>
-                                <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{ketidakhadiran?.pulang ?? '0'}</td>
+                                <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
+                                    Alpa <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.alpha ?? '0'}</span>
+                                </td>
+                                <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
+                                    Sakit <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.sakit ?? '0'}</span>
+                                </td>
+                                <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
+                                    Izin <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.izin ?? '0'}</span>
+                                </td>
+                                <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
+                                    Pulang <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.pulang ?? '0'}</span>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -288,7 +305,7 @@ const RaportMadrasahTemplate = ({
                 <div style={{
                     border: '1px solid #000',
                     padding: '8px 10px',
-                    minHeight: '40px',
+                    minHeight: '42px',
                     backgroundColor: 'white',
                     fontSize: '10px',
                     fontStyle: 'italic',
@@ -301,16 +318,16 @@ const RaportMadrasahTemplate = ({
             {/* ========== SIGNATURES ========== */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginTop: '20px', marginBottom: '10px', alignItems: 'flex-end' }}>
                 <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '10px', marginBottom: '40px', color: '#111827' }}>Wali Murid</p>
+                    <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Wali Murid</p>
                     <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                        ({santri?.nama_wali || santri?.nama || '.....................'})
+                        ({santri?.nama_wali || '.....................'})
                     </p>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ fontSize: '10px', marginBottom: '4px', color: '#111827' }}>
                         Batuan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
-                    <p style={{ fontSize: '10px', marginBottom: '40px', color: '#111827' }}>Musyrif</p>
+                    <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Musyrif</p>
                     <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
                         {musyrifName || santri?.musyrif_nama || 'UST. SUBAIDI'}
                     </p>
@@ -320,7 +337,7 @@ const RaportMadrasahTemplate = ({
             {/* ========== MENGETAHUI PENGASUH ========== */}
             <div style={{ textAlign: 'center', marginTop: '6px' }}>
                 <p style={{ fontSize: '10px', marginBottom: '2px', color: '#111827' }}>Mengetahui,</p>
-                <p style={{ fontSize: '10px', marginBottom: '35px', color: '#111827' }}>Pengasuh PTQA Batuan</p>
+                <p style={{ fontSize: '10px', marginBottom: '40px', color: '#111827' }}>Pengasuh PTQA Batuan</p>
                 <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
                     KH. MIFTAHUL ARIFIN, LC.
                 </p>

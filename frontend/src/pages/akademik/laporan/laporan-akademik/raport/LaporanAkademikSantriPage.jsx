@@ -27,6 +27,14 @@ const LaporanAkademikSantriPage = () => {
         fetchOptions()
     }, [])
 
+    useEffect(() => {
+        if (filters.santri_id && filters.semester_id) {
+            fetchSantriReport(filters.santri_id)
+        } else {
+            setSelectedSantri(null)
+        }
+    }, [filters.santri_id, filters.semester_id])
+
     const fetchOptions = async () => {
         const [semRes, santriRes] = await Promise.all([
             supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
@@ -59,11 +67,10 @@ const LaporanAkademikSantriPage = () => {
             if (selected) selected.musyrif_nama = musyrifName
             setSelectedSantri(selected)
 
-            // --- 1. Fetch Madrosiyah Mapels ---
+            // --- 1. Fetch Mapels ---
             const { data: allMapels } = await supabase
                 .from('mapel')
                 .select('*')
-                .in('kategori', ['Madrosiyah', 'Madrasiyah'])
                 .order('nama', { ascending: true })
             const expectedMapels = allMapels || []
 
@@ -106,12 +113,11 @@ const LaporanAkademikSantriPage = () => {
             })
 
             let madrasahList = mapelsToProcess.map(mapel => {
-                const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id || n.mapel?.nama === mapel.nama) || []
-                if (mapelGrades.length === 0) return null
-
-                if (mapel.nama.toLowerCase().includes('tahfizh') || mapel.nama.toLowerCase().includes('quran')) {
+                if (mapel.nama?.toLowerCase().includes('tahfizh') || mapel.nama?.toLowerCase().includes('quran')) {
                     return null
                 }
+
+                const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id || n.mapel?.nama === mapel.nama) || []
 
                 const harianRecord = mapelGrades.find(g => g.jenis_ujian === 'harian')
                 const examGrades = mapelGrades.filter(g => g.jenis_ujian !== 'harian')
@@ -120,8 +126,6 @@ const LaporanAkademikSantriPage = () => {
                 const nilaiHarian = harianRecord ? (harianRecord.nilai_akhir ?? harianRecord.nilai) : null
                 const nilaiUjian = bestExamRecord ? (bestExamRecord.nilai_akhir ?? bestExamRecord.nilai) : null
 
-                if (nilaiHarian === null && nilaiUjian === null) return null
-
                 const calc = calculateSidogiriGrade(nilaiUjian, nilaiHarian)
 
                 return {
@@ -129,7 +133,9 @@ const LaporanAkademikSantriPage = () => {
                     nilai_harian: nilaiHarian !== null ? nilaiHarian : '-',
                     nilai_ujian: nilaiUjian !== null ? nilaiUjian : '-',
                     nilai_akhir: calc.finalGrade,
-                    predikat: getPredikat(calc.finalGrade)
+                    nilai_raport: calc.finalGrade,
+                    predikat: getPredikat(calc.finalGrade),
+                    isRed: calc.isRed
                 }
             }).filter(Boolean)
             setNilaiMadros(madrasahList)
@@ -197,12 +203,13 @@ const LaporanAkademikSantriPage = () => {
     }
 
     const getPredikat = (nilai) => {
-        if (!nilai && nilai !== 0) return '-'
+        if (nilai === null || nilai === undefined || nilai === '' || nilai === '-' || String(nilai).trim() === '-') return '-'
         const n = Number(nilai)
-        if (n >= 90 || n >= 9) return 'A'
-        if (n >= 80 || n >= 8) return 'B'
-        if (n >= 70 || n >= 7) return 'C'
-        if (n >= 60 || n >= 6) return 'D'
+        if (isNaN(n) || n === 0) return '-'
+        if (n >= 9 || n >= 90) return 'A'
+        if (n >= 8 || n >= 80) return 'B'
+        if (n >= 7 || n >= 70) return 'C'
+        if (n >= 6 || n >= 60) return 'D'
         return 'E'
     }
 

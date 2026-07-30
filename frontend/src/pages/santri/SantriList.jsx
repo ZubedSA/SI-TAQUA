@@ -76,13 +76,72 @@ const SantriList = () => {
 
     const fetchSantri = () => refetch()
 
+    // Helpers for Excel parsing
+    const parseNisString = (val) => {
+        if (val === undefined || val === null) return ''
+        const str = String(val).trim()
+        if (str.includes('e+') || str.includes('E+')) {
+            const num = Number(val)
+            if (!isNaN(num)) {
+                return String(Math.round(num))
+            }
+        }
+        return str
+    }
+
+    const parseExcelDate = (val) => {
+        if (!val) return null
+        if (val instanceof Date) {
+            if (isNaN(val.getTime())) return null
+            const y = val.getFullYear()
+            const m = String(val.getMonth() + 1).padStart(2, '0')
+            const d = String(val.getDate()).padStart(2, '0')
+            return `${y}-${m}-${d}`
+        }
+        if (typeof val === 'number') {
+            try {
+                const dateObj = XLSX.SSF.parse_date_code(val)
+                if (dateObj) {
+                    const y = dateObj.y
+                    const m = String(dateObj.m).padStart(2, '0')
+                    const d = String(dateObj.d).padStart(2, '0')
+                    return `${y}-${m}-${d}`
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+        const str = String(val).trim()
+        if (!str) return null
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+
+        // Check if string is Date representation (e.g. "Tue Sep 30 2014...")
+        const dateParsed = new Date(str)
+        if (!isNaN(dateParsed.getTime()) && str.length > 15) {
+            const y = dateParsed.getFullYear()
+            const m = String(dateParsed.getMonth() + 1).padStart(2, '0')
+            const d = String(dateParsed.getDate()).padStart(2, '0')
+            return `${y}-${m}-${d}`
+        }
+
+        // Match DD/MM/YYYY or DD-MM-YYYY
+        const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+        if (dmy) {
+            const d = dmy[1].padStart(2, '0')
+            const m = dmy[2].padStart(2, '0')
+            const y = dmy[3]
+            return `${y}-${m}-${d}`
+        }
+        return str
+    }
+
     const handleFileUpload = (e) => {
         const file = e.target.files[0]
         if (!file) return
 
         // Validate file type
-        if (!file.name.match(/\.(xlsx|xls)$/i)) {
-            showToast.error('File harus berformat .xlsx atau .xls')
+        if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+            showToast.error('File harus berformat .xlsx, .xls, atau .csv')
             return
         }
 
@@ -90,7 +149,7 @@ const SantriList = () => {
         reader.onload = (evt) => {
             try {
                 const bstr = evt.target.result
-                const wb = XLSX.read(bstr, { type: 'binary' })
+                const wb = XLSX.read(bstr, { type: 'binary', cellDates: true })
                 const wsname = wb.SheetNames[0]
                 const ws = wb.Sheets[wsname]
                 const data = XLSX.utils.sheet_to_json(ws, { defval: '' })
@@ -101,45 +160,115 @@ const SantriList = () => {
 
                 // Parse and validate each row
                 const mappedData = data.map((row, index) => {
-                    const mapped = { rowNum: index + 2, errors: [] } // rowNum for Excel row (header = 1)
+                    const mapped = {
+                        rowNum: index + 2, // rowNum for Excel row (header = 1)
+                        errors: [],
+                        nis: '',
+                        nama: '',
+                        jenis_kelamin: 'Laki-laki',
+                        tempat_lahir: '',
+                        tanggal_lahir: '',
+                        alamat: '',
+                        nama_wali: '',
+                        no_telp_wali: '',
+                        nama_angkatan: '',
+                        kelas: '',
+                        halaqoh: '',
+                        status: 'Aktif'
+                    }
 
-                    // Map columns (flexible naming)
+                    // Map columns (flexible naming with strict priority)
                     Object.keys(row).forEach(key => {
                         const lowerKey = key.toLowerCase().trim()
-                        if (lowerKey.includes('nis') || lowerKey.includes('nisn') || lowerKey === 'no_induk') {
-                            mapped.nis = String(row[key]).trim()
-                        } else if (lowerKey === 'nama' || lowerKey.includes('nama_santri') || lowerKey === 'name') {
-                            mapped.nama = String(row[key]).trim()
-                        } else if (lowerKey.includes('jenis') || lowerKey.includes('kelamin') || lowerKey === 'l/p' || lowerKey === 'jk') {
-                            const val = String(row[key]).toLowerCase()
-                            mapped.jenis_kelamin = val.includes('l') || val.includes('laki') ? 'Laki-laki' : 'Perempuan'
-                        } else if (lowerKey === 'kelas' || lowerKey.includes('class')) {
-                            mapped.kelas = String(row[key]).trim()
-                        } else if (lowerKey === 'halaqoh' || lowerKey.includes('halaqah')) {
-                            mapped.halaqoh = String(row[key]).trim()
-                        } else if (lowerKey === 'tahun_masuk' || lowerKey.includes('tahun masuk') || lowerKey === 'year') {
-                            const num = parseInt(String(row[key]))
-                            mapped.tahun_masuk = !isNaN(num) ? num : null
-                        } else if (lowerKey === 'nama_angkatan' || lowerKey.includes('angkatan')) {
-                            mapped.nama_angkatan = String(row[key]).trim()
-                        } else if (lowerKey.includes('alamat') || lowerKey === 'address') {
-                            mapped.alamat = String(row[key]).trim()
-                        } else if (lowerKey.includes('wali') || lowerKey.includes('ortu')) {
-                            mapped.nama_wali = String(row[key]).trim()
-                        } else if (
-                            lowerKey.includes('telp') ||
-                            lowerKey.includes('hp') ||
-                            lowerKey.includes('phone') ||
-                            lowerKey.includes('handphone') ||
-                            lowerKey.includes('whatsapp') ||
-                            lowerKey.includes('wa') ||
-                            lowerKey.includes('kontak') ||
-                            lowerKey.includes('mobile') ||
-                            lowerKey.includes('nomor') ||
-                            lowerKey === 'no_hp' ||
-                            lowerKey === 'no hp'
+                        const rawVal = row[key] !== undefined && row[key] !== null ? String(row[key]).trim() : ''
+
+                        if (!rawVal) return
+
+                        // Priority 1: Wali Name (Check exact 'nama_wali' or 'nama wali' first!)
+                        if (
+                            lowerKey === 'nama_wali' || lowerKey === 'nama wali' ||
+                            lowerKey === 'wali' || lowerKey === 'parent_name' ||
+                            lowerKey === 'nama_ortu' || lowerKey === 'nama ortu'
                         ) {
-                            mapped.no_telp_wali = String(row[key]).trim()
+                            mapped.nama_wali = rawVal
+                        }
+                        // Priority 2: Phone numbers (No telp wali / HP)
+                        else if (
+                            lowerKey === 'no_telp_wali' || lowerKey === 'no telp wali' ||
+                            lowerKey === 'telp_wali' || lowerKey === 'hp_wali' ||
+                            lowerKey === 'no_hp_wali' || lowerKey === 'no_telp' ||
+                            lowerKey === 'no telp' || lowerKey === 'no_hp' ||
+                            lowerKey === 'no hp' || lowerKey === 'whatsapp' ||
+                            lowerKey === 'wa' || lowerKey.includes('telp') ||
+                            lowerKey.includes('handphone') || lowerKey.includes('phone') ||
+                            lowerKey.includes('mobile') || lowerKey.includes('hp_wali')
+                        ) {
+                            mapped.no_telp_wali = rawVal
+                        }
+                        // Priority 3: Fallback general 'wali'
+                        else if (lowerKey.includes('wali') || lowerKey.includes('ortu') || lowerKey.includes('parent')) {
+                            mapped.nama_wali = rawVal
+                        }
+                        // Priority 4: NIS
+                        else if (
+                            lowerKey === 'nis' || lowerKey === 'nisn' || lowerKey === 'no_induk' ||
+                            lowerKey === 'no induk' || lowerKey.includes('nis')
+                        ) {
+                            mapped.nis = parseNisString(row[key])
+                        }
+                        // Priority 5: Nama Santri
+                        else if (
+                            lowerKey === 'nama' || lowerKey === 'nama_santri' ||
+                            lowerKey === 'nama lengkap' || lowerKey === 'name' || lowerKey.includes('nama')
+                        ) {
+                            mapped.nama = rawVal
+                        }
+                        // Priority 5: Jenis Kelamin
+                        else if (
+                            lowerKey.includes('jenis') || lowerKey.includes('kelamin') ||
+                            lowerKey === 'l/p' || lowerKey === 'jk' || lowerKey === 'gender'
+                        ) {
+                            const val = rawVal.toLowerCase()
+                            mapped.jenis_kelamin = (val.includes('l') || val.includes('laki')) ? 'Laki-laki' : 'Perempuan'
+                        }
+                        // Priority 6: Tempat Lahir
+                        else if (
+                            lowerKey.includes('tempat') || lowerKey.includes('birthplace') ||
+                            lowerKey === 'tmp_lahir' || lowerKey === 'tpt_lahir'
+                        ) {
+                            mapped.tempat_lahir = rawVal
+                        }
+                        // Priority 7: Tanggal Lahir
+                        else if (
+                            lowerKey.includes('tanggal') || lowerKey.includes('tgl') ||
+                            lowerKey.includes('birthdate') || lowerKey === 'dob'
+                        ) {
+                            mapped.tanggal_lahir = parseExcelDate(row[key])
+                        }
+                        // Priority 8: Alamat
+                        else if (
+                            lowerKey.includes('alamat') || lowerKey.includes('address')
+                        ) {
+                            mapped.alamat = rawVal
+                        }
+                        // Priority 9: Status
+                        else if (lowerKey === 'status') {
+                            const normalizedStatus = rawVal.charAt(0).toUpperCase() + rawVal.slice(1).toLowerCase()
+                            mapped.status = ['Aktif', 'Boyong', 'Tidak Aktif', 'Lulus', 'Pindah'].includes(normalizedStatus) ? normalizedStatus : 'Aktif'
+                        }
+                        // Priority 10: Angkatan
+                        else if (
+                            lowerKey === 'nama_angkatan' || lowerKey.includes('angkatan') || lowerKey === 'year'
+                        ) {
+                            mapped.nama_angkatan = rawVal
+                        }
+                        // Priority 11: Kelas
+                        else if (lowerKey === 'kelas' || lowerKey.includes('class')) {
+                            mapped.kelas = rawVal
+                        }
+                        // Priority 12: Halaqoh
+                        else if (lowerKey === 'halaqoh' || lowerKey.includes('halaqah')) {
+                            mapped.halaqoh = rawVal
                         }
                     })
 
@@ -149,7 +278,6 @@ const SantriList = () => {
                     if (!mapped.nama_angkatan) mapped.errors.push('Angkatan wajib diisi')
 
                     mapped.isValid = mapped.errors.length === 0
-                    mapped.status = 'Aktif'
 
                     return mapped
                 }).filter(row => row.nis || row.nama) // Filter completely empty rows
@@ -204,16 +332,18 @@ const SantriList = () => {
                 }
             }
 
-            // STEP 3: Prepare Santri Data
+            // STEP 3: Prepare Santri Data with ALL fields
             const santriData = validRows.map(d => ({
                 nis: d.nis,
                 nama: d.nama,
                 jenis_kelamin: d.jenis_kelamin || 'Laki-laki',
+                tempat_lahir: d.tempat_lahir || null,
+                tanggal_lahir: d.tanggal_lahir || null,
                 alamat: d.alamat || null,
                 nama_wali: d.nama_wali || null,
                 no_telp: d.no_telp_wali || null,
                 no_telp_wali: d.no_telp_wali || null,
-                status: 'Aktif',
+                status: d.status || 'Aktif',
                 angkatan_id: angkatanMap[d.nama_angkatan] || null
             }))
 
@@ -552,7 +682,7 @@ const SantriList = () => {
             {/* Import Modal */}
             {showImportModal && (
                 <div className="modal-overlay">
-                    <div className="modal-box w-full max-w-2xl">
+                    <div className="modal-box w-full max-w-5xl">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                 <FileSpreadsheet size={20} className="text-primary-600" />
@@ -584,21 +714,57 @@ const SantriList = () => {
                                     </div>
 
                                     {/* Preview Table */}
-                                    <div className="max-h-[280px] overflow-auto border border-gray-200 rounded-lg">
+                                    <div className="max-h-[360px] overflow-auto border border-gray-200 rounded-lg">
                                         <ResponsiveTable
                                             columns={[
-                                                { header: '#', render: (row) => <span className="text-gray-500">{row.rowNum}</span>, className: 'px-3 py-2 w-12 text-center', hideOnMobile: true },
-                                                { header: 'NIS', render: (row) => <span className="font-mono">{row.nis || <span className="text-red-500">-</span>}</span>, className: 'px-3 py-2' },
-                                                { header: 'Nama', render: (row) => row.nama || <span className="text-red-500">-</span>, className: 'px-3 py-2' },
-                                                { header: 'No HP', render: (row) => <span className={row.no_telp_wali ? 'text-emerald-600' : 'text-amber-500 italic'}>{row.no_telp_wali || 'kosong'}</span>, className: 'px-3 py-2', hideOnMobile: true },
-                                                { header: 'Angkatan', render: (row) => row.nama_angkatan || <span className="text-red-500">-</span>, className: 'px-3 py-2', hideOnMobile: true },
-                                                { header: 'Status', render: (row) => (
-                                                    row.isValid ? (
-                                                        <span className="text-emerald-600 font-medium">✓ OK</span>
-                                                    ) : (
-                                                        <span className="text-red-600">{row.errors.join(', ')}</span>
-                                                    )
-                                                ), className: 'px-3 py-2' }
+                                                { header: '#', render: (row) => <span className="text-gray-500">{row.rowNum}</span>, className: 'px-3 py-2 w-10 text-center', hideOnMobile: true },
+                                                { header: 'NIS', render: (row) => <span className="font-mono font-semibold text-xs">{row.nis || <span className="text-red-500">-</span>}</span>, className: 'px-3 py-2' },
+                                                { 
+                                                    header: 'Nama Santri', 
+                                                    render: (row) => (
+                                                        <div>
+                                                            <div className="font-bold text-gray-900 text-sm">{row.nama || <span className="text-red-500">-</span>}</div>
+                                                            <div className="text-[11px] text-gray-500 font-medium">
+                                                                {row.jenis_kelamin} {(row.tempat_lahir || row.tanggal_lahir) ? `• ${row.tempat_lahir || ''}${row.tempat_lahir && row.tanggal_lahir ? ', ' : ''}${row.tanggal_lahir || ''}` : ''}
+                                                            </div>
+                                                        </div>
+                                                    ), 
+                                                    className: 'px-3 py-2' 
+                                                },
+                                                { 
+                                                    header: 'Nama Wali', 
+                                                    render: (row) => <span className="text-xs text-gray-800 font-medium">{row.nama_wali || <span className="text-gray-400 italic">-</span>}</span>, 
+                                                    className: 'px-3 py-2', 
+                                                    hideOnMobile: true 
+                                                },
+                                                { 
+                                                    header: 'No HP Wali', 
+                                                    render: (row) => (
+                                                        <span className={row.no_telp_wali ? 'text-emerald-600 font-mono text-xs font-bold' : 'text-amber-500 italic text-xs'}>
+                                                            {row.no_telp_wali || 'kosong'}
+                                                        </span>
+                                                    ), 
+                                                    className: 'px-3 py-2', 
+                                                    hideOnMobile: true 
+                                                },
+                                                { 
+                                                    header: 'Alamat', 
+                                                    render: (row) => <span className="text-xs text-gray-600 block max-w-[200px] truncate" title={row.alamat}>{row.alamat || '-'}</span>, 
+                                                    className: 'px-3 py-2', 
+                                                    hideOnMobile: true 
+                                                },
+                                                { header: 'Angkatan', render: (row) => <span className="text-xs font-semibold">{row.nama_angkatan || <span className="text-red-500">-</span>}</span>, className: 'px-3 py-2', hideOnMobile: true },
+                                                { 
+                                                    header: 'Status', 
+                                                    render: (row) => (
+                                                        row.isValid ? (
+                                                            <span className="text-emerald-600 font-bold text-xs">✓ OK</span>
+                                                        ) : (
+                                                            <span className="text-red-600 text-xs font-semibold">{row.errors.join(', ')}</span>
+                                                        )
+                                                    ), 
+                                                    className: 'px-3 py-2' 
+                                                }
                                             ]}
                                             data={importData}
                                             rowClassName={(row) => !row.isValid ? 'bg-red-50' : ''}
@@ -623,8 +789,20 @@ const SantriList = () => {
                                                         <div className="text-red-600 mb-2">{row.errors.join(', ')}</div>
                                                     )}
                                                     <div className="flex justify-between">
-                                                        <span>No HP:</span>
-                                                        <span className={row.no_telp_wali ? 'text-emerald-600' : 'text-amber-500 italic'}>{row.no_telp_wali || 'kosong'}</span>
+                                                        <span>Wali:</span>
+                                                        <span className="font-medium">{row.nama_wali || '-'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>No HP Wali:</span>
+                                                        <span className={row.no_telp_wali ? 'text-emerald-600 font-bold' : 'text-amber-500 italic'}>{row.no_telp_wali || 'kosong'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>TTL:</span>
+                                                        <span>{row.tempat_lahir || ''} {row.tanggal_lahir || ''}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Alamat:</span>
+                                                        <span className="truncate max-w-[150px]">{row.alamat || '-'}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span>Angkatan:</span>
