@@ -6,8 +6,10 @@ import { useAuth } from '../context/AuthContext'
  */
 export const usePermissions = () => {
     const { userProfile, user, hasRole: authHasRole } = useAuth()
-    // Multiple fallback untuk role detection - check activeRole first, then role
-    const role = userProfile?.activeRole || userProfile?.role || 'guest'
+    
+    // Multiple fallback untuk role detection - check activeRole, role, then user metadata
+    const metadataRole = user?.user_metadata?.role || user?.role
+    const role = userProfile?.activeRole || userProfile?.role || metadataRole || 'guest'
 
     // Permission definitions
     const permissions = {
@@ -28,12 +30,12 @@ export const usePermissions = () => {
         canAccessKeuangan: ['admin', 'bendahara', 'pengasuh'].includes(role),
         canAccessKas: ['admin', 'bendahara', 'pengasuh'].includes(role),
         canAccessPembayaran: ['admin', 'bendahara', 'pengasuh'].includes(role),
-        canAccessAnggaran: ['admin', 'bendahara'].includes(role), // Pengasuh cannot access Anggaran
+        canAccessAnggaran: ['admin', 'bendahara'].includes(role),
         canAccessPersetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
 
-        // Keuangan CRUD - Pengasuh can only CRUD in Persetujuan
-        canCrudKeuangan: ['admin', 'bendahara'].includes(role), // General keuangan CRUD
-        canCrudPersetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role), // Persetujuan CRUD
+        // Keuangan CRUD
+        canCrudKeuangan: ['admin', 'bendahara'].includes(role),
+        canCrudPersetujuan: ['admin', 'bendahara', 'pengasuh'].includes(role),
 
         // CRUD operations
         canCreate: {
@@ -45,7 +47,6 @@ export const usePermissions = () => {
             presensi: ['admin', 'admin_akademik', 'guru', 'musyrif'].includes(role),
             nilai: ['admin', 'admin_akademik', 'guru', 'musyrif'].includes(role),
             mapel: ['admin', 'admin_akademik'].includes(role),
-            // Keuangan
             kas: ['admin', 'bendahara'].includes(role),
             pembayaran: ['admin', 'bendahara'].includes(role),
             tagihan: ['admin', 'bendahara'].includes(role),
@@ -62,7 +63,6 @@ export const usePermissions = () => {
             presensi: ['admin', 'admin_akademik', 'guru', 'musyrif'].includes(role),
             nilai: ['admin', 'admin_akademik', 'guru', 'musyrif'].includes(role),
             mapel: ['admin', 'admin_akademik'].includes(role),
-            // Keuangan
             kas: ['admin', 'bendahara'].includes(role),
             pembayaran: ['admin', 'bendahara'].includes(role),
             tagihan: ['admin', 'bendahara'].includes(role),
@@ -79,7 +79,6 @@ export const usePermissions = () => {
             presensi: ['admin', 'admin_akademik', 'musyrif'].includes(role),
             nilai: ['admin', 'admin_akademik', 'musyrif'].includes(role),
             mapel: ['admin', 'admin_akademik'].includes(role),
-            // Keuangan
             kas: ['admin', 'bendahara'].includes(role),
             pembayaran: ['admin', 'bendahara'].includes(role),
             tagihan: ['admin', 'bendahara'].includes(role),
@@ -88,7 +87,6 @@ export const usePermissions = () => {
             realisasi: ['admin', 'bendahara'].includes(role),
         },
         canRead: {
-            // Wali hanya bisa read data santri yang terhubung (enforced by RLS)
             santri: ['admin', 'admin_akademik', 'guru', 'wali', 'musyrif'].includes(role),
             guru: ['admin', 'admin_akademik', 'guru', 'wali', 'musyrif'].includes(role),
             kelas: ['admin', 'admin_akademik', 'guru', 'wali', 'musyrif'].includes(role),
@@ -97,7 +95,6 @@ export const usePermissions = () => {
             presensi: ['admin', 'admin_akademik', 'guru', 'wali', 'musyrif'].includes(role),
             nilai: ['admin', 'admin_akademik', 'guru', 'wali', 'musyrif'].includes(role),
             mapel: ['admin', 'admin_akademik', 'guru', 'wali', 'musyrif'].includes(role),
-            // Keuangan - Pengasuh can read all
             kas: ['admin', 'bendahara', 'pengasuh'].includes(role),
             pembayaran: ['admin', 'bendahara', 'pengasuh'].includes(role),
             tagihan: ['admin', 'bendahara', 'pengasuh'].includes(role),
@@ -126,25 +123,22 @@ export const usePermissions = () => {
     const isAuthenticated = () => !!user
 
     // Check if user has any of the specified roles
-    // Now checks both active role AND roles array for flexibility
     const hasRole = (roles) => {
-        const userRoles = userProfile?.roles || []
-        const currentRole = userProfile?.activeRole || userProfile?.role || 'guest'
+        if (!user) return false
+        const userRoles = userProfile?.roles?.length ? userProfile.roles : (userProfile?.role ? [userProfile.role] : (metadataRole ? [metadataRole] : []))
+        const currentRole = userProfile?.activeRole || userProfile?.role || metadataRole || 'guest'
 
         if (typeof roles === 'string') {
             return currentRole === roles || userRoles.includes(roles)
         }
-        // Check if current active role is in allowed roles OR any roles array item is allowed
         return roles.includes(currentRole) || roles.some(r => userRoles.includes(r))
     }
 
-    // Check if user actually possesses the role (regardless of active state)
     const hasAssignedRole = (targetRole) => {
-        const userRoles = userProfile?.roles || []
+        const userRoles = userProfile?.roles || (userProfile?.role ? [userProfile.role] : (metadataRole ? [metadataRole] : []))
         return userRoles.includes(targetRole)
     }
 
-    // Check if user can access a specific route/module
     const canAccess = (module) => {
         const modulePermission = `canAccess${module.charAt(0).toUpperCase() + module.slice(1)}`
         return permissions[modulePermission] || false

@@ -1,74 +1,173 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw } from 'lucide-react'
+import { Save, RefreshCw, Shield, UserCheck, Lock, AlertCircle, CheckCircle2, BookOpen, GraduationCap } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
-import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
+import { useAuth } from '../../../../context/AuthContext'
 import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 import '../../shared/styles/Nilai.css'
 
+/**
+ * Komponen Input Data Raport (Non-Akademik) Dual Mode
+ * Mode Halaqoh: Ketat khusus Musyrif pengampu halaqoh (halaqoh.musyrif_id)
+ * Mode Kelas: Ketat khusus Wali Kelas pengampu kelas (kelas.wali_kelas_id)
+ */
 const InputPerilakuPage = () => {
+    const { user, userProfile, isAdmin: checkIsAdmin, isAdminAkademik: checkIsAdminAkademik } = useAuth()
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
+
+    // Mode: 'halaqoh' (Musyrif) vs 'kelas' (Wali Kelas)
+    const [mode, setMode] = useState('halaqoh')
+
     const [semester, setSemester] = useState([])
-    const [kelas, setKelas] = useState([])
+    const [kelasList, setKelasList] = useState([])
+    const [halaqohList, setHalaqohList] = useState([])
     const [santri, setSantri] = useState([])
     const [formData, setFormData] = useState({}) // Stores { santriId: { ...perilakuData, ...taujihadData } }
+
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
+
+    // Access Control States
+    const [teacherInfo, setTeacherInfo] = useState(null)
+    const [isAdmin, setIsAdmin] = useState(false)
+
     const [filters, setFilters] = useState({
         semester_id: '',
         kelas_id: '',
         halaqoh_id: ''
     })
 
-    // AUTO-FILTER: Halaqoh berdasarkan akun
-    const {
-        halaqohList, // List of {id, nama} available for this user
-        isAdmin,
-        selectedHalaqohId,
-        setSelectedHalaqohId
-    } = useUserHalaqoh()
-
     useEffect(() => {
-        fetchOptions()
-    }, [])
+        loadDropdownsAndPermissions()
+    }, [user, userProfile, mode])
 
-    // Sync filters.halaqoh_id with hook's selectedHalaqohId
-    useEffect(() => {
-        setFilters(prev => ({ ...prev, halaqoh_id: selectedHalaqohId || '' }))
-    }, [selectedHalaqohId])
+    // 1. Load Dropdowns & Determine Permissions (Strict Wali Kelas / Musyrif Filter)
+    const loadDropdownsAndPermissions = async () => {
+        try {
+            setLoading(true)
+            const adminRole = (checkIsAdmin && checkIsAdmin()) || 
+                (checkIsAdminAkademik && checkIsAdminAkademik()) ||
+                ['admin', 'admin_akademik'].includes(userProfile?.activeRole) || 
+                ['admin', 'admin_akademik'].includes(userProfile?.role) ||
+                userProfile?.roles?.includes('admin') ||
+                userProfile?.roles?.includes('admin_akademik')
 
-    const fetchOptions = async () => {
-        const [semRes, kelRes] = await Promise.all([
-            supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('kelas').select('id, nama').order('nama')
-        ])
-        if (semRes.data) {
-            setSemester(semRes.data)
-            const active = semRes.data.find(s => s.is_active)
-            if (active) setFilters(prev => ({ ...prev, semester_id: active.id }))
+            setIsAdmin(Boolean(adminRole))
+
+            const [semRes, kelRes, halRes] = await Promise.all([
+                supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
+                supabase.from('kelas').select('id, nama, wali_kelas_id').order('nama'),
+                supabase.from('halaqoh').select('id, nama, musyrif_id').order('nama')
+            ])
+
+            const allSemesters = semRes.data || []
+            const allKelas = kelRes.data || []
+            const allHalaqoh = halRes.data || []
+
+            setSemester(allSemesters)
+
+            let activeSemId = ''
+            const activeSem = allSemesters.find(s => s.is_active)
+            if (activeSem) activeSemId = activeSem.id
+
+            if (!adminRole && user) {
+                let guruData = null
+
+                if (user.email) {
+                    const { data: byEmail } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('email', user.email)
+                        .maybeSingle()
+                    guruData = byEmail
+                }
+
+                if (!guruData && user.id) {
+                    const { data: byUserId } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('user_id', user.id)
+                        .maybeSingle()
+                    guruData = byUserId
+                }
+
+                if (guruData) {
+                    setTeacherInfo(guruData)
+
+                    if (mode === 'halaqoh') {
+                        // Strict filter for Musyrif Halaqoh
+                        const assignedHalaqoh = allHalaqoh.filter(h => h.musyrif_id === guruData.id)
+                        setHalaqohList(assignedHalaqoh)
+                        setKelasList([])
+
+                        setFilters({
+                            semester_id: activeSemId,
+                            kelas_id: '',
+                            halaqoh_id: assignedHalaqoh.length > 0 ? assignedHalaqoh[0].id : ''
+                        })
+                    } else {
+                        // Strict filter for Wali Kelas
+                        const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
+                        setKelasList(assignedKelas)
+                        setHalaqohList([])
+
+                        setFilters({
+                            semester_id: activeSemId,
+                            kelas_id: assignedKelas.length > 0 ? assignedKelas[0].id : '',
+                            halaqoh_id: ''
+                        })
+                    }
+                } else {
+                    setHalaqohList([])
+                    setKelasList([])
+                    setFilters({ semester_id: activeSemId, kelas_id: '', halaqoh_id: '' })
+                }
+            } else {
+                // Admin full access
+                setHalaqohList(allHalaqoh)
+                setKelasList(allKelas)
+
+                if (mode === 'halaqoh') {
+                    setFilters({
+                        semester_id: activeSemId,
+                        kelas_id: '',
+                        halaqoh_id: allHalaqoh.length > 0 ? allHalaqoh[0].id : ''
+                    })
+                } else {
+                    setFilters({
+                        semester_id: activeSemId,
+                        kelas_id: allKelas.length > 0 ? allKelas[0].id : '',
+                        halaqoh_id: ''
+                    })
+                }
+            }
+        } catch (err) {
+            console.error('Permission load error:', err)
+            setError('Gagal memuat opsi filter: ' + err.message)
+        } finally {
+            setLoading(false)
         }
-        if (kelRes.data) setKelas(kelRes.data)
     }
 
+    // 2. Fetch Santri and existing Perilaku / Taujihat Data
     const fetchSantriAndData = async () => {
-        // Validation: Must have Semester AND (Kelas OR Halaqoh)
         if (!filters.semester_id || (!filters.kelas_id && !filters.halaqoh_id)) return
 
         setLoading(true)
         setError('')
 
         try {
-            // 1. Fetch Santri
+            // A. Query Santri
             let query = supabase
                 .from('santri')
                 .select('id, nama, nis')
                 .eq('status', 'Aktif')
                 .order('nama')
 
-            if (filters.kelas_id) {
+            if (mode === 'kelas' && filters.kelas_id) {
                 query = query.eq('kelas_id', filters.kelas_id)
             }
-            if (filters.halaqoh_id) {
+            if (mode === 'halaqoh' && filters.halaqoh_id) {
                 query = query.eq('halaqoh_id', filters.halaqoh_id)
             }
 
@@ -80,28 +179,27 @@ const InputPerilakuPage = () => {
             if (santriData && santriData.length > 0) {
                 const santriIds = santriData.map(s => s.id)
 
-                // 2. Fetch Perilaku
+                // B. Query Perilaku Semester
                 const { data: perilakuData } = await supabase
                     .from('perilaku_semester')
                     .select('*')
                     .eq('semester_id', filters.semester_id)
                     .in('santri_id', santriIds)
 
-                // 3. Fetch Taujihat
+                // C. Query Taujihat (Catatan Musyrif / Wali Kelas)
                 const { data: taujihadData } = await supabase
                     .from('taujihad')
                     .select('*')
                     .eq('semester_id', filters.semester_id)
                     .in('santri_id', santriIds)
 
-                // 4. Merge Data
+                // D. Merge Data
                 const mergedData = {}
                 santriData.forEach(s => {
                     const p = perilakuData?.find(x => x.santri_id === s.id)
                     const t = taujihadData?.find(x => x.santri_id === s.id)
 
                     mergedData[s.id] = {
-                        // IDs for updates
                         perilaku_id: p?.id,
                         taujihad_id: t?.id,
 
@@ -127,6 +225,8 @@ const InputPerilakuPage = () => {
                     }
                 })
                 setFormData(mergedData)
+            } else {
+                setFormData({})
             }
         } catch (err) {
             setError('Gagal memuat data: ' + err.message)
@@ -136,12 +236,12 @@ const InputPerilakuPage = () => {
     }
 
     useEffect(() => {
-        // Trigger fetch only if valid filters exist
         if (filters.semester_id && (filters.kelas_id || filters.halaqoh_id)) {
             fetchSantriAndData()
         }
-    }, [filters.kelas_id, filters.semester_id, filters.halaqoh_id])
+    }, [filters.kelas_id, filters.semester_id, filters.halaqoh_id, mode])
 
+    // 3. Handle Input Field Changes
     const handleInputChange = (santriId, field, value) => {
         setFormData(prev => ({
             ...prev,
@@ -152,6 +252,7 @@ const InputPerilakuPage = () => {
         }))
     }
 
+    // 4. Save All Data (Perilaku & Taujihat)
     const handleSave = async () => {
         setSaving(true)
         setError('')
@@ -162,7 +263,6 @@ const InputPerilakuPage = () => {
             const taujihadUpserts = []
 
             for (const [santriId, data] of Object.entries(formData)) {
-                // Prepare Perilaku Data - generate UUID if no existing id
                 perilakuUpserts.push({
                     id: data.perilaku_id || crypto.randomUUID(),
                     santri_id: santriId,
@@ -180,7 +280,6 @@ const InputPerilakuPage = () => {
                     pulang: parseInt(data.pulang) || 0
                 })
 
-                // Prepare Taujihad Data
                 if (data.catatan) {
                     taujihadUpserts.push({
                         id: data.taujihad_id || crypto.randomUUID(),
@@ -191,7 +290,6 @@ const InputPerilakuPage = () => {
                 }
             }
 
-            // Upsert with onConflict to handle existing records
             if (perilakuUpserts.length > 0) {
                 const { error: pErr } = await supabase
                     .from('perilaku_semester')
@@ -212,9 +310,9 @@ const InputPerilakuPage = () => {
                 if (tErr) throw tErr
             }
 
-            setSuccess('✅ Data berhasil disimpan!')
+            setSuccess('✅ Data Rapor Non-Akademik berhasil disimpan!')
             setTimeout(() => setSuccess(''), 3000)
-            fetchSantriAndData() // Refresh IDs
+            fetchSantriAndData()
         } catch (err) {
             setError('Gagal menyimpan: ' + err.message)
         } finally {
@@ -223,13 +321,16 @@ const InputPerilakuPage = () => {
     }
 
     const BehaviorOptions = ({ value, onChange }) => (
-        <select className="form-control text-sm py-1 h-8" value={value} onChange={e => onChange(e.target.value)}>
+        <select 
+            className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
+            value={value} 
+            onChange={e => onChange(e.target.value)}
+        >
             <option value="">Pilih...</option>
             <option value="Sangat Baik">Sangat Baik</option>
             <option value="Baik">Baik</option>
             <option value="Cukup">Cukup</option>
             <option value="Kurang">Kurang</option>
-            {/* Fallback for old data */}
             {!['Sangat Baik', 'Baik', 'Cukup', 'Kurang', ''].includes(value) && value && (
                 <option value={value}>{value} (Lama)</option>
             )}
@@ -237,13 +338,16 @@ const InputPerilakuPage = () => {
     )
 
     const PredikatOptions = ({ value, onChange }) => (
-        <select className="form-control text-sm py-1 h-8" value={value} onChange={e => onChange(e.target.value)}>
+        <select 
+            className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
+            value={value} 
+            onChange={e => onChange(e.target.value)}
+        >
             <option value="">Pilih...</option>
             <option value="Mumtaz">Mumtaz</option>
             <option value="Jayyid Jiddan">Jayyid Jiddan</option>
             <option value="Jayyid">Jayyid</option>
             <option value="Maqbul">Maqbul</option>
-            {/* Fallback for old data */}
             {!['Mumtaz', 'Jayyid Jiddan', 'Jayyid', 'Maqbul', ''].includes(value) && value && (
                 <option value={value}>{value} (Lama)</option>
             )}
@@ -252,18 +356,73 @@ const InputPerilakuPage = () => {
 
     return (
         <div className="nilai-page">
-            <div className="page-header">
+            {/* PAGE HEADER */}
+            <div className="page-header flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
-                    <h1 className="page-title">Input Data Raport (Non-Akademik)</h1>
-                    <p className="page-subtitle">Perilaku, Tahfizh Summary, & Catatan Musyrif</p>
+                    <h1 className="page-title flex items-center gap-2">
+                        <span>Input Data Raport (Non-Akademik)</span>
+                    </h1>
+                    <p className="page-subtitle">Perilaku, Tahfizh Summary, & Catatan Musyrif / Wali Kelas</p>
+                </div>
+
+                {/* ACCESS BADGE */}
+                <div>
+                    {isAdmin ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold shadow-xs">
+                            <Shield size={16} className="text-purple-600" />
+                            <span>Akses Penuh (Admin)</span>
+                        </div>
+                    ) : teacherInfo ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-xs">
+                            <UserCheck size={16} className="text-emerald-600" />
+                            <span>{mode === 'halaqoh' ? 'Musyrif' : 'Wali Kelas'}: {teacherInfo.nama}</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold">
+                            <UserCheck size={16} className="text-gray-500" />
+                            <span>Akses Pengajar</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {error && <div className="alert alert-error mb-3">{error}</div>}
-            {success && <div className="alert alert-success mb-3">{success}</div>}
+            {/* ALERTS */}
+            {error && (
+                <div className="alert alert-error mb-3 flex items-center gap-2">
+                    <AlertCircle size={18} />
+                    <span>{error}</span>
+                </div>
+            )}
+            {success && (
+                <div className="alert alert-success mb-3 flex items-center gap-2">
+                    <CheckCircle2 size={18} />
+                    <span>{success}</span>
+                </div>
+            )}
 
+            {/* DUAL MODE SWITCHER */}
+            <div className="flex bg-gray-200/80 p-1 rounded-xl gap-1 text-xs font-bold mb-4 w-fit">
+                <button
+                    type="button"
+                    onClick={() => setMode('halaqoh')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${mode === 'halaqoh' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                    <BookOpen size={16} />
+                    <span>Perilaku & Catatan Halaqoh (Musyrif)</span>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setMode('kelas')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${mode === 'kelas' ? 'bg-white text-blue-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                    <GraduationCap size={16} />
+                    <span>Perilaku & Catatan Kelas (Wali Kelas)</span>
+                </button>
+            </div>
+
+            {/* FILTERS SECTION */}
             <div className="filter-section">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                     <div className="form-group">
                         <label className="form-label">Semester *</label>
                         <select
@@ -280,40 +439,48 @@ const InputPerilakuPage = () => {
                         </select>
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Kelas</label>
-                        <select
-                            className="form-control"
-                            value={filters.kelas_id}
-                            onChange={e => setFilters({ ...filters, kelas_id: e.target.value })}
-                        >
-                            <option value="">Semua Kelas</option>
-                            {kelas.map(k => (
-                                <option key={k.id} value={k.id}>{k.nama}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Halaqoh</label>
-                        <select
-                            className="form-control"
-                            value={selectedHalaqohId}
-                            onChange={e => setSelectedHalaqohId(e.target.value)}
-                            disabled={!isAdmin && halaqohList.length <= 1} // Disable if Musyrif only has 1 halaqoh
-                        >
-                            <option value="">Semua Halaqoh</option>
-                            {halaqohList.map(h => (
-                                <option key={h.id} value={h.id}>{h.nama}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {mode === 'halaqoh' ? (
+                        <div className="form-group">
+                            <label className="form-label">
+                                Halaqoh * {!isAdmin && <span className="text-[10px] text-emerald-700 font-semibold">(Binaan Anda)</span>}
+                            </label>
+                            <select
+                                className="form-control"
+                                value={filters.halaqoh_id}
+                                onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
+                                disabled={!isAdmin && halaqohList.length === 0}
+                            >
+                                <option value="">Pilih Halaqoh</option>
+                                {halaqohList.map(h => (
+                                    <option key={h.id} value={h.id}>{h.nama}</option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="form-group">
+                            <label className="form-label">
+                                Kelas * {!isAdmin && <span className="text-[10px] text-blue-700 font-semibold">(Wali Kelas Anda)</span>}
+                            </label>
+                            <select
+                                className="form-control"
+                                value={filters.kelas_id}
+                                onChange={e => setFilters({ ...filters, kelas_id: e.target.value })}
+                                disabled={!isAdmin && kelasList.length === 0}
+                            >
+                                <option value="">Pilih Kelas</option>
+                                {kelasList.map(k => (
+                                    <option key={k.id} value={k.id}>{k.nama}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {(filters.kelas_id || filters.halaqoh_id) && filters.semester_id && (
+            {/* TABLE / EMPTY ACCESS SECTION */}
+            {(filters.kelas_id || filters.halaqoh_id) && filters.semester_id ? (
                 <div className="table-container">
-                    <div className="table-header">
+                    <div className="table-header flex justify-between items-center mb-3">
                         <h3 className="table-title">Daftar Santri ({santri.length})</h3>
                         <button
                             className="btn btn-primary"
@@ -323,30 +490,35 @@ const InputPerilakuPage = () => {
                             {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Data</>}
                         </button>
                     </div>
+
                     <ResponsiveTable
                         columns={[
-                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-10 sticky left-0 z-10 bg-white' },
-                            { header: 'Nama Santri', accessor: 'nama', className: 'w-48 sticky left-10 z-10 bg-white font-medium', hideOnMobile: true },
-                            
-                            { header: 'Ketekunan', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.ketekunan} onChange={v => handleInputChange(row.id, 'ketekunan', v)} /> },
-                            { header: 'Kedisiplinan', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.kedisiplinan} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} /> },
-                            { header: 'Kebersihan', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.kebersihan} onChange={v => handleInputChange(row.id, 'kebersihan', v)} /> },
-                            { header: 'Kerapian', className: 'w-32', render: (row) => <BehaviorOptions value={formData[row.id]?.kerapian} onChange={v => handleInputChange(row.id, 'kerapian', v)} /> },
+                            { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-12 text-center min-w-[48px]' },
+                            { header: 'Nama Santri', accessor: 'nama', className: 'min-w-[190px] font-medium text-gray-900', hideOnMobile: true },
 
-                            { header: 'Hafalan (Juz)', className: 'w-40 border-l', render: (row) => <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 1 Juz" value={formData[row.id]?.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} /> },
-                            { header: 'Predikat', className: 'w-32', render: (row) => <PredikatOptions value={formData[row.id]?.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} /> },
-                            { header: 'Total Hafalan', className: 'w-40', render: (row) => <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 3 Juz" value={formData[row.id]?.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} /> },
-                            
-                            { header: 'Ketidakhadiran (S/I/A/P)', className: 'w-56 border-l text-center', render: (row) => (
-                                <div className="flex gap-1 justify-center">
-                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="S" title="Sakit" value={formData[row.id]?.sakit ?? ''} onChange={e => handleInputChange(row.id, 'sakit', e.target.value)} />
-                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="I" title="Izin" value={formData[row.id]?.izin ?? ''} onChange={e => handleInputChange(row.id, 'izin', e.target.value)} />
-                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="A" title="Alpha" value={formData[row.id]?.alpha ?? ''} onChange={e => handleInputChange(row.id, 'alpha', e.target.value)} />
-                                    <input type="number" min="0" className="form-control h-8 text-sm w-12 text-center" placeholder="P" title="Pulang" value={formData[row.id]?.pulang ?? ''} onChange={e => handleInputChange(row.id, 'pulang', e.target.value)} />
-                                </div>
-                            ) },
-                            
-                            { header: 'Catatan Musyrif (Taujihat)', className: 'w-64 border-l', render: (row) => <textarea className="form-control text-sm min-h-[60px]" placeholder="Catatan untuk santri..." value={formData[row.id]?.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} /> }
+                            { header: 'Ketekunan', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.ketekunan} onChange={v => handleInputChange(row.id, 'ketekunan', v)} /> },
+                            { header: 'Kedisiplinan', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.kedisiplinan} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} /> },
+                            { header: 'Kebersihan', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.kebersihan} onChange={v => handleInputChange(row.id, 'kebersihan', v)} /> },
+                            { header: 'Kerapian', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.kerapian} onChange={v => handleInputChange(row.id, 'kerapian', v)} /> },
+
+                            ...(mode === 'halaqoh' ? [
+                                { header: 'Hafalan (Juz)', className: 'min-w-[160px] border-l border-gray-200/60', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Contoh: 1 Juz" value={formData[row.id]?.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} /> },
+                                { header: 'Predikat', className: 'min-w-[150px]', render: (row) => <PredikatOptions value={formData[row.id]?.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} /> },
+                                { header: 'Total Hafalan', className: 'min-w-[160px]', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Contoh: 3 Juz" value={formData[row.id]?.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} /> },
+                            ] : []),
+
+                            {
+                                header: 'Ketidakhadiran (S/I/A/P)', className: 'min-w-[210px] border-l border-gray-200/60 text-center', render: (row) => (
+                                    <div className="flex gap-1.5 justify-center">
+                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="S" title="Sakit" value={formData[row.id]?.sakit ?? ''} onChange={e => handleInputChange(row.id, 'sakit', e.target.value)} />
+                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="I" title="Izin" value={formData[row.id]?.izin ?? ''} onChange={e => handleInputChange(row.id, 'izin', e.target.value)} />
+                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="A" title="Alpha" value={formData[row.id]?.alpha ?? ''} onChange={e => handleInputChange(row.id, 'alpha', e.target.value)} />
+                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="P" title="Pulang" value={formData[row.id]?.pulang ?? ''} onChange={e => handleInputChange(row.id, 'pulang', e.target.value)} />
+                                    </div>
+                                )
+                            },
+
+                            { header: mode === 'halaqoh' ? 'Catatan Musyrif (Taujihat)' : 'Catatan Wali Kelas', className: 'min-w-[250px] border-l border-gray-200/60', render: (row) => <textarea className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg p-2 min-h-[50px] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Catatan untuk santri..." value={formData[row.id]?.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} /> }
                         ]}
                         data={santri}
                         loading={loading}
@@ -384,24 +556,26 @@ const InputPerilakuPage = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    {/* Tahfizh Summary */}
-                                    <div className="border-t border-gray-50 pt-3">
-                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Tahfizh Summary</h4>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="col-span-2">
-                                                <label className="text-[10px] text-gray-500 mb-1 block">Hafalan (Juz)</label>
-                                                <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 1 Juz" value={d.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 mb-1 block">Predikat</label>
-                                                <PredikatOptions value={d.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 mb-1 block">Total Hafalan</label>
-                                                <input type="text" className="form-control h-8 text-sm" placeholder="Contoh: 3 Juz" value={d.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} />
+                                    {/* Tahfizh Summary (Hanya Mode Halaqoh) */}
+                                    {mode === 'halaqoh' && (
+                                        <div className="border-t border-gray-50 pt-3">
+                                            <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Tahfizh Summary</h4>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="col-span-2">
+                                                    <label className="text-[10px] text-gray-500 mb-1 block">Hafalan (Juz)</label>
+                                                    <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 outline-none" placeholder="Contoh: 1 Juz" value={d.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] text-gray-500 mb-1 block">Predikat</label>
+                                                    <PredikatOptions value={d.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} />
+                                                </div>
+                                                <div>
+                                                    <label className="text-[10px] text-gray-500 mb-1 block">Total Hafalan</label>
+                                                    <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 outline-none" placeholder="Contoh: 3 Juz" value={d.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                     {/* Presensi */}
                                     <div className="border-t border-gray-50 pt-3">
                                         <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Ketidakhadiran (S/I/A/P)</h4>
@@ -414,13 +588,29 @@ const InputPerilakuPage = () => {
                                     </div>
                                     {/* Taujihat */}
                                     <div className="border-t border-gray-50 pt-3">
-                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Catatan Musyrif (Taujihat)</h4>
+                                        <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Catatan Musyrif / Wali Kelas</h4>
                                         <textarea className="form-control text-sm min-h-[80px]" placeholder="Catatan untuk santri..." value={d.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} />
                                     </div>
                                 </div>
                             )
                         }}
                     />
+                </div>
+            ) : (
+                <div className="p-8 text-center bg-amber-50/80 rounded-xl border border-amber-200 text-amber-900 mt-4">
+                    {!isAdmin && (mode === 'halaqoh' ? halaqohList.length === 0 : kelasList.length === 0) ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <Lock size={28} className="text-amber-600 mb-1" />
+                            <h4 className="font-bold text-sm">
+                                🔒 Akses Terbatas {mode === 'halaqoh' ? 'Musyrif' : 'Wali Kelas'}
+                            </h4>
+                            <p className="text-xs text-amber-800 max-w-md">
+                                Akun <strong>{teacherInfo?.nama || user?.email}</strong> belum ditugaskan sebagai {mode === 'halaqoh' ? 'Musyrif pengampu di halaqoh' : 'Wali Kelas di kelas'} mana pun.
+                            </p>
+                        </div>
+                    ) : (
+                        `Silakan pilih ${mode === 'halaqoh' ? 'Halaqoh' : 'Kelas'} untuk memulai`
+                    )}
                 </div>
             )}
         </div>

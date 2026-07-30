@@ -111,7 +111,18 @@ const AbsensiIsolationManager = ({ children }) => {
                              location.pathname.startsWith('/wali') ||
                              location.pathname.startsWith('/profil') ||
                              location.pathname.startsWith('/messages') ||
-                             location.pathname.startsWith('/raport')
+                             location.pathname.startsWith('/raport') ||
+                             location.pathname.startsWith('/akademik') ||
+                             location.pathname.startsWith('/rekap-nilai') ||
+                             location.pathname.startsWith('/laporan') ||
+                             location.pathname.startsWith('/santri') ||
+                             location.pathname.startsWith('/guru') ||
+                             location.pathname.startsWith('/kelas') ||
+                             location.pathname.startsWith('/mapel') ||
+                             location.pathname.startsWith('/halaqoh') ||
+                             location.pathname.startsWith('/semester') ||
+                             location.pathname.startsWith('/jadwal') ||
+                             location.pathname.startsWith('/hafalan')
 
     // Jika sedang di path absensi, simpan sebagai path terakhir
     if (isAbsensiMode && isAbsensiPath) {

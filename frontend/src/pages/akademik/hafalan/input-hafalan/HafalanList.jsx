@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save, Printer, Download, MoreVertical, Send, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, RefreshCw, FileText, BarChart3, CheckCircle, Clock, AlertCircle, Filter, Calendar, MessageCircle, Trophy, Save, Printer, Download, MoreVertical, Send, Eye, EyeOff, Lock } from 'lucide-react'
 import DeleteConfirmationModal from '../../../../components/ui/DeleteConfirmationModal'
 import { supabase } from '../../../../lib/supabase'
 import { logDelete } from '../../../../lib/auditLog'
@@ -118,25 +118,31 @@ const HafalanList = () => {
         fetchSantriList()
     }, [])
 
-    // Fetch ALL halaqohs for Rekap Tab (ignoring user role/assignment)
+    // Fetch ALL halaqohs for Rekap Tab ONLY for Admins, strictly use halaqohList for Musyrif
     useEffect(() => {
-        if (activeTab === 'rekap' && allHalaqohList.length === 0) {
-            const fetchAllHalaqoh = async () => {
-                try {
-                    const { data, error } = await supabase
-                        .from('halaqoh')
-                        .select('id, nama')
-                        .order('nama')
+        if (activeTab === 'rekap') {
+            if (isAdmin) {
+                if (allHalaqohList.length === 0) {
+                    const fetchAllHalaqoh = async () => {
+                        try {
+                            const { data, error } = await supabase
+                                .from('halaqoh')
+                                .select('id, nama')
+                                .order('nama')
 
-                    if (error) throw error
-                    setAllHalaqohList(data || [])
-                } catch (err) {
-                    console.error('Error fetching all halaqohs:', err.message)
+                            if (error) throw error
+                            setAllHalaqohList(data || [])
+                        } catch (err) {
+                            console.error('Error fetching all halaqohs:', err.message)
+                        }
+                    }
+                    fetchAllHalaqoh()
                 }
+            } else {
+                setAllHalaqohList(halaqohList)
             }
-            fetchAllHalaqoh()
         }
-    }, [activeTab])
+    }, [activeTab, isAdmin, halaqohList])
 
     // Sync activeTab with URL when navigating via sidebar
     useEffect(() => {
@@ -390,14 +396,22 @@ const HafalanList = () => {
             matchDate = matchDate && h.tanggal <= dateFilter.sampai
         }
 
-        // Halaqoh filter - Updated for RBAC Dropdown
-        let matchHalaqoh = true
-        if (selectedHalaqohId) {
-            matchHalaqoh = h.halaqoh_id === selectedHalaqohId
-            // Check deep relation fallback if halaqoh_id is null on root but exists in santri object? 
-            // usage of h.halaqoh_id comes from fetchHafalan mapping: halaqoh_id: h.santri?.halaqoh?.id
-        } else if (!isAdmin && halaqohIds.length > 0) {
-            matchHalaqoh = halaqohIds.includes(h.halaqoh_id)
+        // Halaqoh filter - Strict Musyrif Access
+        let matchHalaqoh = false
+        if (isAdmin) {
+            if (selectedHalaqohId) {
+                matchHalaqoh = h.halaqoh_id === selectedHalaqohId
+            } else {
+                matchHalaqoh = true
+            }
+        } else {
+            if (selectedHalaqohId) {
+                matchHalaqoh = h.halaqoh_id === selectedHalaqohId && halaqohIds.includes(selectedHalaqohId)
+            } else if (halaqohIds.length > 0) {
+                matchHalaqoh = halaqohIds.includes(h.halaqoh_id)
+            } else {
+                matchHalaqoh = false
+            }
         }
 
         return matchSearch && matchFilter && matchDate && matchHalaqoh
@@ -502,9 +516,15 @@ const HafalanList = () => {
             filtered = filtered.filter(h => h.tanggal <= rekapFilters.tanggalSelesai)
         }
 
-        // Filter by halaqoh
+        // Filter by halaqoh (Strict for non-admin)
         if (rekapFilters.halaqoh_id) {
             filtered = filtered.filter(h => h.halaqoh_id === rekapFilters.halaqoh_id)
+        } else if (!isAdmin) {
+            if (halaqohIds.length > 0) {
+                filtered = filtered.filter(h => halaqohIds.includes(h.halaqoh_id))
+            } else {
+                filtered = []
+            }
         }
 
         // Filter by santri name
@@ -746,135 +766,147 @@ const HafalanList = () => {
                         </div>
                     </div>
 
-                    <ResponsiveTable
-                        columns={[
-                            { header: 'Tanggal', render: (row) => new Date(row.tanggal).toLocaleDateString('id-ID'), className: 'whitespace-nowrap text-gray-600', hideOnMobile: true },
-                            { header: 'Nama Santri', accessor: 'santri_nama', className: 'font-medium text-gray-900' },
-                            { header: 'Kelas', accessor: 'kelas_nama', className: 'text-gray-600', hideOnMobile: true },
-                            { 
-                                header: 'Hafalan', 
-                                render: (row) => (
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
-                                        <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
-                                        <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
-                                    </div>
-                                )
-                            },
-                            { 
-                                header: 'Jenis', 
-                                className: 'text-center',
-                                render: (row) => (
-                                    <Badge variant={
-                                        row.jenis === 'Setoran' ? 'info' :
-                                            row.jenis === "Muroja'ah" ? 'warning' :
-                                                row.jenis === 'Ziyadah Ulang' ? 'success' : 'default'
-                                    }>
-                                        {row.jenis || 'Setoran'}
-                                    </Badge>
-                                ) 
-                            },
-                            { 
-                                header: 'Status', 
-                                className: 'text-center',
-                                render: (row) => (
-                                    <Badge variant={
-                                        ['Lancar', 'Mutqin'].includes(row.status) ? 'success' :
-                                            ['Sedang', 'Proses'].includes(row.status) ? 'info' :
-                                                ['Lemah', 'Perlu Perbaikan'].includes(row.status) ? 'warning' : 'error'
-                                    }>
-                                        {row.status}
-                                    </Badge>
-                                ) 
-                            },
-                            { header: 'Penguji', accessor: 'penguji_nama', className: 'text-gray-600', hideOnMobile: true },
-                            { 
-                                header: 'Aksi', 
-                                className: 'text-right',
-                                render: (row) => (
-                                    <MobileActionMenu
-                                        actions={[
-                                            { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(row) },
-                                            { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${row.id}/edit` },
-                                            { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(row); setShowDeleteModal(true) }, danger: true }
-                                        ]}
-                                    >
-                                        <div className="flex items-center justify-end gap-1">
-                                            <button
-                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                title="Kirim WhatsApp"
-                                                onClick={() => sendWhatsApp(row)}
-                                            >
-                                                <MessageCircle size={18} />
-                                            </button>
-                                            <Link
-                                                to={`/hafalan/${row.id}/edit`}
-                                                className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                <Edit size={18} />
-                                            </Link>
-                                            <button
-                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Hapus"
-                                                onClick={() => { setSelectedHafalan(row); setShowDeleteModal(true) }}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                    {!isAdmin && !hasHalaqoh && !loadingHalaqoh ? (
+                        <div className="p-8 text-center bg-amber-50/80 rounded-xl border border-amber-200 text-amber-900 m-4">
+                            <div className="flex flex-col items-center gap-2">
+                                <Lock size={28} className="text-amber-600 mb-1" />
+                                <h4 className="font-bold text-sm">🔒 Akses Terbatas Musyrif</h4>
+                                <p className="text-xs text-amber-800 max-w-md">
+                                    Akun <strong>{musyrifInfo?.nama || 'Pengajar'}</strong> belum ditugaskan sebagai Musyrif di halaqoh mana pun. Hanya Musyrif pengampu halaqoh yang berhak melihat dan menginput data hafalan.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <ResponsiveTable
+                            columns={[
+                                { header: 'Tanggal', render: (row) => new Date(row.tanggal).toLocaleDateString('id-ID'), className: 'whitespace-nowrap text-gray-600', hideOnMobile: true },
+                                { header: 'Nama Santri', accessor: 'santri_nama', className: 'font-medium text-gray-900' },
+                                { header: 'Kelas', accessor: 'kelas_nama', className: 'text-gray-600', hideOnMobile: true },
+                                { 
+                                    header: 'Hafalan', 
+                                    render: (row) => (
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                            <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
+                                            <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
                                         </div>
-                                    </MobileActionMenu>
-                                ) 
+                                    )
+                                },
+                                { 
+                                    header: 'Jenis', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <Badge variant={
+                                            row.jenis === 'Setoran' ? 'info' :
+                                                row.jenis === "Muroja'ah" ? 'warning' :
+                                                    row.jenis === 'Ziyadah Ulang' ? 'success' : 'default'
+                                        }>
+                                            {row.jenis || 'Setoran'}
+                                        </Badge>
+                                    ) 
+                                },
+                                { 
+                                    header: 'Status', 
+                                    className: 'text-center',
+                                    render: (row) => (
+                                        <Badge variant={
+                                            ['Lancar', 'Mutqin'].includes(row.status) ? 'success' :
+                                                ['Sedang', 'Proses'].includes(row.status) ? 'info' :
+                                                    ['Lemah', 'Perlu Perbaikan'].includes(row.status) ? 'warning' : 'error'
+                                        }>
+                                            {row.status}
+                                        </Badge>
+                                    ) 
+                                },
+                                { header: 'Penguji', accessor: 'penguji_nama', className: 'text-gray-600', hideOnMobile: true },
+                                { 
+                                    header: 'Aksi', 
+                                    className: 'text-right',
+                                    render: (row) => (
+                                        <MobileActionMenu
+                                            actions={[
+                                                { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(row) },
+                                                { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${row.id}/edit` },
+                                                { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(row); setShowDeleteModal(true) }, danger: true }
+                                            ]}
+                                        >
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                    title="Kirim WhatsApp"
+                                                    onClick={() => sendWhatsApp(row)}
+                                                >
+                                                    <MessageCircle size={18} />
+                                                </button>
+                                                <Link
+                                                    to={`/hafalan/${row.id}/edit`}
+                                                    className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={18} />
+                                                </Link>
+                                                <button
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Hapus"
+                                                    onClick={() => { setSelectedHafalan(row); setShowDeleteModal(true) }}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </MobileActionMenu>
+                                    ) 
+                                }
+                            ]}
+                            data={filteredHafalan}
+                            loading={loading || loadingHalaqoh}
+                            emptyState={
+                                <EmptyState
+                                    icon={FileText}
+                                    title="Belum ada data hafalan"
+                                    message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada data hafalan yang tercatat."}
+                                    actionLabel="Catat Hafalan"
+                                    onAction={() => window.location.href = '/hafalan/create?jenis=Setoran'}
+                                />
                             }
-                        ]}
-                        data={filteredHafalan}
-                        loading={loading}
-                        emptyState={
-                            <EmptyState
-                                icon={FileText}
-                                title="Belum ada data hafalan"
-                                message={searchTerm ? `Tidak ditemukan data untuk pencarian "${searchTerm}"` : "Belum ada data hafalan yang tercatat."}
-                                actionLabel="Catat Hafalan"
-                                onAction={() => window.location.href = '/hafalan/create?jenis=Setoran'}
-                            />
-                        }
-                        mobileCardHeader={(row) => (
-                            <div className="flex flex-col">
-                                <span className="font-bold text-[#0A2619]">{row.santri_nama}</span>
-                                <span className="text-[10px] text-gray-500 mt-0.5">{new Date(row.tanggal).toLocaleDateString('id-ID')}</span>
-                            </div>
-                        )}
-                        mobileCardActions={(row) => (
-                            <MobileActionMenu
-                                actions={[
-                                    { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(row) },
-                                    { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${row.id}/edit` },
-                                    { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(row); setShowDeleteModal(true) }, danger: true }
-                                ]}
-                            />
-                        )}
-                        mobileCardContent={(row) => (
-                            <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-500">Kelas</span>
-                                        <span className="font-medium text-gray-900">{row.kelas_nama}</span>
+                            mobileCardHeader={(row) => (
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-[#0A2619]">{row.santri_nama}</span>
+                                    <span className="text-[10px] text-gray-500 mt-0.5">{new Date(row.tanggal).toLocaleDateString('id-ID')}</span>
+                                </div>
+                            )}
+                            mobileCardActions={(row) => (
+                                <MobileActionMenu
+                                    actions={[
+                                        { icon: <MessageCircle size={16} />, label: 'WhatsApp', onClick: () => sendWhatsApp(row) },
+                                        { icon: <Edit size={16} />, label: 'Edit', path: `/hafalan/${row.id}/edit` },
+                                        { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedHafalan(row); setShowDeleteModal(true) }, danger: true }
+                                    ]}
+                                />
+                            )}
+                            mobileCardContent={(row) => (
+                                <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-100">
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500">Kelas</span>
+                                            <span className="font-medium text-gray-900">{row.kelas_nama}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500">Penguji</span>
+                                            <span className="font-medium text-gray-900">{row.penguji_nama}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-500">Penguji</span>
-                                        <span className="font-medium text-gray-900">{row.penguji_nama}</span>
+                                    <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-gray-500">Hafalan</span>
+                                            <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                            <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
+                                            <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm mt-1">
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-500">Hafalan</span>
-                                        <span className="font-medium text-gray-900">Juz {row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
-                                        <span className="text-gray-600">{row.surah_mulai || row.surah || '-'}{(row.surah_selesai && row.surah_selesai !== row.surah_mulai) ? ` s/d ${row.surah_selesai}` : ''}</span>
-                                        <span className="text-xs text-gray-500">Ayat {row.ayat_mulai || 1}-{row.ayat_selesai || 1}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    />
+                            )}
+                        />
+                    )}
                 </div>
             )}
 

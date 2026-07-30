@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react'
-import { Users, RefreshCw, Download, Printer, BookMarked, FileText, Calendar } from 'lucide-react'
+import { Users, RefreshCw, Printer, FileText, BookOpen, Layers } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
-import { useCalendar } from '../../../../../context/CalendarContext'
-import DateDisplay from '../../../../../components/common/DateDisplay'
-import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
+import RaportTemplate from '../../../../../components/akademik/RaportTemplate'
+import { calculateSidogiriGrade } from '../../../../../components/akademik/RaportMadrasahTemplate'
 import '../../../../../pages/laporan/Laporan.css'
 
 const LaporanAkademikSantriPage = () => {
-    const { formatDate } = useCalendar()
     const [loading, setLoading] = useState(false)
     const [semester, setSemester] = useState([])
     const [santriList, setSantriList] = useState([])
     const [selectedSantri, setSelectedSantri] = useState(null)
-    const [hafalanData, setHafalanData] = useState([])
-    const [nilaiTahfizh, setNilaiTahfizh] = useState(null)
+    const [nilaiTahfizh, setNilaiTahfizh] = useState([])
     const [nilaiMadros, setNilaiMadros] = useState([])
+    const [perilaku, setPerilaku] = useState(null)
+    const [taujihad, setTaujihad] = useState(null)
+    const [activeTab, setActiveTab] = useState('all') // 'all', 'tahfizh', 'madrasah'
     const [presensiData, setPresensiData] = useState({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
     const [filters, setFilters] = useState({
         semester_id: '',
@@ -46,37 +46,28 @@ const LaporanAkademikSantriPage = () => {
 
         try {
             const selected = santriList.find(s => s.id === santriId)
+
+            let musyrifName = "UST. SUBAIDI"
+            if (selected?.halaqoh?.musyrif_id) {
+                const { data: guruData } = await supabase
+                    .from('guru')
+                    .select('nama')
+                    .eq('id', selected.halaqoh.musyrif_id)
+                    .single()
+                if (guruData) musyrifName = guruData.nama
+            }
+            if (selected) selected.musyrif_nama = musyrifName
             setSelectedSantri(selected)
 
-            // --- 1. Fetch Hafalan Progress (Keep existing logic) ---
-            const { data: hafalan } = await supabase
-                .from('hafalan')
-                .select('juz, juz_mulai, status, tanggal')
-                .eq('santri_id', santriId)
-                .order('tanggal', { ascending: false })
-
-            const juzProgress = {}
-            hafalan?.forEach(h => {
-                const juz = h.juz_mulai || h.juz
-                if (!juzProgress[juz] || h.status === 'Lancar') {
-                    juzProgress[juz] = {
-                        juz,
-                        status: h.status,
-                        tanggal: h.tanggal
-                    }
-                }
-            })
-            setHafalanData(Object.values(juzProgress).sort((a, b) => a.juz - b.juz))
-
-            // --- 2. Fetch Madrosiyah Mapels (for Madrasah grades) ---
+            // --- 1. Fetch Madrosiyah Mapels ---
             const { data: allMapels } = await supabase
                 .from('mapel')
                 .select('*')
-                .eq('kategori', 'Madrosiyah')
+                .in('kategori', ['Madrosiyah', 'Madrasiyah'])
                 .order('nama', { ascending: true })
             const expectedMapels = allMapels || []
 
-            // --- 3. Fetch All Grades for Semester ---
+            // --- 2. Fetch All Grades for Semester ---
             const { data: nilaiData } = await supabase
                 .from('nilai')
                 .select(`
@@ -86,45 +77,64 @@ const LaporanAkademikSantriPage = () => {
                 .eq('santri_id', santriId)
                 .eq('semester_id', filters.semester_id)
 
-            // --- 4. Process Logic (Same as CetakRaport) ---
             const typePriority = { 'semester': 4, 'uas': 3, 'uts': 2, 'harian': 1 }
 
             const getBestGrade = (grades) => {
                 if (!grades || grades.length === 0) return null
                 return grades.reduce((prev, current) => {
+                    const prevVal = prev.nilai_akhir ?? prev.nilai ?? 0
+                    const currVal = current.nilai_akhir ?? current.nilai ?? 0
                     const prevP = typePriority[prev.jenis_ujian] || 0
                     const currP = typePriority[current.jenis_ujian] || 0
                     if (currP > prevP) return current
                     if (currP === prevP) {
-                        return (current.nilai_akhir || 0) > (prev.nilai_akhir || 0) ? current : prev
+                        return currVal > prevVal ? current : prev
                     }
                     return prev
                 })
             }
 
-            // A. Process Madrasah
-            let madrasahList = expectedMapels.map(mapel => {
-                const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id) || []
-                const bestGrade = getBestGrade(mapelGrades)
+            let mapelsToProcess = [...expectedMapels]
+            nilaiData?.forEach(n => {
+                if (n.mapel_id && !mapelsToProcess.some(m => m.id === n.mapel_id)) {
+                    const mapelName = n.mapel?.nama || 'Mata Pelajaran'
+                    const isTahfizh = mapelName.toLowerCase().includes('tahfizh') || mapelName.toLowerCase().includes('quran')
+                    if (!isTahfizh && n.kategori !== 'Tahfizhiyah') {
+                        mapelsToProcess.push({ id: n.mapel_id, nama: mapelName })
+                    }
+                }
+            })
 
-                // Exclude if no grade found (User Request: Only show mapels with input)
-                if (!bestGrade) return null
+            let madrasahList = mapelsToProcess.map(mapel => {
+                const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id || n.mapel?.nama === mapel.nama) || []
+                if (mapelGrades.length === 0) return null
 
-                // Exclude Tahfizh/Quran from Madrasah list
                 if (mapel.nama.toLowerCase().includes('tahfizh') || mapel.nama.toLowerCase().includes('quran')) {
                     return null
                 }
 
-                // Format to match CetakRaport (RaportTemplate expects mapel.nama and nilai_akhir)
+                const harianRecord = mapelGrades.find(g => g.jenis_ujian === 'harian')
+                const examGrades = mapelGrades.filter(g => g.jenis_ujian !== 'harian')
+                const bestExamRecord = getBestGrade(examGrades)
+
+                const nilaiHarian = harianRecord ? (harianRecord.nilai_akhir ?? harianRecord.nilai) : null
+                const nilaiUjian = bestExamRecord ? (bestExamRecord.nilai_akhir ?? bestExamRecord.nilai) : null
+
+                if (nilaiHarian === null && nilaiUjian === null) return null
+
+                const calc = calculateSidogiriGrade(nilaiUjian, nilaiHarian)
+
                 return {
-                    mapel: { nama: mapel.nama },
-                    nilai_akhir: bestGrade.nilai_akhir,
-                    predikat: getPredikat(bestGrade.nilai_akhir)
+                    mapel: mapel,
+                    nilai_harian: nilaiHarian !== null ? nilaiHarian : '-',
+                    nilai_ujian: nilaiUjian !== null ? nilaiUjian : '-',
+                    nilai_akhir: calc.finalGrade,
+                    predikat: getPredikat(calc.finalGrade)
                 }
             }).filter(Boolean)
             setNilaiMadros(madrasahList)
 
-            // B. Process Tahfizh (Decomposition)
+            // --- 3. Process Tahfizh ---
             const tahfizhRecords = nilaiData?.filter(n => {
                 const isCatTahfizh = n.kategori === 'Tahfizhiyah'
                 const isNameTahfizh = n.mapel?.nama?.toLowerCase().includes('tahfizh') || n.mapel?.nama?.toLowerCase().includes('quran')
@@ -132,12 +142,6 @@ const LaporanAkademikSantriPage = () => {
             }) || []
 
             const bestTahfizhRecord = getBestGrade(tahfizhRecords)
-
-            // Transform for UI - We need to supply 'nilaiTahfizh' state which expects an object or array?
-            // Existing UI expects 'nilaiTahfizh' object with keys like nilai_hafalan. 
-            // BUT we want to show rows. Let's change state structure.
-            // For now, let's keep the single object structure if possible OR update state.
-            // Let's update state to hold the 'rows' directly.
 
             let tahfizhRows = []
             if (bestTahfizhRecord) {
@@ -157,7 +161,6 @@ const LaporanAkademikSantriPage = () => {
                     }
                 })
 
-                // If empty but has mapel name
                 if (tahfizhRows.length === 0 && bestTahfizhRecord.mapel?.nama) {
                     tahfizhRows.push({
                         mapel: { nama: bestTahfizhRecord.mapel.nama },
@@ -166,23 +169,21 @@ const LaporanAkademikSantriPage = () => {
                     })
                 }
             }
-            setNilaiTahfizh(tahfizhRows.length > 0 ? tahfizhRows : null)
+            setNilaiTahfizh(tahfizhRows)
 
-            // --- 5. Fetch Presensi data ---
-            const { data: perilakuData } = await supabase
-                .from('perilaku_semester')
-                .select('*')
-                .eq('santri_id', santriId)
-                .eq('semester_id', filters.semester_id)
-                .single()
+            // --- 4. Fetch Taujihad & Perilaku ---
+            const { data: taujihadData } = await supabase.from('taujihad').select('*').eq('santri_id', santriId).eq('semester_id', filters.semester_id).maybeSingle()
+            setTaujihad(taujihadData)
+
+            const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', filters.semester_id).maybeSingle()
+            setPerilaku(perilakuData)
 
             if (perilakuData) {
                 setPresensiData({
                     pulang: perilakuData.pulang ?? 0,
                     sakit: perilakuData.sakit ?? 0,
                     izin: perilakuData.izin ?? 0,
-                    alpha: perilakuData.alpha ?? 0,
-                    hadir: perilakuData.hadir ?? 0
+                    alpha: perilakuData.alpha ?? 0
                 })
             } else {
                 setPresensiData({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
@@ -195,18 +196,13 @@ const LaporanAkademikSantriPage = () => {
         }
     }
 
-    useEffect(() => {
-        if (filters.santri_id && filters.semester_id) {
-            fetchSantriReport(filters.santri_id)
-        }
-    }, [filters.santri_id, filters.semester_id])
-
     const getPredikat = (nilai) => {
         if (!nilai && nilai !== 0) return '-'
-        if (nilai >= 90) return 'A'
-        if (nilai >= 80) return 'B'
-        if (nilai >= 70) return 'C'
-        if (nilai >= 60) return 'D'
+        const n = Number(nilai)
+        if (n >= 90 || n >= 9) return 'A'
+        if (n >= 80 || n >= 8) return 'B'
+        if (n >= 70 || n >= 7) return 'C'
+        if (n >= 60 || n >= 6) return 'D'
         return 'E'
     }
 
@@ -220,19 +216,14 @@ const LaporanAkademikSantriPage = () => {
             Kelas: selectedSantri.kelas?.nama || '-',
             Halaqoh: selectedSantri.halaqoh?.nama || '-',
             Semester: currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-',
-            'Nilai Tahfizh Avg': nilaiTahfizh?.nilai_akhir?.toFixed(1) || '-',
-            // Calculate Madros Avg from displayed table if needed, or just list subjects?
-            // For summary, maybe just list average of averages or leave strict detail to PDF.
-            // Let's output Presensi:
-            'Hadir': presensiData.hadir,
             'Izin': presensiData.izin,
             'Sakit': presensiData.sakit,
             'Alpha': presensiData.alpha,
+            'Pulang': presensiData.pulang,
         }]
 
-        // Flatten Nilai Madros as columns? e.g. "Mapel X": 80
         nilaiMadros.forEach(m => {
-            exportData[0][`Nilai ${m.mapel?.nama || m.nama}`] = m.nilai_akhir ?? m.rata_rata
+            exportData[0][`Nilai ${m.mapel?.nama || m.nama}`] = m.nilai_akhir
         })
 
         const columns = Object.keys(exportData[0])
@@ -249,29 +240,30 @@ const LaporanAkademikSantriPage = () => {
             Kelas: selectedSantri.kelas?.nama || '-',
             Halaqoh: selectedSantri.halaqoh?.nama || '-',
             Semester: currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-',
-            'Nilai Tahfizh Avg': nilaiTahfizh?.nilai_akhir?.toFixed(1) || '-',
-            'Hadir': presensiData.hadir,
             'Izin': presensiData.izin,
             'Sakit': presensiData.sakit,
             'Alpha': presensiData.alpha,
+            'Pulang': presensiData.pulang,
         }]
 
         nilaiMadros.forEach(m => {
-            exportData[0][`Nilai ${m.mapel?.nama || m.nama}`] = m.nilai_akhir ?? m.rata_rata
+            exportData[0][`Nilai ${m.mapel?.nama || m.nama}`] = m.nilai_akhir
         })
 
         const columns = Object.keys(exportData[0])
         exportToCSV(exportData, columns, `laporan_akademik_${selectedSantri.nama.replace(/\s/g, '_')}`)
     }
 
+    const currentSemesterObj = semester.find(s => s.id === filters.semester_id)
+
     return (
         <div className="laporan-page">
             <div className="page-header">
                 <div>
                     <h1 className="page-title">
-                        Laporan Akademik Santri
+                        Laporan Raport Santri
                     </h1>
-                    <p className="page-subtitle">Laporan lengkap per santri</p>
+                    <p className="page-subtitle">Pratinjau & cetak raport resmi santri</p>
                 </div>
                 <div className="header-actions">
                     <DownloadButton
@@ -321,110 +313,61 @@ const LaporanAkademikSantriPage = () => {
                 </div>
             </div>
 
-            <div className="card">
+            {/* TAB SWITCHER & LIVE PREVIEW */}
+            {selectedSantri && (
+                <div className="flex bg-gray-200/80 p-1 rounded-xl gap-1 text-xs md:text-sm font-bold w-fit mb-4">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('all')}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition-all ${activeTab === 'all' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                        <Layers size={16} />
+                        <span>Tampilkan Semua (2 Lembar)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('tahfizh')}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition-all ${activeTab === 'tahfizh' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                        <BookOpen size={16} />
+                        <span>Raport Tahfizh (Qur'aniyah)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('madrasah')}
+                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg transition-all ${activeTab === 'madrasah' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                        <FileText size={16} />
+                        <span>Raport Madrasah (Madrosiyah)</span>
+                    </button>
+                </div>
+            )}
+
+            <div className="card p-0 overflow-hidden bg-gray-100">
                 {loading ? (
-                    <div className="loading-state">
+                    <div className="loading-state p-12 text-center">
                         <RefreshCw className="spin" size={24} />
-                        <span>Memuat data...</span>
+                        <span>Memuat data raport santri...</span>
                     </div>
                 ) : !selectedSantri ? (
-                    <div className="empty-state">
+                    <div className="empty-state p-12 text-center">
                         <Users size={48} />
-                        <p>Pilih santri untuk melihat laporan akademik</p>
+                        <p>Pilih santri untuk melihat pratinjau raport resmi</p>
                     </div>
                 ) : (
-                    <div className="laporan-akademik-content">
-                        {/* Santri Profile */}
-                        <div className="santri-profile" style={{
-                            padding: '24px',
-                            background: 'var(--bg-light)',
-                            borderRadius: '12px',
-                            marginBottom: '24px'
-                        }}>
-                            <h2>{selectedSantri.nama}</h2>
-                            <p>NIS: {selectedSantri.nis}</p>
-                            <p>Kelas: {selectedSantri.kelas?.nama || '-'} | Halaqoh: {selectedSantri.halaqoh?.nama || '-'}</p>
-                        </div>
-
-                        <div className="laporan-sections" style={{ display: 'grid', gap: '24px' }}>
-                            {/* Hafalan Section */}
-                            <div className="section">
-                                <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <BookMarked size={20} /> Progress Hafalan
-                                </h3>
-                                <ResponsiveTable
-                                    columns={[
-                                        { header: 'Juz', render: (row) => `Juz ${row.juz}` },
-                                        { 
-                                            header: 'Status', 
-                                            render: (row) => <span className={`badge ${row.status === 'Lancar' ? 'badge-success' : row.status === 'Sedang' ? 'badge-warning' : 'badge-danger'}`}>{row.status}</span>
-                                        },
-                                        { header: 'Tanggal Terakhir', render: (row) => <DateDisplay date={row.tanggal} /> }
-                                    ]}
-                                    data={hafalanData}
-                                    emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data hafalan</div>}
-                                    mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">Juz {row.juz}</span>}
-                                />
-                            </div>
-
-                            {/* Nilai Tahfizh Section */}
-                            <div className="section">
-                                <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={20} /> Nilai Tahfizhiyah (Semester)
-                                </h3>
-                                <ResponsiveTable
-                                    columns={[
-                                        { header: 'Komponen', render: (row) => row.mapel?.nama || row.komponen, className: 'font-medium' },
-                                        { header: 'Nilai', render: (row) => row.nilai_akhir ?? row.nilai ?? '-', className: 'text-center font-semibold' },
-                                        { header: 'Predikat', accessor: 'predikat', className: 'text-center' }
-                                    ]}
-                                    data={nilaiTahfizh || []}
-                                    emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data nilai tahfizh</div>}
-                                    mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">{row.mapel?.nama || row.komponen}</span>}
-                                />
-                            </div>
-
-                            {/* Nilai Madros Section */}
-                            <div className="section">
-                                <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={20} /> Nilai Madrosiyah
-                                </h3>
-                                <ResponsiveTable
-                                    columns={[
-                                        { header: 'Mapel', render: (row) => row.mapel?.nama || row.nama, className: 'font-medium' },
-                                        { header: 'Nilai Akhir', render: (row) => row.nilai_akhir ?? row.rata_rata ?? '-', className: 'text-center font-semibold' },
-                                        { header: 'Predikat', accessor: 'predikat', className: 'text-center' }
-                                    ]}
-                                    data={nilaiMadros}
-                                    emptyState={<div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">Belum ada data nilai madrosiyah</div>}
-                                    mobileCardHeader={(row) => <span className="font-bold text-[#0A2619]">{row.mapel?.nama || row.nama}</span>}
-                                />
-                            </div>
-
-                            {/* Kehadiran Section */}
-                            <div className="section">
-                                <h3 style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Calendar size={20} /> Kehadiran Semester Ini
-                                </h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderRadius: '8px', textAlign: 'center', color: 'white' }}>
-                                        <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.pulang}</div>
-                                        <div style={{ fontSize: '14px', opacity: 0.9 }}>Pulang</div>
-                                    </div>
-                                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', borderRadius: '8px', textAlign: 'center', color: 'white' }}>
-                                        <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.izin}</div>
-                                        <div style={{ fontSize: '14px', opacity: 0.9 }}>Izin</div>
-                                    </div>
-                                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', borderRadius: '8px', textAlign: 'center', color: 'white' }}>
-                                        <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.sakit}</div>
-                                        <div style={{ fontSize: '14px', opacity: 0.9 }}>Sakit</div>
-                                    </div>
-                                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', borderRadius: '8px', textAlign: 'center', color: 'white' }}>
-                                        <div style={{ fontSize: '32px', fontWeight: '700' }}>{presensiData.alpha}</div>
-                                        <div style={{ fontSize: '14px', opacity: 0.9 }}>Alpha</div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div className="p-4 md:p-8 flex justify-center bg-gray-100 overflow-x-auto">
+                        <div className="w-full max-w-[210mm] shadow-md rounded-lg overflow-hidden bg-white">
+                            <RaportTemplate
+                                santri={selectedSantri}
+                                semester={currentSemesterObj}
+                                nilaiTahfizh={nilaiTahfizh}
+                                nilaiMadrasah={nilaiMadros}
+                                perilaku={perilaku}
+                                taujihad={taujihad}
+                                ketidakhadiran={presensiData}
+                                musyrifName={selectedSantri?.musyrif_nama}
+                                type={activeTab}
+                            />
                         </div>
                     </div>
                 )}

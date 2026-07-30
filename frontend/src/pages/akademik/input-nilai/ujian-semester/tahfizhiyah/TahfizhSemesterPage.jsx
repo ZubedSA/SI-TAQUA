@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, BookMarked, Calendar } from 'lucide-react'
+import { Save, RefreshCw, BookMarked, Shield, UserCheck, AlertCircle, CheckCircle2, Lock } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
+import { useAuth } from '../../../../../context/AuthContext'
 import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
 import '../../../shared/styles/Nilai.css'
 
+/**
+ * Komponen Input Nilai Ujian Semester Qur'aniyah (Tahfizhiyah)
+ * Akses Ketat: Hanya Musyrif pengampu halaqoh yang diizinkan menginput nilai
+ */
 const TahfizhSemesterPage = () => {
+    const { user, userProfile, isAdmin: checkIsAdmin, isAdminAkademik: checkIsAdminAkademik } = useAuth()
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [semester, setSemester] = useState([])
@@ -13,28 +19,119 @@ const TahfizhSemesterPage = () => {
     const [nilai, setNilai] = useState({})
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
+
+    // Musyrif & Admin Access Control
+    const [teacherInfo, setTeacherInfo] = useState(null)
+    const [isAdmin, setIsAdmin] = useState(false)
+
     const [filters, setFilters] = useState({
         semester_id: '',
         halaqoh_id: ''
     })
 
     useEffect(() => {
-        fetchOptions()
-    }, [])
+        fetchOptionsAndPermissions()
+    }, [user, userProfile])
 
-    const fetchOptions = async () => {
-        const [semRes, halRes] = await Promise.all([
-            supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('halaqoh').select('id, nama').order('nama')
-        ])
-        if (semRes.data) {
-            setSemester(semRes.data)
-            const active = semRes.data.find(s => s.is_active)
-            if (active) setFilters(prev => ({ ...prev, semester_id: active.id }))
+    // 1. Fetch Semester, Halaqoh (Strict Musyrif Filtering)
+    const fetchOptionsAndPermissions = async () => {
+        try {
+            setLoading(true)
+            const adminRole = (checkIsAdmin && checkIsAdmin()) || 
+                (checkIsAdminAkademik && checkIsAdminAkademik()) ||
+                ['admin', 'admin_akademik'].includes(userProfile?.activeRole) || 
+                ['admin', 'admin_akademik'].includes(userProfile?.role) ||
+                userProfile?.roles?.includes('admin') ||
+                userProfile?.roles?.includes('admin_akademik')
+
+            setIsAdmin(Boolean(adminRole))
+
+            const [semRes, halRes] = await Promise.all([
+                supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
+                supabase.from('halaqoh').select('id, nama').order('nama')
+            ])
+
+            const allSemesters = semRes.data || []
+            const allHalaqoh = halRes.data || []
+
+            setSemester(allSemesters)
+
+            let activeSemId = ''
+            const activeSem = allSemesters.find(s => s.is_active)
+            if (activeSem) activeSemId = activeSem.id
+
+            // Check Musyrif permissions strictly if not admin
+            if (!adminRole && user) {
+                let guruData = null
+
+                if (user.email) {
+                    const { data: byEmail } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('email', user.email)
+                        .maybeSingle()
+                    guruData = byEmail
+                }
+
+                if (!guruData && user.id) {
+                    const { data: byUserId } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('user_id', user.id)
+                        .maybeSingle()
+                    guruData = byUserId
+                }
+
+                if (guruData) {
+                    setTeacherInfo(guruData)
+
+                    // Fetch halaqoh STRICTLY assigned to this musyrif
+                    const { data: halData } = await supabase
+                        .from('halaqoh')
+                        .select('id, nama')
+                        .eq('musyrif_id', guruData.id)
+                        .order('nama')
+
+                    const assignedHalaqoh = halData || []
+                    setHalaqoh(assignedHalaqoh)
+
+                    if (assignedHalaqoh.length > 0) {
+                        setFilters({
+                            semester_id: activeSemId,
+                            halaqoh_id: assignedHalaqoh[0].id
+                        })
+                    } else {
+                        // Strict: Musyrif not assigned to any halaqoh -> empty halaqoh
+                        setFilters({
+                            semester_id: activeSemId,
+                            halaqoh_id: ''
+                        })
+                    }
+                } else {
+                    // Strict: Guru profile not linked -> empty halaqoh
+                    setHalaqoh([])
+                    setFilters({
+                        semester_id: activeSemId,
+                        halaqoh_id: ''
+                    })
+                }
+            } else {
+                // Admin has full access to all halaqohs
+                setHalaqoh(allHalaqoh)
+                setFilters({
+                    semester_id: activeSemId,
+                    halaqoh_id: allHalaqoh.length > 0 ? allHalaqoh[0].id : ''
+                })
+            }
+        } catch (err) {
+            console.error('Fetch permissions error:', err)
+            setError('Gagal memuat opsi filter: ' + err.message)
+        } finally {
+            setLoading(false)
         }
-        if (halRes.data) setHalaqoh(halRes.data)
     }
 
+    // 2. Fetch Santri list and existing grades for selected halaqoh & semester
     const fetchSantriAndNilai = async () => {
         if (!filters.halaqoh_id || !filters.semester_id) return
         setLoading(true)
@@ -49,16 +146,17 @@ const TahfizhSemesterPage = () => {
                 .order('nama')
 
             if (santriError) throw santriError
-            setSantri(santriData || [])
+            const listSantri = santriData || []
+            setSantri(listSantri)
 
-            if (santriData && santriData.length > 0) {
+            if (listSantri.length > 0) {
                 const { data: nilaiData, error: nilaiError } = await supabase
                     .from('nilai')
                     .select('*')
                     .eq('semester_id', filters.semester_id)
                     .eq('jenis_ujian', 'semester')
                     .eq('kategori', 'Tahfizhiyah')
-                    .in('santri_id', santriData.map(s => s.id))
+                    .in('santri_id', listSantri.map(s => s.id))
 
                 if (nilaiError) throw nilaiError
 
@@ -72,6 +170,8 @@ const TahfizhSemesterPage = () => {
                     }
                 })
                 setNilai(nilaiMap)
+            } else {
+                setNilai({})
             }
         } catch (err) {
             setError('Gagal memuat data: ' + err.message)
@@ -86,6 +186,7 @@ const TahfizhSemesterPage = () => {
         }
     }, [filters.halaqoh_id, filters.semester_id])
 
+    // 3. Handle Grade Input Change
     const handleNilaiChange = (santriId, field, value) => {
         setNilai(prev => ({
             ...prev,
@@ -96,6 +197,7 @@ const TahfizhSemesterPage = () => {
         }))
     }
 
+    // 4. Calculate Average Grade
     const calculateRataRata = (santriId) => {
         const data = nilai[santriId]
         if (!data) return '-'
@@ -106,6 +208,7 @@ const TahfizhSemesterPage = () => {
         return ((hb + t + k) / 3).toFixed(1)
     }
 
+    // 5. Save All Grades
     const handleSave = async () => {
         setSaving(true)
         setError('')
@@ -151,18 +254,52 @@ const TahfizhSemesterPage = () => {
 
     return (
         <div className="nilai-page">
-            <div className="page-header">
+            {/* PAGE HEADER */}
+            <div className="page-header flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
-                    <h1 className="page-title">
-                        Input Nilai Ujian Semester
+                    <h1 className="page-title flex items-center gap-2">
+                        <span>Input Nilai Ujian Semester</span>
+                        <span className="text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full uppercase">Tahfizhiyah</span>
                     </h1>
-                    <p className="page-subtitle">Tahfizhiyah - Ujian Semester</p>
+                    <p className="page-subtitle">Ujian Semester Qur'aniyah (Hafalan, Tajwid & Kelancaran)</p>
+                </div>
+
+                {/* ACCESS BADGE */}
+                <div>
+                    {isAdmin ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold shadow-xs">
+                            <Shield size={16} className="text-purple-600" />
+                            <span>Akses Penuh (Admin)</span>
+                        </div>
+                    ) : teacherInfo ? (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-xs">
+                            <UserCheck size={16} className="text-emerald-600" />
+                            <span>Musyrif: {teacherInfo.nama}</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold">
+                            <UserCheck size={16} className="text-gray-500" />
+                            <span>Akses Musyrif</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {error && <div className="alert alert-error mb-3">{error}</div>}
-            {success && <div className="alert alert-success mb-3">{success}</div>}
+            {/* ALERTS */}
+            {error && (
+                <div className="alert alert-error mb-3 flex items-center gap-2">
+                    <AlertCircle size={18} />
+                    <span>{error}</span>
+                </div>
+            )}
+            {success && (
+                <div className="alert alert-success mb-3 flex items-center gap-2">
+                    <CheckCircle2 size={18} />
+                    <span>{success}</span>
+                </div>
+            )}
 
+            {/* FILTERS SECTION */}
             <div className="filter-section">
                 <div className="form-group">
                     <label className="form-label">Semester *</label>
@@ -181,11 +318,14 @@ const TahfizhSemesterPage = () => {
                 </div>
 
                 <div className="form-group">
-                    <label className="form-label">Halaqoh *</label>
+                    <label className="form-label">
+                        Halaqoh * {!isAdmin && <span className="text-[10px] text-emerald-700 font-semibold">(Binaan Anda)</span>}
+                    </label>
                     <select
                         className="form-control"
                         value={filters.halaqoh_id}
                         onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
+                        disabled={!isAdmin && halaqoh.length === 0}
                     >
                         <option value="">Pilih Halaqoh</option>
                         {halaqoh.map(h => (
@@ -195,9 +335,10 @@ const TahfizhSemesterPage = () => {
                 </div>
             </div>
 
-            {filters.halaqoh_id && filters.semester_id && (
+            {/* TABLE / EMPTY ACCESS SECTION */}
+            {filters.halaqoh_id && filters.semester_id ? (
                 <div className="table-container">
-                    <div className="table-header">
+                    <div className="table-header flex justify-between items-center mb-3">
                         <h3 className="table-title">Daftar Santri ({santri.length})</h3>
                         <button
                             className="btn btn-primary"
@@ -214,7 +355,7 @@ const TahfizhSemesterPage = () => {
                             { header: 'NIS', accessor: 'nis', hideOnMobile: true },
                             { header: 'Nama Santri', accessor: 'nama', className: 'font-medium text-gray-900' },
                             {
-                                header: 'Hafalan',
+                                header: 'Hafalan (0-100)',
                                 className: 'text-center',
                                 render: (row) => (
                                     <input
@@ -229,7 +370,7 @@ const TahfizhSemesterPage = () => {
                                 )
                             },
                             {
-                                header: 'Tajwid',
+                                header: 'Tajwid (0-100)',
                                 className: 'text-center',
                                 render: (row) => (
                                     <input
@@ -244,7 +385,7 @@ const TahfizhSemesterPage = () => {
                                 )
                             },
                             {
-                                header: 'Kelancaran',
+                                header: 'Kelancaran (0-100)',
                                 className: 'text-center',
                                 render: (row) => (
                                     <input
@@ -317,6 +458,20 @@ const TahfizhSemesterPage = () => {
                             </div>
                         )}
                     />
+                </div>
+            ) : (
+                <div className="p-8 text-center bg-amber-50/80 rounded-xl border border-amber-200 text-amber-900 mt-4">
+                    {!isAdmin && halaqoh.length === 0 ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <Lock size={28} className="text-amber-600 mb-1" />
+                            <h4 className="font-bold text-sm">🔒 Akses Terbatas Musyrif</h4>
+                            <p className="text-xs text-amber-800 max-w-md">
+                                Akun <strong>{teacherInfo?.nama || user?.email}</strong> belum ditugaskan sebagai Musyrif pengampu di halaqoh mana pun. Hanya Musyrif pengampu halaqoh yang berhak menginput nilai.
+                            </p>
+                        </div>
+                    ) : (
+                        'Silakan pilih Halaqoh untuk memulai'
+                    )}
                 </div>
             )}
         </div>

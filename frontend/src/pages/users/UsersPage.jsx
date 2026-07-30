@@ -1163,12 +1163,6 @@ const UsersPage = () => {
                 </div>
             </Card>
 
-                OR Reuse existing plain divs but styled with Tailwind 
-            */}
-
-
-
-
             {/* Add/Edit Modal */}
             {showAddModal && createPortal(
                 <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 overflow-y-auto animate-in fade-in duration-200">
@@ -1447,14 +1441,6 @@ const UsersPage = () => {
             )}
             {/* Confirmation Modals MUST be at the end to ensure they appear on top of other portals */}
             <ConfirmationModal
-                isOpen={actionModal.isOpen && actionModal.type === 'save_user'}
-                onClose={() => setActionModal({ ...actionModal, isOpen: false })}
-                onConfirm={executeSaveUser}
-                title="Konfirmasi Simpan"
-                message={`Apakah anda yakin ingin menyimpan data user ${formData.nama}?`}
-                confirmLabel={saving ? 'Menyimpan...' : 'Ya, Simpan'}
-                cancelLabel="Batal"
-                variant="primary"
                 isOpen={actionModal.isOpen}
                 onClose={() => setActionModal({ isOpen: false, type: null })}
                 onConfirm={actionModal.type === 'save_user' ? executeSaveUser : executeResetPassword}

@@ -3,11 +3,11 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
 /**
- * Hook untuk AUTO-FILTER data berdasarkan halaqoh akun
- * PRINSIP: Halaqoh adalah ATRIBUT AKUN, bukan input user
+ * Hook untuk AUTO-FILTER data berdasarkan halaqoh akun Musyrif
+ * PRINSIP: Halaqoh disaring ketat berdasarkan penugasan musyrif_id di database
  */
 export const useUserHalaqoh = () => {
-    const { userProfile, isAdmin, isAdminAkademik } = useAuth()
+    const { user, userProfile, isAdmin, isAdminAkademik } = useAuth()
     const [halaqohIds, setHalaqohIds] = useState([])
     const [halaqohList, setHalaqohList] = useState([]) // Array of {id, nama}
     const [selectedHalaqohId, setSelectedHalaqohId] = useState('')
@@ -16,13 +16,20 @@ export const useUserHalaqoh = () => {
 
     useEffect(() => {
         fetchUserHalaqoh()
-    }, [userProfile?.user_id, userProfile?.activeRole, isAdmin, isAdminAkademik])
+    }, [userProfile?.user_id, userProfile?.activeRole, user?.id, isAdmin, isAdminAkademik])
 
     const fetchUserHalaqoh = async () => {
         setIsLoading(true)
         try {
-            // Jika ADMIN: Fetch SEMUA halaqoh
-            if (isAdmin() || isAdminAkademik()) {
+            const adminRole = (isAdmin && isAdmin()) || 
+                (isAdminAkademik && isAdminAkademik()) ||
+                ['admin', 'admin_akademik'].includes(userProfile?.activeRole) || 
+                ['admin', 'admin_akademik'].includes(userProfile?.role) ||
+                userProfile?.roles?.includes('admin') ||
+                userProfile?.roles?.includes('admin_akademik')
+
+            // A. Jika ADMIN: Fetch SEMUA halaqoh
+            if (adminRole) {
                 const { data: allHalaqoh, error: adminError } = await supabase
                     .from('halaqoh')
                     .select('id, nama, musyrif_id, guru:musyrif_id(nama)')
@@ -30,7 +37,7 @@ export const useUserHalaqoh = () => {
 
                 if (adminError) throw adminError
 
-                const formattedList = allHalaqoh.map(h => ({
+                const formattedList = (allHalaqoh || []).map(h => ({
                     id: h.id,
                     nama: h.nama,
                     musyrif_id: h.musyrif_id,
@@ -40,12 +47,7 @@ export const useUserHalaqoh = () => {
                 setHalaqohList(formattedList)
                 setHalaqohIds(formattedList.map(h => h.id))
 
-                // Default: Pilih halaqoh pertama jika belum ada yang dipilih
-                // Atau biarkan kosong jika ingin opsi "Semua" (tapi requirement user bilang default harus ada value)
                 if (formattedList.length > 0 && !selectedHalaqohId) {
-                    // For Admin, we might want separate logic, but let's default to first for consistent initial state
-                    // Or enable "All" option management in UI. 
-                    // Let's set first one to be safe, user can change.
                     setSelectedHalaqohId(formattedList[0].id)
                 }
 
@@ -53,52 +55,95 @@ export const useUserHalaqoh = () => {
                 return
             }
 
-            // Jika MUSYRIF: Fetch ONLY Linked Halaqoh
-            if (!userProfile?.user_id) {
-                setIsLoading(false)
-                return
+            // B. Jika MUSYRIF / GURU (Non-Admin): Fetch ONLY Linked/Assigned Halaqoh
+            const email = userProfile?.email || user?.email
+            const userId = userProfile?.user_id || user?.id
+
+            let guruId = null
+            let guruNama = ''
+
+            if (email) {
+                const { data: gEmail } = await supabase
+                    .from('guru')
+                    .select('id, nama')
+                    .eq('email', email)
+                    .maybeSingle()
+                if (gEmail) {
+                    guruId = gEmail.id
+                    guruNama = gEmail.nama
+                }
             }
 
-            // Step 1: Fetch halaqoh_id dari musyrif_halaqoh
-            const { data: linkedHalaqoh, error: linkError } = await supabase
-                .from('musyrif_halaqoh')
-                .select('halaqoh_id')
-                .eq('user_id', userProfile.user_id)
+            if (!guruId && userId) {
+                const { data: gUser } = await supabase
+                    .from('guru')
+                    .select('id, nama')
+                    .eq('user_id', userId)
+                    .maybeSingle()
+                if (gUser) {
+                    guruId = gUser.id
+                    guruNama = gUser.nama
+                }
+            }
 
-            if (linkError) throw linkError
+            let foundHalaqohIds = []
 
-            if (linkedHalaqoh && linkedHalaqoh.length > 0) {
-                const ids = linkedHalaqoh.map(h => h.halaqoh_id)
-                setHalaqohIds(ids)
+            // 1. Direct check on halaqoh table (musyrif_id)
+            if (guruId) {
+                const { data: directHalaqoh } = await supabase
+                    .from('halaqoh')
+                    .select('id, nama')
+                    .eq('musyrif_id', guruId)
 
-                // Step 2: Fetch halaqoh names + musyrif via RPC or direct query
-                // Using RPC as before for consistency
-                const { data: halaqohData, error: rpcError } = await supabase
-                    .rpc('get_halaqoh_names', { halaqoh_ids: ids })
+                if (directHalaqoh) {
+                    directHalaqoh.forEach(h => foundHalaqohIds.push(h.id))
+                }
+            }
 
-                if (!rpcError && halaqohData && halaqohData.length > 0) {
-                    setHalaqohList(halaqohData)
+            // 2. Relation check on musyrif_halaqoh table
+            if (userId || guruId) {
+                let linkQuery = supabase.from('musyrif_halaqoh').select('halaqoh_id')
+                if (userId) linkQuery = linkQuery.eq('user_id', userId)
 
-                    // Default selection Logic
-                    if (!selectedHalaqohId) {
-                        setSelectedHalaqohId(halaqohData[0].id)
-                    }
+                const { data: linkedHalaqoh } = await linkQuery
+                if (linkedHalaqoh) {
+                    linkedHalaqoh.forEach(h => foundHalaqohIds.push(h.halaqoh_id))
+                }
+            }
 
-                    // Set musyrif info (only relevant if single, or derived from selected)
-                    // We'll update musyrifInfo based on selection below
-                } else {
-                    setHalaqohList([])
-                    setMusyrifInfo(null)
+            foundHalaqohIds = [...new Set(foundHalaqohIds)]
+
+            if (foundHalaqohIds.length > 0) {
+                const { data: halaqohData } = await supabase
+                    .from('halaqoh')
+                    .select('id, nama, musyrif_id, guru:musyrif_id(nama)')
+                    .in('id', foundHalaqohIds)
+                    .order('nama')
+
+                const formattedList = (halaqohData || []).map(h => ({
+                    id: h.id,
+                    nama: h.nama,
+                    musyrif_id: h.musyrif_id,
+                    musyrif_nama: h.guru?.nama || guruNama
+                }))
+
+                setHalaqohList(formattedList)
+                setHalaqohIds(foundHalaqohIds)
+
+                if (!selectedHalaqohId || !foundHalaqohIds.includes(selectedHalaqohId)) {
+                    setSelectedHalaqohId(formattedList[0].id)
                 }
             } else {
                 setHalaqohIds([])
                 setHalaqohList([])
+                setSelectedHalaqohId('')
                 setMusyrifInfo(null)
             }
         } catch (error) {
-            console.error('Error fetching halaqoh:', error)
+            console.error('Error fetching user halaqoh:', error)
             setHalaqohIds([])
             setHalaqohList([])
+            setSelectedHalaqohId('')
         } finally {
             setIsLoading(false)
         }
@@ -118,7 +163,6 @@ export const useUserHalaqoh = () => {
             setMusyrifInfo(null)
         }
     }, [selectedHalaqohId, halaqohList])
-
 
     const halaqohNames = useMemo(() => {
         if (selectedHalaqohId) {
