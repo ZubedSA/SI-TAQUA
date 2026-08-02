@@ -28,21 +28,64 @@ export const useUserHalaqoh = () => {
                 userProfile?.roles?.includes('admin') ||
                 userProfile?.roles?.includes('admin_akademik')
 
-            // A. Jika ADMIN: Fetch SEMUA halaqoh
+            // A. Jika ADMIN: Fetch SEMUA halaqoh dengan resolusi komprehensif seluruh Musyrif
             if (adminRole) {
-                const { data: allHalaqoh, error: adminError } = await supabase
-                    .from('halaqoh')
-                    .select('id, nama, musyrif_id, guru:musyrif_id(nama)')
-                    .order('nama')
+                const [hRes, mhRes, gRes, pRes] = await Promise.all([
+                    supabase.from('halaqoh').select('id, nama, musyrif_id, guru:musyrif_id(nama)').order('nama'),
+                    supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id, musyrif_id'),
+                    supabase.from('guru').select('id, nama, user_id, email'),
+                    supabase.from('user_profiles').select('user_id, id, nama, email')
+                ])
 
-                if (adminError) throw adminError
+                const allHalaqoh = hRes.data || []
+                const mhLinks = mhRes.data || []
+                const allGuru = gRes.data || []
+                const allProfiles = pRes.data || []
 
-                const formattedList = (allHalaqoh || []).map(h => ({
-                    id: h.id,
-                    nama: h.nama,
-                    musyrif_id: h.musyrif_id,
-                    musyrif_nama: h.guru?.nama
-                }))
+                const formattedList = allHalaqoh.map(h => {
+                    const names = []
+
+                    // 1. Direct guru relation from halaqoh.musyrif_id
+                    if (h.guru?.nama) {
+                        names.push(h.guru.nama)
+                    } else if (h.musyrif_id) {
+                        const g = allGuru.find(item => item.id === h.musyrif_id || item.user_id === h.musyrif_id)
+                        if (g?.nama) names.push(g.nama)
+                        else {
+                            const p = allProfiles.find(item => item.user_id === h.musyrif_id || item.id === h.musyrif_id)
+                            if (p?.nama) names.push(p.nama)
+                        }
+                    }
+
+                    // 2. Junction table musyrif_halaqoh assignments
+                    const links = mhLinks.filter(m => m.halaqoh_id === h.id)
+                    links.forEach(link => {
+                        let foundName = null
+                        if (link.user_id) {
+                            const p = allProfiles.find(item => item.user_id === link.user_id || item.id === link.user_id)
+                            if (p?.nama) foundName = p.nama
+                            else {
+                                const g = allGuru.find(item => item.user_id === link.user_id || item.id === link.user_id)
+                                if (g?.nama) foundName = g.nama
+                            }
+                        }
+                        if (!foundName && link.musyrif_id) {
+                            const g = allGuru.find(item => item.id === link.musyrif_id)
+                            if (g?.nama) foundName = g.nama
+                        }
+
+                        if (foundName && !names.includes(foundName)) {
+                            names.push(foundName)
+                        }
+                    })
+
+                    return {
+                        id: h.id,
+                        nama: h.nama,
+                        musyrif_id: h.musyrif_id,
+                        musyrif_nama: names.length > 0 ? names.join(', ') : null
+                    }
+                })
 
                 setHalaqohList(formattedList)
                 setHalaqohIds(formattedList.map(h => h.id))

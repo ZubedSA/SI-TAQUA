@@ -16,8 +16,8 @@ const LaporanHafalanHarianPage = () => {
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState([])
 
-    // AUTO-FILTER: Halaqoh adalah ATRIBUT AKUN, bukan input user
-    const { halaqohIds, halaqohNames, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin } = useUserHalaqoh()
+    // AUTO-FILTER: Halaqoh berdasarkan akun (Super Admin dapat memilih semua halaqoh)
+    const { halaqohIds, halaqohNames, halaqohList, isLoading: loadingHalaqoh, hasHalaqoh, isAdmin, selectedHalaqohId, setSelectedHalaqohId } = useUserHalaqoh()
 
     const [filters, setFilters] = useState({
         startDate: new Date().toISOString().split('T')[0],
@@ -37,7 +37,9 @@ const LaporanHafalanHarianPage = () => {
                 .select('id')
                 .eq('status', 'Aktif')
 
-            if (!isAdmin && halaqohIds.length > 0) {
+            if (selectedHalaqohId) {
+                santriQuery = santriQuery.eq('halaqoh_id', selectedHalaqohId)
+            } else if (!isAdmin && halaqohIds.length > 0) {
                 santriQuery = santriQuery.in('halaqoh_id', halaqohIds)
             } else if (!isAdmin && halaqohIds.length === 0) {
                 setData([])
@@ -79,7 +81,7 @@ const LaporanHafalanHarianPage = () => {
 
     useEffect(() => {
         if (!loadingHalaqoh && hasHalaqoh) fetchData()
-    }, [halaqohIds, loadingHalaqoh, filters.startDate, filters.endDate])
+    }, [halaqohIds, loadingHalaqoh, filters.startDate, filters.endDate, selectedHalaqohId])
 
     const sendWhatsApp = (item) => {
         const santri = item.santri
@@ -212,14 +214,28 @@ const LaporanHafalanHarianPage = () => {
                 {/* HALAQOH INFO - Read-only */}
                 <div className="form-group">
                     <label className="form-label">Halaqoh</label>
-                    <input
-                        type="text"
+                    <select
                         className="form-control"
-                        value={isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
-                        disabled
-                        readOnly
-                        style={{ backgroundColor: '#f5f5f5', color: '#333', cursor: 'not-allowed' }}
-                    />
+                        value={selectedHalaqohId}
+                        onChange={(e) => setSelectedHalaqohId(e.target.value)}
+                    >
+                        {isAdmin ? (
+                            <>
+                                <option value="">Semua Halaqoh (Admin)</option>
+                                {halaqohList.map(h => (
+                                    <option key={h.id} value={h.id}>
+                                        {h.nama} {h.musyrif_nama ? `(${h.musyrif_nama})` : ''}
+                                    </option>
+                                ))}
+                            </>
+                        ) : (
+                            halaqohList.map(h => (
+                                <option key={h.id} value={h.id}>
+                                    {h.nama}
+                                </option>
+                            ))
+                        )}
+                    </select>
                 </div>
 
                 <div className="form-group">

@@ -435,11 +435,12 @@ const TagihanSantriPage = () => {
                 <div className="p-4 border-b border-gray-100 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
                         <div className="relative flex-1 md:max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" size={18} />
                             <input
                                 type="text"
                                 placeholder="Cari santri..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                style={{ paddingLeft: '2.5rem' }}
+                                className="w-full pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
                                 value={filters.search}
                                 onChange={e => setFilters({ ...filters, search: e.target.value })}
                             />

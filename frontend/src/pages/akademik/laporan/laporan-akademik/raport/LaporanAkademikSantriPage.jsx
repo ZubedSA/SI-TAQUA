@@ -1,15 +1,124 @@
-import { useState, useEffect } from 'react'
-import { Users, RefreshCw, Printer, FileText, BookOpen, Layers } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Users, RefreshCw, Printer, FileText, BookOpen, Layers, Filter, Search, ChevronDown, X } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
+import { useAuth } from '../../../../../context/AuthContext'
+import { useUserHalaqoh } from '../../../../../hooks/features/useUserHalaqoh'
 import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import RaportTemplate from '../../../../../components/akademik/RaportTemplate'
 import { calculateSidogiriGrade } from '../../../../../components/akademik/RaportMadrasahTemplate'
 import '../../../../../pages/laporan/Laporan.css'
 
+/**
+ * Komponen Select Pencarian Cerdas Santri
+ * Fitur: Instant Filter by Nama / NIS, Popover Dropdown, Keyboard & Click friendly
+ */
+const SmartSantriSelect = ({ options = [], value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false)
+    const [search, setSearch] = useState('')
+    const containerRef = useRef(null)
+
+    const selectedOption = useMemo(() => {
+        return options.find(o => o.id === value) || null
+    }, [options, value])
+
+    const searchFilteredOptions = useMemo(() => {
+        if (!search.trim()) return options
+        const q = search.toLowerCase().trim()
+        return options.filter(s =>
+            s.nama?.toLowerCase().includes(q) ||
+            s.nis?.toLowerCase().includes(q)
+        )
+    }, [options, search])
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <div
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm cursor-pointer hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-xs min-h-[38px]"
+            >
+                <div className="flex items-center gap-2 truncate">
+                    {selectedOption ? (
+                        <span className="font-bold text-gray-800 truncate">
+                            {selectedOption.nama} <span className="text-xs text-gray-500 font-medium">({selectedOption.nis})</span>
+                        </span>
+                    ) : (
+                        <span className="text-gray-400 font-normal">Cari Nama / NIS Santri...</span>
+                    )}
+                </div>
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl p-2 max-h-64 overflow-y-auto">
+                    <div className="relative mb-2">
+                        <input
+                            type="text"
+                            className="w-full px-3 pr-7 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                            placeholder="Ketik Nama atau NIS santri..."
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            autoFocus
+                        />
+                        {search && (
+                            <button
+                                type="button"
+                                onClick={() => setSearch('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                        {searchFilteredOptions.length === 0 ? (
+                            <div className="p-3 text-center text-xs text-gray-500">
+                                Santri tidak ditemukan
+                            </div>
+                        ) : (
+                            searchFilteredOptions.map(s => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(s.id)
+                                        setIsOpen(false)
+                                        setSearch('')
+                                    }}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between ${
+                                        s.id === value ? 'bg-emerald-50 text-emerald-800 font-bold' : 'hover:bg-gray-100 text-gray-700'
+                                    }`}
+                                >
+                                    <span className="truncate">{s.nama}</span>
+                                    <span className="text-[10px] text-gray-500 font-mono ml-2 flex-shrink-0">NIS: {s.nis}</span>
+                                </button>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 const LaporanAkademikSantriPage = () => {
+    const { user, userProfile, isAdmin: checkIsAdmin, isAdminAkademik: checkIsAdminAkademik } = useAuth()
+    const { halaqohList, halaqohIds, isAdmin: isHalaqohAdmin } = useUserHalaqoh()
+
     const [loading, setLoading] = useState(false)
     const [semester, setSemester] = useState([])
+    const [kelasList, setKelasList] = useState([])
     const [santriList, setSantriList] = useState([])
     const [selectedSantri, setSelectedSantri] = useState(null)
     const [nilaiTahfizh, setNilaiTahfizh] = useState([])
@@ -18,14 +127,126 @@ const LaporanAkademikSantriPage = () => {
     const [taujihad, setTaujihad] = useState(null)
     const [activeTab, setActiveTab] = useState('all') // 'all', 'tahfizh', 'madrasah'
     const [presensiData, setPresensiData] = useState({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
+
     const [filters, setFilters] = useState({
         semester_id: '',
+        kelas_id: '',
+        halaqoh_id: '',
         santri_id: ''
     })
 
+    const [isAdminRole, setIsAdminRole] = useState(false)
+
     useEffect(() => {
-        fetchOptions()
-    }, [])
+        fetchOptionsAndPermissions()
+    }, [user?.id, userProfile?.activeRole])
+
+    const fetchOptionsAndPermissions = async () => {
+        try {
+            setLoading(true)
+            const adminRole = (checkIsAdmin && checkIsAdmin()) || 
+                (checkIsAdminAkademik && checkIsAdminAkademik()) ||
+                ['admin', 'admin_akademik'].includes(userProfile?.activeRole) || 
+                ['admin', 'admin_akademik'].includes(userProfile?.role) ||
+                userProfile?.roles?.includes('admin') ||
+                userProfile?.roles?.includes('admin_akademik')
+
+            setIsAdminRole(Boolean(adminRole))
+
+            const [semRes, kelRes, santriRes] = await Promise.all([
+                supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
+                supabase.from('kelas').select('id, nama, wali_kelas_id').order('nama'),
+                supabase.from('santri').select(`
+                    id, nama, nis, nama_wali, kelas_id, halaqoh_id,
+                    kelas:kelas!kelas_id(id, nama, wali_kelas_id, wali_kelas:guru!wali_kelas_id(nama)),
+                    halaqoh:halaqoh!halaqoh_id(id, nama, musyrif_id, musyrif:guru!musyrif_id(nama))
+                `).eq('status', 'Aktif').order('nama')
+            ])
+
+            const allSemesters = semRes.data || []
+            const allKelas = kelRes.data || []
+            const allSantri = santriRes.data || []
+
+            setSemester(allSemesters)
+            setSantriList(allSantri)
+
+            let activeSemId = ''
+            const activeSem = allSemesters.find(s => s.is_active)
+            if (activeSem) activeSemId = activeSem.id
+
+            let activeKelasList = allKelas
+
+            if (!adminRole && user) {
+                let guruData = null
+                if (user.email) {
+                    const { data: byEmail } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('email', user.email)
+                        .maybeSingle()
+                    guruData = byEmail
+                }
+                if (!guruData && user.id) {
+                    const { data: byUserId } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('user_id', user.id)
+                        .maybeSingle()
+                    guruData = byUserId
+                }
+
+                if (guruData) {
+                    const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
+                    if (assignedKelas.length > 0) {
+                        activeKelasList = assignedKelas
+                    }
+                }
+            }
+
+            setKelasList(activeKelasList)
+
+            setFilters(prev => ({
+                ...prev,
+                semester_id: activeSemId
+            }))
+        } catch (err) {
+            console.error('Error loading options:', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Filter santri dynamically based on selected kelas_id and halaqoh_id
+    const filteredSantriList = useMemo(() => {
+        return santriList.filter(s => {
+            let matchKelas = true
+            let matchHalaqoh = true
+
+            if (filters.kelas_id) {
+                const sKelasId = s.kelas?.id || s.kelas_id
+                matchKelas = sKelasId === filters.kelas_id
+            }
+
+            if (filters.halaqoh_id) {
+                const sHalaqohId = s.halaqoh?.id || s.halaqoh_id
+                matchHalaqoh = sHalaqohId === filters.halaqoh_id
+            }
+
+            return matchKelas && matchHalaqoh
+        })
+    }, [santriList, filters.kelas_id, filters.halaqoh_id])
+
+    // Auto select first santri when filteredSantriList changes or filter changes
+    useEffect(() => {
+        if (filteredSantriList.length > 0) {
+            const exists = filteredSantriList.some(s => s.id === filters.santri_id)
+            if (!exists) {
+                setFilters(prev => ({ ...prev, santri_id: filteredSantriList[0].id }))
+            }
+        } else {
+            setFilters(prev => ({ ...prev, santri_id: '' }))
+        }
+    }, [filteredSantriList])
 
     useEffect(() => {
         if (filters.santri_id && filters.semester_id) {
@@ -34,23 +255,6 @@ const LaporanAkademikSantriPage = () => {
             setSelectedSantri(null)
         }
     }, [filters.santri_id, filters.semester_id])
-
-    const fetchOptions = async () => {
-        const [semRes, santriRes] = await Promise.all([
-            supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('santri').select(`
-                id, nama, nis, nama_wali,
-                kelas:kelas!kelas_id(id, nama, wali_kelas_id, wali_kelas:guru!wali_kelas_id(nama)),
-                halaqoh:halaqoh!halaqoh_id(id, nama, musyrif_id, musyrif:guru!musyrif_id(nama))
-            `).eq('status', 'Aktif').order('nama')
-        ])
-        if (semRes.data) {
-            setSemester(semRes.data)
-            const active = semRes.data.find(s => s.is_active)
-            if (active) setFilters(prev => ({ ...prev, semester_id: active.id }))
-        }
-        if (santriRes.data) setSantriList(santriRes.data)
-    }
 
     const fetchSantriReport = async (santriId) => {
         if (!santriId || !filters.semester_id) return
@@ -102,104 +306,64 @@ const LaporanAkademikSantriPage = () => {
                 .eq('santri_id', santriId)
                 .eq('semester_id', filters.semester_id)
 
-            const typePriority = { 'semester': 4, 'uas': 3, 'uts': 2, 'harian': 1 }
+            // Split into Tahfizhiyah & Madrasiyah
+            const tahfizhGrades = nilaiData?.filter(n => n.kategori === 'Tahfizhiyah') || []
+            const mapelGrades = nilaiData?.filter(n => n.kategori === 'Madrasiyah' || n.kategori === 'Madrosiyah') || []
 
-            const getBestGrade = (grades) => {
-                if (!grades || grades.length === 0) return null
-                return grades.reduce((prev, current) => {
-                    const prevVal = prev.nilai_akhir ?? prev.nilai ?? 0
-                    const currVal = current.nilai_akhir ?? current.nilai ?? 0
-                    const prevP = typePriority[prev.jenis_ujian] || 0
-                    const currP = typePriority[current.jenis_ujian] || 0
-                    if (currP > prevP) return current
-                    if (currP === prevP) {
-                        return currVal > prevVal ? current : prev
-                    }
-                    return prev
-                })
+            let nilaiTahfizhList = []
+            if (tahfizhGrades.length > 0) {
+                let activeRecord = tahfizhGrades.find(n => n.jenis_ujian === 'semester')
+                if (!activeRecord) activeRecord = tahfizhGrades.find(n => n.jenis_ujian === 'uas')
+                if (!activeRecord && tahfizhGrades.length > 0) activeRecord = tahfizhGrades[0]
+
+                if (activeRecord) {
+                    const hafalan = activeRecord.nilai_hafalan || 0
+                    const tajwid = activeRecord.nilai_tajwid || 0
+                    const kelancaran = activeRecord.nilai_kelancaran || 0
+
+                    nilaiTahfizhList = [
+                        { aspek: 'Hafalan', nilai: hafalan },
+                        { aspek: 'Tajwid', nilai: tajwid },
+                        { aspek: 'Kelancaran', nilai: kelancaran }
+                    ]
+                }
             }
+            setNilaiTahfizh(nilaiTahfizhList)
 
-            let mapelsToProcess = [...expectedMapels]
-            nilaiData?.forEach(n => {
-                if (n.mapel_id && !mapelsToProcess.some(m => m.id === n.mapel_id)) {
-                    const mapelName = n.mapel?.nama || 'Mata Pelajaran'
-                    const isTahfizh = mapelName.toLowerCase().includes('tahfizh') || mapelName.toLowerCase().includes('quran')
-                    if (!isTahfizh && n.kategori !== 'Tahfizhiyah') {
-                        mapelsToProcess.push({ id: n.mapel_id, nama: mapelName })
-                    }
-                }
-            })
+            // Map all expected Madrasiyah mapels with Sidogiri grade calculation
+            const nilaiMadrosList = expectedMapels.map(m => {
+                const mapelScores = mapelGrades.filter(n => n.mapel_id === m.id)
+                const harianRec = mapelScores.find(n => n.jenis_ujian === 'harian')
+                const uasRec = mapelScores.find(n => n.jenis_ujian === 'semester' || n.jenis_ujian === 'uas')
 
-            let madrasahList = mapelsToProcess.map(mapel => {
-                if (mapel.nama?.toLowerCase().includes('tahfizh') || mapel.nama?.toLowerCase().includes('quran')) {
-                    return null
-                }
+                const harianVal = harianRec ? (Number(harianRec.nilai_harian ?? harianRec.nilai_akhir ?? harianRec.nilai) || null) : null
+                const uasVal = uasRec ? (Number(uasRec.nilai_uas ?? uasRec.nilai_akhir ?? uasRec.nilai) || null) : null
 
-                const mapelGrades = nilaiData?.filter(n => n.mapel_id === mapel.id || n.mapel?.nama === mapel.nama) || []
-
-                const harianRecord = mapelGrades.find(g => g.jenis_ujian === 'harian')
-                const examGrades = mapelGrades.filter(g => g.jenis_ujian !== 'harian')
-                const bestExamRecord = getBestGrade(examGrades)
-
-                const nilaiHarian = harianRecord ? (harianRecord.nilai_akhir ?? harianRecord.nilai) : null
-                const nilaiUjian = bestExamRecord ? (bestExamRecord.nilai_akhir ?? bestExamRecord.nilai) : null
-
-                const calc = calculateSidogiriGrade(nilaiUjian, nilaiHarian)
+                const calculated = calculateSidogiriGrade(uasVal, harianVal)
 
                 return {
-                    mapel: mapel,
-                    nilai_harian: nilaiHarian !== null ? nilaiHarian : '-',
-                    nilai_ujian: nilaiUjian !== null ? nilaiUjian : '-',
-                    nilai_akhir: calc.finalGrade,
-                    nilai_raport: calc.finalGrade,
-                    predikat: getPredikat(calc.finalGrade),
-                    isRed: calc.isRed
+                    mapel_nama: m.nama,
+                    mapel_kode: m.kode || m.nama,
+                    nilai: calculated.finalGrade
                 }
-            }).filter(Boolean)
-            setNilaiMadros(madrasahList)
+            })
+            setNilaiMadros(nilaiMadrosList)
 
-            // --- 3. Process Tahfizh ---
-            const tahfizhRecords = nilaiData?.filter(n => {
-                const isCatTahfizh = n.kategori === 'Tahfizhiyah'
-                const isNameTahfizh = n.mapel?.nama?.toLowerCase().includes('tahfizh') || n.mapel?.nama?.toLowerCase().includes('quran')
-                return isCatTahfizh || isNameTahfizh
-            }) || []
-
-            const bestTahfizhRecord = getBestGrade(tahfizhRecords)
-
-            let tahfizhRows = []
-            if (bestTahfizhRecord) {
-                const components = [
-                    { key: 'nilai_hafalan', label: 'Hafalan' },
-                    { key: 'nilai_tajwid', label: 'Tajwid' },
-                    { key: 'nilai_kelancaran', label: 'Fashohah / Kelancaran' }
-                ]
-
-                components.forEach(comp => {
-                    if (bestTahfizhRecord[comp.key] != null) {
-                        tahfizhRows.push({
-                            mapel: { nama: comp.label },
-                            nilai_akhir: bestTahfizhRecord[comp.key],
-                            predikat: getPredikat(bestTahfizhRecord[comp.key])
-                        })
-                    }
-                })
-
-                if (tahfizhRows.length === 0 && bestTahfizhRecord.mapel?.nama) {
-                    tahfizhRows.push({
-                        mapel: { nama: bestTahfizhRecord.mapel.nama },
-                        nilai_akhir: bestTahfizhRecord.nilai_akhir,
-                        predikat: getPredikat(bestTahfizhRecord.nilai_akhir)
-                    })
-                }
-            }
-            setNilaiTahfizh(tahfizhRows)
-
-            // --- 4. Fetch Taujihad & Perilaku ---
-            const { data: taujihadData } = await supabase.from('taujihad').select('*').eq('santri_id', santriId).eq('semester_id', filters.semester_id).maybeSingle()
+            // --- 3. Fetch Taujihad & Perilaku ---
+            const { data: taujihadData } = await supabase
+                .from('taujihad')
+                .select('*')
+                .eq('santri_id', santriId)
+                .eq('semester_id', filters.semester_id)
+                .maybeSingle()
             setTaujihad(taujihadData)
 
-            const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', filters.semester_id).maybeSingle()
+            const { data: perilakuData } = await supabase
+                .from('perilaku_semester')
+                .select('*')
+                .eq('santri_id', santriId)
+                .eq('semester_id', filters.semester_id)
+                .maybeSingle()
             setPerilaku(perilakuData)
 
             if (perilakuData) {
@@ -224,121 +388,89 @@ const LaporanAkademikSantriPage = () => {
         }
     }
 
-    const getPredikat = (nilai) => {
-        if (nilai === null || nilai === undefined || nilai === '' || nilai === '-' || String(nilai).trim() === '-') return '-'
-        const n = Number(nilai)
-        if (isNaN(n) || n === 0) return '-'
-        if (n >= 9 || n >= 90) return 'A'
-        if (n >= 8 || n >= 80) return 'B'
-        if (n >= 7 || n >= 70) return 'C'
-        if (n >= 6 || n >= 60) return 'D'
-        return 'E'
-    }
-
-    const handleDownloadExcel = () => {
-        if (!selectedSantri) return
-        const currentSem = semester.find(s => s.id === filters.semester_id)
-
-        const exportData = [{
-            NIS: selectedSantri.nis,
-            Nama: selectedSantri.nama,
-            Kelas: selectedSantri.kelas?.nama || '-',
-            Halaqoh: selectedSantri.halaqoh?.nama || '-',
-            Semester: currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-',
-            'Izin': presensiData.izin,
-            'Sakit': presensiData.sakit,
-            'Alpha': presensiData.alpha,
-            'Pulang': presensiData.pulang,
-        }]
-
-        nilaiMadros.forEach(m => {
-            exportData[0][`Nilai ${m.mapel?.nama || m.nama}`] = m.nilai_akhir
-        })
-
-        const columns = Object.keys(exportData[0])
-        exportToExcel(exportData, columns, `laporan_akademik_${selectedSantri.nama.replace(/\s/g, '_')}`)
-    }
-
-    const handleDownloadCSV = () => {
-        if (!selectedSantri) return
-        const currentSem = semester.find(s => s.id === filters.semester_id)
-
-        const exportData = [{
-            NIS: selectedSantri.nis,
-            Nama: selectedSantri.nama,
-            Kelas: selectedSantri.kelas?.nama || '-',
-            Halaqoh: selectedSantri.halaqoh?.nama || '-',
-            Semester: currentSem ? `${currentSem.nama} - ${currentSem.tahun_ajaran}` : '-',
-            'Izin': presensiData.izin,
-            'Sakit': presensiData.sakit,
-            'Alpha': presensiData.alpha,
-            'Pulang': presensiData.pulang,
-        }]
-
-        nilaiMadros.forEach(m => {
-            exportData[0][`Nilai ${m.mapel?.nama || m.nama}`] = m.nilai_akhir
-        })
-
-        const columns = Object.keys(exportData[0])
-        exportToCSV(exportData, columns, `laporan_akademik_${selectedSantri.nama.replace(/\s/g, '_')}`)
-    }
-
     const currentSemesterObj = semester.find(s => s.id === filters.semester_id)
 
     return (
         <div className="laporan-page">
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">
-                        Laporan Raport Santri
-                    </h1>
+                    <h1 className="page-title">Laporan Raport Santri</h1>
                     <p className="page-subtitle">Pratinjau & cetak raport resmi santri</p>
                 </div>
                 <div className="header-actions">
-                    <DownloadButton
-                        onDownloadExcel={handleDownloadExcel}
-                        onDownloadCSV={handleDownloadCSV}
+                    <button 
+                        className="btn btn-primary" 
                         disabled={!selectedSantri}
-                    />
-                    <button
-                        className="btn btn-primary"
-                        disabled={!selectedSantri}
-                        onClick={() => window.open(`/raport/cetak/${filters.santri_id}/${filters.semester_id}`, '_blank')}
+                        onClick={() => window.print()}
                     >
                         <Printer size={18} /> Cetak / Download Raport
                     </button>
                 </div>
             </div>
 
+            {/* FILTER SECTION WITH SMART SEARCHABLE SANTRI SELECT */}
             <div className="filter-section">
-                <div className="form-group">
-                    <label className="form-label">Semester *</label>
-                    <select
-                        className="form-control"
-                        value={filters.semester_id}
-                        onChange={e => setFilters({ ...filters, semester_id: e.target.value })}
-                    >
-                        <option value="">Pilih Semester</option>
-                        {semester.map(s => (
-                            <option key={s.id} value={s.id}>
-                                {s.nama} - {s.tahun_ajaran} {s.is_active ? '(Aktif)' : ''}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full items-end">
+                    {/* 1. SEMESTER FILTER */}
+                    <div className="form-group">
+                        <label className="form-label">Semester *</label>
+                        <select
+                            className="form-control"
+                            value={filters.semester_id}
+                            onChange={e => setFilters({ ...filters, semester_id: e.target.value })}
+                        >
+                            <option value="">Pilih Semester</option>
+                            {semester.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.nama} - {s.tahun_ajaran} {s.is_active ? '(Aktif)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="form-group">
-                    <label className="form-label">Santri *</label>
-                    <select
-                        className="form-control"
-                        value={filters.santri_id}
-                        onChange={e => setFilters({ ...filters, santri_id: e.target.value })}
-                    >
-                        <option value="">Pilih Santri</option>
-                        {santriList.map(s => (
-                            <option key={s.id} value={s.id}>{s.nama} ({s.nis})</option>
-                        ))}
-                    </select>
+                    {/* 2. KELAS FILTER */}
+                    <div className="form-group">
+                        <label className="form-label">Kelas</label>
+                        <select
+                            className="form-control"
+                            value={filters.kelas_id}
+                            onChange={e => setFilters({ ...filters, kelas_id: e.target.value })}
+                        >
+                            <option value="">Semua Kelas</option>
+                            {kelasList.map(k => (
+                                <option key={k.id} value={k.id}>{k.nama}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* 3. HALAQOH FILTER */}
+                    <div className="form-group">
+                        <label className="form-label">Halaqoh</label>
+                        <select
+                            className="form-control"
+                            value={filters.halaqoh_id}
+                            onChange={e => setFilters({ ...filters, halaqoh_id: e.target.value })}
+                        >
+                            <option value="">Semua Halaqoh</option>
+                            {halaqohList.map(h => (
+                                <option key={h.id} value={h.id}>
+                                    {h.nama} {h.musyrif_nama ? `(${h.musyrif_nama})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* 4. SANTRI FILTER WITH SMART SEARCH */}
+                    <div className="form-group">
+                        <label className="form-label">
+                            Pilih Santri * ({filteredSantriList.length})
+                        </label>
+                        <SmartSantriSelect
+                            options={filteredSantriList}
+                            value={filters.santri_id}
+                            onChange={val => setFilters({ ...filters, santri_id: val })}
+                        />
+                    </div>
                 </div>
             </div>
 

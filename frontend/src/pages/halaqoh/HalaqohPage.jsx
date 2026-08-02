@@ -348,14 +348,13 @@ const HalaqohPage = () => {
                             </div>
                             <div className="text-base font-bold text-gray-900">Daftar Halaqoh ({filteredData.length})</div>
                         </div>
-                        <div className="relative w-full md:w-64">
-                            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <div className="w-full md:w-64">
                             <input
                                 type="text"
                                 placeholder="Cari halaqoh..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-medium"
+                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-medium"
                             />
                         </div>
                     </div>

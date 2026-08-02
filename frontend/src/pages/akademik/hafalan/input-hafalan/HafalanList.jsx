@@ -748,19 +748,39 @@ const HafalanList = () => {
                                 />
                             </div>
 
-                            <div className="w-full md:w-auto px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 truncate min-w-[200px]">
-                                {isAdmin ? 'Semua Halaqoh (Admin)' : (halaqohNames || 'Memuat...')}
+                            <div className="w-full md:w-auto">
+                                <select
+                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 text-gray-700 min-w-[200px]"
+                                    value={selectedHalaqohId}
+                                    onChange={(e) => setSelectedHalaqohId(e.target.value)}
+                                >
+                                    {isAdmin ? (
+                                        <>
+                                            <option value="">Semua Halaqoh (Admin)</option>
+                                            {halaqohList.map(h => (
+                                                <option key={h.id} value={h.id}>
+                                                    {h.nama} {h.musyrif_nama ? `(${h.musyrif_nama})` : ''}
+                                                </option>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        halaqohList.map(h => (
+                                            <option key={h.id} value={h.id}>
+                                                {h.nama}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
                             </div>
 
                             {/* Search */}
-                            <div className="relative w-full md:w-64 md:ml-auto">
-                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <div className="w-full md:w-64 md:ml-auto">
                                 <input
                                     type="text"
                                     placeholder="Cari santri..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                                 />
                             </div>
                         </div>
@@ -967,14 +987,13 @@ const HafalanList = () => {
                             )}
 
                             {/* Search */}
-                            <div className="relative w-full md:w-64 md:ml-auto">
-                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <div className="w-full md:w-64 md:ml-auto">
                                 <input
                                     type="text"
                                     placeholder="Cari santri..."
                                     value={rekapFilters.santri_nama}
                                     onChange={(e) => setRekapFilters({ ...rekapFilters, santri_nama: e.target.value })}
-                                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                    className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                                 />
                             </div>
                         </div>
@@ -1187,16 +1206,15 @@ const HafalanList = () => {
 
                                 <div className="w-full md:w-64">
                                     <label className="block text-xs font-medium text-gray-700 mb-1">Cari Santri</label>
-                                    <div className="relative">
-                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Ketik nama santri..."
-                                            value={pencapaianSearch}
-                                            onChange={(e) => setPencapaianSearch(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                        />
-                                    </div>
+                                     <div>
+                                         <input
+                                             type="text"
+                                             placeholder="Ketik nama santri..."
+                                             value={pencapaianSearch}
+                                             onChange={(e) => setPencapaianSearch(e.target.value)}
+                                             className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                                         />
+                                     </div>
                                 </div>
 
                                 {/* Actions based on subtab */}
