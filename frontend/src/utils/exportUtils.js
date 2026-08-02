@@ -61,7 +61,7 @@ export const exportToExcel = (data, columns, filename = 'export') => {
         } else {
             columns.forEach((col, idx) => {
                 const keys = Object.keys(row)
-                const value = row[keys[idx]] ?? ''
+                const value = row[col] !== undefined ? row[col] : (row[keys[idx]] ?? '')
                 html += `<td>${escapeHtml(String(value))}</td>`
             })
         }
@@ -97,7 +97,8 @@ export const exportToCSV = (data, columns, filename = 'export') => {
         } else {
             const values = columns.map((col, idx) => {
                 const keys = Object.keys(row)
-                return escapeCsvField(String(row[keys[idx]] ?? ''))
+                const value = row[col] !== undefined ? row[col] : (row[keys[idx]] ?? '')
+                return escapeCsvField(String(value))
             })
             csv += values.join(',') + '\n'
         }

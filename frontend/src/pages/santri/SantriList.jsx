@@ -396,30 +396,42 @@ const SantriList = () => {
     }
 
     const handleDownloadExcel = () => {
-        const columns = ['NIS', 'Nama', 'L/P', 'Angkatan', 'Kelas', 'Halaqoh', 'Status']
+        const columns = ['NIS', 'Nama', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Alamat', 'No. HP Santri', 'Nama Wali', 'No. Telp Wali', 'Angkatan', 'Kelas', 'Halaqoh', 'Status']
         const exportData = filteredSantri.map(s => ({
-            NIS: s.nis,
-            Nama: s.nama,
-            'L/P': s.jenis_kelamin,
-            Angkatan: s.angkatan,
-            Kelas: s.kelas,
-            Halaqoh: s.halaqoh,
-            Status: s.status
+            NIS: s.nis || '',
+            Nama: s.nama || '',
+            'Jenis Kelamin': s.jenis_kelamin || '',
+            'Tempat Lahir': s.tempat_lahir || '',
+            'Tanggal Lahir': s.tanggal_lahir || '',
+            Alamat: s.alamat || '',
+            'No. HP Santri': s.no_telp || '',
+            'Nama Wali': s.nama_wali || '',
+            'No. Telp Wali': s.no_telp_wali || '',
+            Angkatan: s.angkatan || '',
+            Kelas: s.kelas || '',
+            Halaqoh: s.halaqoh || '',
+            Status: s.status || ''
         }))
         exportToExcel(exportData, columns, 'data_santri')
         showToast.success('Export Excel berhasil')
     }
 
     const handleDownloadCSV = () => {
-        const columns = ['NIS', 'Nama', 'L/P', 'Angkatan', 'Kelas', 'Halaqoh', 'Status']
+        const columns = ['NIS', 'Nama', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'Alamat', 'No. HP Santri', 'Nama Wali', 'No. Telp Wali', 'Angkatan', 'Kelas', 'Halaqoh', 'Status']
         const exportData = filteredSantri.map(s => ({
-            NIS: s.nis,
-            Nama: s.nama,
-            'L/P': s.jenis_kelamin,
-            Angkatan: s.angkatan,
-            Kelas: s.kelas,
-            Halaqoh: s.halaqoh,
-            Status: s.status
+            NIS: s.nis || '',
+            Nama: s.nama || '',
+            'Jenis Kelamin': s.jenis_kelamin || '',
+            'Tempat Lahir': s.tempat_lahir || '',
+            'Tanggal Lahir': s.tanggal_lahir || '',
+            Alamat: s.alamat || '',
+            'No. HP Santri': s.no_telp || '',
+            'Nama Wali': s.nama_wali || '',
+            'No. Telp Wali': s.no_telp_wali || '',
+            Angkatan: s.angkatan || '',
+            Kelas: s.kelas || '',
+            Halaqoh: s.halaqoh || '',
+            Status: s.status || ''
         }))
         exportToCSV(exportData, columns, 'data_santri')
         showToast.success('Export CSV berhasil')
@@ -428,15 +440,20 @@ const SantriList = () => {
     const handleDownloadPDF = () => {
         generateLaporanPDF({
             title: 'Data Santri',
-            columns: ['NIS', 'Nama', 'L/P', 'Angkatan', 'Kelas', 'Halaqoh', 'Status'],
+            columns: ['NIS', 'Nama', 'L/P', 'Tempat Lahir', 'Tgl Lahir', 'Alamat', 'Nama Wali', 'No. Wali', 'Angkatan', 'Kelas', 'Halaqoh', 'Status'],
             data: filteredSantri.map(s => [
-                s.nis,
-                s.nama,
+                s.nis || '',
+                s.nama || '',
                 s.jenis_kelamin === 'Laki-laki' ? 'L' : 'P',
-                s.angkatan,
-                s.kelas,
-                s.halaqoh,
-                s.status
+                s.tempat_lahir || '-',
+                s.tanggal_lahir || '-',
+                s.alamat || '-',
+                s.nama_wali || '-',
+                s.no_telp_wali || '-',
+                s.angkatan || '-',
+                s.kelas || '-',
+                s.halaqoh || '-',
+                s.status || 'Aktif'
             ]),
             filename: 'data_santri'
         })
