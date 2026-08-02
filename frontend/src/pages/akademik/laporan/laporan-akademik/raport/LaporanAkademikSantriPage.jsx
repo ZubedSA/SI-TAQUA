@@ -38,7 +38,11 @@ const LaporanAkademikSantriPage = () => {
     const fetchOptions = async () => {
         const [semRes, santriRes] = await Promise.all([
             supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('santri').select('id, nama, nis, nama_wali, kelas:kelas!kelas_id(nama), halaqoh:halaqoh!halaqoh_id(nama, musyrif_id)').eq('status', 'Aktif').order('nama')
+            supabase.from('santri').select(`
+                id, nama, nis, nama_wali,
+                kelas:kelas!kelas_id(id, nama, wali_kelas_id, wali_kelas:guru!wali_kelas_id(nama)),
+                halaqoh:halaqoh!halaqoh_id(id, nama, musyrif_id, musyrif:guru!musyrif_id(nama))
+            `).eq('status', 'Aktif').order('nama')
         ])
         if (semRes.data) {
             setSemester(semRes.data)
@@ -55,17 +59,31 @@ const LaporanAkademikSantriPage = () => {
         try {
             const selected = santriList.find(s => s.id === santriId)
 
-            let musyrifName = "UST. SUBAIDI"
-            if (selected?.halaqoh?.musyrif_id) {
+            let musyrifName = selected?.halaqoh?.musyrif?.nama || null
+            if (!musyrifName && selected?.halaqoh?.musyrif_id) {
                 const { data: guruData } = await supabase
                     .from('guru')
                     .select('nama')
                     .eq('id', selected.halaqoh.musyrif_id)
-                    .single()
+                    .maybeSingle()
                 if (guruData) musyrifName = guruData.nama
             }
-            if (selected) selected.musyrif_nama = musyrifName
-            setSelectedSantri(selected)
+
+            let waliKelasName = selected?.kelas?.wali_kelas?.nama || null
+            if (!waliKelasName && selected?.kelas?.wali_kelas_id) {
+                const { data: guruData } = await supabase
+                    .from('guru')
+                    .select('nama')
+                    .eq('id', selected.kelas.wali_kelas_id)
+                    .maybeSingle()
+                if (guruData) waliKelasName = guruData.nama
+            }
+
+            if (selected) {
+                selected.musyrif_nama = musyrifName || "UST. SUBAIDI"
+                selected.wali_kelas_nama = waliKelasName || "....................."
+            }
+            setSelectedSantri(selected ? { ...selected } : null)
 
             // --- 1. Fetch Mapels ---
             const { data: allMapels } = await supabase
@@ -189,10 +207,14 @@ const LaporanAkademikSantriPage = () => {
                     pulang: perilakuData.pulang ?? 0,
                     sakit: perilakuData.sakit ?? 0,
                     izin: perilakuData.izin ?? 0,
-                    alpha: perilakuData.alpha ?? 0
+                    alpha: perilakuData.alpha ?? 0,
+                    pulang_kelas: perilakuData.pulang_kelas ?? 0,
+                    sakit_kelas: perilakuData.sakit_kelas ?? 0,
+                    izin_kelas: perilakuData.izin_kelas ?? 0,
+                    alpha_kelas: perilakuData.alpha_kelas ?? 0
                 })
             } else {
-                setPresensiData({ pulang: 0, izin: 0, sakit: 0, alpha: 0 })
+                setPresensiData({ pulang: 0, izin: 0, sakit: 0, alpha: 0, pulang_kelas: 0, izin_kelas: 0, sakit_kelas: 0, alpha_kelas: 0 })
             }
 
         } catch (err) {
@@ -372,7 +394,9 @@ const LaporanAkademikSantriPage = () => {
                                 perilaku={perilaku}
                                 taujihad={taujihad}
                                 ketidakhadiran={presensiData}
+                                catatanWali={perilaku?.catatan_wali || taujihad?.catatan_wali}
                                 musyrifName={selectedSantri?.musyrif_nama}
+                                waliKelasName={selectedSantri?.wali_kelas_nama}
                                 type={activeTab}
                             />
                         </div>

@@ -35,6 +35,7 @@ const RaportMadrasahTemplate = ({
     perilaku = {},
     ketidakhadiran = {},
     catatanWali = '',
+    waliKelasName = '',
     musyrifName = ''
 }) => {
     const getPredikat = (nilai) => {
@@ -253,19 +254,19 @@ const RaportMadrasahTemplate = ({
                         <tbody>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>A. Ketekunan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.ketekunan || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.ketekunan_kelas || perilaku?.ketekunan || 'Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>B. Kedisiplinan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kedisiplinan || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kedisiplinan_kelas || perilaku?.kedisiplinan || 'Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>C. Kebersihan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kebersihan || 'Sangat Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kebersihan_kelas || perilaku?.kebersihan || 'Sangat Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>D. Kerapian</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kerapian || 'Sangat Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kerapian_kelas || perilaku?.kerapian || 'Sangat Baik'}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -280,16 +281,16 @@ const RaportMadrasahTemplate = ({
                         <tbody>
                             <tr>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Alpa <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.alpha ?? '0'}</span>
+                                    Alpa <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.alpha_kelas ?? ketidakhadiran?.alpha ?? '0'}</span>
                                 </td>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Sakit <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.sakit ?? '0'}</span>
+                                    Sakit <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.sakit_kelas ?? ketidakhadiran?.sakit ?? '0'}</span>
                                 </td>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Izin <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.izin ?? '0'}</span>
+                                    Izin <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.izin_kelas ?? ketidakhadiran?.izin ?? '0'}</span>
                                 </td>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Pulang <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.pulang ?? '0'}</span>
+                                    Pulang <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.pulang_kelas ?? ketidakhadiran?.pulang ?? '0'}</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -297,10 +298,10 @@ const RaportMadrasahTemplate = ({
                 </div>
             </div>
 
-            {/* ========== TAUJIHAT MUSYRIF / CATATAN WALI KELAS ========== */}
+            {/* ========== CATATAN WALI KELAS ========== */}
             <div style={{ marginBottom: '14px' }}>
                 <p style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '4px', color: '#1f2937' }}>
-                    Taujihat Musyrif
+                    Catatan Wali Kelas
                 </p>
                 <div style={{
                     border: '1px solid #000',
@@ -327,9 +328,9 @@ const RaportMadrasahTemplate = ({
                     <p style={{ fontSize: '10px', marginBottom: '4px', color: '#111827' }}>
                         Batuan, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
-                    <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Musyrif</p>
+                    <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Wali Kelas</p>
                     <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                        {musyrifName || santri?.musyrif_nama || 'UST. SUBAIDI'}
+                        {waliKelasName || santri?.wali_kelas_nama || santri?.kelas?.wali_kelas?.nama || '.....................'}
                     </p>
                 </div>
             </div>

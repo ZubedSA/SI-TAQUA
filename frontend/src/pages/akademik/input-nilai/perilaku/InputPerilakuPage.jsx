@@ -6,6 +6,103 @@ import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
 import '../../shared/styles/Nilai.css'
 
 /**
+ * Helper Components (Defined Outside InputPerilakuPage to prevent React unmounting/remounting on render)
+ */
+const BehaviorOptions = ({ value, onChange }) => (
+    <select 
+        className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
+        value={value || ''} 
+        onChange={e => onChange(e.target.value)}
+    >
+        <option value="">Pilih...</option>
+        <option value="Sangat Baik">Sangat Baik</option>
+        <option value="Baik">Baik</option>
+        <option value="Cukup">Cukup</option>
+        <option value="Kurang">Kurang</option>
+        {!['Sangat Baik', 'Baik', 'Cukup', 'Kurang', ''].includes(value) && value && (
+            <option value={value}>{value} (Lama)</option>
+        )}
+    </select>
+)
+
+const PredikatOptions = ({ value, onChange }) => (
+    <select 
+        className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
+        value={value || ''} 
+        onChange={e => onChange(e.target.value)}
+    >
+        <option value="">Pilih...</option>
+        <option value="Mumtaz">Mumtaz</option>
+        <option value="Jayyid Jiddan">Jayyid Jiddan</option>
+        <option value="Jayyid">Jayyid</option>
+        <option value="Maqbul">Maqbul</option>
+        {!['Mumtaz', 'Jayyid Jiddan', 'Jayyid', 'Maqbul', ''].includes(value) && value && (
+            <option value={value}>{value} (Lama)</option>
+        )}
+    </select>
+)
+
+const AttendanceInputs = ({ data = {}, onChange }) => {
+    const handleNumChange = (field, rawVal) => {
+        const numOnly = rawVal.replace(/[^0-9]/g, '')
+        onChange(field, numOnly)
+    }
+
+    return (
+        <div className="grid grid-cols-4 gap-1.5 w-full max-w-[300px] mx-auto">
+            <div className="flex flex-col items-center min-w-0">
+                <span className="text-[10px] font-black text-blue-700 bg-blue-100 border border-blue-300 rounded-t-lg w-full text-center py-0.5 leading-tight uppercase tracking-wide truncate" title="Sakit">Sakit</span>
+                <input 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-blue-300 rounded-b-lg py-1 px-1 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none" 
+                    placeholder="0"
+                    value={data.sakit ?? ''} 
+                    onChange={e => handleNumChange('sakit', e.target.value)} 
+                />
+            </div>
+            <div className="flex flex-col items-center min-w-0">
+                <span className="text-[10px] font-black text-amber-700 bg-amber-100 border border-amber-300 rounded-t-lg w-full text-center py-0.5 leading-tight uppercase tracking-wide truncate" title="Izin">Izin</span>
+                <input 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-amber-300 rounded-b-lg py-1 px-1 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none" 
+                    placeholder="0"
+                    value={data.izin ?? ''} 
+                    onChange={e => handleNumChange('izin', e.target.value)} 
+                />
+            </div>
+            <div className="flex flex-col items-center min-w-0">
+                <span className="text-[10px] font-black text-red-700 bg-red-100 border border-red-300 rounded-t-lg w-full text-center py-0.5 leading-tight uppercase tracking-wide truncate" title="Alpa">Alpa</span>
+                <input 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-red-300 rounded-b-lg py-1 px-1 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none" 
+                    placeholder="0"
+                    value={data.alpha ?? ''} 
+                    onChange={e => handleNumChange('alpha', e.target.value)} 
+                />
+            </div>
+            <div className="flex flex-col items-center min-w-0">
+                <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-300 rounded-t-lg w-full text-center py-0.5 leading-tight uppercase tracking-wide truncate" title="Pulang">Pulang</span>
+                <input 
+                    type="text" 
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-purple-300 rounded-b-lg py-1 px-1 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none" 
+                    placeholder="0"
+                    value={data.pulang ?? ''} 
+                    onChange={e => handleNumChange('pulang', e.target.value)} 
+                />
+            </div>
+        </div>
+    )
+}
+
+/**
  * Komponen Input Data Raport (Non-Akademik) Dual Mode
  * Mode Halaqoh: Ketat khusus Musyrif pengampu halaqoh (halaqoh.musyrif_id)
  * Mode Kelas: Ketat khusus Wali Kelas pengampu kelas (kelas.wali_kelas_id)
@@ -38,8 +135,39 @@ const InputPerilakuPage = () => {
     })
 
     useEffect(() => {
-        loadDropdownsAndPermissions()
-    }, [user, userProfile, mode])
+        if (user?.id) {
+            loadDropdownsAndPermissions()
+        }
+    }, [user?.id, userProfile?.activeRole])
+
+    const handleModeChange = (newMode) => {
+        if (newMode === mode) return
+        if (!isAdmin) {
+            if (newMode === 'halaqoh' && halaqohList.length === 0) {
+                setError('Akses Dibatasi: Anda tidak terdaftar sebagai Musyrif pada halaqoh manapun.')
+                return
+            }
+            if (newMode === 'kelas' && kelasList.length === 0) {
+                setError('Akses Dibatasi: Anda tidak terdaftar sebagai Wali Kelas pada kelas manapun.')
+                return
+            }
+        }
+        setError('')
+        setMode(newMode)
+        if (newMode === 'halaqoh') {
+            setFilters(prev => ({
+                ...prev,
+                kelas_id: '',
+                halaqoh_id: halaqohList.length > 0 ? halaqohList[0].id : ''
+            }))
+        } else {
+            setFilters(prev => ({
+                ...prev,
+                halaqoh_id: '',
+                kelas_id: kelasList.length > 0 ? kelasList[0].id : ''
+            }))
+        }
+    }
 
     // 1. Load Dropdowns & Determine Permissions (Strict Wali Kelas / Musyrif Filter)
     const loadDropdownsAndPermissions = async () => {
@@ -70,6 +198,10 @@ const InputPerilakuPage = () => {
             const activeSem = allSemesters.find(s => s.is_active)
             if (activeSem) activeSemId = activeSem.id
 
+            let activeHalaqohList = allHalaqoh
+            let activeKelasList = allKelas
+            let targetMode = mode
+
             if (!adminRole && user) {
                 let guruData = null
 
@@ -94,52 +226,40 @@ const InputPerilakuPage = () => {
                 if (guruData) {
                     setTeacherInfo(guruData)
 
-                    if (mode === 'halaqoh') {
-                        // Strict filter for Musyrif Halaqoh
-                        const assignedHalaqoh = allHalaqoh.filter(h => h.musyrif_id === guruData.id)
-                        setHalaqohList(assignedHalaqoh)
-                        setKelasList([])
+                    const assignedHalaqoh = allHalaqoh.filter(h => h.musyrif_id === guruData.id)
+                    const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
 
-                        setFilters({
-                            semester_id: activeSemId,
-                            kelas_id: '',
-                            halaqoh_id: assignedHalaqoh.length > 0 ? assignedHalaqoh[0].id : ''
-                        })
-                    } else {
-                        // Strict filter for Wali Kelas
-                        const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
-                        setKelasList(assignedKelas)
-                        setHalaqohList([])
+                    activeHalaqohList = assignedHalaqoh
+                    activeKelasList = assignedKelas
 
-                        setFilters({
-                            semester_id: activeSemId,
-                            kelas_id: assignedKelas.length > 0 ? assignedKelas[0].id : '',
-                            halaqoh_id: ''
-                        })
+                    if (assignedHalaqoh.length === 0 && assignedKelas.length > 0) {
+                        targetMode = 'kelas'
+                        setMode('kelas')
+                    } else if (assignedKelas.length === 0 && assignedHalaqoh.length > 0) {
+                        targetMode = 'halaqoh'
+                        setMode('halaqoh')
                     }
                 } else {
-                    setHalaqohList([])
-                    setKelasList([])
-                    setFilters({ semester_id: activeSemId, kelas_id: '', halaqoh_id: '' })
+                    activeHalaqohList = []
+                    activeKelasList = []
                 }
-            } else {
-                // Admin full access
-                setHalaqohList(allHalaqoh)
-                setKelasList(allKelas)
+            }
 
-                if (mode === 'halaqoh') {
-                    setFilters({
-                        semester_id: activeSemId,
-                        kelas_id: '',
-                        halaqoh_id: allHalaqoh.length > 0 ? allHalaqoh[0].id : ''
-                    })
-                } else {
-                    setFilters({
-                        semester_id: activeSemId,
-                        kelas_id: allKelas.length > 0 ? allKelas[0].id : '',
-                        halaqoh_id: ''
-                    })
-                }
+            setHalaqohList(activeHalaqohList)
+            setKelasList(activeKelasList)
+
+            if (targetMode === 'halaqoh') {
+                setFilters({
+                    semester_id: activeSemId,
+                    kelas_id: '',
+                    halaqoh_id: activeHalaqohList.length > 0 ? activeHalaqohList[0].id : ''
+                })
+            } else {
+                setFilters({
+                    semester_id: activeSemId,
+                    kelas_id: activeKelasList.length > 0 ? activeKelasList[0].id : '',
+                    halaqoh_id: ''
+                })
             }
         } catch (err) {
             console.error('Permission load error:', err)
@@ -199,29 +319,55 @@ const InputPerilakuPage = () => {
                     const p = perilakuData?.find(x => x.santri_id === s.id)
                     const t = taujihadData?.find(x => x.santri_id === s.id)
 
-                    mergedData[s.id] = {
-                        perilaku_id: p?.id,
-                        taujihad_id: t?.id,
+                    const catatanMusyrif = t?.catatan || t?.isi || ''
+                    const catatanWali = p?.catatan_wali || t?.catatan_wali || ''
 
-                        // Perilaku Fields
-                        ketekunan: p?.ketekunan || 'Sangat Baik',
-                        kedisiplinan: p?.kedisiplinan || 'Sangat Baik',
-                        kebersihan: p?.kebersihan || 'Sangat Baik',
-                        kerapian: p?.kerapian || 'Sangat Baik',
+                    if (mode === 'halaqoh') {
+                        mergedData[s.id] = {
+                            perilaku_id: p?.id,
+                            taujihad_id: t?.id,
 
-                        // Tahfizh Summary Fields
-                        jumlah_hafalan: p?.jumlah_hafalan || '',
-                        predikat_hafalan: p?.predikat_hafalan || 'Baik',
-                        total_hafalan: p?.total_hafalan || '',
+                            ketekunan: p?.ketekunan || 'Sangat Baik',
+                            kedisiplinan: p?.kedisiplinan || 'Sangat Baik',
+                            kebersihan: p?.kebersihan || 'Sangat Baik',
+                            kerapian: p?.kerapian || 'Sangat Baik',
 
-                        // Presensi Fields
-                        sakit: p?.sakit ?? 0,
-                        izin: p?.izin ?? 0,
-                        alpha: p?.alpha ?? 0,
-                        pulang: p?.pulang ?? 0,
+                            jumlah_hafalan: p?.jumlah_hafalan || '',
+                            predikat_hafalan: p?.predikat_hafalan || 'Baik',
+                            total_hafalan: p?.total_hafalan || '',
 
-                        // Taujihad Fields
-                        catatan: t?.catatan || t?.isi || ''
+                            sakit: p?.sakit !== undefined && p?.sakit !== null && p?.sakit !== 0 ? p.sakit : '',
+                            izin: p?.izin !== undefined && p?.izin !== null && p?.izin !== 0 ? p.izin : '',
+                            alpha: p?.alpha !== undefined && p?.alpha !== null && p?.alpha !== 0 ? p.alpha : '',
+                            pulang: p?.pulang !== undefined && p?.pulang !== null && p?.pulang !== 0 ? p.pulang : '',
+
+                            catatan_musyrif: catatanMusyrif,
+                            catatan_wali: catatanWali,
+                            catatan: catatanMusyrif
+                        }
+                    } else {
+                        mergedData[s.id] = {
+                            perilaku_id: p?.id,
+                            taujihad_id: t?.id,
+
+                            ketekunan: p?.ketekunan_kelas || 'Sangat Baik',
+                            kedisiplinan: p?.kedisiplinan_kelas || 'Sangat Baik',
+                            kebersihan: p?.kebersihan_kelas || 'Sangat Baik',
+                            kerapian: p?.kerapian_kelas || 'Sangat Baik',
+
+                            jumlah_hafalan: p?.jumlah_hafalan || '',
+                            predikat_hafalan: p?.predikat_hafalan || 'Baik',
+                            total_hafalan: p?.total_hafalan || '',
+
+                            sakit: p?.sakit_kelas !== undefined && p?.sakit_kelas !== null && p?.sakit_kelas !== 0 ? p.sakit_kelas : '',
+                            izin: p?.izin_kelas !== undefined && p?.izin_kelas !== null && p?.izin_kelas !== 0 ? p.izin_kelas : '',
+                            alpha: p?.alpha_kelas !== undefined && p?.alpha_kelas !== null && p?.alpha_kelas !== 0 ? p.alpha_kelas : '',
+                            pulang: p?.pulang_kelas !== undefined && p?.pulang_kelas !== null && p?.pulang_kelas !== 0 ? p.pulang_kelas : '',
+
+                            catatan_musyrif: catatanMusyrif,
+                            catatan_wali: catatanWali,
+                            catatan: catatanWali
+                        }
                     }
                 })
                 setFormData(mergedData)
@@ -243,13 +389,21 @@ const InputPerilakuPage = () => {
 
     // 3. Handle Input Field Changes
     const handleInputChange = (santriId, field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [santriId]: {
-                ...prev[santriId],
-                [field]: value
+        setFormData(prev => {
+            const prevItem = prev[santriId] || {}
+            let updated = { ...prevItem, [field]: value }
+            if (field === 'catatan') {
+                if (mode === 'halaqoh') {
+                    updated.catatan_musyrif = value
+                } else {
+                    updated.catatan_wali = value
+                }
             }
-        }))
+            return {
+                ...prev,
+                [santriId]: updated
+            }
+        })
     }
 
     // 4. Save All Data (Perilaku & Taujihat)
@@ -263,29 +417,50 @@ const InputPerilakuPage = () => {
             const taujihadUpserts = []
 
             for (const [santriId, data] of Object.entries(formData)) {
-                perilakuUpserts.push({
-                    id: data.perilaku_id || crypto.randomUUID(),
-                    santri_id: santriId,
-                    semester_id: filters.semester_id,
-                    ketekunan: data.ketekunan,
-                    kedisiplinan: data.kedisiplinan,
-                    kebersihan: data.kebersihan,
-                    kerapian: data.kerapian,
-                    jumlah_hafalan: data.jumlah_hafalan,
-                    predikat_hafalan: data.predikat_hafalan,
-                    total_hafalan: data.total_hafalan,
-                    sakit: parseInt(data.sakit) || 0,
-                    izin: parseInt(data.izin) || 0,
-                    alpha: parseInt(data.alpha) || 0,
-                    pulang: parseInt(data.pulang) || 0
-                })
+                if (mode === 'halaqoh') {
+                    perilakuUpserts.push({
+                        id: data.perilaku_id || crypto.randomUUID(),
+                        santri_id: santriId,
+                        semester_id: filters.semester_id,
+                        ketekunan: data.ketekunan,
+                        kedisiplinan: data.kedisiplinan,
+                        kebersihan: data.kebersihan,
+                        kerapian: data.kerapian,
+                        jumlah_hafalan: data.jumlah_hafalan,
+                        predikat_hafalan: data.predikat_hafalan,
+                        total_hafalan: data.total_hafalan,
+                        sakit: parseInt(data.sakit) || 0,
+                        izin: parseInt(data.izin) || 0,
+                        alpha: parseInt(data.alpha) || 0,
+                        pulang: parseInt(data.pulang) || 0
+                    })
+                } else {
+                    perilakuUpserts.push({
+                        id: data.perilaku_id || crypto.randomUUID(),
+                        santri_id: santriId,
+                        semester_id: filters.semester_id,
+                        ketekunan_kelas: data.ketekunan,
+                        kedisiplinan_kelas: data.kedisiplinan,
+                        kebersihan_kelas: data.kebersihan,
+                        kerapian_kelas: data.kerapian,
+                        sakit_kelas: parseInt(data.sakit) || 0,
+                        izin_kelas: parseInt(data.izin) || 0,
+                        alpha_kelas: parseInt(data.alpha) || 0,
+                        pulang_kelas: parseInt(data.pulang) || 0,
+                        catatan_wali: data.catatan
+                    })
+                }
 
-                if (data.catatan) {
+                const catatanMusyrifSave = mode === 'halaqoh' ? (data.catatan_musyrif || data.catatan) : data.catatan_musyrif
+                const catatanWaliSave = mode === 'kelas' ? (data.catatan_wali || data.catatan) : data.catatan_wali
+
+                if (catatanMusyrifSave || catatanWaliSave) {
                     taujihadUpserts.push({
                         id: data.taujihad_id || crypto.randomUUID(),
                         santri_id: santriId,
                         semester_id: filters.semester_id,
-                        catatan: data.catatan
+                        catatan: catatanMusyrifSave || '',
+                        catatan_wali: catatanWaliSave || ''
                     })
                 }
             }
@@ -297,7 +472,13 @@ const InputPerilakuPage = () => {
                         onConflict: 'santri_id, semester_id',
                         ignoreDuplicates: false
                     })
-                if (pErr) throw pErr
+
+                if (pErr) {
+                    if (pErr.message?.includes('_kelas') || pErr.message?.includes('catatan_wali') || pErr.code === 'PGRST204') {
+                        throw new Error("Kolom data Kelas ('_kelas') belum ada di tabel 'perilaku_semester' Supabase. Mohon jalankan SQL query di Supabase SQL Editor terlebih dahulu.")
+                    }
+                    throw pErr
+                }
             }
 
             if (taujihadUpserts.length > 0) {
@@ -307,7 +488,22 @@ const InputPerilakuPage = () => {
                         onConflict: 'santri_id, semester_id',
                         ignoreDuplicates: false
                     })
-                if (tErr) throw tErr
+
+                if (tErr) {
+                    // Fallback if catatan_wali column does not exist on taujihad table
+                    if (tErr.message?.includes('catatan_wali') || tErr.code === 'PGRST204') {
+                        const fallbackTaujihad = taujihadUpserts.map(({ catatan_wali, ...rest }) => rest)
+                        const { error: fallbackTErr } = await supabase
+                            .from('taujihad')
+                            .upsert(fallbackTaujihad, {
+                                onConflict: 'santri_id, semester_id',
+                                ignoreDuplicates: false
+                            })
+                        if (fallbackTErr) throw fallbackTErr
+                    } else {
+                        throw tErr
+                    }
+                }
             }
 
             setSuccess('✅ Data Rapor Non-Akademik berhasil disimpan!')
@@ -319,40 +515,6 @@ const InputPerilakuPage = () => {
             setSaving(false)
         }
     }
-
-    const BehaviorOptions = ({ value, onChange }) => (
-        <select 
-            className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
-            value={value} 
-            onChange={e => onChange(e.target.value)}
-        >
-            <option value="">Pilih...</option>
-            <option value="Sangat Baik">Sangat Baik</option>
-            <option value="Baik">Baik</option>
-            <option value="Cukup">Cukup</option>
-            <option value="Kurang">Kurang</option>
-            {!['Sangat Baik', 'Baik', 'Cukup', 'Kurang', ''].includes(value) && value && (
-                <option value={value}>{value} (Lama)</option>
-            )}
-        </select>
-    )
-
-    const PredikatOptions = ({ value, onChange }) => (
-        <select 
-            className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
-            value={value} 
-            onChange={e => onChange(e.target.value)}
-        >
-            <option value="">Pilih...</option>
-            <option value="Mumtaz">Mumtaz</option>
-            <option value="Jayyid Jiddan">Jayyid Jiddan</option>
-            <option value="Jayyid">Jayyid</option>
-            <option value="Maqbul">Maqbul</option>
-            {!['Mumtaz', 'Jayyid Jiddan', 'Jayyid', 'Maqbul', ''].includes(value) && value && (
-                <option value={value}>{value} (Lama)</option>
-            )}
-        </select>
-    )
 
     return (
         <div className="nilai-page">
@@ -400,22 +562,41 @@ const InputPerilakuPage = () => {
                 </div>
             )}
 
+            {/* RESTRICTED ACCESS WARNING FOR NON-TEACHER / UNASSIGNED */}
+            {!isAdmin && halaqohList.length === 0 && kelasList.length === 0 && !loading && (
+                <div className="alert alert-error mb-4 flex items-center gap-2 bg-amber-50 border-amber-200 text-amber-900 rounded-xl p-3 text-xs">
+                    <Lock size={18} className="text-amber-600 flex-shrink-0" />
+                    <div>
+                        <span className="font-bold">Akses Dibatasi: </span>
+                        Akun Anda terhubung sebagai pengajar ({teacherInfo?.nama || 'Guru'}), namun belum ditugaskan sebagai Wali Kelas pada kelas manapun maupun Musyrif pada halaqoh manapun. Hanya Super Admin, Admin Akademik, Wali Kelas, dan Musyrif yang dapat mengakses data ini.
+                    </div>
+                </div>
+            )}
+
             {/* DUAL MODE SWITCHER */}
             <div className="flex bg-gray-200/80 p-1 rounded-xl gap-1 text-xs font-bold mb-4 w-fit">
                 <button
                     type="button"
-                    onClick={() => setMode('halaqoh')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${mode === 'halaqoh' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    onClick={() => handleModeChange('halaqoh')}
+                    disabled={!isAdmin && halaqohList.length === 0}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                        mode === 'halaqoh' ? 'bg-white text-emerald-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    } ${!isAdmin && halaqohList.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={!isAdmin && halaqohList.length === 0 ? 'Hanya Musyrif pengampu halaqoh yang dapat mengakses mode ini' : ''}
                 >
-                    <BookOpen size={16} />
+                    {!isAdmin && halaqohList.length === 0 ? <Lock size={14} className="text-gray-400" /> : <BookOpen size={16} />}
                     <span>Perilaku & Catatan Halaqoh (Musyrif)</span>
                 </button>
                 <button
                     type="button"
-                    onClick={() => setMode('kelas')}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${mode === 'kelas' ? 'bg-white text-blue-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                    onClick={() => handleModeChange('kelas')}
+                    disabled={!isAdmin && kelasList.length === 0}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                        mode === 'kelas' ? 'bg-white text-blue-800 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    } ${!isAdmin && kelasList.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={!isAdmin && kelasList.length === 0 ? 'Hanya Wali Kelas pengampu kelas yang dapat mengakses mode ini' : ''}
                 >
-                    <GraduationCap size={16} />
+                    {!isAdmin && kelasList.length === 0 ? <Lock size={14} className="text-gray-400" /> : <GraduationCap size={16} />}
                     <span>Perilaku & Catatan Kelas (Wali Kelas)</span>
                 </button>
             </div>
@@ -506,15 +687,15 @@ const InputPerilakuPage = () => {
                                 { header: 'Predikat', className: 'min-w-[150px]', render: (row) => <PredikatOptions value={formData[row.id]?.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} /> },
                                 { header: 'Total Hafalan', className: 'min-w-[160px]', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Contoh: 3 Juz" value={formData[row.id]?.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} /> },
                             ] : []),
-
                             {
-                                header: 'Ketidakhadiran (S/I/A/P)', className: 'min-w-[210px] border-l border-gray-200/60 text-center', render: (row) => (
-                                    <div className="flex gap-1.5 justify-center">
-                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="S" title="Sakit" value={formData[row.id]?.sakit ?? ''} onChange={e => handleInputChange(row.id, 'sakit', e.target.value)} />
-                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="I" title="Izin" value={formData[row.id]?.izin ?? ''} onChange={e => handleInputChange(row.id, 'izin', e.target.value)} />
-                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="A" title="Alpha" value={formData[row.id]?.alpha ?? ''} onChange={e => handleInputChange(row.id, 'alpha', e.target.value)} />
-                                        <input type="number" min="0" className="w-11 text-xs font-semibold text-center text-gray-800 bg-white border border-gray-300 rounded-lg py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="P" title="Pulang" value={formData[row.id]?.pulang ?? ''} onChange={e => handleInputChange(row.id, 'pulang', e.target.value)} />
-                                    </div>
+                                header: 'Ketidakhadiran (S/I/A/P)', 
+                                className: 'min-w-[320px] border-l border-gray-200/60 text-center', 
+                                cellClassName: 'px-2 py-4',
+                                render: (row) => (
+                                    <AttendanceInputs 
+                                        data={formData[row.id]} 
+                                        onChange={(field, val) => handleInputChange(row.id, field, val)} 
+                                    />
                                 )
                             },
 
@@ -579,12 +760,10 @@ const InputPerilakuPage = () => {
                                     {/* Presensi */}
                                     <div className="border-t border-gray-50 pt-3">
                                         <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Ketidakhadiran (S/I/A/P)</h4>
-                                        <div className="flex gap-2">
-                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="S" title="Sakit" value={d.sakit ?? ''} onChange={e => handleInputChange(row.id, 'sakit', e.target.value)} />
-                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="I" title="Izin" value={d.izin ?? ''} onChange={e => handleInputChange(row.id, 'izin', e.target.value)} />
-                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="A" title="Alpha" value={d.alpha ?? ''} onChange={e => handleInputChange(row.id, 'alpha', e.target.value)} />
-                                            <input type="number" min="0" className="form-control h-8 text-sm flex-1 text-center" placeholder="P" title="Pulang" value={d.pulang ?? ''} onChange={e => handleInputChange(row.id, 'pulang', e.target.value)} />
-                                        </div>
+                                        <AttendanceInputs 
+                                            data={d} 
+                                            onChange={(field, val) => handleInputChange(row.id, field, val)} 
+                                        />
                                     </div>
                                     {/* Taujihat */}
                                     <div className="border-t border-gray-50 pt-3">

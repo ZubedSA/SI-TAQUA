@@ -11,6 +11,7 @@ const RaportTemplate = ({
     taujihad,
     ketidakhadiran,
     musyrifName,
+    waliKelasName,
     catatanWali,
     type = 'all' // 'all', 'tahfizh', 'madrasah'
 }) => {
@@ -146,7 +147,8 @@ const RaportTemplate = ({
                     perilaku={perilaku}
                     ketidakhadiran={ketidakhadiran}
                     catatanWali={catatanWali || taujihad?.catatan}
-                    musyrifName={musyrifName}
+                    waliKelasName={waliKelasName || santri?.wali_kelas_nama}
+                    musyrifName={musyrifName || santri?.musyrif_nama}
                 />
             )}
         </div>

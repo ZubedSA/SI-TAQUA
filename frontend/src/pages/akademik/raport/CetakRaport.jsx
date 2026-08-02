@@ -73,25 +73,37 @@ const CetakRaport = () => {
                 .from('santri')
                 .select(`
                     *,
-                    kelas:kelas_id(nama),
-                    halaqoh:halaqoh_id(nama, musyrif_id)
+                    kelas:kelas_id(id, nama, wali_kelas_id, wali_kelas:guru!wali_kelas_id(nama)),
+                    halaqoh:halaqoh_id(id, nama, musyrif_id, musyrif:guru!musyrif_id(nama))
                 `)
                 .eq('id', santriId)
                 .single();
 
             if (santriError) throw santriError;
-            setSantri(santriData);
 
-            let musyrifName = "Imam 'Ashim Al-Kufi";
-            if (santriData.halaqoh?.musyrif_id) {
+            let musyrifName = santriData.halaqoh?.musyrif?.nama || null;
+            if (!musyrifName && santriData.halaqoh?.musyrif_id) {
                 const { data: guruData } = await supabase
                     .from('guru')
                     .select('nama')
                     .eq('id', santriData.halaqoh.musyrif_id)
-                    .single();
+                    .maybeSingle();
                 if (guruData) musyrifName = guruData.nama;
             }
-            santriData.musyrif_nama = musyrifName;
+
+            let waliKelasName = santriData.kelas?.wali_kelas?.nama || null;
+            if (!waliKelasName && santriData.kelas?.wali_kelas_id) {
+                const { data: guruData } = await supabase
+                    .from('guru')
+                    .select('nama')
+                    .eq('id', santriData.kelas.wali_kelas_id)
+                    .maybeSingle();
+                if (guruData) waliKelasName = guruData.nama;
+            }
+
+            santriData.musyrif_nama = musyrifName || "UST. SUBAIDI";
+            santriData.wali_kelas_nama = waliKelasName || ".....................";
+            setSantri(santriData);
 
             // 2. Fetch Semester
             const { data: semesterData } = await supabase
@@ -221,7 +233,11 @@ const CetakRaport = () => {
                 sakit: perilakuData?.sakit ?? '-',
                 izin: perilakuData?.izin ?? '-',
                 alpha: perilakuData?.alpha ?? '-',
-                pulang: perilakuData?.pulang ?? '-'
+                pulang: perilakuData?.pulang ?? '-',
+                sakit_kelas: perilakuData?.sakit_kelas ?? '-',
+                izin_kelas: perilakuData?.izin_kelas ?? '-',
+                alpha_kelas: perilakuData?.alpha_kelas ?? '-',
+                pulang_kelas: perilakuData?.pulang_kelas ?? '-'
             });
 
         } catch (error) {
@@ -402,7 +418,9 @@ const CetakRaport = () => {
                         perilaku={perilaku}
                         taujihad={taujihad}
                         ketidakhadiran={ketidakhadiran}
+                        catatanWali={perilaku?.catatan_wali || taujihad?.catatan_wali}
                         musyrifName={santri?.musyrif_nama}
+                        waliKelasName={santri?.wali_kelas_nama}
                         type={activeTab}
                     />
                 </div>
