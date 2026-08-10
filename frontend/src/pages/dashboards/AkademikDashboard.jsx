@@ -42,6 +42,8 @@ ChartJS.register(
     Filler
 )
 
+import { PageSkeleton } from '../../components/ui/Skeleton'
+
 /**
  * Akademik Dashboard - Operasional akademik (guru/admin)
  * Fokus pada hafalan, nilai, presensi, dan santri
@@ -85,11 +87,13 @@ const AkademikDashboard = () => {
 
     const fetchStats = async () => {
         setLoading(true)
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
         try {
-            const [santriRes, halaqohRes] = await Promise.all([
+            const fetchPromise = Promise.all([
                 supabase.from('santri').select('*', { count: 'exact', head: true }).eq('status', 'Aktif'),
                 supabase.from('halaqoh').select('*', { count: 'exact', head: true })
             ])
+            const [santriRes, halaqohRes] = await Promise.race([fetchPromise, timeoutPromise])
             setStats({
                 totalSantri: santriRes.count || 0,
                 totalHalaqoh: halaqohRes.count || 0
@@ -224,6 +228,8 @@ const AkademikDashboard = () => {
             }
         }
     }
+
+    if (loading) return <PageSkeleton />
 
     return (
         <div className="akademik-dashboard" data-dashboard="akademik">

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, Suspense } from 'react'
 import { lazyWithRetry as lazy } from './utils/lazyWithRetry'
+import { PageSkeleton } from './components/ui/Skeleton'
 import Spinner from './components/ui/Spinner'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
@@ -166,7 +167,7 @@ function App() {
             <CalendarProvider>
               <ToastProvider>
                 <AbsensiIsolationManager>
-                  <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><Spinner size="xl" label="Memuat SI-TAQUA..." /></div>}>
+                  <Suspense fallback={<PageSkeleton />}>
                     <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<LandingPage />} />

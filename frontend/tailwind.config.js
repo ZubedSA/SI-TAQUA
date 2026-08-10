@@ -112,6 +112,15 @@ export default {
                 sans: ['var(--font-sans)', 'sans-serif'],
                 mono: ['var(--font-mono)', 'monospace'],
             },
+            fontSize: {
+                xs: ['var(--font-size-xs)', { lineHeight: '1.4' }],
+                sm: ['var(--font-size-sm)', { lineHeight: '1.45' }],
+                base: ['var(--font-size-base)', { lineHeight: '1.5' }],
+                lg: ['var(--font-size-lg)', { lineHeight: '1.5' }],
+                xl: ['var(--font-size-xl)', { lineHeight: '1.4' }],
+                '2xl': ['var(--font-size-2xl)', { lineHeight: '1.3' }],
+                '3xl': ['var(--font-size-3xl)', { lineHeight: '1.25' }],
+            },
             borderRadius: {
                 DEFAULT: 'var(--border-radius)',
                 sm: 'var(--border-radius-sm)',

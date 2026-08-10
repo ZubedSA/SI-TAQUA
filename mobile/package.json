@@ -1,0 +1,8 @@
+{
+  "name": "si-taqua-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "echo \"Mobile package initialized\""
+  }
+}

@@ -137,22 +137,22 @@ const AcademicBottomNav = () => {
                         <X size={20} />
                     </button>
                 </div>
-                <div className="p-6 grid grid-cols-2 gap-4">
+                <div className="p-4 sm:p-6 grid grid-cols-2 gap-3 sm:gap-4">
                     {activeSheet && navItems.find(i => i.id === activeSheet)?.children?.map((child, idx) => (
                         <NavLink
                             key={idx}
                             to={child.path}
                             onClick={closeSheet}
                             className={({ isActive }) => `
-                                flex flex-col items-center gap-2 p-4 rounded-2xl transition-all
+                                flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl transition-all active:scale-95 min-h-[96px] h-24 w-full relative
                                 ${isActive 
-                                    ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-200' 
-                                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                    ? 'bg-[#BCF32F] text-black shadow-md shadow-[#BCF32F]/10 scale-[1.02]' 
+                                    : 'bg-[#143d2a] text-gray-300 hover:bg-[#1a4a35] hover:text-white border border-[#1d5239]'
                                 }
                             `}
                         >
-                            <child.icon size={24} className={location.pathname === child.path ? 'text-primary-600' : 'text-gray-400'} />
-                            <span className="text-xs font-semibold text-center leading-tight">{child.label}</span>
+                            <child.icon size={26} className={`shrink-0 ${location.pathname === child.path ? 'text-black' : 'text-white'}`} />
+                            <span className="text-xs font-bold text-center leading-tight line-clamp-2 px-1">{child.label}</span>
                         </NavLink>
                     ))}
                 </div>

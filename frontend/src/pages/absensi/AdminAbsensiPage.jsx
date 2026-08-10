@@ -80,6 +80,8 @@ const AdminAbsensiPage = () => {
     const [manualStatus, setManualStatus] = useState('Hadir')
     const [allJadwal, setAllJadwal] = useState([])
     const [filterType, setFilterType] = useState('Semua') // 'Semua', 'Madrosah', 'Quraniyah'
+    const [filterKelasId, setFilterKelasId] = useState('')
+    const [filterHalaqohId, setFilterHalaqohId] = useState('')
     const [searchTerm, setSearchTerm] = useState('')
     const [filterGuru, setFilterGuru] = useState('')
 
@@ -102,6 +104,18 @@ const AdminAbsensiPage = () => {
         return new Date(dateStr).toLocaleDateString('id-ID', options)
     }
 
+    const getCategoryLabel = () => {
+        if (filterType === 'Madrosah') {
+            const kName = filterKelasId ? kelasList.find(k => k.id === filterKelasId)?.nama : 'Semua Kelas'
+            return `Madrosah (${kName || 'Kelas'})`
+        }
+        if (filterType === 'Quraniyah') {
+            const hName = filterHalaqohId ? halaqohList.find(h => h.id === filterHalaqohId)?.nama : 'Semua Halaqoh'
+            return `Qur'aniyah (${hName || 'Halaqoh'})`
+        }
+        return 'Semua Kategori'
+    }
+
     const exportToPDF = () => {
         const doc = new jsPDF({
             orientation: 'landscape',
@@ -110,11 +124,12 @@ const AdminAbsensiPage = () => {
         });
 
         const isStaf = laporanSubTab === 'staf';
+        const categoryTitle = getCategoryLabel();
         const title = isStaf 
-            ? `Laporan Kehadiran Staf Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`
-            : `Laporan Kehadiran Santri Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`;
+            ? `Laporan Kehadiran Staf - ${categoryTitle} [${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}]`
+            : `Laporan Kehadiran Santri - ${categoryTitle} [${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}]`;
         
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setTextColor(15, 23, 42); // Slate-900
         doc.text(title, 14, 15);
         
@@ -149,24 +164,29 @@ const AdminAbsensiPage = () => {
                 6: { cellWidth: 35, halign: 'center' }
             };
         } else {
-            tableHeaders = [["No", "Nama Santri", "NIS", "Kelas / Halaqoh", "Hadir", "Sakit", "Izin", "Alpha"]];
+            tableHeaders = [["No", "Nama Santri", "NIS", "Kategori", "Kelas / Halaqoh", "Hadir", "Terlambat", "Sakit", "Izin", "Alpha"]];
             tableRows = aggregatedSantri.map((item, index) => [
                 index + 1,
                 item.nama,
                 item.nis || '-',
+                item.kategoriLabel || '-',
                 item.grup || '-',
                 item.Hadir,
+                item.Terlambat || 0,
                 item.Sakit,
                 item.Izin,
                 item.Alpha
             ]);
             columnStyles = {
-                0: { cellWidth: 12, halign: 'center' },
+                0: { cellWidth: 8, halign: 'center' },
                 1: { fontStyle: 'bold' },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 20, halign: 'center' },
-                6: { cellWidth: 20, halign: 'center' },
-                7: { cellWidth: 20, halign: 'center' }
+                3: { cellWidth: 22 },
+                4: { cellWidth: 22 },
+                5: { cellWidth: 12, halign: 'center' },
+                6: { cellWidth: 14, halign: 'center' },
+                7: { cellWidth: 12, halign: 'center' },
+                8: { cellWidth: 12, halign: 'center' },
+                9: { cellWidth: 12, halign: 'center' }
             };
         }
 
@@ -193,7 +213,7 @@ const AdminAbsensiPage = () => {
             }
         });
 
-        doc.save(`Laporan_Kehadiran_${isStaf ? 'Staf' : 'Santri'}_${filterStartDate}_sd_${filterEndDate}.pdf`);
+        doc.save(`Laporan_Kehadiran_${isStaf ? 'Staf' : 'Santri'}_${filterType}_${filterStartDate}_sd_${filterEndDate}.pdf`);
     };
 
     const exportToExcel = () => {
@@ -201,7 +221,7 @@ const AdminAbsensiPage = () => {
         let dataToExport, maxWidths, sheetName;
 
         if (isStaf) {
-            sheetName = "Laporan Kehadiran Staf";
+            sheetName = `Staf ${filterType}`;
             dataToExport = aggregatedStaf.map((item, index) => {
                 const total = item.Hadir + item.Izin + item.Alpha;
                 const score = total > 0 ? Math.round(((item.Hadir + item.Izin) / total) * 100) : 0;
@@ -225,13 +245,15 @@ const AdminAbsensiPage = () => {
                 { wch: 18 }   // Score
             ];
         } else {
-            sheetName = "Laporan Kehadiran Santri";
+            sheetName = `Santri ${filterType}`;
             dataToExport = aggregatedSantri.map((item, index) => ({
                 "No": index + 1,
                 "Nama Santri": item.nama,
                 "NIS": item.nis || '-',
+                "Kategori": item.kategoriLabel || '-',
                 "Kelas / Halaqoh": item.grup || '-',
                 "Hadir": item.Hadir,
+                "Terlambat": item.Terlambat || 0,
                 "Sakit": item.Sakit,
                 "Izin": item.Izin,
                 "Alpha": item.Alpha
@@ -240,8 +262,10 @@ const AdminAbsensiPage = () => {
                 { wch: 6 },   // No
                 { wch: 30 },  // Nama
                 { wch: 15 },  // NIS
+                { wch: 18 },  // Kategori
                 { wch: 20 },  // Kelas/Halaqoh
                 { wch: 10 },  // Hadir
+                { wch: 10 },  // Terlambat
                 { wch: 10 },  // Sakit
                 { wch: 10 },  // Izin
                 { wch: 10 }   // Alpha
@@ -253,14 +277,15 @@ const AdminAbsensiPage = () => {
         XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
         worksheet['!cols'] = maxWidths;
 
-        XLSX.writeFile(workbook, `Laporan_Kehadiran_${isStaf ? 'Staf' : 'Santri'}_${filterStartDate}_sd_${filterEndDate}.xlsx`);
+        XLSX.writeFile(workbook, `Laporan_Kehadiran_${isStaf ? 'Staf' : 'Santri'}_${filterType}_${filterStartDate}_sd_${filterEndDate}.xlsx`);
     };
 
     const exportToWord = () => {
         const isStaf = laporanSubTab === 'staf';
+        const categoryTitle = getCategoryLabel();
         const title = isStaf 
-            ? `Laporan Kehadiran Staf Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`
-            : `Laporan Kehadiran Santri Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`;
+            ? `Laporan Kehadiran Staf - ${categoryTitle} Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`
+            : `Laporan Kehadiran Santri - ${categoryTitle} Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`;
         
         let tableHeaderHtml = '';
         let tableBodyHtml = '';
@@ -298,8 +323,10 @@ const AdminAbsensiPage = () => {
                     <th>No</th>
                     <th>Nama Santri</th>
                     <th>NIS</th>
+                    <th>Kategori</th>
                     <th>Kelas / Halaqoh</th>
                     <th>Hadir</th>
+                    <th>Terlambat</th>
                     <th>Sakit</th>
                     <th>Izin</th>
                     <th>Alpha</th>
@@ -311,8 +338,10 @@ const AdminAbsensiPage = () => {
                         <td class="center">${index + 1}</td>
                         <td><b>${item.nama}</b></td>
                         <td>${item.nis || '-'}</td>
+                        <td>${item.kategoriLabel || '-'}</td>
                         <td>${item.grup || '-'}</td>
                         <td class="center">${item.Hadir}</td>
+                        <td class="center">${item.Terlambat || 0}</td>
                         <td class="center">${item.Sakit}</td>
                         <td class="center">${item.Izin}</td>
                         <td class="center">${item.Alpha}</td>
@@ -436,9 +465,16 @@ const AdminAbsensiPage = () => {
         if (activeTab === 'staf' || activeTab === 'laporan') {
             fetchPresensiStaf()
         }
-    }, [activeTab, filterDate, filterStartDate, filterEndDate, filterType])
+    }, [activeTab, filterDate, filterStartDate, filterEndDate, filterType, filterKelasId, filterHalaqohId])
 
     const fetchPresensiStaf = async () => {
+        if (activeTab === 'laporan') {
+            if (!filterStartDate || !filterEndDate) return
+            if (filterStartDate > filterEndDate) return
+        } else {
+            if (!filterDate) return
+        }
+
         setLoading(true)
         try {
             let query = supabase
@@ -524,11 +560,16 @@ const AdminAbsensiPage = () => {
     }
 
     const fetchPresensi = async () => {
+        const isRange = activeTab === 'laporan'
+        if (isRange) {
+            if (!filterStartDate || !filterEndDate) return
+            if (filterStartDate > filterEndDate) return
+        } else {
+            if (!filterDate) return
+        }
+
         setLoading(true)
         try {
-            // Jika tab laporan, gunakan range
-            const isRange = activeTab === 'laporan'
-
             let query = supabase
                 .from('presensi')
                 .select(`
@@ -537,8 +578,10 @@ const AdminAbsensiPage = () => {
                         id, 
                         nama, 
                         nis, 
-                        kelas:kelas_id(nama),
-                        halaqoh:halaqoh_id(nama)
+                        kelas_id,
+                        halaqoh_id,
+                        kelas:kelas_id(id, nama),
+                        halaqoh:halaqoh_id(id, nama)
                     )
                 `)
 
@@ -561,7 +604,7 @@ const AdminAbsensiPage = () => {
         }
     }
 
-    // 1. Filter data mentah menjadi data yang siap ditampilkan di Rekap
+    // 1. Filter data mentah menjadi data yang siap ditampilkan di Rekap & Laporan
     const filteredPresensi = React.useMemo(() => {
         return presensiData.filter(p => {
             const isQuraniyah = p.keterangan?.includes('[Quraniyah]') || (p.santri?.halaqoh && !p.santri?.kelas)
@@ -572,45 +615,71 @@ const AdminAbsensiPage = () => {
             
             if (!matchesType) return false
 
+            if (filterType === 'Madrosah' && filterKelasId) {
+                const sKelasId = p.santri?.kelas_id || p.santri?.kelas?.id
+                if (sKelasId !== filterKelasId) return false
+            }
+
+            if (filterType === 'Quraniyah' && filterHalaqohId) {
+                const sHalaqohId = p.santri?.halaqoh_id || p.santri?.halaqoh?.id
+                if (sHalaqohId !== filterHalaqohId) return false
+            }
+
             const searchLower = searchTerm.toLowerCase()
             return (
                 (p.santri?.nama || '').toLowerCase().includes(searchLower) ||
                 (p.santri?.nis || '').toLowerCase().includes(searchLower)
             )
         })
-    }, [presensiData, filterType, searchTerm])
+    }, [presensiData, filterType, filterKelasId, filterHalaqohId, searchTerm])
 
     // 2. Agregasi data dari filteredPresensi untuk Laporan
     const aggregatedSantri = React.useMemo(() => {
         const map = {}
         filteredPresensi.forEach(p => {
             const isQuraniyah = p.keterangan?.includes('[Quraniyah]') || (p.santri?.halaqoh && !p.santri?.kelas)
-            const id = p.santri_id
-            if (!map[id]) {
-                map[id] = {
-                    id,
+            const key = filterType === 'Semua' 
+                ? `${p.santri_id}_${isQuraniyah ? 'quraniyah' : 'madrosah'}`
+                : p.santri_id
+
+            if (!map[key]) {
+                map[key] = {
+                    id: p.santri_id,
+                    key,
                     nama: p.santri?.nama,
                     nis: p.santri?.nis,
-                    grup: isQuraniyah ? p.santri?.halaqoh?.nama : p.santri?.kelas?.nama,
+                    isQuraniyah,
+                    grup: isQuraniyah ? (p.santri?.halaqoh?.nama || 'Halaqoh') : (p.santri?.kelas?.nama || 'Kelas'),
+                    kategoriLabel: isQuraniyah ? "Qur'aniyah (Halaqoh)" : "Madrosah (Kelas)",
                     Hadir: 0,
+                    Terlambat: 0,
                     Sakit: 0,
                     Izin: 0,
                     Alpha: 0
                 }
             }
-            // Logika Case-Insensitive untuk status (Aman terhadap HADIR, Hadir, alpha, alpa, dll)
+            // Logika Case-Insensitive untuk status (Aman terhadap HADIR, Hadir, terlambat, telat, alpha, alpa, dll)
             const s = (p.status || '').toLowerCase()
-            if (s === 'hadir') map[id].Hadir++
-            else if (s === 'sakit') map[id].Sakit++
-            else if (s === 'izin' || s === 'pulang') map[id].Izin++
-            else if (['alpha', 'alpa', 'alfa'].includes(s)) map[id].Alpha++
+            if (s === 'hadir') map[key].Hadir++
+            else if (s === 'terlambat' || s === 'telat') map[key].Terlambat++
+            else if (s === 'sakit') map[key].Sakit++
+            else if (s === 'izin' || s === 'pulang') map[key].Izin++
+            else if (['alpha', 'alpa', 'alfa'].includes(s)) map[key].Alpha++
         })
         return Object.values(map)
-    }, [filteredPresensi])
+    }, [filteredPresensi, filterType])
 
     // Logika Agregasi untuk Laporan Staf (Cross-Check dengan Jadwal dan Izin)
     const aggregatedStaf = React.useMemo(() => {
         if (!allJadwal.length) return []
+
+        const relevantJadwal = allJadwal.filter(j => {
+            if (filterType === 'Madrosah') return j.tipe === 'MADROSAH'
+            if (filterType === 'Quraniyah') return j.tipe === 'HALAQOH' || j.tipe === 'QURANIYAH'
+            return true
+        })
+
+        if (!relevantJadwal.length) return []
 
         const stafSummary = {}
         
@@ -625,7 +694,7 @@ const AdminAbsensiPage = () => {
         }
 
         // 2. Untuk setiap staf di jadwal, inisialisasi rekap
-        const allGuruIds = [...new Set(allJadwal.map(j => j.guru_id))]
+        const allGuruIds = [...new Set(relevantJadwal.map(j => j.guru_id))]
         allGuruIds.forEach(gid => {
             const guru = guruList.find(g => g.id === gid)
             stafSummary[gid] = {
@@ -647,7 +716,7 @@ const AdminAbsensiPage = () => {
             const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
             const dayName = dayMap[date.getDay()]
 
-            const jadwalHariIni = allJadwal.filter(j => j.hari === dayName)
+            const jadwalHariIni = relevantJadwal.filter(j => j.hari === dayName)
             
             jadwalHariIni.forEach(j => {
                 if (!stafSummary[j.guru_id]) return
@@ -744,7 +813,7 @@ const AdminAbsensiPage = () => {
         })
 
         return Object.values(stafSummary).sort((a, b) => b.Alpha - a.Alpha)
-    }, [presensiStaf, allJadwal, filterStartDate, filterEndDate, guruList, izinGuruList])
+    }, [presensiStaf, allJadwal, filterStartDate, filterEndDate, guruList, izinGuruList, filterType])
 
     // Logika untuk Kehadiran Staf Harian (Daftar seluruh jadwal hari ini + status kehadirannya)
     const dailyStaffAttendance = React.useMemo(() => {
@@ -980,7 +1049,11 @@ const AdminAbsensiPage = () => {
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tipe Absensi</label>
                                 <select 
                                     value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
+                                    onChange={(e) => {
+                                        setFilterType(e.target.value)
+                                        setFilterKelasId('')
+                                        setFilterHalaqohId('')
+                                    }}
                                     className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-sm bg-gray-50/30 appearance-none"
                                 >
                                     <option value="Semua">Semua Tipe</option>
@@ -988,7 +1061,36 @@ const AdminAbsensiPage = () => {
                                     <option value="Quraniyah">Qur'aniyah (Halaqoh)</option>
                                 </select>
                             </div>
-                            <div className="md:col-span-2 space-y-2">
+                            {filterType === 'Madrosah' ? (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Filter Kelas</label>
+                                    <select 
+                                        value={filterKelasId}
+                                        onChange={(e) => setFilterKelasId(e.target.value)}
+                                        className="w-full px-4 py-3.5 rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-sm bg-emerald-50/30 text-emerald-900 appearance-none"
+                                    >
+                                        <option value="">Semua Kelas</option>
+                                        {kelasList.map(k => (
+                                            <option key={k.id} value={k.id}>{k.nama}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : filterType === 'Quraniyah' ? (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1">Filter Halaqoh</label>
+                                    <select 
+                                        value={filterHalaqohId}
+                                        onChange={(e) => setFilterHalaqohId(e.target.value)}
+                                        className="w-full px-4 py-3.5 rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-sm bg-blue-50/30 text-blue-900 appearance-none"
+                                    >
+                                        <option value="">Semua Halaqoh</option>
+                                        {halaqohList.map(h => (
+                                            <option key={h.id} value={h.id}>{h.nama}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ) : null}
+                            <div className={`${filterType === 'Semua' ? 'md:col-span-2' : 'md:col-span-1'} space-y-2`}>
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Cari Santri</label>
                                 <div className="relative">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -1486,7 +1588,7 @@ const AdminAbsensiPage = () => {
                 </div>
             ) : activeTab === 'laporan' ? (
                 <div className="space-y-8 animate-slide-up">
-                    <Card variant="premium" className="p-6 md:p-8">
+                    <Card variant="premium" className="p-6 md:p-8 space-y-6">
                         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 md:gap-8">
                             <div className="space-y-1">
                                 <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight italic">Periodical Analysis</h3>
@@ -1503,6 +1605,58 @@ const AdminAbsensiPage = () => {
                                     <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full" />
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Kategori Filter Bar inside Laporan Card */}
+                        <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Kategori Absensi</label>
+                                <select 
+                                    value={filterType}
+                                    onChange={(e) => {
+                                        setFilterType(e.target.value)
+                                        setFilterKelasId('')
+                                        setFilterHalaqohId('')
+                                    }}
+                                    className="w-full px-4 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-gray-50/30 appearance-none"
+                                >
+                                    <option value="Semua">Semua Kategori (Madrosah & Qur'aniyah)</option>
+                                    <option value="Madrosah">Madrosah (Kelas)</option>
+                                    <option value="Quraniyah">Qur'aniyah (Halaqoh)</option>
+                                </select>
+                            </div>
+
+                            {filterType === 'Madrosah' && (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Filter Kelas</label>
+                                    <select 
+                                        value={filterKelasId}
+                                        onChange={(e) => setFilterKelasId(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none"
+                                    >
+                                        <option value="">Semua Kelas</option>
+                                        {kelasList.map(k => (
+                                            <option key={k.id} value={k.id}>{k.nama}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {filterType === 'Quraniyah' && (
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1">Filter Halaqoh</label>
+                                    <select 
+                                        value={filterHalaqohId}
+                                        onChange={(e) => setFilterHalaqohId(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-xs bg-blue-50/40 text-blue-900 appearance-none"
+                                    >
+                                        <option value="">Semua Halaqoh</option>
+                                        {halaqohList.map(h => (
+                                            <option key={h.id} value={h.id}>{h.nama}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                     </Card>
 
@@ -1645,22 +1799,23 @@ const AdminAbsensiPage = () => {
                     ) : (
                         <div className="space-y-8 animate-slide-up">
                             {/* Stats Cards Row for Santri */}
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                                 {[
                                     { label: 'Hadir', status: 'hadir', color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
-                                    { label: 'Izin', status: 'izin', color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
+                                    { label: 'Terlambat', status: 'terlambat', color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50' },
                                     { label: 'Sakit', status: 'sakit', color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
+                                    { label: 'Izin', status: 'izin', color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
                                     { label: 'Alpha', status: 'alpha', color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
                                 ].map(stat => {
                                     const count = filteredPresensi.filter(p => {
                                         const s = (p.status || '').toLowerCase()
-                                        return s === stat.status || (stat.status === 'alpha' && ['alpa', 'alfa'].includes(s))
+                                        return s === stat.status || (stat.status === 'alpha' && ['alpa', 'alfa'].includes(s)) || (stat.status === 'terlambat' && ['terlambat', 'telat'].includes(s))
                                     }).length
                                     return (
-                                        <div key={stat.status} className={`${stat.bg} p-6 rounded-[2.5rem] border border-white shadow-sm flex flex-col items-center justify-center gap-2 group hover:translate-y-[-4px] transition-all duration-300`}>
+                                        <div key={stat.status} className={`${stat.bg} p-5 rounded-[2rem] border border-white shadow-sm flex flex-col items-center justify-center gap-1.5 group hover:translate-y-[-4px] transition-all duration-300`}>
                                             <div className={`w-2 h-2 rounded-full ${stat.color} animate-pulse`}></div>
                                             <div className="text-3xl font-black text-gray-900 tracking-tighter">{count}</div>
-                                            <div className={`text-[10px] font-black uppercase tracking-[0.2em] ${stat.text}`}>{stat.label}</div>
+                                            <div className={`text-[10px] font-black uppercase tracking-[0.15em] ${stat.text}`}>{stat.label}</div>
                                         </div>
                                     )
                                 })}
@@ -1673,7 +1828,7 @@ const AdminAbsensiPage = () => {
                                         <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Total Participation</p>
                                         <h5 className="text-4xl font-black tracking-tighter">
                                             {filteredPresensi.length > 0 
-                                                ? Math.round((filteredPresensi.filter(p => (p.status || '').toLowerCase() === 'hadir').length / filteredPresensi.length) * 100) 
+                                                ? Math.round((filteredPresensi.filter(p => ['hadir', 'terlambat', 'telat'].includes((p.status || '').toLowerCase())).length / filteredPresensi.length) * 100) 
                                                 : 0}%
                                         </h5>
                                     </div>
@@ -1701,53 +1856,74 @@ const AdminAbsensiPage = () => {
                                                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.nis}</div>
                                                      </>
                                                  ), 
-                                                 className: 'px-8 py-6', 
+                                                 className: 'px-6 py-6', 
                                                  hideOnMobile: true 
                                              },
                                              { 
-                                                 header: 'Group / Class', 
-                                                 render: (row) => <span className="px-3 py-1 rounded-lg bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest">{row.grup || '-'}</span>, 
-                                                 className: 'px-8 py-6', 
+                                                 header: 'Kategori & Grup', 
+                                                 render: (row) => (
+                                                     <div className="flex items-center gap-2">
+                                                         <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                                                             row.isQuraniyah 
+                                                                 ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+                                                                 : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                         }`}>
+                                                             {row.isQuraniyah ? <Users size={12} /> : <BookOpen size={12} />}
+                                                             {row.kategoriLabel}: {row.grup || '-'}
+                                                         </span>
+                                                     </div>
+                                                 ), 
+                                                 className: 'px-6 py-6', 
                                                  hideOnMobile: true 
                                              },
                                              { 
                                                  header: 'Hadir', 
                                                  render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Hadir > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Hadir > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-300'}`}>
                                                          {row.Hadir}
                                                      </span>
                                                  ), 
-                                                 className: 'px-8 py-6 text-center text-emerald-600', 
+                                                 className: 'px-4 py-6 text-center text-emerald-600', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Terlambat', 
+                                                 render: (row) => (
+                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Terlambat > 0 ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                         {row.Terlambat}
+                                                     </span>
+                                                 ), 
+                                                 className: 'px-4 py-6 text-center text-orange-600', 
                                                  hideOnMobile: true 
                                              },
                                              { 
                                                  header: 'Sakit', 
                                                  render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Sakit > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Sakit > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-300'}`}>
                                                          {row.Sakit}
                                                      </span>
                                                  ), 
-                                                 className: 'px-8 py-6 text-center text-amber-600', 
+                                                 className: 'px-4 py-6 text-center text-amber-600', 
                                                  hideOnMobile: true 
                                              },
                                              { 
                                                  header: 'Izin', 
                                                  render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Izin > 0 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Izin > 0 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-50 text-gray-300'}`}>
                                                          {row.Izin}
                                                      </span>
                                                  ), 
-                                                 className: 'px-8 py-6 text-center text-blue-600', 
+                                                 className: 'px-4 py-6 text-center text-blue-600', 
                                                  hideOnMobile: true 
                                              },
                                              { 
                                                  header: 'Alpha', 
                                                  render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl font-black text-xs ${row.Alpha > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Alpha > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-300'}`}>
                                                          {row.Alpha}
                                                      </span>
                                                  ), 
-                                                 className: 'px-8 py-6 text-center text-red-600', 
+                                                 className: 'px-4 py-6 text-center text-red-600', 
                                                  hideOnMobile: true 
                                              },
                                              { 
@@ -1755,12 +1931,12 @@ const AdminAbsensiPage = () => {
                                                  render: (row) => (
                                                      <button 
                                                          onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
-                                                         className="p-3 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
+                                                         className="p-2.5 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
                                                      >
                                                          <Eye size={16} />
                                                      </button>
                                                  ), 
-                                                 className: 'px-8 py-6 text-right', 
+                                                 className: 'px-6 py-6 text-right', 
                                                  hideOnMobile: false 
                                              }
                                          ]}
@@ -1772,27 +1948,35 @@ const AdminAbsensiPage = () => {
                                                  <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
                                                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{row.nis}</div>
                                                  <div className="mt-2">
-                                                     <span className="px-2 py-0.5 rounded-lg bg-gray-100 text-gray-500 text-[8px] font-black uppercase tracking-widest">{row.grup || '-'}</span>
+                                                     <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-flex items-center gap-1 ${
+                                                         row.isQuraniyah ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                     }`}>
+                                                         {row.kategoriLabel}: {row.grup || '-'}
+                                                     </span>
                                                  </div>
                                              </div>
                                          )}
                                          mobileCardContent={(row) => (
                                              <div className="flex flex-col gap-2 w-full mt-4 pt-4 border-t border-gray-50">
-                                                 <div className="grid grid-cols-4 gap-2">
-                                                     <div className={`${row.Hadir > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Hadir > 0 ? 'text-emerald-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>H</div>
+                                                 <div className="grid grid-cols-5 gap-1.5">
+                                                     <div className={`${row.Hadir > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Hadir > 0 ? 'text-emerald-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>H</div>
                                                          <div className={`text-xs font-black ${row.Hadir > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.Hadir}</div>
                                                      </div>
-                                                     <div className={`${row.Sakit > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Sakit > 0 ? 'text-amber-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>S</div>
+                                                     <div className={`${row.Terlambat > 0 ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Terlambat > 0 ? 'text-orange-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>T</div>
+                                                         <div className={`text-xs font-black ${row.Terlambat > 0 ? 'text-orange-600' : 'text-gray-300'}`}>{row.Terlambat}</div>
+                                                     </div>
+                                                     <div className={`${row.Sakit > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Sakit > 0 ? 'text-amber-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>S</div>
                                                          <div className={`text-xs font-black ${row.Sakit > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{row.Sakit}</div>
                                                      </div>
-                                                     <div className={`${row.Izin > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Izin > 0 ? 'text-blue-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>I</div>
+                                                     <div className={`${row.Izin > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Izin > 0 ? 'text-blue-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>I</div>
                                                          <div className={`text-xs font-black ${row.Izin > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{row.Izin}</div>
                                                      </div>
-                                                     <div className={`${row.Alpha > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} p-2 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Alpha > 0 ? 'text-red-400' : 'text-gray-300'} uppercase tracking-widest mb-1`}>A</div>
+                                                     <div className={`${row.Alpha > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
+                                                         <div className={`text-[8px] font-black ${row.Alpha > 0 ? 'text-red-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>A</div>
                                                          <div className={`text-xs font-black ${row.Alpha > 0 ? 'text-red-600' : 'text-gray-300'}`}>{row.Alpha}</div>
                                                      </div>
                                                  </div>

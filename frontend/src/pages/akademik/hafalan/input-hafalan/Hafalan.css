@@ -583,7 +583,16 @@
 
     .hafalan-filter-tabs {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    .hafalan-filter-tabs::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .hafalan-filter-tabs::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.15);
+        border-radius: 9999px;
     }
 
     .filter-tab {
@@ -768,4 +777,44 @@
     border-color: #475569 !important;
     -webkit-text-fill-color: #0f172a !important;
     opacity: 1 !important;
+}
+
+/* Mobile-First Input Form Layout & Typography (< 640px) */
+@media (max-width: 640px) {
+    .hafalan-form-page .form-card {
+        padding: 1rem !important;
+        border-radius: 1.25rem !important;
+    }
+
+    .form-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 1.25rem !important;
+    }
+
+    .form-section-title {
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        color: #0A2619 !important;
+        margin-bottom: 1rem !important;
+        border-bottom: 2px solid #E2E8F0 !important;
+        padding-bottom: 0.5rem !important;
+    }
+
+    .form-actions {
+        display: flex !important;
+        flex-direction: column-reverse !important;
+        gap: 0.75rem !important;
+        margin-top: 1.5rem !important;
+    }
+
+    .form-actions button,
+    .form-actions .btn {
+        width: 100% !important;
+        min-height: 48px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        border-radius: 0.875rem !important;
+        justify-content: center !important;
+    }
 }

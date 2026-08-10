@@ -350,21 +350,21 @@ const BottomNav = () => {
                         <X size={20} />
                     </button>
                 </div>
-                <div className="p-6 grid grid-cols-2 gap-4">
+                <div className="p-4 sm:p-6 grid grid-cols-2 gap-3 sm:gap-4">
                     {activeSheet && (activeSubSheet ? activeSubSheet.children : navItems.find(i => i.id === activeSheet)?.children)?.map((child, idx) => (
                         <button
                             key={idx}
                             onClick={() => handleSubMenuClick(child)}
                             className={`
-                                flex flex-col items-center gap-2 p-4 rounded-2xl transition-all active:scale-95
+                                flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl transition-all active:scale-95 min-h-[96px] h-24 w-full relative
                                 ${location.pathname === child.path 
                                     ? 'bg-[#BCF32F] text-black shadow-md shadow-[#BCF32F]/10 scale-[1.02]' 
-                                    : 'bg-[#143d2a] text-gray-300 hover:bg-[#1a4a35] hover:text-white'
+                                    : 'bg-[#143d2a] text-gray-300 hover:bg-[#1a4a35] hover:text-white border border-[#1d5239]'
                                 }
                             `}
                         >
-                            <child.icon size={24} className={location.pathname === child.path ? 'text-black' : 'text-white'} />
-                            <span className="text-xs font-semibold text-center leading-tight">{child.label}</span>
+                            <child.icon size={26} className={`shrink-0 ${location.pathname === child.path ? 'text-black' : 'text-white'}`} />
+                            <span className="text-xs font-bold text-center leading-tight line-clamp-2 px-1">{child.label}</span>
                             {child.children && (
                                 <div className="absolute top-2 right-2">
                                     <div className="w-1.5 h-1.5 bg-[#BCF32F] rounded-full" />

@@ -22,11 +22,18 @@ const GlobalSearch = ({ isOpen, onClose }) => {
 
     // Focus input when modal opens
     useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus()
+        if (isOpen) {
             setQuery('')
             setResults([])
             setSelectedIndex(0)
+            const timer = setTimeout(() => {
+                try {
+                    inputRef.current?.focus()
+                } catch (err) {
+                    console.log('Focus error:', err)
+                }
+            }, 60)
+            return () => clearTimeout(timer)
         }
     }, [isOpen])
 
@@ -41,13 +48,7 @@ const GlobalSearch = ({ isOpen, onClose }) => {
         const searchResults = []
 
         try {
-            const [
-                { data: santriData },
-                { data: guruData },
-                { data: kelasData },
-                { data: halaqohData },
-                { data: mapelData }
-            ] = await Promise.all([
+            const [santriRes, guruRes, kelasRes, halaqohRes, mapelRes] = await Promise.allSettled([
                 // Search Santri (Nama & NIS)
                 supabase
                     .from('santri')
@@ -63,26 +64,26 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                 // Search Kelas
                 supabase
                     .from('kelas')
-                    .select('id, nama_kelas')
-                    .ilike('nama_kelas', `%${searchQuery}%`)
+                    .select('id, nama')
+                    .ilike('nama', `%${searchQuery}%`)
                     .limit(5),
                 // Search Halaqoh
                 supabase
                     .from('halaqoh')
-                    .select('id, nama_halaqoh')
-                    .ilike('nama_halaqoh', `%${searchQuery}%`)
+                    .select('id, nama')
+                    .ilike('nama', `%${searchQuery}%`)
                     .limit(5),
                 // Search Mapel
                 supabase
                     .from('mapel')
-                    .select('id, nama_mapel')
-                    .ilike('nama_mapel', `%${searchQuery}%`)
+                    .select('id, nama')
+                    .ilike('nama', `%${searchQuery}%`)
                     .limit(5)
             ])
 
             // Process Santri
-            if (santriData) {
-                santriData.forEach(item => {
+            if (santriRes.status === 'fulfilled' && santriRes.value.data) {
+                santriRes.value.data.forEach(item => {
                     searchResults.push({
                         type: 'santri',
                         id: item.id,
@@ -94,8 +95,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             }
 
             // Process Guru
-            if (guruData) {
-                guruData.forEach(item => {
+            if (guruRes.status === 'fulfilled' && guruRes.value.data) {
+                guruRes.value.data.forEach(item => {
                     searchResults.push({
                         type: 'guru',
                         id: item.id,
@@ -107,12 +108,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             }
 
             // Process Kelas
-            if (kelasData) {
-                kelasData.forEach(item => {
+            if (kelasRes.status === 'fulfilled' && kelasRes.value.data) {
+                kelasRes.value.data.forEach(item => {
                     searchResults.push({
                         type: 'kelas',
                         id: item.id,
-                        title: item.nama_kelas,
+                        title: item.nama || item.nama_kelas,
                         subtitle: 'Kelas',
                         path: `/kelas?highlight=${item.id}`
                     })
@@ -120,12 +121,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             }
 
             // Process Halaqoh
-            if (halaqohData) {
-                halaqohData.forEach(item => {
+            if (halaqohRes.status === 'fulfilled' && halaqohRes.value.data) {
+                halaqohRes.value.data.forEach(item => {
                     searchResults.push({
                         type: 'halaqoh',
                         id: item.id,
-                        title: item.nama_halaqoh,
+                        title: item.nama || item.nama_halaqoh,
                         subtitle: 'Halaqoh',
                         path: `/halaqoh?highlight=${item.id}`
                     })
@@ -133,12 +134,12 @@ const GlobalSearch = ({ isOpen, onClose }) => {
             }
 
             // Process Mapel
-            if (mapelData) {
-                mapelData.forEach(item => {
+            if (mapelRes.status === 'fulfilled' && mapelRes.value.data) {
+                mapelRes.value.data.forEach(item => {
                     searchResults.push({
                         type: 'mapel',
                         id: item.id,
-                        title: item.nama_mapel,
+                        title: item.nama || item.nama_mapel,
                         subtitle: 'Mata Pelajaran',
                         path: `/mapel?highlight=${item.id}`
                     })
@@ -210,8 +211,8 @@ const GlobalSearch = ({ isOpen, onClose }) => {
     if (!isOpen) return null
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay global-search-overlay" onClick={onClose}>
+            <div className="modal-box global-search-modal" onClick={e => e.stopPropagation()}>
                 <div className="global-search-header">
                     <Search size={20} className="search-icon" />
                     <input
@@ -249,6 +250,10 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                                     key={`${result.type}-${result.id}`}
                                     className={`search-result-item ${index === selectedIndex ? 'selected' : ''}`}
                                     onClick={() => handleSelectResult(result)}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault()
+                                        handleSelectResult(result)
+                                    }}
                                     onMouseEnter={() => setSelectedIndex(index)}
                                 >
                                     <span className={`result-icon result-icon-${result.type}`}>
@@ -269,7 +274,19 @@ const GlobalSearch = ({ isOpen, onClose }) => {
                             <p>Ketik untuk mencari di:</p>
                             <div className="search-categories">
                                 {SEARCH_CATEGORIES.map(cat => (
-                                    <span key={cat.key} className="category-tag">
+                                    <span 
+                                        key={cat.key} 
+                                        className="category-tag cursor-pointer hover:bg-gray-100 transition-colors"
+                                        onClick={() => {
+                                            navigate(cat.path)
+                                            onClose()
+                                        }}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault()
+                                            navigate(cat.path)
+                                            onClose()
+                                        }}
+                                    >
                                         <cat.icon size={14} />
                                         {cat.label}
                                     </span>

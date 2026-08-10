@@ -865,6 +865,18 @@ const SantriList = () => {
                 itemName={selectedSantri?.nama}
                 message={`Apakah Anda yakin ingin menghapus santri ${selectedSantri?.nama}? Tindakan ini tidak dapat dibatalkan.`}
             />
+
+            {/* Mobile Floating Action Button (FAB) */}
+            {canEditSantri && (
+                <button
+                    onClick={() => navigate('/santri/tambah')}
+                    className="md:hidden fixed bottom-24 right-5 z-40 w-14 h-14 bg-[#0A2619] text-[#BCF32F] rounded-full shadow-2xl shadow-black/40 flex items-center justify-center active:scale-95 transition-all border-2 border-[#BCF32F]"
+                    title="Tambah Santri Baru"
+                    aria-label="Tambah Santri Baru"
+                >
+                    <Plus size={24} strokeWidth={2.5} />
+                </button>
+            )}
         </div>
     )
 }

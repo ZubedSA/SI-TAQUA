@@ -179,13 +179,23 @@ const Header = ({ onMenuClick }) => {
                     {/* Global Search Button */}
                     {!location.pathname.startsWith('/absensi') && (
                         <button
-                            className="hidden md:flex items-center gap-3 px-4 py-2 bg-gray-50/50 border border-gray-100 rounded-2xl text-sm text-gray-500 hover:border-gray-300 hover:bg-white hover:shadow-lg transition-all w-48 lg:w-72 group"
-                            onClick={() => setShowSearch(true)}
+                            type="button"
+                            className="hidden md:flex items-center gap-3 px-4 py-2 bg-gray-50/50 border border-gray-100 rounded-2xl text-sm text-gray-500 hover:border-gray-300 hover:bg-white hover:shadow-lg transition-all w-48 lg:w-72 group cursor-pointer relative z-10"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setShowSearch(true)
+                            }}
+                            onTouchEnd={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setShowSearch(true)
+                            }}
                             title="Pencarian Global (Ctrl+K)"
                         >
-                            <Search size={16} className="text-gray-300 group-hover:text-gray-900 transition-colors" />
-                            <span className="flex-1 text-left font-medium">Cari...</span>
-                            <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-[10px] text-gray-400 bg-white border border-gray-100 rounded-lg font-mono">⌘ K</kbd>
+                            <Search size={16} className="text-gray-300 group-hover:text-gray-900 transition-colors pointer-events-none" />
+                            <span className="flex-1 text-left font-medium pointer-events-none">Cari...</span>
+                            <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-[10px] text-gray-400 bg-white border border-gray-100 rounded-lg font-mono pointer-events-none">⌘ K</kbd>
                         </button>
                     )}
 
@@ -207,11 +217,21 @@ const Header = ({ onMenuClick }) => {
                     {/* Mobile Search Button (< md) */}
                     {!location.pathname.startsWith('/absensi') && (
                         <button
-                            className="flex md:hidden p-2.5 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-90"
-                            onClick={() => setShowSearch(true)}
+                            type="button"
+                            className="flex md:hidden p-2.5 rounded-2xl text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all active:scale-90 cursor-pointer relative z-10"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setShowSearch(true)
+                            }}
+                            onTouchEnd={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setShowSearch(true)
+                            }}
                             title="Pencarian Global"
                         >
-                            <Search size={22} strokeWidth={1.8} />
+                            <Search size={22} strokeWidth={1.8} className="pointer-events-none" />
                         </button>
                     )}
 
@@ -231,16 +251,20 @@ const Header = ({ onMenuClick }) => {
                     </div>
 
                     {/* Profile Dropdown */}
-                    <div className="relative pl-1 md:pl-4 border-l border-gray-100" ref={dropdownRef}>
+                    <div className="relative pl-1 sm:pl-3 md:pl-4 border-l border-gray-100" ref={dropdownRef}>
                         <button
-                            className="flex items-center gap-3 py-1.5 pl-3 pr-1.5 rounded-2xl hover:bg-gray-50/80 transition-all group focus:outline-none active:scale-95 border border-transparent hover:border-gray-200"
+                            className="flex items-center gap-1.5 sm:gap-3 py-1 sm:py-1.5 pl-1 sm:pl-3 pr-1 sm:pr-1.5 rounded-2xl hover:bg-gray-50/80 transition-all group focus:outline-none active:scale-95 border border-transparent hover:border-gray-200"
                             onClick={() => setShowDropdown(!showDropdown)}
                         >
-                            <div className="text-right">
-                                <p className="text-xs md:text-sm font-black text-gray-900 leading-tight group-hover:text-gray-700 transition-colors line-clamp-1 uppercase tracking-tight">{getUserName()}</p>
-                                <p className="text-[8px] md:text-[9px] uppercase font-black text-gray-400 tracking-[0.15em]">{getRoleLabel()}</p>
+                            <div className="text-right flex flex-col justify-center">
+                                <p className="text-[11px] sm:text-xs md:text-sm font-black text-gray-900 leading-tight group-hover:text-gray-700 transition-colors truncate max-w-[75px] xs:max-w-[110px] sm:max-w-none uppercase tracking-tight">
+                                    {getUserName()}
+                                </p>
+                                <p className="hidden xs:block text-[8px] md:text-[9px] uppercase font-black text-gray-400 tracking-[0.12em] truncate max-w-[75px] xs:max-w-[110px] sm:max-w-none">
+                                    {getRoleLabel()}
+                                </p>
                             </div>
-                            <div className={`relative w-10 h-10 rounded-full transition-all duration-500 group-hover:rotate-3 ${userProfile?.avatar_url ? '' : 'p-[2.5px] bg-gradient-to-tr from-gray-600 to-gray-400 shadow-lg'}`}>
+                            <div className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full transition-all duration-500 group-hover:rotate-3 ${userProfile?.avatar_url ? '' : 'p-[2px] sm:p-[2.5px] bg-gradient-to-tr from-gray-600 to-gray-400 shadow-lg'}`}>
                                 <div className={`w-full h-full rounded-full overflow-hidden border-2 ${showDropdown ? 'border-[#0A2619]' : 'border-white'} transition-colors bg-white`}>
                                     {userProfile?.avatar_url ? (
                                         <img src={userProfile.avatar_url} alt={getUserName()} className="w-full h-full object-cover" width="40" height="40" />
@@ -248,7 +272,7 @@ const Header = ({ onMenuClick }) => {
                                         <img src="/images/default-avatar.png" alt={getUserName()} className="w-full h-full object-cover" width="40" height="40" />
                                     )}
                                 </div>
-                                <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#BCF32F] border-2 border-white rounded-full shadow-sm"></div>
+                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 bg-[#BCF32F] border-2 border-white rounded-full shadow-sm"></div>
                             </div>
                             <ChevronDown size={14} className={`text-gray-300 transition-transform duration-500 ${showDropdown ? 'rotate-180 text-emerald-600' : ''}`} />
                         </button>

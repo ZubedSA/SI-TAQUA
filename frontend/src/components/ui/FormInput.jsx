@@ -13,9 +13,9 @@ const FormInput = React.forwardRef(({
     const inputId = id || props.name;
 
     return (
-        <div className={`space-y-1.5 ${className}`}>
+        <div className={`space-y-1 sm:space-y-1.5 ${className}`}>
             {label && (
-                <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
+                <label htmlFor={inputId} className="block text-xs sm:text-sm font-bold text-gray-700 tracking-tight">
                     {label}
                 </label>
             )}
@@ -25,8 +25,8 @@ const FormInput = React.forwardRef(({
                     ref={ref}
                     type={type}
                     className={`
-            flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 
-            focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+            flex h-11 sm:h-10 w-full rounded-xl border border-gray-300 bg-white px-3.5 sm:px-3 py-2.5 sm:py-2 text-base sm:text-sm placeholder:text-gray-400 
+            focus:outline-none focus:ring-2 focus:ring-[#0A2619]/20 focus:border-[#0A2619]
             disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500
             transition-all duration-200
             ${Icon ? 'pl-10' : ''}
