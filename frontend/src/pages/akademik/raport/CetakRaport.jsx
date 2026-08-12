@@ -7,7 +7,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import RaportTemplate from '../../../components/akademik/RaportTemplate';
 import { calculateSidogiriGrade } from '../../../components/akademik/RaportMadrasahTemplate';
-import { fetchAttendanceSummary } from '../../../utils/attendanceCalculator';
+import { calculateAutoPresensi, getResolvedAttendance } from '../../../utils/attendanceHelper';
 
 const CetakRaport = () => {
     const { santriId, semesterId } = useParams();
@@ -230,26 +230,32 @@ const CetakRaport = () => {
             const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).maybeSingle();
             setPerilaku(perilakuData);
 
-            // 6. Query Presensi & Summary using Unified Calculator
-            const summaryMap = await fetchAttendanceSummary({
-                semesterId,
-                santriIds: [santriId]
-            });
+            // 6. Query Presensi Log by Semester Date Range (Fallback calculation from daily presensi logs)
+            let presensiQuery = supabase
+                .from('presensi')
+                .select('santri_id, status, keterangan, tanggal')
+                .eq('santri_id', santriId);
 
-            const sumItem = summaryMap[santriId] || {
-                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0 },
-                halaqoh: { sakit: 0, izin: 0, alpha: 0, pulang: 0 }
-            };
+            if (semesterData?.tanggal_mulai && semesterData?.tanggal_selesai) {
+                presensiQuery = presensiQuery
+                    .gte('tanggal', semesterData.tanggal_mulai)
+                    .lte('tanggal', semesterData.tanggal_selesai);
+            }
+
+            const { data: rawPresensi } = await presensiQuery;
+            const autoCounts = calculateAutoPresensi(rawPresensi || [], [santriId]);
+            const autoObj = autoCounts[santriId] || { madrosah: {}, quraniyah: {} };
+            const resolved = getResolvedAttendance(perilakuData, autoObj);
 
             setKetidakhadiran({
-                sakit: sumItem.halaqoh.sakit,
-                izin: sumItem.halaqoh.izin,
-                alpha: sumItem.halaqoh.alpha,
-                pulang: sumItem.halaqoh.pulang,
-                sakit_kelas: sumItem.madrosah.sakit,
-                izin_kelas: sumItem.madrosah.izin,
-                alpha_kelas: sumItem.madrosah.alpha,
-                pulang_kelas: sumItem.madrosah.pulang
+                sakit: resolved.quraniyah.sakit,
+                izin: resolved.quraniyah.izin,
+                alpha: resolved.quraniyah.alpha,
+                pulang: resolved.quraniyah.pulang,
+                sakit_kelas: resolved.madrosah.sakit,
+                izin_kelas: resolved.madrosah.izin,
+                alpha_kelas: resolved.madrosah.alpha,
+                pulang_kelas: resolved.madrosah.pulang
             });
 
         } catch (error) {

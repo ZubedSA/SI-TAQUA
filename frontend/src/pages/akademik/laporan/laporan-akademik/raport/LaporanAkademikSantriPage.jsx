@@ -7,7 +7,7 @@ import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import RaportTemplate from '../../../../../components/akademik/RaportTemplate'
 import { calculateSidogiriGrade } from '../../../../../components/akademik/RaportMadrasahTemplate'
-import { fetchAttendanceSummary } from '../../../../../utils/attendanceCalculator'
+import { calculateAutoPresensi, getResolvedAttendance } from '../../../../../utils/attendanceHelper'
 import '../../../../../pages/laporan/Laporan.css'
 
 /**
@@ -367,26 +367,33 @@ const LaporanAkademikSantriPage = () => {
                 .maybeSingle()
             setPerilaku(perilakuData)
 
-            // --- 4. Query Presensi & Summary using Unified Calculator ---
-            const summaryMap = await fetchAttendanceSummary({
-                semesterId: filters.semester_id,
-                santriIds: [santriId]
-            })
+            // --- 4. Query Presensi Logs by Semester Date Range (Fallback calculation from daily logs) ---
+            const activeSemObj = semester.find(s => s.id === filters.semester_id)
+            let presensiQuery = supabase
+                .from('presensi')
+                .select('status, keterangan, tanggal')
+                .eq('santri_id', santriId)
 
-            const sumItem = summaryMap[santriId] || {
-                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0 },
-                halaqoh: { sakit: 0, izin: 0, alpha: 0, pulang: 0 }
+            if (activeSemObj?.tanggal_mulai && activeSemObj?.tanggal_selesai) {
+                presensiQuery = presensiQuery
+                    .gte('tanggal', activeSemObj.tanggal_mulai)
+                    .lte('tanggal', activeSemObj.tanggal_selesai)
             }
 
+            const { data: rawPresensi } = await presensiQuery
+            const autoCounts = calculateAutoPresensi(rawPresensi || [], [santriId])
+            const autoObj = autoCounts[santriId] || { madrosah: {}, quraniyah: {} }
+            const resolved = getResolvedAttendance(perilakuData, autoObj)
+
             setPresensiData({
-                sakit: sumItem.halaqoh.sakit,
-                izin: sumItem.halaqoh.izin,
-                alpha: sumItem.halaqoh.alpha,
-                pulang: sumItem.halaqoh.pulang,
-                sakit_kelas: sumItem.madrosah.sakit,
-                izin_kelas: sumItem.madrosah.izin,
-                alpha_kelas: sumItem.madrosah.alpha,
-                pulang_kelas: sumItem.madrosah.pulang
+                sakit: resolved.quraniyah.sakit,
+                izin: resolved.quraniyah.izin,
+                alpha: resolved.quraniyah.alpha,
+                pulang: resolved.quraniyah.pulang,
+                sakit_kelas: resolved.madrosah.sakit,
+                izin_kelas: resolved.madrosah.izin,
+                alpha_kelas: resolved.madrosah.alpha,
+                pulang_kelas: resolved.madrosah.pulang
             })
 
         } catch (err) {

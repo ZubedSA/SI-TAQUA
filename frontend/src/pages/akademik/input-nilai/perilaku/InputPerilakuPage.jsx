@@ -3,7 +3,7 @@ import { Save, RefreshCw, Shield, UserCheck, Lock, AlertCircle, CheckCircle2, Bo
 import { supabase } from '../../../../lib/supabase'
 import { useAuth } from '../../../../context/AuthContext'
 import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
-import { fetchAttendanceSummary } from '../../../../utils/attendanceCalculator'
+import { calculateAutoPresensi, getResolvedAttendance } from '../../../../utils/attendanceHelper'
 import '../../shared/styles/Nilai.css'
 
 /**
@@ -300,36 +300,54 @@ const InputPerilakuPage = () => {
             if (santriData && santriData.length > 0) {
                 const santriIds = santriData.map(s => s.id)
 
-                // B. Fetch Taujihat
+                // B. Query Perilaku Semester
+                const { data: perilakuData } = await supabase
+                    .from('perilaku_semester')
+                    .select('*')
+                    .eq('semester_id', filters.semester_id)
+                    .in('santri_id', santriIds)
+
+                // C. Query Taujihat (Catatan Musyrif / Wali Kelas)
                 const { data: taujihadData } = await supabase
                     .from('taujihad')
                     .select('*')
                     .eq('semester_id', filters.semester_id)
                     .in('santri_id', santriIds)
 
-                // C. Fetch Attendance Summary using Unified Calculator
-                const summaryMap = await fetchAttendanceSummary({
-                    semesterId: filters.semester_id,
-                    santriIds
-                })
+                // D. Query Presensi Log filtered by Semester Date Range & Attendance Type (Halaqoh vs Madrasah)
+                const activeSem = semester.find(s => s.id === filters.semester_id)
+                let presensiQuery = supabase
+                    .from('presensi')
+                    .select('santri_id, status, keterangan, tanggal')
+                    .in('santri_id', santriIds)
 
-                // D. Merge Data
+                if (activeSem?.tanggal_mulai && activeSem?.tanggal_selesai) {
+                    presensiQuery = presensiQuery
+                        .gte('tanggal', activeSem.tanggal_mulai)
+                        .lte('tanggal', activeSem.tanggal_selesai)
+                }
+
+                const { data: rawPresensi, error: presensiErr } = await presensiQuery
+                if (presensiErr) {
+                    console.warn('Gagal memuat log presensi:', presensiErr)
+                }
+
+                // Aggregate absence counts per santri from presensi logs using attendanceHelper
+                const autoCounts = calculateAutoPresensi(rawPresensi, santriIds)
+
+                // E. Merge Data
                 const mergedData = {}
                 santriData.forEach(s => {
-                    const sumItem = summaryMap[s.id] || {
-                        madrosah: { sakit: '', izin: '', alpha: '', pulang: '', auto_sakit: 0, auto_izin: 0, auto_alpha: 0, auto_pulang: 0 },
-                        halaqoh: { sakit: '', izin: '', alpha: '', pulang: '', auto_sakit: 0, auto_izin: 0, auto_alpha: 0, auto_pulang: 0 },
-                        rawPerilaku: null
-                    }
-                    const p = sumItem.rawPerilaku
+                    const p = perilakuData?.find(x => x.santri_id === s.id)
                     const t = taujihadData?.find(x => x.santri_id === s.id)
+                    const autoObj = autoCounts[s.id] || { madrosah: {}, quraniyah: {} }
+                    const resolved = getResolvedAttendance(p, autoObj)
 
                     const catatanMusyrif = t?.catatan || t?.isi || ''
                     const catatanWali = p?.catatan_wali || t?.catatan_wali || ''
 
-                    const targetSum = mode === 'halaqoh' ? sumItem.halaqoh : sumItem.madrosah
-
                     if (mode === 'halaqoh') {
+                        const qRes = resolved.quraniyah
                         mergedData[s.id] = {
                             perilaku_id: p?.id,
                             taujihad_id: t?.id,
@@ -343,21 +361,22 @@ const InputPerilakuPage = () => {
                             predikat_hafalan: p?.predikat_hafalan || 'Baik',
                             total_hafalan: p?.total_hafalan || '',
 
-                            sakit: targetSum.sakit || '',
-                            izin: targetSum.izin || '',
-                            alpha: targetSum.alpha || '',
-                            pulang: targetSum.pulang || '',
+                            sakit: qRes.sakit > 0 ? qRes.sakit : '',
+                            izin: qRes.izin > 0 ? qRes.izin : '',
+                            alpha: qRes.alpha > 0 ? qRes.alpha : '',
+                            pulang: qRes.pulang > 0 ? qRes.pulang : '',
 
-                            auto_sakit: targetSum.auto_sakit,
-                            auto_izin: targetSum.auto_izin,
-                            auto_alpha: targetSum.auto_alpha,
-                            auto_pulang: targetSum.auto_pulang,
+                            auto_sakit: autoObj.quraniyah.sakit,
+                            auto_izin: autoObj.quraniyah.izin,
+                            auto_alpha: autoObj.quraniyah.alpha,
+                            auto_pulang: autoObj.quraniyah.pulang,
 
                             catatan_musyrif: catatanMusyrif,
                             catatan_wali: catatanWali,
                             catatan: catatanMusyrif
                         }
                     } else {
+                        const mRes = resolved.madrosah
                         mergedData[s.id] = {
                             perilaku_id: p?.id,
                             taujihad_id: t?.id,
@@ -371,15 +390,15 @@ const InputPerilakuPage = () => {
                             predikat_hafalan: p?.predikat_hafalan || 'Baik',
                             total_hafalan: p?.total_hafalan || '',
 
-                            sakit: targetSum.sakit || '',
-                            izin: targetSum.izin || '',
-                            alpha: targetSum.alpha || '',
-                            pulang: targetSum.pulang || '',
+                            sakit: mRes.sakit > 0 ? mRes.sakit : '',
+                            izin: mRes.izin > 0 ? mRes.izin : '',
+                            alpha: mRes.alpha > 0 ? mRes.alpha : '',
+                            pulang: mRes.pulang > 0 ? mRes.pulang : '',
 
-                            auto_sakit: targetSum.auto_sakit,
-                            auto_izin: targetSum.auto_izin,
-                            auto_alpha: targetSum.auto_alpha,
-                            auto_pulang: targetSum.auto_pulang,
+                            auto_sakit: autoObj.madrosah.sakit,
+                            auto_izin: autoObj.madrosah.izin,
+                            auto_alpha: autoObj.madrosah.alpha,
+                            auto_pulang: autoObj.madrosah.pulang,
 
                             catatan_musyrif: catatanMusyrif,
                             catatan_wali: catatanWali,
