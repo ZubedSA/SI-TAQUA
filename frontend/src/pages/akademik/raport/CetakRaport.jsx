@@ -7,6 +7,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import RaportTemplate from '../../../components/akademik/RaportTemplate';
 import { calculateSidogiriGrade } from '../../../components/akademik/RaportMadrasahTemplate';
+import { fetchAttendanceSummary } from '../../../utils/attendanceCalculator';
 
 const CetakRaport = () => {
     const { santriId, semesterId } = useParams();
@@ -229,15 +230,26 @@ const CetakRaport = () => {
             const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).maybeSingle();
             setPerilaku(perilakuData);
 
+            // 6. Query Presensi & Summary using Unified Calculator
+            const summaryMap = await fetchAttendanceSummary({
+                semesterId,
+                santriIds: [santriId]
+            });
+
+            const sumItem = summaryMap[santriId] || {
+                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0 },
+                halaqoh: { sakit: 0, izin: 0, alpha: 0, pulang: 0 }
+            };
+
             setKetidakhadiran({
-                sakit: perilakuData?.sakit ?? '-',
-                izin: perilakuData?.izin ?? '-',
-                alpha: perilakuData?.alpha ?? '-',
-                pulang: perilakuData?.pulang ?? '-',
-                sakit_kelas: perilakuData?.sakit_kelas ?? '-',
-                izin_kelas: perilakuData?.izin_kelas ?? '-',
-                alpha_kelas: perilakuData?.alpha_kelas ?? '-',
-                pulang_kelas: perilakuData?.pulang_kelas ?? '-'
+                sakit: sumItem.halaqoh.sakit,
+                izin: sumItem.halaqoh.izin,
+                alpha: sumItem.halaqoh.alpha,
+                pulang: sumItem.halaqoh.pulang,
+                sakit_kelas: sumItem.madrosah.sakit,
+                izin_kelas: sumItem.madrosah.izin,
+                alpha_kelas: sumItem.madrosah.alpha,
+                pulang_kelas: sumItem.madrosah.pulang
             });
 
         } catch (error) {

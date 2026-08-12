@@ -7,6 +7,7 @@ import DownloadButton from '../../../../../components/ui/DownloadButton'
 import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import RaportTemplate from '../../../../../components/akademik/RaportTemplate'
 import { calculateSidogiriGrade } from '../../../../../components/akademik/RaportMadrasahTemplate'
+import { fetchAttendanceSummary } from '../../../../../utils/attendanceCalculator'
 import '../../../../../pages/laporan/Laporan.css'
 
 /**
@@ -366,20 +367,27 @@ const LaporanAkademikSantriPage = () => {
                 .maybeSingle()
             setPerilaku(perilakuData)
 
-            if (perilakuData) {
-                setPresensiData({
-                    pulang: perilakuData.pulang ?? 0,
-                    sakit: perilakuData.sakit ?? 0,
-                    izin: perilakuData.izin ?? 0,
-                    alpha: perilakuData.alpha ?? 0,
-                    pulang_kelas: perilakuData.pulang_kelas ?? 0,
-                    sakit_kelas: perilakuData.sakit_kelas ?? 0,
-                    izin_kelas: perilakuData.izin_kelas ?? 0,
-                    alpha_kelas: perilakuData.alpha_kelas ?? 0
-                })
-            } else {
-                setPresensiData({ pulang: 0, izin: 0, sakit: 0, alpha: 0, pulang_kelas: 0, izin_kelas: 0, sakit_kelas: 0, alpha_kelas: 0 })
+            // --- 4. Query Presensi & Summary using Unified Calculator ---
+            const summaryMap = await fetchAttendanceSummary({
+                semesterId: filters.semester_id,
+                santriIds: [santriId]
+            })
+
+            const sumItem = summaryMap[santriId] || {
+                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0 },
+                halaqoh: { sakit: 0, izin: 0, alpha: 0, pulang: 0 }
             }
+
+            setPresensiData({
+                sakit: sumItem.halaqoh.sakit,
+                izin: sumItem.halaqoh.izin,
+                alpha: sumItem.halaqoh.alpha,
+                pulang: sumItem.halaqoh.pulang,
+                sakit_kelas: sumItem.madrosah.sakit,
+                izin_kelas: sumItem.madrosah.izin,
+                alpha_kelas: sumItem.madrosah.alpha,
+                pulang_kelas: sumItem.madrosah.pulang
+            })
 
         } catch (err) {
             console.error('Error fetching report:', err.message)

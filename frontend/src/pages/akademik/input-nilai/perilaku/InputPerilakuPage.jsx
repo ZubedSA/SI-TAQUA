@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Shield, UserCheck, Lock, AlertCircle, CheckCircle2, BookOpen, GraduationCap } from 'lucide-react'
+import { Save, RefreshCw, Shield, UserCheck, Lock, AlertCircle, CheckCircle2, BookOpen, GraduationCap, Calendar } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useAuth } from '../../../../context/AuthContext'
 import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
+import { fetchAttendanceSummary } from '../../../../utils/attendanceCalculator'
 import '../../shared/styles/Nilai.css'
 
 /**
@@ -299,28 +300,34 @@ const InputPerilakuPage = () => {
             if (santriData && santriData.length > 0) {
                 const santriIds = santriData.map(s => s.id)
 
-                // B. Query Perilaku Semester
-                const { data: perilakuData } = await supabase
-                    .from('perilaku_semester')
-                    .select('*')
-                    .eq('semester_id', filters.semester_id)
-                    .in('santri_id', santriIds)
-
-                // C. Query Taujihat (Catatan Musyrif / Wali Kelas)
+                // B. Fetch Taujihat
                 const { data: taujihadData } = await supabase
                     .from('taujihad')
                     .select('*')
                     .eq('semester_id', filters.semester_id)
                     .in('santri_id', santriIds)
 
+                // C. Fetch Attendance Summary using Unified Calculator
+                const summaryMap = await fetchAttendanceSummary({
+                    semesterId: filters.semester_id,
+                    santriIds
+                })
+
                 // D. Merge Data
                 const mergedData = {}
                 santriData.forEach(s => {
-                    const p = perilakuData?.find(x => x.santri_id === s.id)
+                    const sumItem = summaryMap[s.id] || {
+                        madrosah: { sakit: '', izin: '', alpha: '', pulang: '', auto_sakit: 0, auto_izin: 0, auto_alpha: 0, auto_pulang: 0 },
+                        halaqoh: { sakit: '', izin: '', alpha: '', pulang: '', auto_sakit: 0, auto_izin: 0, auto_alpha: 0, auto_pulang: 0 },
+                        rawPerilaku: null
+                    }
+                    const p = sumItem.rawPerilaku
                     const t = taujihadData?.find(x => x.santri_id === s.id)
 
                     const catatanMusyrif = t?.catatan || t?.isi || ''
                     const catatanWali = p?.catatan_wali || t?.catatan_wali || ''
+
+                    const targetSum = mode === 'halaqoh' ? sumItem.halaqoh : sumItem.madrosah
 
                     if (mode === 'halaqoh') {
                         mergedData[s.id] = {
@@ -336,10 +343,15 @@ const InputPerilakuPage = () => {
                             predikat_hafalan: p?.predikat_hafalan || 'Baik',
                             total_hafalan: p?.total_hafalan || '',
 
-                            sakit: p?.sakit !== undefined && p?.sakit !== null && p?.sakit !== 0 ? p.sakit : '',
-                            izin: p?.izin !== undefined && p?.izin !== null && p?.izin !== 0 ? p.izin : '',
-                            alpha: p?.alpha !== undefined && p?.alpha !== null && p?.alpha !== 0 ? p.alpha : '',
-                            pulang: p?.pulang !== undefined && p?.pulang !== null && p?.pulang !== 0 ? p.pulang : '',
+                            sakit: targetSum.sakit || '',
+                            izin: targetSum.izin || '',
+                            alpha: targetSum.alpha || '',
+                            pulang: targetSum.pulang || '',
+
+                            auto_sakit: targetSum.auto_sakit,
+                            auto_izin: targetSum.auto_izin,
+                            auto_alpha: targetSum.auto_alpha,
+                            auto_pulang: targetSum.auto_pulang,
 
                             catatan_musyrif: catatanMusyrif,
                             catatan_wali: catatanWali,
@@ -359,10 +371,15 @@ const InputPerilakuPage = () => {
                             predikat_hafalan: p?.predikat_hafalan || 'Baik',
                             total_hafalan: p?.total_hafalan || '',
 
-                            sakit: p?.sakit_kelas !== undefined && p?.sakit_kelas !== null && p?.sakit_kelas !== 0 ? p.sakit_kelas : '',
-                            izin: p?.izin_kelas !== undefined && p?.izin_kelas !== null && p?.izin_kelas !== 0 ? p.izin_kelas : '',
-                            alpha: p?.alpha_kelas !== undefined && p?.alpha_kelas !== null && p?.alpha_kelas !== 0 ? p.alpha_kelas : '',
-                            pulang: p?.pulang_kelas !== undefined && p?.pulang_kelas !== null && p?.pulang_kelas !== 0 ? p.pulang_kelas : '',
+                            sakit: targetSum.sakit || '',
+                            izin: targetSum.izin || '',
+                            alpha: targetSum.alpha || '',
+                            pulang: targetSum.pulang || '',
+
+                            auto_sakit: targetSum.auto_sakit,
+                            auto_izin: targetSum.auto_izin,
+                            auto_alpha: targetSum.auto_alpha,
+                            auto_pulang: targetSum.auto_pulang,
 
                             catatan_musyrif: catatanMusyrif,
                             catatan_wali: catatanWali,
@@ -379,6 +396,30 @@ const InputPerilakuPage = () => {
         } finally {
             setLoading(false)
         }
+    }
+
+    // 2.1 Handle Manual Sync Action from Presensi Logs
+    const handleSyncPresensi = () => {
+        setFormData(prev => {
+            const updated = { ...prev }
+            let count = 0
+            Object.keys(updated).forEach(sId => {
+                const item = updated[sId]
+                if (item) {
+                    updated[sId] = {
+                        ...item,
+                        sakit: item.auto_sakit > 0 ? item.auto_sakit : '',
+                        izin: item.auto_izin > 0 ? item.auto_izin : '',
+                        alpha: item.auto_alpha > 0 ? item.auto_alpha : '',
+                        pulang: item.auto_pulang > 0 ? item.auto_pulang : ''
+                    }
+                    count++
+                }
+            })
+            setSuccess(`✅ Data ketidakhadiran berhasil disinkronkan otomatis dari presensi ${mode === 'halaqoh' ? 'Halaqoh' : 'Madrasah'} (${count} santri)!`)
+            setTimeout(() => setSuccess(''), 4000)
+            return updated
+        })
     }
 
     useEffect(() => {
@@ -661,15 +702,47 @@ const InputPerilakuPage = () => {
             {/* TABLE / EMPTY ACCESS SECTION */}
             {(filters.kelas_id || filters.halaqoh_id) && filters.semester_id ? (
                 <div className="table-container">
-                    <div className="table-header flex justify-between items-center mb-3">
+                    {/* SEMESTER DATE RANGE BADGE */}
+                    {(() => {
+                        const activeSemObj = semester.find(s => s.id === filters.semester_id)
+                        if (!activeSemObj) return null
+                        const formatDate = (dt) => dt ? new Date(dt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
+                        return (
+                            <div className="flex items-center justify-between flex-wrap gap-2 px-3.5 py-2 bg-emerald-50/90 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-semibold mb-3 shadow-xs">
+                                <div className="flex items-center gap-2">
+                                    <Calendar size={15} className="text-emerald-700 flex-shrink-0" />
+                                    <span>
+                                        Periode Semester {activeSemObj.nama} ({activeSemObj.tahun_ajaran}): <strong>{formatDate(activeSemObj.tanggal_mulai)}</strong> s/d <strong>{formatDate(activeSemObj.tanggal_selesai)}</strong>
+                                        {' '}<span className="text-emerald-700 font-normal">({mode === 'halaqoh' ? 'Kehadiran Halaqoh / Qur\'aniyah' : 'Kehadiran Madrasah'})</span>
+                                    </span>
+                                </div>
+                                <span className="text-[11px] text-emerald-800 bg-white/90 px-2 py-0.5 rounded border border-emerald-200/80 font-medium">
+                                    ⚡ Auto-Calculate Log Presensi
+                                </span>
+                            </div>
+                        )
+                    })()}
+
+                    <div className="table-header flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
                         <h3 className="table-title">Daftar Santri ({santri.length})</h3>
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleSave}
-                            disabled={saving || santri.length === 0}
-                        >
-                            {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Data</>}
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                className="btn btn-outline text-xs flex items-center gap-1.5 bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 transition-all"
+                                onClick={handleSyncPresensi}
+                                disabled={loading || santri.length === 0}
+                                title="Hitung ulang otomatis dari data log presensi harian sesuai periode tanggal semester"
+                            >
+                                <RefreshCw size={14} /> Hitung Otomatis Presensi
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleSave}
+                                disabled={saving || santri.length === 0}
+                            >
+                                {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Data</>}
+                            </button>
+                        </div>
                     </div>
 
                     <ResponsiveTable

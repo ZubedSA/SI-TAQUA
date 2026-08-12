@@ -261,16 +261,16 @@ const RaportTahfizhTemplate = ({
                         <tbody>
                             <tr>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Alpa <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.alpha ?? '0'}</span>
+                                    Alpa <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.alpha ?? ketidakhadiran?.alpha_kelas ?? '0'}</span>
                                 </td>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Sakit <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.sakit ?? '0'}</span>
+                                    Sakit <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.sakit ?? ketidakhadiran?.sakit_kelas ?? '0'}</span>
                                 </td>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Izin <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.izin ?? '0'}</span>
+                                    Izin <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.izin ?? ketidakhadiran?.izin_kelas ?? '0'}</span>
                                 </td>
                                 <td style={{ ...cellStyle, textAlign: 'center', width: '25%' }}>
-                                    Pulang <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.pulang ?? '0'}</span>
+                                    Pulang <span style={{ fontWeight: 'bold' }}>{ketidakhadiran?.pulang ?? ketidakhadiran?.pulang_kelas ?? '0'}</span>
                                 </td>
                             </tr>
                         </tbody>

@@ -28,6 +28,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useKelas, useHalaqoh, useJurnal, useMapel } from '../../hooks/useAkademik'
 import PageHeader from '../../components/layout/PageHeader'
+import { fetchAttendanceSummary } from '../../utils/attendanceCalculator'
 import { Card, CardHeader, CardContent } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -86,6 +87,41 @@ const AdminAbsensiPage = () => {
     const [filterGuru, setFilterGuru] = useState('')
 
     const [guruList, setGuruList] = useState([])
+    const [semesterList, setSemesterList] = useState([])
+    const [selectedSemesterId, setSelectedSemesterId] = useState('')
+    const [perilakuSemesterData, setPerilakuSemesterData] = useState([])
+    const [santriList, setSantriList] = useState([])
+    const [attendanceSummaryMap, setAttendanceSummaryMap] = useState({})
+
+    useEffect(() => {
+        const fetchSemesters = async () => {
+            try {
+                const { data } = await supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false })
+                const sList = data || []
+                setSemesterList(sList)
+                const activeSem = sList.find(s => s.is_active)
+                if (activeSem) {
+                    setSelectedSemesterId(activeSem.id)
+                    if (activeSem.tanggal_mulai && activeSem.tanggal_selesai) {
+                        setFilterStartDate(activeSem.tanggal_mulai)
+                        setFilterEndDate(activeSem.tanggal_selesai)
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching semester list:', err)
+            }
+        }
+        fetchSemesters()
+    }, [])
+
+    const handleSemesterChange = (semId) => {
+        setSelectedSemesterId(semId)
+        const sem = semesterList.find(s => s.id === semId)
+        if (sem && sem.tanggal_mulai && sem.tanggal_selesai) {
+            setFilterStartDate(sem.tanggal_mulai)
+            setFilterEndDate(sem.tanggal_selesai)
+        }
+    }
 
     // Data for Jurnal Tab
     const { data: agendaList = [], isLoading: loadingAgenda } = useJurnal({
@@ -164,7 +200,7 @@ const AdminAbsensiPage = () => {
                 6: { cellWidth: 35, halign: 'center' }
             };
         } else {
-            tableHeaders = [["No", "Nama Santri", "NIS", "Kategori", "Kelas / Halaqoh", "Hadir", "Terlambat", "Sakit", "Izin", "Alpha"]];
+            tableHeaders = [["No", "Nama Santri", "NIS", "Kategori", "Kelas / Halaqoh", "Hadir", "Terlambat", "Sakit", "Izin", "Alpha", "Pulang"]];
             tableRows = aggregatedSantri.map((item, index) => [
                 index + 1,
                 item.nama,
@@ -175,7 +211,8 @@ const AdminAbsensiPage = () => {
                 item.Terlambat || 0,
                 item.Sakit,
                 item.Izin,
-                item.Alpha
+                item.Alpha,
+                item.Pulang || 0
             ]);
             columnStyles = {
                 0: { cellWidth: 8, halign: 'center' },
@@ -186,7 +223,8 @@ const AdminAbsensiPage = () => {
                 6: { cellWidth: 14, halign: 'center' },
                 7: { cellWidth: 12, halign: 'center' },
                 8: { cellWidth: 12, halign: 'center' },
-                9: { cellWidth: 12, halign: 'center' }
+                9: { cellWidth: 12, halign: 'center' },
+                10: { cellWidth: 12, halign: 'center' }
             };
         }
 
@@ -256,7 +294,8 @@ const AdminAbsensiPage = () => {
                 "Terlambat": item.Terlambat || 0,
                 "Sakit": item.Sakit,
                 "Izin": item.Izin,
-                "Alpha": item.Alpha
+                "Alpha": item.Alpha,
+                "Pulang": item.Pulang || 0
             }));
             maxWidths = [
                 { wch: 6 },   // No
@@ -268,7 +307,8 @@ const AdminAbsensiPage = () => {
                 { wch: 10 },  // Terlambat
                 { wch: 10 },  // Sakit
                 { wch: 10 },  // Izin
-                { wch: 10 }   // Alpha
+                { wch: 10 },  // Alpha
+                { wch: 10 }   // Pulang
             ];
         }
 
@@ -330,6 +370,7 @@ const AdminAbsensiPage = () => {
                     <th>Sakit</th>
                     <th>Izin</th>
                     <th>Alpha</th>
+                    <th>Pulang</th>
                 </tr>
             `;
             aggregatedSantri.forEach((item, index) => {
@@ -345,6 +386,7 @@ const AdminAbsensiPage = () => {
                         <td class="center">${item.Sakit}</td>
                         <td class="center">${item.Izin}</td>
                         <td class="center">${item.Alpha}</td>
+                        <td class="center">${item.Pulang || 0}</td>
                     </tr>
                 `;
             });
@@ -465,7 +507,7 @@ const AdminAbsensiPage = () => {
         if (activeTab === 'staf' || activeTab === 'laporan') {
             fetchPresensiStaf()
         }
-    }, [activeTab, filterDate, filterStartDate, filterEndDate, filterType, filterKelasId, filterHalaqohId])
+    }, [activeTab, filterDate, filterStartDate, filterEndDate, filterType, filterKelasId, filterHalaqohId, selectedSemesterId])
 
     const fetchPresensiStaf = async () => {
         if (activeTab === 'laporan') {
@@ -570,7 +612,7 @@ const AdminAbsensiPage = () => {
 
         setLoading(true)
         try {
-            let query = supabase
+            let presensiPromise = supabase
                 .from('presensi')
                 .select(`
                     *,
@@ -586,16 +628,36 @@ const AdminAbsensiPage = () => {
                 `)
 
             if (isRange) {
-                query = query.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
+                presensiPromise = presensiPromise.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
             } else {
-                query = query.eq('tanggal', filterDate)
+                presensiPromise = presensiPromise.eq('tanggal', filterDate)
             }
 
-            query = query.order('created_at', { ascending: false })
+            presensiPromise = presensiPromise.order('created_at', { ascending: false })
 
-            const { data, error } = await query
-            if (error) throw error
-            setPresensiData(data || [])
+            const targetSemId = selectedSemesterId || semesterList.find(s => s.is_active)?.id || semesterList[0]?.id
+
+            let santriPromise = supabase
+                .from('santri')
+                .select('id, nama, nis, kelas_id, halaqoh_id, kelas:kelas_id(id, nama), halaqoh:halaqoh_id(id, nama)')
+                .eq('status', 'Aktif')
+                .order('nama')
+
+            let summaryPromise = fetchAttendanceSummary({
+                semesterId: targetSemId
+            })
+
+            const [resPresensi, resSantri, resSummary] = await Promise.all([
+                presensiPromise,
+                santriPromise,
+                summaryPromise
+            ])
+
+            if (resPresensi.error) throw resPresensi.error
+
+            setPresensiData(resPresensi.data || [])
+            if (resSantri.data) setSantriList(resSantri.data)
+            setAttendanceSummaryMap(resSummary || {})
         } catch (err) {
             console.error('Error fetching presensi:', err)
             showToast.error('Gagal memuat data presensi')
@@ -607,7 +669,7 @@ const AdminAbsensiPage = () => {
     // 1. Filter data mentah menjadi data yang siap ditampilkan di Rekap & Laporan
     const filteredPresensi = React.useMemo(() => {
         return presensiData.filter(p => {
-            const isQuraniyah = p.keterangan?.includes('[Quraniyah]') || (p.santri?.halaqoh && !p.santri?.kelas)
+            const isQuraniyah = (p.keterangan || '').toLowerCase().includes('[quraniyah]')
             const matchesType = 
                 filterType === 'Semua' || 
                 (filterType === 'Madrosah' && !isQuraniyah) || 
@@ -633,41 +695,75 @@ const AdminAbsensiPage = () => {
         })
     }, [presensiData, filterType, filterKelasId, filterHalaqohId, searchTerm])
 
-    // 2. Agregasi data dari filteredPresensi untuk Laporan
+    // 2. Agregasi data dari attendanceSummaryMap untuk Laporan Santri
     const aggregatedSantri = React.useMemo(() => {
-        const map = {}
-        filteredPresensi.forEach(p => {
-            const isQuraniyah = p.keterangan?.includes('[Quraniyah]') || (p.santri?.halaqoh && !p.santri?.kelas)
-            const key = filterType === 'Semua' 
-                ? `${p.santri_id}_${isQuraniyah ? 'quraniyah' : 'madrosah'}`
-                : p.santri_id
+        const activeSantri = santriList.length > 0 ? santriList : (
+            Object.values(presensiData.reduce((acc, p) => {
+                if (p.santri && !acc[p.santri.id]) acc[p.santri.id] = p.santri
+                return acc
+            }, {}))
+        )
 
-            if (!map[key]) {
-                map[key] = {
-                    id: p.santri_id,
-                    key,
-                    nama: p.santri?.nama,
-                    nis: p.santri?.nis,
-                    isQuraniyah,
-                    grup: isQuraniyah ? (p.santri?.halaqoh?.nama || 'Halaqoh') : (p.santri?.kelas?.nama || 'Kelas'),
-                    kategoriLabel: isQuraniyah ? "Qur'aniyah (Halaqoh)" : "Madrosah (Kelas)",
-                    Hadir: 0,
-                    Terlambat: 0,
-                    Sakit: 0,
-                    Izin: 0,
-                    Alpha: 0
-                }
+        const result = []
+
+        activeSantri.forEach(s => {
+            const searchLower = searchTerm.toLowerCase()
+            if (searchTerm && !(s.nama || '').toLowerCase().includes(searchLower) && !(s.nis || '').toLowerCase().includes(searchLower)) {
+                return
             }
-            // Logika Case-Insensitive untuk status (Aman terhadap HADIR, Hadir, terlambat, telat, alpha, alpa, dll)
-            const s = (p.status || '').toLowerCase()
-            if (s === 'hadir') map[key].Hadir++
-            else if (s === 'terlambat' || s === 'telat') map[key].Terlambat++
-            else if (s === 'sakit') map[key].Sakit++
-            else if (s === 'izin' || s === 'pulang') map[key].Izin++
-            else if (['alpha', 'alpa', 'alfa'].includes(s)) map[key].Alpha++
+
+            const sumItem = attendanceSummaryMap[s.id] || {
+                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 },
+                halaqoh: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 }
+            }
+
+            // A. Madrosah (Kelas)
+            const includeMadrosah = (filterType === 'Semua' || filterType === 'Madrosah') &&
+                (!filterKelasId || s.kelas_id === filterKelasId || s.kelas?.id === filterKelasId)
+
+            if (includeMadrosah) {
+                result.push({
+                    id: s.id,
+                    key: `${s.id}_madrosah`,
+                    nama: s.nama,
+                    nis: s.nis,
+                    isQuraniyah: false,
+                    grup: s.kelas?.nama || 'Kelas',
+                    kategoriLabel: "Madrosah (Kelas)",
+                    Hadir: sumItem.madrosah.hadir,
+                    Terlambat: sumItem.madrosah.terlambat,
+                    Sakit: sumItem.madrosah.sakit,
+                    Izin: sumItem.madrosah.izin,
+                    Alpha: sumItem.madrosah.alpha,
+                    Pulang: sumItem.madrosah.pulang
+                })
+            }
+
+            // B. Quraniyah (Halaqoh)
+            const includeQuraniyah = (filterType === 'Semua' || filterType === 'Quraniyah') &&
+                (!filterHalaqohId || s.halaqoh_id === filterHalaqohId || s.halaqoh?.id === filterHalaqohId)
+
+            if (includeQuraniyah) {
+                result.push({
+                    id: s.id,
+                    key: `${s.id}_quraniyah`,
+                    nama: s.nama,
+                    nis: s.nis,
+                    isQuraniyah: true,
+                    grup: s.halaqoh?.nama || 'Halaqoh',
+                    kategoriLabel: "Qur'aniyah (Halaqoh)",
+                    Hadir: sumItem.halaqoh.hadir,
+                    Terlambat: sumItem.halaqoh.terlambat,
+                    Sakit: sumItem.halaqoh.sakit,
+                    Izin: sumItem.halaqoh.izin,
+                    Alpha: sumItem.halaqoh.alpha,
+                    Pulang: sumItem.halaqoh.pulang
+                })
+            }
         })
-        return Object.values(map)
-    }, [filteredPresensi, filterType])
+
+        return result
+    }, [santriList, presensiData, attendanceSummaryMap, filterType, filterKelasId, filterHalaqohId, searchTerm])
 
     // Logika Agregasi untuk Laporan Staf (Cross-Check dengan Jadwal dan Izin)
     const aggregatedStaf = React.useMemo(() => {
@@ -1607,8 +1703,24 @@ const AdminAbsensiPage = () => {
                             </div>
                         </div>
 
-                        {/* Kategori Filter Bar inside Laporan Card */}
-                        <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {/* Kategori & Semester Filter Bar inside Laporan Card */}
+                        <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Preset Periode Semester</label>
+                                <select 
+                                    value={selectedSemesterId}
+                                    onChange={(e) => handleSemesterChange(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
+                                >
+                                    <option value="">Rentang Kustom (Manual)</option>
+                                    {semesterList.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.nama} ({s.tahun_ajaran}) {s.is_active ? '— Semester Aktif' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Kategori Absensi</label>
                                 <select 
@@ -1799,18 +1911,24 @@ const AdminAbsensiPage = () => {
                     ) : (
                         <div className="space-y-8 animate-slide-up">
                             {/* Stats Cards Row for Santri */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                                 {[
                                     { label: 'Hadir', status: 'hadir', color: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' },
                                     { label: 'Terlambat', status: 'terlambat', color: 'bg-orange-500', text: 'text-orange-700', bg: 'bg-orange-50' },
                                     { label: 'Sakit', status: 'sakit', color: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' },
                                     { label: 'Izin', status: 'izin', color: 'bg-blue-500', text: 'text-blue-700', bg: 'bg-blue-50' },
                                     { label: 'Alpha', status: 'alpha', color: 'bg-red-500', text: 'text-red-700', bg: 'bg-red-50' },
+                                    { label: 'Pulang', status: 'pulang', color: 'bg-purple-500', text: 'text-purple-700', bg: 'bg-purple-50' },
                                 ].map(stat => {
-                                    const count = filteredPresensi.filter(p => {
-                                        const s = (p.status || '').toLowerCase()
-                                        return s === stat.status || (stat.status === 'alpha' && ['alpa', 'alfa'].includes(s)) || (stat.status === 'terlambat' && ['terlambat', 'telat'].includes(s))
-                                    }).length
+                                    const count = aggregatedSantri.reduce((sum, item) => {
+                                        if (stat.status === 'hadir') return sum + (item.Hadir || 0)
+                                        if (stat.status === 'terlambat') return sum + (item.Terlambat || 0)
+                                        if (stat.status === 'sakit') return sum + (item.Sakit || 0)
+                                        if (stat.status === 'izin') return sum + (item.Izin || 0)
+                                        if (stat.status === 'alpha') return sum + (item.Alpha || 0)
+                                        if (stat.status === 'pulang') return sum + (item.Pulang || 0)
+                                        return sum
+                                    }, 0)
                                     return (
                                         <div key={stat.status} className={`${stat.bg} p-5 rounded-[2rem] border border-white shadow-sm flex flex-col items-center justify-center gap-1.5 group hover:translate-y-[-4px] transition-all duration-300`}>
                                             <div className={`w-2 h-2 rounded-full ${stat.color} animate-pulse`}></div>
@@ -1924,6 +2042,16 @@ const AdminAbsensiPage = () => {
                                                      </span>
                                                  ), 
                                                  className: 'px-4 py-6 text-center text-red-600', 
+                                                 hideOnMobile: true 
+                                             },
+                                             { 
+                                                 header: 'Pulang', 
+                                                 render: (row) => (
+                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Pulang > 0 ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                         {row.Pulang || 0}
+                                                     </span>
+                                                 ), 
+                                                 className: 'px-4 py-6 text-center text-purple-600', 
                                                  hideOnMobile: true 
                                              },
                                              { 
