@@ -160,17 +160,23 @@ const AcademicBottomNav = () => {
             </div>
 
             {/* Bottom Navbar Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-2 py-1 z-[10000] shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-                <div className="flex justify-around items-center h-16 max-w-md mx-auto">
+            <nav className="lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-3 right-3 sm:left-4 sm:right-4 bg-white border border-gray-200 px-2 py-1 z-[10000] shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[1.5rem] touch-manipulation select-none">
+                <div className="flex justify-around items-center h-14 max-w-md mx-auto">
                     {navItems.map((item) => {
                         const active = isActive(item)
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => handleNavClick(item)}
-                                className={`flex flex-col items-center justify-center flex-1 transition-all relative
-                                    ${active ? 'text-primary-600' : 'text-gray-400'}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleNavClick(item)
+                                }}
+                                className={`flex flex-col items-center justify-center flex-1 transition-all relative cursor-pointer touch-manipulation active:scale-95
+                                    ${active ? 'text-primary-600 font-bold' : 'text-gray-400'}
                                 `}
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
                             >
                                 <div className={`p-1 rounded-xl transition-all duration-300 ${active ? 'scale-110' : ''}`}>
                                     <item.icon size={22} className={active ? 'stroke-[2.5px]' : 'stroke-[2px]'} />
@@ -182,23 +188,11 @@ const AcademicBottomNav = () => {
                                 {active && (
                                     <div className="absolute -top-1 w-1 h-1 bg-primary-600 rounded-full" />
                                 )}
-                                
-                                {item.children && !activeSheet && (
-                                    <ChevronUp size={10} className="absolute -top-1 right-1/4 text-gray-300 animate-bounce" />
-                                )}
                             </button>
                         )
                     })}
                 </div>
-                {/* iPhone Home Indicator Spacer */}
-                <div className="h-safe-area-bottom pb-2" />
-            </div>
-
-            <style>{`
-                .h-safe-area-bottom {
-                    height: env(safe-area-inset-bottom);
-                }
-            `}</style>
+            </nav>
         </>
     )
 }

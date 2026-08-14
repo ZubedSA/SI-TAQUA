@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Info, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, UserCheck, Shield } from 'lucide-react'
+import { Save, RefreshCw, Info, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, UserCheck, Shield, Lock } from 'lucide-react'
 import { supabase } from '../../../../../lib/supabase'
 import { useAuth } from '../../../../../context/AuthContext'
 import ResponsiveTable from '../../../../../components/ui/ResponsiveTable'
@@ -294,9 +294,16 @@ const MadrosUASPage = () => {
         }))
     }
 
+    const selectedSemObj = semester.find(s => String(s.id) === String(filters.semester_id))
+    const isSemesterActive = Boolean(selectedSemObj ? selectedSemObj.is_active : true)
+
     // 5. Save All Grades
     const handleSaveAll = async () => {
         if (santri.length === 0) return
+        if (!isSemesterActive) {
+            setErrorMessage('Gagal menyimpan: Semester ini sudah tidak aktif (Read-Only).')
+            return
+        }
 
         setSaving(true)
         setErrorMessage('')
@@ -312,8 +319,6 @@ const MadrosUASPage = () => {
                 const harianNum = (data.harian !== '' && data.harian !== null && data.harian !== undefined) ? parseFloat(data.harian) : null
                 const uasNum = (data.uas !== '' && data.uas !== null && data.uas !== undefined) ? parseFloat(data.uas) : null
 
-                if (harianNum === null && uasNum === null && !data.catatan) continue
-
                 const { data: existingRows } = await supabase
                     .from('nilai')
                     .select('id, jenis_ujian')
@@ -324,7 +329,7 @@ const MadrosUASPage = () => {
                 const harianRow = existingRows?.find(r => r.jenis_ujian === 'harian')
                 const examRow = existingRows?.find(r => r.jenis_ujian !== 'harian')
 
-                // A. Save Nilai Harian if filled
+                // A. Save Nilai Harian if filled, or Delete if cleared
                 if (harianNum !== null) {
                     const payloadH = {
                         santri_id: s.id,
@@ -339,14 +344,18 @@ const MadrosUASPage = () => {
                     if (harianRow) {
                         const { error: errUp } = await supabase.from('nilai').update(payloadH).eq('id', harianRow.id)
                         if (errUp) throw errUp
-                    } else if (!existingRows || existingRows.length === 0) {
+                    } else {
                         const { error: errIn } = await supabase.from('nilai').insert([payloadH])
                         if (errIn) throw errIn
                     }
                     countSaved++
+                } else if (harianRow) {
+                    const { error: errDel } = await supabase.from('nilai').delete().eq('id', harianRow.id)
+                    if (errDel) throw errDel
+                    countSaved++
                 }
 
-                // B. Save Nilai Ujian (UAS / IMDA) if filled
+                // B. Save Nilai Ujian (UAS / IMDA) if filled, or Delete if cleared
                 if (uasNum !== null) {
                     const payloadE = {
                         santri_id: s.id,
@@ -393,6 +402,10 @@ const MadrosUASPage = () => {
                             }
                         }
                     }
+                    countSaved++
+                } else if (examRow) {
+                    const { error: errDel } = await supabase.from('nilai').delete().eq('id', examRow.id)
+                    if (errDel) throw errDel
                     countSaved++
                 }
             }
@@ -507,6 +520,26 @@ const MadrosUASPage = () => {
                 </div>
             </div>
 
+            {/* INACTIVE SEMESTER WARNING BANNER */}
+            {filters.semester_id && !isSemesterActive && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-fadeIn">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-100/80 rounded-xl text-amber-700 shrink-0">
+                            <Lock size={20} />
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-amber-900">Mode Lihat Saja (Semester Tidak Aktif)</div>
+                            <div className="text-xs text-amber-700 mt-0.5">
+                                Semester ({selectedSemObj?.nama} - {selectedSemObj?.tahun_ajaran}) sudah tidak aktif. Seluruh pengisian dan pengubahan nilai dikunci.
+                            </div>
+                        </div>
+                    </div>
+                    <span className="px-3 py-1 bg-amber-200/80 text-amber-900 font-bold rounded-lg text-[10px] uppercase tracking-wider shrink-0 font-mono border border-amber-300">
+                        Terkunci
+                    </span>
+                </div>
+            )}
+
             {/* TABLE SECTION */}
             {filters.kelas_id && filters.mapel_id && filters.semester_id ? (
                 <div className="table-container">
@@ -542,9 +575,15 @@ const MadrosUASPage = () => {
                             type="button"
                             className="btn btn-primary"
                             onClick={handleSaveAll}
-                            disabled={saving || santri.length === 0}
+                            disabled={saving || santri.length === 0 || !isSemesterActive}
                         >
-                            {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Semua Nilai</>}
+                            {saving ? (
+                                <><RefreshCw size={18} className="spin" /> Menyimpan...</>
+                            ) : !isSemesterActive ? (
+                                <><Lock size={18} /> Semester Terkunci</>
+                            ) : (
+                                <><Save size={18} /> Simpan Semua Nilai</>
+                            )}
                         </button>
                     </div>
 
@@ -559,10 +598,11 @@ const MadrosUASPage = () => {
                                 render: (row) => (
                                     <input
                                         type="number"
-                                        className="nilai-input"
+                                        className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         min="0"
                                         max="100"
                                         placeholder="0-100"
+                                        disabled={!isSemesterActive}
                                         value={inputMap[row.id]?.harian ?? ''}
                                         onChange={e => handleFieldChange(row.id, 'harian', e.target.value)}
                                     />
@@ -574,10 +614,11 @@ const MadrosUASPage = () => {
                                 render: (row) => (
                                     <input
                                         type="number"
-                                        className="nilai-input"
+                                        className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         min="0"
                                         max="100"
                                         placeholder="0-100"
+                                        disabled={!isSemesterActive}
                                         value={inputMap[row.id]?.uas ?? ''}
                                         onChange={e => handleFieldChange(row.id, 'uas', e.target.value)}
                                     />
@@ -616,8 +657,9 @@ const MadrosUASPage = () => {
                                 render: (row) => (
                                     <input
                                         type="text"
-                                        className="form-control"
+                                        className="form-control disabled:bg-gray-100 disabled:cursor-not-allowed"
                                         placeholder="Keterangan..."
+                                        disabled={!isSemesterActive}
                                         value={inputMap[row.id]?.catatan ?? ''}
                                         onChange={e => handleFieldChange(row.id, 'catatan', e.target.value)}
                                         style={{ minWidth: '130px' }}
@@ -653,10 +695,11 @@ const MadrosUASPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block font-semibold">Nilai Harian</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="100"
                                                 placeholder="0-100"
+                                                disabled={!isSemesterActive}
                                                 value={inputMap[row.id]?.harian ?? ''}
                                                 onChange={e => handleFieldChange(row.id, 'harian', e.target.value)}
                                             />
@@ -665,10 +708,11 @@ const MadrosUASPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block font-semibold">Nilai UAS (IMDA)</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="100"
                                                 placeholder="0-100"
+                                                disabled={!isSemesterActive}
                                                 value={inputMap[row.id]?.uas ?? ''}
                                                 onChange={e => handleFieldChange(row.id, 'uas', e.target.value)}
                                             />
@@ -678,8 +722,9 @@ const MadrosUASPage = () => {
                                         <label className="text-xs text-gray-500 mb-1 block">Keterangan</label>
                                         <input
                                             type="text"
-                                            className="form-control text-sm px-2 py-1"
+                                            className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             placeholder="Keterangan..."
+                                            disabled={!isSemesterActive}
                                             value={inputMap[row.id]?.catatan ?? ''}
                                             onChange={e => handleFieldChange(row.id, 'catatan', e.target.value)}
                                         />

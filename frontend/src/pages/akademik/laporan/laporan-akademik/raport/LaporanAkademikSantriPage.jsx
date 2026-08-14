@@ -368,7 +368,7 @@ const LaporanAkademikSantriPage = () => {
             setPerilaku(perilakuData)
 
             // --- 4. Query Presensi Logs by Semester Date Range (Fallback calculation from daily logs) ---
-            const activeSemObj = semester.find(s => s.id === filters.semester_id)
+            const activeSemObj = semester.find(s => String(s.id) === String(filters.semester_id))
             let presensiQuery = supabase
                 .from('presensi')
                 .select('status, keterangan, tanggal')

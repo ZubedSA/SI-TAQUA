@@ -9,10 +9,11 @@ import '../../shared/styles/Nilai.css'
 /**
  * Helper Components (Defined Outside InputPerilakuPage to prevent React unmounting/remounting on render)
  */
-const BehaviorOptions = ({ value, onChange }) => (
+const AkhlakSelect = ({ value, onChange, disabled }) => (
     <select 
-        className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
+        className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed" 
         value={value || ''} 
+        disabled={disabled}
         onChange={e => onChange(e.target.value)}
     >
         <option value="">Pilih...</option>
@@ -26,10 +27,11 @@ const BehaviorOptions = ({ value, onChange }) => (
     </select>
 )
 
-const PredikatOptions = ({ value, onChange }) => (
+const PredikatOptions = ({ value, onChange, disabled }) => (
     <select 
-        className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer" 
+        className="w-full text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded-lg px-2 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed" 
         value={value || ''} 
+        disabled={disabled}
         onChange={e => onChange(e.target.value)}
     >
         <option value="">Pilih...</option>
@@ -43,7 +45,7 @@ const PredikatOptions = ({ value, onChange }) => (
     </select>
 )
 
-const AttendanceInputs = ({ data = {}, onChange }) => {
+const AttendanceInputs = ({ data = {}, onChange, disabled }) => {
     const handleNumChange = (field, rawVal) => {
         const numOnly = rawVal.replace(/[^0-9]/g, '')
         onChange(field, numOnly)
@@ -57,7 +59,8 @@ const AttendanceInputs = ({ data = {}, onChange }) => {
                     type="text" 
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-blue-300 rounded-b-lg py-1 px-1 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none" 
+                    disabled={disabled}
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-blue-300 rounded-b-lg py-1 px-1 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" 
                     placeholder="0"
                     value={data.sakit ?? ''} 
                     onChange={e => handleNumChange('sakit', e.target.value)} 
@@ -69,19 +72,21 @@ const AttendanceInputs = ({ data = {}, onChange }) => {
                     type="text" 
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-amber-300 rounded-b-lg py-1 px-1 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none" 
+                    disabled={disabled}
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-amber-300 rounded-b-lg py-1 px-1 focus:border-amber-600 focus:ring-1 focus:ring-amber-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" 
                     placeholder="0"
                     value={data.izin ?? ''} 
                     onChange={e => handleNumChange('izin', e.target.value)} 
                 />
             </div>
             <div className="flex flex-col items-center min-w-0">
-                <span className="text-[10px] font-black text-red-700 bg-red-100 border border-red-300 rounded-t-lg w-full text-center py-0.5 leading-tight uppercase tracking-wide truncate" title="Alpa">Alpa</span>
+                <span className="text-[10px] font-black text-rose-700 bg-rose-100 border border-rose-300 rounded-t-lg w-full text-center py-0.5 leading-tight uppercase tracking-wide truncate" title="Alpha">Alpha</span>
                 <input 
                     type="text" 
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-red-300 rounded-b-lg py-1 px-1 focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none" 
+                    disabled={disabled}
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-rose-300 rounded-b-lg py-1 px-1 focus:border-rose-600 focus:ring-1 focus:ring-rose-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" 
                     placeholder="0"
                     value={data.alpha ?? ''} 
                     onChange={e => handleNumChange('alpha', e.target.value)} 
@@ -93,7 +98,8 @@ const AttendanceInputs = ({ data = {}, onChange }) => {
                     type="text" 
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-purple-300 rounded-b-lg py-1 px-1 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none" 
+                    disabled={disabled}
+                    className="w-full text-sm font-bold text-center text-gray-900 bg-white border border-t-0 border-purple-300 rounded-b-lg py-1 px-1 focus:border-purple-600 focus:ring-1 focus:ring-purple-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" 
                     placeholder="0"
                     value={data.pulang ?? ''} 
                     onChange={e => handleNumChange('pulang', e.target.value)} 
@@ -315,31 +321,51 @@ const InputPerilakuPage = () => {
                     .in('santri_id', santriIds)
 
                 // D. Query Presensi Log filtered by Semester Date Range & Attendance Type (Halaqoh vs Madrasah)
-                const activeSem = semester.find(s => s.id === filters.semester_id)
-                let presensiQuery = supabase
-                    .from('presensi')
-                    .select('santri_id, status, keterangan, tanggal')
-                    .in('santri_id', santriIds)
+                const activeSem = semester.find(s => String(s.id) === String(filters.semester_id))
+                let allRawPresensi = []
+                let page = 0
+                const pageSize = 1000
+                let hasMore = true
 
-                if (activeSem?.tanggal_mulai && activeSem?.tanggal_selesai) {
-                    presensiQuery = presensiQuery
-                        .gte('tanggal', activeSem.tanggal_mulai)
-                        .lte('tanggal', activeSem.tanggal_selesai)
-                }
+                while (hasMore) {
+                    let presensiQuery = supabase
+                        .from('presensi')
+                        .select('santri_id, status, keterangan, tanggal')
+                        .in('santri_id', santriIds)
+                        .range(page * pageSize, (page + 1) * pageSize - 1)
 
-                const { data: rawPresensi, error: presensiErr } = await presensiQuery
-                if (presensiErr) {
-                    console.warn('Gagal memuat log presensi:', presensiErr)
+                    if (activeSem?.tanggal_mulai && activeSem?.tanggal_selesai) {
+                        presensiQuery = presensiQuery
+                            .gte('tanggal', activeSem.tanggal_mulai)
+                            .lte('tanggal', activeSem.tanggal_selesai)
+                    }
+
+                    const { data: chunk, error: presensiErr } = await presensiQuery
+                    if (presensiErr) {
+                        console.warn('Gagal memuat log presensi:', presensiErr)
+                        break
+                    }
+
+                    if (chunk && chunk.length > 0) {
+                        allRawPresensi = [...allRawPresensi, ...chunk]
+                        if (chunk.length < pageSize) {
+                            hasMore = false
+                        } else {
+                            page++
+                        }
+                    } else {
+                        hasMore = false
+                    }
                 }
 
                 // Aggregate absence counts per santri from presensi logs using attendanceHelper
-                const autoCounts = calculateAutoPresensi(rawPresensi, santriIds)
+                const autoCounts = calculateAutoPresensi(allRawPresensi, santriIds)
 
                 // E. Merge Data
                 const mergedData = {}
                 santriData.forEach(s => {
-                    const p = perilakuData?.find(x => x.santri_id === s.id)
-                    const t = taujihadData?.find(x => x.santri_id === s.id)
+                    const p = perilakuData?.find(x => String(x.santri_id) === String(s.id))
+                    const t = taujihadData?.find(x => String(x.santri_id) === String(s.id))
                     const autoObj = autoCounts[s.id] || { madrosah: {}, quraniyah: {} }
                     const resolved = getResolvedAttendance(p, autoObj)
 
@@ -466,8 +492,16 @@ const InputPerilakuPage = () => {
         })
     }
 
+    const selectedSemObj = semester.find(s => String(s.id) === String(filters.semester_id))
+    const isSemesterActive = Boolean(selectedSemObj ? selectedSemObj.is_active : true)
+
     // 4. Save All Data (Perilaku & Taujihat)
     const handleSave = async () => {
+        if (!isSemesterActive) {
+            setError('Gagal menyimpan: Semester ini sudah tidak aktif (Read-Only).')
+            return
+        }
+
         setSaving(true)
         setError('')
         setSuccess('')
@@ -718,6 +752,26 @@ const InputPerilakuPage = () => {
                 </div>
             </div>
 
+            {/* INACTIVE SEMESTER WARNING BANNER */}
+            {filters.semester_id && !isSemesterActive && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-fadeIn">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-100/80 rounded-xl text-amber-700 shrink-0">
+                            <Lock size={20} />
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-amber-900">Mode Lihat Saja (Semester Tidak Aktif)</div>
+                            <div className="text-xs text-amber-700 mt-0.5">
+                                Semester ({selectedSemObj?.nama} - {selectedSemObj?.tahun_ajaran}) sudah tidak aktif. Seluruh pengisian perilaku & presensi dikunci.
+                            </div>
+                        </div>
+                    </div>
+                    <span className="px-3 py-1 bg-amber-200/80 text-amber-900 font-bold rounded-lg text-[10px] uppercase tracking-wider shrink-0 font-mono border border-amber-300">
+                        Terkunci
+                    </span>
+                </div>
+            )}
+
             {/* TABLE / EMPTY ACCESS SECTION */}
             {(filters.kelas_id || filters.halaqoh_id) && filters.semester_id ? (
                 <div className="table-container">
@@ -747,9 +801,9 @@ const InputPerilakuPage = () => {
                         <div className="flex items-center gap-2 flex-wrap">
                             <button
                                 type="button"
-                                className="btn btn-outline text-xs flex items-center gap-1.5 bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 transition-all"
+                                className="btn btn-outline text-xs flex items-center gap-1.5 bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={handleSyncPresensi}
-                                disabled={loading || santri.length === 0}
+                                disabled={loading || santri.length === 0 || !isSemesterActive}
                                 title="Hitung ulang otomatis dari data log presensi harian sesuai periode tanggal semester"
                             >
                                 <RefreshCw size={14} /> Hitung Otomatis Presensi
@@ -757,9 +811,15 @@ const InputPerilakuPage = () => {
                             <button
                                 className="btn btn-primary"
                                 onClick={handleSave}
-                                disabled={saving || santri.length === 0}
+                                disabled={saving || santri.length === 0 || !isSemesterActive}
                             >
-                                {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Data</>}
+                                {saving ? (
+                                    <><RefreshCw size={18} className="spin" /> Menyimpan...</>
+                                ) : !isSemesterActive ? (
+                                    <><Lock size={18} /> Semester Terkunci</>
+                                ) : (
+                                    <><Save size={18} /> Simpan Data</>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -769,15 +829,15 @@ const InputPerilakuPage = () => {
                             { header: 'No', hideOnMobile: true, render: (_, i) => i + 1, className: 'w-12 text-center min-w-[48px]' },
                             { header: 'Nama Santri', accessor: 'nama', className: 'min-w-[190px] font-medium text-gray-900', hideOnMobile: true },
 
-                            { header: 'Ketekunan', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.ketekunan} onChange={v => handleInputChange(row.id, 'ketekunan', v)} /> },
-                            { header: 'Kedisiplinan', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.kedisiplinan} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} /> },
-                            { header: 'Kebersihan', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.kebersihan} onChange={v => handleInputChange(row.id, 'kebersihan', v)} /> },
-                            { header: 'Kerapian', className: 'min-w-[150px]', render: (row) => <BehaviorOptions value={formData[row.id]?.kerapian} onChange={v => handleInputChange(row.id, 'kerapian', v)} /> },
+                            { header: 'Ketekunan', className: 'min-w-[150px]', render: (row) => <AkhlakSelect value={formData[row.id]?.ketekunan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'ketekunan', v)} /> },
+                            { header: 'Kedisiplinan', className: 'min-w-[150px]', render: (row) => <AkhlakSelect value={formData[row.id]?.kedisiplinan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} /> },
+                            { header: 'Kebersihan', className: 'min-w-[150px]', render: (row) => <AkhlakSelect value={formData[row.id]?.kebersihan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'kebersihan', v)} /> },
+                            { header: 'Kerapian', className: 'min-w-[150px]', render: (row) => <AkhlakSelect value={formData[row.id]?.kerapian} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'kerapian', v)} /> },
 
                             ...(mode === 'halaqoh' ? [
-                                { header: 'Hafalan (Juz)', className: 'min-w-[160px] border-l border-gray-200/60', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Contoh: 1 Juz" value={formData[row.id]?.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} /> },
-                                { header: 'Predikat', className: 'min-w-[150px]', render: (row) => <PredikatOptions value={formData[row.id]?.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} /> },
-                                { header: 'Total Hafalan', className: 'min-w-[160px]', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Contoh: 3 Juz" value={formData[row.id]?.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} /> },
+                                { header: 'Hafalan (Juz)', className: 'min-w-[160px] border-l border-gray-200/60', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="Contoh: 1 Juz" disabled={!isSemesterActive} value={formData[row.id]?.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} /> },
+                                { header: 'Predikat', className: 'min-w-[150px]', render: (row) => <PredikatOptions value={formData[row.id]?.predikat_hafalan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} /> },
+                                { header: 'Total Hafalan', className: 'min-w-[160px]', render: (row) => <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="Contoh: 3 Juz" disabled={!isSemesterActive} value={formData[row.id]?.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} /> },
                             ] : []),
                             {
                                 header: 'Ketidakhadiran (S/I/A/P)', 
@@ -786,12 +846,13 @@ const InputPerilakuPage = () => {
                                 render: (row) => (
                                     <AttendanceInputs 
                                         data={formData[row.id]} 
+                                        disabled={!isSemesterActive}
                                         onChange={(field, val) => handleInputChange(row.id, field, val)} 
                                     />
                                 )
                             },
 
-                            { header: mode === 'halaqoh' ? 'Catatan Musyrif (Taujihat)' : 'Catatan Wali Kelas', className: 'min-w-[250px] border-l border-gray-200/60', render: (row) => <textarea className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg p-2 min-h-[50px] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none" placeholder="Catatan untuk santri..." value={formData[row.id]?.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} /> }
+                            { header: mode === 'halaqoh' ? 'Catatan Musyrif (Taujihat)' : 'Catatan Wali Kelas', className: 'min-w-[250px] border-l border-gray-200/60', render: (row) => <textarea className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg p-2 min-h-[50px] focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="Catatan untuk santri..." disabled={!isSemesterActive} value={formData[row.id]?.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} /> }
                         ]}
                         data={santri}
                         loading={loading}
@@ -813,19 +874,19 @@ const InputPerilakuPage = () => {
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Ketekunan</label>
-                                                <BehaviorOptions value={d.ketekunan} onChange={v => handleInputChange(row.id, 'ketekunan', v)} />
+                                                <AkhlakSelect value={d.ketekunan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'ketekunan', v)} />
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Kedisiplinan</label>
-                                                <BehaviorOptions value={d.kedisiplinan} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} />
+                                                <AkhlakSelect value={d.kedisiplinan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'kedisiplinan', v)} />
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Kebersihan</label>
-                                                <BehaviorOptions value={d.kebersihan} onChange={v => handleInputChange(row.id, 'kebersihan', v)} />
+                                                <AkhlakSelect value={d.kebersihan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'kebersihan', v)} />
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-gray-500 mb-1 block">Kerapian</label>
-                                                <BehaviorOptions value={d.kerapian} onChange={v => handleInputChange(row.id, 'kerapian', v)} />
+                                                <AkhlakSelect value={d.kerapian} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'kerapian', v)} />
                                             </div>
                                         </div>
                                     </div>
@@ -836,15 +897,15 @@ const InputPerilakuPage = () => {
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="col-span-2">
                                                     <label className="text-[10px] text-gray-500 mb-1 block">Hafalan (Juz)</label>
-                                                    <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 outline-none" placeholder="Contoh: 1 Juz" value={d.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} />
+                                                    <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="Contoh: 1 Juz" disabled={!isSemesterActive} value={d.jumlah_hafalan || ''} onChange={e => handleInputChange(row.id, 'jumlah_hafalan', e.target.value)} />
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] text-gray-500 mb-1 block">Predikat</label>
-                                                    <PredikatOptions value={d.predikat_hafalan} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} />
+                                                    <PredikatOptions value={d.predikat_hafalan} disabled={!isSemesterActive} onChange={v => handleInputChange(row.id, 'predikat_hafalan', v)} />
                                                 </div>
                                                 <div>
                                                     <label className="text-[10px] text-gray-500 mb-1 block">Total Hafalan</label>
-                                                    <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 outline-none" placeholder="Contoh: 3 Juz" value={d.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} />
+                                                    <input type="text" className="w-full text-xs font-medium text-gray-800 bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="Contoh: 3 Juz" disabled={!isSemesterActive} value={d.total_hafalan || ''} onChange={e => handleInputChange(row.id, 'total_hafalan', e.target.value)} />
                                                 </div>
                                             </div>
                                         </div>
@@ -854,13 +915,14 @@ const InputPerilakuPage = () => {
                                         <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Ketidakhadiran (S/I/A/P)</h4>
                                         <AttendanceInputs 
                                             data={d} 
+                                            disabled={!isSemesterActive}
                                             onChange={(field, val) => handleInputChange(row.id, field, val)} 
                                         />
                                     </div>
                                     {/* Taujihat */}
                                     <div className="border-t border-gray-50 pt-3">
                                         <h4 className="text-xs font-semibold text-[#0A2619] mb-2 uppercase">Catatan Musyrif / Wali Kelas</h4>
-                                        <textarea className="form-control text-sm min-h-[80px]" placeholder="Catatan untuk santri..." value={d.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} />
+                                        <textarea className="form-control text-sm min-h-[80px] disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="Catatan untuk santri..." disabled={!isSemesterActive} value={d.catatan || ''} onChange={e => handleInputChange(row.id, 'catatan', e.target.value)} />
                                     </div>
                                 </div>
                             )

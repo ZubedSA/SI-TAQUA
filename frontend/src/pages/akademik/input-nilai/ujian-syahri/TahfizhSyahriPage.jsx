@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, BookMarked, AlertCircle } from 'lucide-react'
+import { Save, RefreshCw, BookMarked, AlertCircle, Lock } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useUserHalaqoh } from '../../../../hooks/features/useUserHalaqoh'
 import SmartMonthYearFilter from '../../../../components/common/SmartMonthYearFilter'
@@ -17,106 +17,100 @@ const TahfizhSyahriPage = () => {
     const [success, setSuccess] = useState('')
     const [error, setError] = useState('')
 
-    // Gunakan hook untuk halaqoh yang difilter berdasarkan user
+    const { mode: calendarMode } = useCalendar()
+
     const {
         halaqohList,
-        halaqohIds,
-        musyrifInfo,
+        selectedHalaqohId: selectedHalaqoh,
+        setSelectedHalaqohId: setSelectedHalaqoh,
         isLoading: loadingHalaqoh,
-        hasHalaqoh,
-        isAdmin: isUserAdmin
+        isOnlyMusyrif,
+        musyrifInfo
     } = useUserHalaqoh()
-
-    const [selectedHalaqoh, setSelectedHalaqoh] = useState('')
-
-    // Auto-select halaqoh jika hanya satu (non-admin)
-    useEffect(() => {
-        if (!isUserAdmin && halaqohList.length === 1 && !selectedHalaqoh) {
-            setSelectedHalaqoh(halaqohList[0].id)
-        }
-    }, [isUserAdmin, halaqohList, selectedHalaqoh])
 
     const [filters, setFilters] = useState({
         semester_id: '',
-        bulan: new Date().getMonth() + 1,
-        tahun: new Date().getFullYear()
+        bulan: String(new Date().getMonth() + 1),
+        tahun: String(new Date().getFullYear())
     })
 
-    const { mode } = useCalendar()
-
     useEffect(() => {
-        console.log('[TahfizhSyahri] Mode changed:', mode)
-    }, [mode])
-
-    useEffect(() => {
-        fetchOptions()
+        fetchSemesters()
+        fetchGuruList()
     }, [])
 
-    const fetchOptions = async () => {
-        const [semRes, guruRes] = await Promise.all([
-            supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
-            supabase.from('guru').select('id, nama').order('nama')
-        ])
-        if (semRes.data) {
-            setSemester(semRes.data)
-            const active = semRes.data.find(s => s.is_active)
-            if (active) setFilters(prev => ({ ...prev, semester_id: active.id }))
+    useEffect(() => {
+        if (selectedHalaqoh && filters.semester_id) {
+            fetchSantriAndNilai()
         }
-        if (guruRes.data) setGuruList(guruRes.data)
+    }, [selectedHalaqoh, filters])
+
+    const fetchSemesters = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('semester')
+                .select('*')
+                .order('tahun_ajaran', { ascending: false })
+
+            if (error) throw error
+            setSemester(data || [])
+            const activeSem = data?.find(s => s.is_active)
+            if (activeSem) {
+                setFilters(prev => ({ ...prev, semester_id: activeSem.id }))
+            }
+        } catch (err) {
+            console.error('Error fetching semesters:', err)
+        }
+    }
+
+    const selectedSemObj = semester.find(s => String(s.id) === String(filters.semester_id))
+    const isSemesterActive = Boolean(selectedSemObj ? selectedSemObj.is_active : true)
+
+    const fetchGuruList = async () => {
+        try {
+            const { data } = await supabase.from('guru').select('id, nama').order('nama')
+            setGuruList(data || [])
+        } catch (err) {
+            console.error('Error fetching guru:', err)
+        }
     }
 
     const fetchSantriAndNilai = async () => {
-        console.log('[TahfizhSyahri] Fetch triggered:', filters)
-        if (!selectedHalaqoh || !filters.semester_id) return
-        setLoading(true)
-        setError('')
-
         try {
-            // Fetch santri berdasarkan halaqoh
+            setLoading(true)
+
             const { data: santriData, error: santriError } = await supabase
                 .from('santri')
                 .select('id, nama, nis')
                 .eq('halaqoh_id', selectedHalaqoh)
-                .eq('status', 'Aktif')
                 .order('nama')
 
             if (santriError) throw santriError
             setSantri(santriData || [])
 
-            // Fetch existing nilai untuk periode ini
-            if (santriData && santriData.length > 0) {
-                const { data: nilaiData, error: nilaiError } = await supabase
-                    .from('nilai')
-                    .select('*')
-                    .eq('semester_id', filters.semester_id)
-                    .eq('jenis_ujian', 'syahri')
-                    .eq('bulan', filters.bulan)
-                    .eq('tahun', filters.tahun)
-                    .in('santri_id', santriData.map(s => s.id))
+            const { data: nilaiData, error: nilaiError } = await supabase
+                .from('nilai')
+                .select('*')
+                .eq('semester_id', filters.semester_id)
+                .eq('jenis_ujian', 'syahri')
+                .eq('bulan', filters.bulan)
+                .eq('tahun', filters.tahun)
 
-                if (nilaiError) throw nilaiError
+            if (nilaiError) throw nilaiError
 
-                // Get default penguji from halaqoh musyrif
-                const currentHalaqoh = halaqohList.find(h => h.id === selectedHalaqoh)
-                // Use musyrifInfo if available (from hook), otherwise from halaqoh list if joined, otherwise empty
-                const defaultPenguji = musyrifInfo?.id || currentHalaqoh?.musyrif_id || ''
-
-                // Map nilai ke state
-                const nilaiMap = {}
-                santriData.forEach(s => {
-                    const existingNilai = nilaiData?.find(n => n.santri_id === s.id)
-                    nilaiMap[s.id] = {
-                        id: existingNilai?.id || null,
-                        hafalan: existingNilai?.nilai_hafalan || '',
-                        tajwid: existingNilai?.nilai_tajwid || '',
-                        tilawah: existingNilai?.nilai_kelancaran || '',
-                        jumlah_hafalan: existingNilai?.jumlah_hafalan || '',
-                        jumlah_hafalan_halaman: existingNilai?.jumlah_hafalan_halaman || '',
-                        penguji_id: existingNilai?.penguji_id || defaultPenguji
-                    }
-                })
-                setNilai(nilaiMap)
-            }
+            const nilaiMap = {}
+            nilaiData?.forEach(n => {
+                nilaiMap[n.santri_id] = {
+                    id: n.id,
+                    hafalan: n.nilai_hafalan || '',
+                    tajwid: n.nilai_tajwid || '',
+                    tilawah: n.nilai_kelancaran || '',
+                    jumlah_hafalan: n.jumlah_hafalan || '',
+                    jumlah_hafalan_halaman: n.jumlah_hafalan_halaman || '',
+                    penguji_id: n.penguji_id || ''
+                }
+            })
+            setNilai(nilaiMap)
         } catch (err) {
             setError('Gagal memuat data: ' + err.message)
         } finally {
@@ -124,18 +118,12 @@ const TahfizhSyahriPage = () => {
         }
     }
 
-    useEffect(() => {
-        if (selectedHalaqoh && filters.semester_id) {
-            fetchSantriAndNilai()
-        }
-    }, [selectedHalaqoh, filters.semester_id, filters.bulan, filters.tahun])
-
     const handleNilaiChange = (santriId, field, value) => {
         setNilai(prev => ({
             ...prev,
             [santriId]: {
                 ...prev[santriId],
-                [field]: field === 'penguji_id' ? value : (value === '' ? '' : parseFloat(value) || 0)
+                [field]: value
             }
         }))
     }
@@ -151,14 +139,26 @@ const TahfizhSyahriPage = () => {
     }
 
     const handleSave = async () => {
+        if (!isSemesterActive) {
+            setError('Gagal menyimpan: Semester ini sudah tidak aktif (Read-Only).')
+            return
+        }
+
         setSaving(true)
         setError('')
         setSuccess('')
 
         try {
             for (const [santriId, data] of Object.entries(nilai)) {
-                // Skip jika tidak ada nilai yang diisi
-                if (!data.hafalan && !data.tajwid && !data.tilawah) continue
+                const hasValue = data.hafalan !== '' || data.tajwid !== '' || data.tilawah !== ''
+
+                if (!hasValue) {
+                    if (data.id) {
+                        const { error } = await supabase.from('nilai').delete().eq('id', data.id)
+                        if (error) throw error
+                    }
+                    continue
+                }
 
                 const payload = {
                     santri_id: santriId,
@@ -268,6 +268,26 @@ const TahfizhSyahriPage = () => {
                 />
             </div>
 
+            {/* INACTIVE SEMESTER WARNING BANNER */}
+            {filters.semester_id && !isSemesterActive && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-fadeIn">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-100/80 rounded-xl text-amber-700 shrink-0">
+                            <Lock size={20} />
+                        </div>
+                        <div>
+                            <div className="font-bold text-sm text-amber-900">Mode Lihat Saja (Semester Tidak Aktif)</div>
+                            <div className="text-xs text-amber-700 mt-0.5">
+                                Semester ({selectedSemObj?.nama} - {selectedSemObj?.tahun_ajaran}) sudah tidak aktif. Seluruh pengisian dan pengubahan nilai dikunci.
+                            </div>
+                        </div>
+                    </div>
+                    <span className="px-3 py-1 bg-amber-200/80 text-amber-900 font-bold rounded-lg text-[10px] uppercase tracking-wider shrink-0 font-mono border border-amber-300">
+                        Terkunci
+                    </span>
+                </div>
+            )}
+
             {
                 selectedHalaqoh && filters.semester_id && (
                     <div className="table-container">
@@ -276,9 +296,15 @@ const TahfizhSyahriPage = () => {
                             <button
                                 className="btn btn-primary"
                                 onClick={handleSave}
-                                disabled={saving || santri.length === 0}
+                                disabled={saving || santri.length === 0 || !isSemesterActive}
                             >
-                                {saving ? <><RefreshCw size={18} className="spin" /> Menyimpan...</> : <><Save size={18} /> Simpan Nilai</>}
+                                {saving ? (
+                                    <><RefreshCw size={18} className="spin" /> Menyimpan...</>
+                                ) : !isSemesterActive ? (
+                                    <><Lock size={18} /> Semester Terkunci</>
+                                ) : (
+                                    <><Save size={18} /> Simpan Nilai</>
+                                )}
                             </button>
                         </div>
 
@@ -293,10 +319,11 @@ const TahfizhSyahriPage = () => {
                                     render: (row) => (
                                         <input
                                             type="number"
-                                            className="nilai-input"
+                                            className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             min="0"
                                             max="100"
                                             placeholder="0-100"
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.hafalan ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'hafalan', e.target.value)}
                                         />
@@ -308,10 +335,11 @@ const TahfizhSyahriPage = () => {
                                     render: (row) => (
                                         <input
                                             type="number"
-                                            className="nilai-input"
+                                            className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             min="0"
                                             max="100"
                                             placeholder="0-100"
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.tajwid ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'tajwid', e.target.value)}
                                         />
@@ -323,10 +351,11 @@ const TahfizhSyahriPage = () => {
                                     render: (row) => (
                                         <input
                                             type="number"
-                                            className="nilai-input"
+                                            className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             min="0"
                                             max="100"
                                             placeholder="0-100"
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.tilawah ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'tilawah', e.target.value)}
                                         />
@@ -339,10 +368,11 @@ const TahfizhSyahriPage = () => {
                                     render: (row) => (
                                         <input
                                             type="number"
-                                            className="nilai-input"
+                                            className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             min="0"
                                             max="30"
                                             placeholder="Juz"
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.jumlah_hafalan ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan', e.target.value)}
                                         />
@@ -354,10 +384,11 @@ const TahfizhSyahriPage = () => {
                                     render: (row) => (
                                         <input
                                             type="number"
-                                            className="nilai-input"
+                                            className="nilai-input disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             min="0"
                                             max="20"
                                             placeholder="Hal"
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.jumlah_hafalan_halaman ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan_halaman', e.target.value)}
                                         />
@@ -368,8 +399,9 @@ const TahfizhSyahriPage = () => {
                                     className: 'text-center min-w-[150px]',
                                     render: (row) => (
                                         <select
-                                            className="form-control"
+                                            className="form-control disabled:bg-gray-100 disabled:cursor-not-allowed"
                                             style={{ minWidth: '140px', padding: '6px 8px', fontSize: '0.85rem' }}
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.penguji_id ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'penguji_id', e.target.value)}
                                         >
@@ -398,10 +430,11 @@ const TahfizhSyahriPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block">Hafalan</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="100"
                                                 placeholder="0-100"
+                                                disabled={!isSemesterActive}
                                                 value={nilai[row.id]?.hafalan ?? ''}
                                                 onChange={e => handleNilaiChange(row.id, 'hafalan', e.target.value)}
                                             />
@@ -410,10 +443,11 @@ const TahfizhSyahriPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block">Tajwid</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="100"
                                                 placeholder="0-100"
+                                                disabled={!isSemesterActive}
                                                 value={nilai[row.id]?.tajwid ?? ''}
                                                 onChange={e => handleNilaiChange(row.id, 'tajwid', e.target.value)}
                                             />
@@ -422,10 +456,11 @@ const TahfizhSyahriPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block">Tilawah</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="100"
                                                 placeholder="0-100"
+                                                disabled={!isSemesterActive}
                                                 value={nilai[row.id]?.tilawah ?? ''}
                                                 onChange={e => handleNilaiChange(row.id, 'tilawah', e.target.value)}
                                             />
@@ -436,10 +471,11 @@ const TahfizhSyahriPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block">Jml Hafalan (Juz)</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="30"
                                                 placeholder="Juz"
+                                                disabled={!isSemesterActive}
                                                 value={nilai[row.id]?.jumlah_hafalan ?? ''}
                                                 onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan', e.target.value)}
                                             />
@@ -448,10 +484,11 @@ const TahfizhSyahriPage = () => {
                                             <label className="text-xs text-gray-500 mb-1 block">Jml Hafalan (Hal)</label>
                                             <input
                                                 type="number"
-                                                className="form-control text-sm px-2 py-1"
+                                                className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
                                                 min="0"
                                                 max="20"
                                                 placeholder="Hal"
+                                                disabled={!isSemesterActive}
                                                 value={nilai[row.id]?.jumlah_hafalan_halaman ?? ''}
                                                 onChange={e => handleNilaiChange(row.id, 'jumlah_hafalan_halaman', e.target.value)}
                                             />
@@ -460,7 +497,8 @@ const TahfizhSyahriPage = () => {
                                     <div className="mt-1">
                                         <label className="text-xs text-gray-500 mb-1 block">Penguji</label>
                                         <select
-                                            className="form-control text-sm px-2 py-1"
+                                            className="form-control text-sm px-2 py-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            disabled={!isSemesterActive}
                                             value={nilai[row.id]?.penguji_id ?? ''}
                                             onChange={e => handleNilaiChange(row.id, 'penguji_id', e.target.value)}
                                         >

@@ -53,22 +53,17 @@ export const calculateAutoPresensi = (rawPresensi = [], santriIds = []) => {
 }
 
 /**
- * Resolve final numeric attendance value with fallback logic:
- * 1. Primary saved value in `perilaku_semester`
- * 2. Fallback saved value in `perilaku_semester` (cross-mode fallback)
- * 3. Auto-calculated daily presensi log count
+ * Resolve final numeric attendance value:
+ * 1. Primary saved value in `perilaku_semester` for the target mode
+ * 2. Auto-calculated daily presensi log count for the target mode
  * 
  * @param {*} primarySaved - Value from target mode in `perilaku_semester`
- * @param {*} fallbackSaved - Value from alternate mode in `perilaku_semester`
- * @param {number} autoVal - Calculated count from `presensi` logs
+ * @param {number} autoVal - Calculated count from `presensi` logs for target mode
  * @returns {number} Resolved numeric count
  */
-export const resolveAttendanceCount = (primarySaved, fallbackSaved, autoVal = 0) => {
+export const resolveAttendanceCount = (primarySaved, autoVal = 0) => {
     if (primarySaved !== undefined && primarySaved !== null && primarySaved !== '' && primarySaved !== '-') {
         return Number(primarySaved)
-    }
-    if (fallbackSaved !== undefined && fallbackSaved !== null && fallbackSaved !== '' && fallbackSaved !== '-') {
-        return Number(fallbackSaved)
     }
     return Number(autoVal || 0)
 }
@@ -86,18 +81,18 @@ export const getResolvedAttendance = (perilakuRow = null, autoObj = { madrosah: 
 
     return {
         madrosah: {
-            sakit: resolveAttendanceCount(perilakuRow?.sakit_kelas, perilakuRow?.sakit, autoM.sakit),
-            izin: resolveAttendanceCount(perilakuRow?.izin_kelas, perilakuRow?.izin, autoM.izin),
-            alpha: resolveAttendanceCount(perilakuRow?.alpha_kelas, perilakuRow?.alpha, autoM.alpha),
-            pulang: resolveAttendanceCount(perilakuRow?.pulang_kelas, perilakuRow?.pulang, autoM.pulang),
+            sakit: resolveAttendanceCount(perilakuRow?.sakit_kelas, autoM.sakit),
+            izin: resolveAttendanceCount(perilakuRow?.izin_kelas, autoM.izin),
+            alpha: resolveAttendanceCount(perilakuRow?.alpha_kelas, autoM.alpha),
+            pulang: resolveAttendanceCount(perilakuRow?.pulang_kelas, autoM.pulang),
             hadir: autoM.hadir,
             terlambat: autoM.terlambat
         },
         quraniyah: {
-            sakit: resolveAttendanceCount(perilakuRow?.sakit, perilakuRow?.sakit_kelas, autoQ.sakit),
-            izin: resolveAttendanceCount(perilakuRow?.izin, perilakuRow?.izin_kelas, autoQ.izin),
-            alpha: resolveAttendanceCount(perilakuRow?.alpha, perilakuRow?.alpha_kelas, autoQ.alpha),
-            pulang: resolveAttendanceCount(perilakuRow?.pulang, perilakuRow?.pulang_kelas, autoQ.pulang),
+            sakit: resolveAttendanceCount(perilakuRow?.sakit, autoQ.sakit),
+            izin: resolveAttendanceCount(perilakuRow?.izin, autoQ.izin),
+            alpha: resolveAttendanceCount(perilakuRow?.alpha, autoQ.alpha),
+            pulang: resolveAttendanceCount(perilakuRow?.pulang, autoQ.pulang),
             hadir: autoQ.hadir,
             terlambat: autoQ.terlambat
         }

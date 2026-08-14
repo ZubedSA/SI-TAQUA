@@ -324,9 +324,9 @@ const BottomNav = () => {
 
             {/* Bottom Sheet Menu */}
             <div 
-                className={`fixed left-4 right-4 bg-[#0A2619]/95 backdrop-blur-md rounded-[2rem] z-[9999] shadow-2xl border border-[#143d2a] transition-all duration-300 ease-in-out md:hidden
+                className={`fixed left-3 right-3 sm:left-4 sm:right-4 bg-[#0A2619]/95 backdrop-blur-md rounded-[2rem] z-[10001] shadow-2xl border border-[#143d2a] transition-all duration-300 ease-in-out md:hidden
                     ${activeSheet 
-                        ? 'bottom-24 opacity-100 translate-y-0 scale-100 pointer-events-auto' 
+                        ? 'bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] opacity-100 translate-y-0 scale-100 pointer-events-auto' 
                         : 'bottom-0 opacity-0 translate-y-10 scale-95 pointer-events-none'
                     }
                 `}
@@ -336,8 +336,9 @@ const BottomNav = () => {
                     <div className="flex items-center gap-3">
                         {activeSubSheet && (
                             <button 
+                                type="button"
                                 onClick={goBack}
-                                className="p-2 -ml-2 bg-[#143d2a] rounded-full text-white hover:bg-[#1a4a35] transition-colors"
+                                className="p-2 -ml-2 bg-[#143d2a] rounded-full text-white hover:bg-[#1a4a35] transition-colors cursor-pointer touch-manipulation"
                             >
                                 <ChevronUp size={20} className="-rotate-90" />
                             </button>
@@ -346,7 +347,7 @@ const BottomNav = () => {
                             {activeSubSheet ? activeSubSheet.label : (navItems.find(i => i.id === activeSheet)?.label || 'Menu')}
                         </h3>
                     </div>
-                    <button onClick={closeSheet} className="p-2 bg-[#143d2a] rounded-full text-white">
+                    <button type="button" onClick={closeSheet} className="p-2 bg-[#143d2a] rounded-full text-white cursor-pointer touch-manipulation">
                         <X size={20} />
                     </button>
                 </div>
@@ -354,14 +355,20 @@ const BottomNav = () => {
                     {activeSheet && (activeSubSheet ? activeSubSheet.children : navItems.find(i => i.id === activeSheet)?.children)?.map((child, idx) => (
                         <button
                             key={idx}
-                            onClick={() => handleSubMenuClick(child)}
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleSubMenuClick(child)
+                            }}
                             className={`
-                                flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl transition-all active:scale-95 min-h-[96px] h-24 w-full relative
+                                flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-2xl transition-all active:scale-95 min-h-[96px] h-24 w-full relative cursor-pointer touch-manipulation
                                 ${location.pathname === child.path 
                                     ? 'bg-[#BCF32F] text-black shadow-md shadow-[#BCF32F]/10 scale-[1.02]' 
                                     : 'bg-[#143d2a] text-gray-300 hover:bg-[#1a4a35] hover:text-white border border-[#1d5239]'
                                 }
                             `}
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
                         >
                             <child.icon size={26} className={`shrink-0 ${location.pathname === child.path ? 'text-black' : 'text-white'}`} />
                             <span className="text-xs font-bold text-center leading-tight line-clamp-2 px-1">{child.label}</span>
@@ -377,17 +384,23 @@ const BottomNav = () => {
             </div>
 
             {/* Floating Bottom Navbar Bar */}
-            <div className="lg:hidden fixed bottom-4 left-4 right-4 bg-[#0A2619]/95 backdrop-blur-md border border-[#143d2a]/80 px-2 py-1.5 z-[10000] shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-[1.5rem]">
+            <nav className="lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-3 right-3 sm:left-4 sm:right-4 bg-[#0A2619]/95 backdrop-blur-md border border-[#143d2a]/80 px-2 py-1.5 z-[10000] shadow-[0_8px_32px_rgba(0,0,0,0.3)] rounded-[1.5rem] touch-manipulation select-none">
                 <div className="flex justify-around items-center h-14 max-w-md mx-auto">
                     {navItems.map((item) => {
                         const active = isActive(item)
                         return (
                             <button
                                 key={item.id}
-                                onClick={() => handleNavClick(item)}
-                                className={`flex flex-col items-center justify-center flex-1 transition-all relative
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleNavClick(item)
+                                }}
+                                className={`flex flex-col items-center justify-center flex-1 transition-all relative cursor-pointer touch-manipulation active:scale-95
                                     ${active ? 'text-[#BCF32F]' : 'text-gray-400'}
                                 `}
+                                style={{ WebkitTapHighlightColor: 'transparent' }}
                             >
                                 <div className={`p-1 rounded-xl transition-all duration-300 ${active ? 'scale-110' : ''}`}>
                                     <item.icon size={22} className={active ? 'stroke-[2.5px]' : 'stroke-[2px]'} />
@@ -403,7 +416,7 @@ const BottomNav = () => {
                         )
                     })}
                 </div>
-            </div>
+            </nav>
         </>
     )
 }
