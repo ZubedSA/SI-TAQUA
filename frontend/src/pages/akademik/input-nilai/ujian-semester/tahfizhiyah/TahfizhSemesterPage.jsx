@@ -273,31 +273,34 @@ const TahfizhSemesterPage = () => {
             {/* PAGE HEADER */}
             <div className="page-header flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
-                    <h1 className="page-title flex items-center gap-2">
-                        <span>Input Nilai Ujian Semester</span>
-                        <span className="text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full uppercase">Tahfizhiyah</span>
-                    </h1>
-                    <p className="page-subtitle">Ujian Semester Qur'aniyah (Hafalan, Tajwid & Kelancaran)</p>
-                </div>
-
-                {/* ACCESS BADGE */}
-                <div>
-                    {isAdmin ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold shadow-xs">
-                            <Shield size={16} className="text-purple-600" />
-                            <span>Akses Penuh (Admin)</span>
-                        </div>
-                    ) : teacherInfo ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-xs">
-                            <UserCheck size={16} className="text-emerald-600" />
-                            <span>Musyrif: {teacherInfo.nama}</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold">
-                            <UserCheck size={16} className="text-gray-500" />
-                            <span>Akses Musyrif</span>
-                        </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h1 className="page-title text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+                            Input Nilai Ujian Semester
+                        </h1>
+                        <span className="text-[10px] sm:text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full uppercase tracking-wider">
+                            Tahfizhiyah
+                        </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <p className="page-subtitle text-xs sm:text-sm text-gray-500 m-0">Ujian Semester Qur'aniyah (Hafalan, Tajwid & Kelancaran)</p>
+                        <span className="text-gray-300 hidden sm:inline">•</span>
+                        {isAdmin ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <Shield size={12} className="text-purple-600" />
+                                <span>Akses Penuh (Admin)</span>
+                            </div>
+                        ) : teacherInfo ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <UserCheck size={12} className="text-emerald-600" />
+                                <span>Musyrif: {teacherInfo.nama}</span>
+                            </div>
+                        ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gray-50 text-gray-700 border border-gray-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <UserCheck size={12} className="text-gray-500" />
+                                <span>Akses Musyrif</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

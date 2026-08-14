@@ -359,8 +359,15 @@
     }
 
     .action-links a {
-        padding: var(--space-2) var(--space-3);
+        padding: 0.625rem 0.875rem;
+        min-height: 44px;
         font-size: var(--font-size-xs);
+        border-radius: 12px;
+        touch-action: manipulation;
+    }
+
+    .action-links a:active {
+        transform: scale(0.98);
     }
 
     .keuangan-stat-card .stat-value {

@@ -92,6 +92,7 @@
     width: 64px;
     height: 64px;
     background: rgba(255, 255, 255, 0.2);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     border-radius: 16px;
     display: flex;
@@ -151,6 +152,7 @@
 .ota-welcome-btn.secondary {
     background: rgba(255, 255, 255, 0.15);
     color: white;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -556,6 +558,70 @@
     }
 
     .ota-stats-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.625rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .ota-stat-card {
+        padding: 0.875rem;
+        border-radius: 16px;
+    }
+
+    .ota-stat-value {
+        font-size: 1.25rem;
+    }
+
+    .ota-stat-icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+    }
+
+    .ota-stat-icon-box svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ota-welcome-header {
+        padding: 1.25rem 1rem;
+        border-radius: 18px;
+    }
+
+    .ota-welcome-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .ota-welcome-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+    }
+
+    .ota-stat-card {
+        padding: 0.75rem 0.875rem;
+        border-radius: 14px;
+    }
+
+    .ota-stat-label {
+        font-size: 0.6875rem;
+    }
+
+    .ota-stat-value {
+        font-size: 1.125rem;
+    }
+
+    .ota-welcome-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .ota-welcome-btn {
+        width: 100%;
+        min-height: 44px;
     }
 }

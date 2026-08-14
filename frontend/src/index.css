@@ -339,20 +339,21 @@
     cursor: pointer;
     text-decoration: none;
     /* Default colors for visibility */
-    background-color: var(--primary-600);
+    background-color: #0A2619;
     color: #FFFFFF;
   }
 
   .btn:hover:not(:disabled) {
-    background-color: var(--primary-700);
+    background-color: #143d2a;
+    color: #FFFFFF;
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
   }
 
   /* Primary Button Default (if no specific class is added) */
   .btn-primary {
-    background-color: var(--accent-admin); /* Dark Green */
-    color: var(--bg-white);
+    background-color: #0A2619; /* Dark Forest Green */
+    color: #FFFFFF;
     border: none;
     padding: 0.625rem 1.25rem;
     font-weight: 600;
@@ -363,10 +364,11 @@
     transition: all 0.2s ease;
   }
 
-  .btn-primary:hover {
-    background-color: var(--accent-admin-hover);
+  .btn-primary:hover:not(:disabled) {
+    background-color: #143d2a;
+    color: #FFFFFF;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(10, 38, 25, 0.23);
+    box-shadow: 0 6px 20px rgba(10, 38, 25, 0.28);
   }
 
   /* Lime Button (Primary Action) */

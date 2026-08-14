@@ -10,7 +10,7 @@ const EmptyState = ({ icon: Icon = FolderOpen, title = 'Tidak ada data', message
             <p className="text-sm text-gray-500 max-w-sm mb-6">{message}</p>
             {actionLabel && onAction && (
                 <button
-                    className="inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    className="btn btn-primary"
                     onClick={onAction}
                 >
                     {actionLabel}

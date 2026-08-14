@@ -47,7 +47,7 @@ const Layout = () => {
                 {/* Mobile-only Universal Bottom Navigation */}
                 <BottomNav />
 
-                <div className="flex-1 px-4 py-6 md:p-6 lg:p-8 max-w-[1600px] w-full mx-auto pb-20 lg:pb-0 pt-24 md:pt-28 lg:pt-28">
+                <div className="flex-1 px-1 sm:px-6 md:p-6 lg:p-8 max-w-[1600px] w-full mx-auto pb-28 lg:pb-8 pt-20 md:pt-28 lg:pt-28">
                     <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><Spinner size="lg" label="Memuat halaman..." /></div>}>
                         <div key={location.pathname} className="animate-fade-in">
                             <Outlet />

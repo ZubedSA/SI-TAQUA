@@ -308,12 +308,21 @@ const KasPengeluaranPage = () => {
                 </div>
             </div>
 
-            <div className="summary-card red">
-                <div className="summary-content">
-                    <span className="summary-label">Total Pengeluaran</span>
-                    <span className="summary-value">Rp {totalPengeluaran.toLocaleString('id-ID')}</span>
+            {/* Summary Card - Siohioma Dashboard Style */}
+            <div className="bg-white p-4 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm sm:shadow-md flex flex-col justify-between relative overflow-hidden mb-6 active:scale-95 touch-manipulation">
+                <div className="absolute top-0 right-0 w-28 h-28 bg-rose-50 rounded-bl-full -z-10"></div>
+                <div className="flex justify-between items-start mb-3 sm:mb-4">
+                    <div className="p-2.5 sm:p-3 bg-rose-50 text-rose-600 rounded-xl sm:rounded-2xl">
+                        <ArrowDownCircle className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+                    </div>
+                    <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full">Pengeluaran</span>
                 </div>
-                <ArrowDownCircle size={40} className="summary-icon" />
+                <div>
+                    <p className="text-gray-500 font-semibold mb-1 text-xs sm:text-sm truncate">Total Pengeluaran</p>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                        Rp {totalPengeluaran.toLocaleString('id-ID')}
+                    </h3>
+                </div>
             </div>
 
             <div className="filters-bar mt-6">

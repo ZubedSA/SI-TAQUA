@@ -243,8 +243,8 @@
     }
 
     .akademik-stats-grid {
-        grid-template-columns: 1fr;
-        gap: var(--space-3);
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.625rem;
     }
 
     .akademik-card {

@@ -129,6 +129,29 @@
     }
 }
 
+@media (max-width: 576px) {
+    .nilai-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .nilai-stat-card {
+        padding: 12px;
+        border-radius: 16px;
+        gap: 10px;
+    }
+    .stat-icon-wrapper {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+    .nilai-stat-card .stat-value {
+        font-size: 1.25rem;
+    }
+    .nilai-stat-card .stat-label {
+        font-size: 0.75rem;
+    }
+}
+
 @media (max-width: 768px) {
 
     .nilai-page .filter-section,

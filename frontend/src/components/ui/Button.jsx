@@ -11,7 +11,7 @@ const Button = ({
     type = 'button',
     ...props
 }) => {
-    const baseStyles = "inline-flex items-center justify-center gap-2 !rounded-full font-bold uppercase tracking-wide transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
+    const baseStyles = "inline-flex items-center justify-center gap-2 !rounded-full font-bold uppercase tracking-wide transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 touch-manipulation select-none";
 
     const variants = {
         primary: "!bg-[#0A2619] !text-[#BCF32F] hover:!bg-[#BCF32F] hover:!text-[#0A2619] !shadow-lg !shadow-[#0A2619]/10 hover:!shadow-[#BCF32F]/30",
@@ -23,10 +23,10 @@ const Button = ({
     };
 
     const sizes = {
-        sm: "px-4 py-1.5 text-[10px]",
-        md: "px-5 py-2 text-[11px]",
-        lg: "px-6 py-2.5 text-xs",
-        icon: "p-2",
+        sm: "px-4 py-2 min-h-[38px] text-[10px] sm:text-xs",
+        md: "px-5 py-2.5 min-h-[44px] text-[11px] sm:text-xs",
+        lg: "px-6 py-3 min-h-[48px] text-xs sm:text-sm",
+        icon: "p-2.5 min-w-[40px] min-h-[40px]",
     };
 
     const classes = [

@@ -210,63 +210,63 @@ const PengurusDashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Stats - Premium Siohioma */}
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 mt-6">
-                <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col justify-between group hover:border-red-300 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4 md:mb-6">
-                        <div className="p-2 md:p-3 bg-red-100 text-red-600 rounded-xl md:rounded-2xl">
-                            <AlertTriangle className="w-5 h-5 md:w-6 md:h-6" />
+            {/* Quick Stats - Mobile-First 2x2 Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6 mb-6 mt-4">
+                <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-gray-100/80 shadow-sm sm:shadow-md flex flex-col justify-between group hover:border-red-300 transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                        <div className="p-2 sm:p-2.5 bg-red-50 text-red-600 rounded-xl">
+                            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Pelanggaran</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Total Pelanggaran</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Total Pelanggaran</p>
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
                             {loading ? '...' : stats.totalPelanggaran}
                         </h3>
                     </div>
                 </div>
 
-                <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col justify-between group hover:border-orange-300 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4 md:mb-6">
-                        <div className="p-2 md:p-3 bg-orange-100 text-orange-600 rounded-xl md:rounded-2xl">
-                            <AlertCircle className="w-5 h-5 md:w-6 md:h-6" />
+                <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-gray-100/80 shadow-sm sm:shadow-md flex flex-col justify-between group hover:border-orange-300 transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                        <div className="p-2 sm:p-2.5 bg-orange-50 text-orange-600 rounded-xl">
+                            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Open</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Kasus Open</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Kasus Open</p>
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
                             {loading ? '...' : stats.kasusOpen}
                         </h3>
                     </div>
                 </div>
 
-                <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col justify-between group hover:border-blue-300 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4 md:mb-6">
-                        <div className="p-2 md:p-3 bg-blue-100 text-blue-600 rounded-xl md:rounded-2xl">
-                            <Clock className="w-5 h-5 md:w-6 md:h-6" />
+                <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-gray-100/80 shadow-sm sm:shadow-md flex flex-col justify-between group hover:border-blue-300 transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                        <div className="p-2 sm:p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Proses</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Dalam Proses</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Dalam Proses</p>
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
                             {loading ? '...' : stats.kasusProses}
                         </h3>
                     </div>
                 </div>
 
-                <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col justify-between group hover:border-emerald-300 transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4 md:mb-6">
-                        <div className="p-2 md:p-3 bg-emerald-100 text-emerald-600 rounded-xl md:rounded-2xl">
-                            <CheckCircle className="w-5 h-5 md:w-6 md:h-6" />
+                <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-gray-100/80 shadow-sm sm:shadow-md flex flex-col justify-between group hover:border-emerald-300 transition-all duration-300 relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+                        <div className="p-2 sm:p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Selesai</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Selesai</p>
-                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Selesai</p>
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight">
                             {loading ? '...' : stats.kasusSelesai}
                         </h3>
                     </div>

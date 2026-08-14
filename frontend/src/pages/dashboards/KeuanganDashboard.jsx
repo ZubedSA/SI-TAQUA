@@ -278,48 +278,51 @@ const KeuanganDashboard = () => {
                 </div>
             </div>
 
-            {/* Quick Stats - Premium Siohioma */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 mt-6">
-                <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:translate-y-[-4px] md:hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+            {/* Quick Stats - Mobile-First 2-Column Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 mb-6 mt-4">
+                <div className="bg-white p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm sm:shadow-md group hover:translate-y-[-2px] md:hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden active:scale-95 touch-manipulation">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 md:p-4 bg-emerald-100 text-emerald-600 rounded-xl md:rounded-2xl">
-                            <ArrowUpCircle size={24} className="md:w-7 md:h-7" />
+                    <div className="flex justify-between items-start mb-2 sm:mb-4">
+                        <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl">
+                            <ArrowUpCircle className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                         </div>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Masuk</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Total Pemasukan</p>
-                        <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs md:text-sm truncate">Total Pemasukan</p>
+                        <h3 className="text-base sm:text-xl md:text-2xl font-black text-gray-900 tracking-tight truncate">
                             {loading ? '...' : formatCurrency(keuanganStats.pemasukan)}
                         </h3>
                     </div>
                 </div>
 
-                <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:translate-y-[-4px] md:hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+                <div className="bg-white p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm sm:shadow-md group hover:translate-y-[-2px] md:hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden active:scale-95 touch-manipulation">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 md:p-4 bg-rose-100 text-rose-600 rounded-xl md:rounded-2xl">
-                            <ArrowDownCircle size={24} className="md:w-7 md:h-7" />
+                    <div className="flex justify-between items-start mb-2 sm:mb-4">
+                        <div className="p-2 sm:p-3 bg-rose-50 text-rose-600 rounded-xl sm:rounded-2xl">
+                            <ArrowDownCircle className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                         </div>
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Keluar</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Total Pengeluaran</p>
-                        <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs md:text-sm truncate">Total Pengeluaran</p>
+                        <h3 className="text-base sm:text-xl md:text-2xl font-black text-gray-900 tracking-tight truncate">
                             {loading ? '...' : formatCurrency(keuanganStats.pengeluaran)}
                         </h3>
                     </div>
                 </div>
 
-                <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-200/50 group hover:translate-y-[-4px] md:hover:translate-y-[-8px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden sm:col-span-2 lg:col-span-1">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 md:p-4 bg-blue-100 text-blue-600 rounded-xl md:rounded-2xl">
-                            <Wallet size={24} className="md:w-7 md:h-7" />
+                <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-white to-blue-50/40 p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-blue-100 shadow-sm sm:shadow-md group hover:translate-y-[-2px] md:hover:translate-y-[-4px] transition-all duration-300 flex flex-col justify-between relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-blue-100/50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+                    <div className="flex justify-between items-start mb-2 sm:mb-4">
+                        <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl">
+                            <Wallet className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7" />
                         </div>
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">Saldo Kas</span>
                     </div>
                     <div>
-                        <p className="text-gray-500 font-medium mb-1 text-xs md:text-sm">Saldo Kas</p>
-                        <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs md:text-sm">Total Saldo Kas</p>
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-blue-900 tracking-tight">
                             {loading ? '...' : formatCurrency(keuanganStats.saldo)}
                         </h3>
                     </div>

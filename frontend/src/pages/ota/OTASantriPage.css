@@ -246,6 +246,7 @@
     height: 64px;
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.2);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
@@ -279,6 +280,7 @@
     font-size: 0.875rem;
     font-weight: 600;
     background: rgba(255, 255, 255, 0.15);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     display: flex;
     align-items: center;
@@ -616,8 +618,6 @@
         gap: 12px;
         overflow-x: auto;
         padding-bottom: 8px;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
     }
 
     .ota-stats-grid::-webkit-scrollbar {

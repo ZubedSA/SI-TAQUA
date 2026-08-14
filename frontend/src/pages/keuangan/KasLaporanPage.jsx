@@ -158,27 +158,54 @@ const KasLaporanPage = () => {
                 </div>
             </div>
 
-            <div className="summary-grid">
-                <div className="summary-card green">
-                    <div className="summary-content">
-                        <span className="summary-label">Total Pemasukan</span>
-                        <span className="summary-value">Rp {totalPemasukan.toLocaleString('id-ID')}</span>
+            {/* Summary Cards - Dashboard Style */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 mb-6">
+                <div className="bg-white p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm sm:shadow-md flex flex-col justify-between relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-10"></div>
+                    <div className="flex justify-between items-start mb-2 sm:mb-4">
+                        <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-xl sm:rounded-2xl">
+                            <ArrowUpCircle className="w-4 h-4 sm:w-6 sm:h-6" />
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Masuk</span>
                     </div>
-                    <ArrowUpCircle size={40} className="summary-icon" />
+                    <div>
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Total Pemasukan</p>
+                        <h3 className="text-base sm:text-xl md:text-2xl font-black text-gray-900 tracking-tight truncate">
+                            Rp {totalPemasukan.toLocaleString('id-ID')}
+                        </h3>
+                    </div>
                 </div>
-                <div className="summary-card red">
-                    <div className="summary-content">
-                        <span className="summary-label">Total Pengeluaran</span>
-                        <span className="summary-value">Rp {totalPengeluaran.toLocaleString('id-ID')}</span>
+
+                <div className="bg-white p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm sm:shadow-md flex flex-col justify-between relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-rose-50 rounded-bl-full -z-10"></div>
+                    <div className="flex justify-between items-start mb-2 sm:mb-4">
+                        <div className="p-2 sm:p-3 bg-rose-50 text-rose-600 rounded-xl sm:rounded-2xl">
+                            <ArrowDownCircle className="w-4 h-4 sm:w-6 sm:h-6" />
+                        </div>
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full hidden sm:inline-block">Keluar</span>
                     </div>
-                    <ArrowDownCircle size={40} className="summary-icon" />
+                    <div>
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Total Pengeluaran</p>
+                        <h3 className="text-base sm:text-xl md:text-2xl font-black text-gray-900 tracking-tight truncate">
+                            Rp {totalPengeluaran.toLocaleString('id-ID')}
+                        </h3>
+                    </div>
                 </div>
-                <div className={`summary-card ${saldo >= 0 ? 'blue' : 'yellow'}`}>
-                    <div className="summary-content">
-                        <span className="summary-label">Saldo</span>
-                        <span className="summary-value">Rp {saldo.toLocaleString('id-ID')}</span>
+
+                <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-white to-blue-50/40 p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] border border-blue-100 shadow-sm sm:shadow-md flex flex-col justify-between relative overflow-hidden active:scale-95 touch-manipulation">
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-blue-100/50 rounded-bl-full -z-10"></div>
+                    <div className="flex justify-between items-start mb-2 sm:mb-4">
+                        <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-xl sm:rounded-2xl">
+                            <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6" />
+                        </div>
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">Saldo Kas</span>
                     </div>
-                    <TrendingUp size={40} className="summary-icon" />
+                    <div>
+                        <p className="text-gray-500 font-semibold mb-0.5 text-[11px] sm:text-xs truncate">Saldo Kas</p>
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-black text-blue-900 tracking-tight truncate">
+                            Rp {saldo.toLocaleString('id-ID')}
+                        </h3>
+                    </div>
                 </div>
             </div>
 

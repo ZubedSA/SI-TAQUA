@@ -424,33 +424,36 @@ const MadrosUASPage = () => {
     return (
         <div className="nilai-page">
             {/* PAGE HEADER */}
-            <div className="page-header flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="page-header flex flex-col sm:flex-row gap-2.5 items-start sm:items-center justify-between mb-4">
                 <div>
-                    <h1 className="page-title flex items-center gap-2">
-                        <span>Input Nilai Madrasah</span>
-                        <span className="text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full uppercase">MMU Sidogiri</span>
-                    </h1>
-                    <p className="page-subtitle">Input Nilai Harian & Nilai UAS (IMDA) dalam 1 tabel</p>
-                </div>
-
-                {/* ACCESS LEVEL BADGE */}
-                <div>
-                    {isAdmin ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold shadow-xs">
-                            <Shield size={16} className="text-purple-600" />
-                            <span>Akses Penuh (Admin)</span>
-                        </div>
-                    ) : teacherInfo ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-xs">
-                            <UserCheck size={16} className="text-emerald-600" />
-                            <span>Pengajar: {teacherInfo.nama}</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold">
-                            <UserCheck size={16} className="text-gray-500" />
-                            <span>Akses Pengajar</span>
-                        </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h1 className="page-title text-lg sm:text-2xl font-black text-gray-900 tracking-tight">
+                            Input Nilai Madrasah
+                        </h1>
+                        <span className="text-[10px] sm:text-xs px-2.5 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full uppercase tracking-wider">
+                            MMU Sidogiri
+                        </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <p className="page-subtitle text-xs sm:text-sm text-gray-500 m-0">Input Nilai Harian & Nilai UAS (IMDA) dalam 1 tabel</p>
+                        <span className="text-gray-300 hidden sm:inline">•</span>
+                        {isAdmin ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <Shield size={12} className="text-purple-600" />
+                                <span>Akses Penuh (Admin)</span>
+                            </div>
+                        ) : teacherInfo ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <UserCheck size={12} className="text-emerald-600" />
+                                <span>Pengajar: {teacherInfo.nama}</span>
+                            </div>
+                        ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gray-50 text-gray-700 border border-gray-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <UserCheck size={12} className="text-gray-500" />
+                                <span>Akses Pengajar</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -544,26 +547,38 @@ const MadrosUASPage = () => {
             {filters.kelas_id && filters.mapel_id && filters.semester_id ? (
                 <div className="table-container">
                     {/* TOGGLEABLE PETUNJUK RAPOR */}
-                    <div className="mb-4 bg-emerald-50/80 border border-emerald-200 rounded-xl overflow-hidden text-xs">
+                    <div className="mb-4 bg-emerald-50/40 border border-emerald-100 rounded-2xl overflow-hidden transition-all duration-200 shadow-2xs">
                         <button
                             type="button"
                             onClick={() => setShowPetunjuk(!showPetunjuk)}
-                            className="w-full px-3.5 py-2.5 flex items-center justify-between text-emerald-900 font-bold hover:bg-emerald-100/50 transition-colors"
+                            className="w-full px-4 py-3 flex items-center justify-between text-emerald-950 font-semibold hover:bg-emerald-50/80 transition-colors"
                         >
-                            <div className="flex items-center gap-2">
-                                <Info size={16} className="text-emerald-600 shrink-0" />
-                                <span>Petunjuk Rapor MMU Sidogiri</span>
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-xl bg-white flex items-center justify-center text-emerald-600 shadow-2xs border border-emerald-100/80">
+                                    <Info size={15} />
+                                </div>
+                                <span className="text-xs font-bold tracking-tight">Petunjuk Rapor MMU Sidogiri</span>
                             </div>
-                            <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-white/80 px-2.5 py-1 rounded-full border border-emerald-100/60">
                                 <span>{showPetunjuk ? 'Sembunyikan' : 'Lihat Petunjuk'}</span>
-                                {showPetunjuk ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                {showPetunjuk ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </div>
                         </button>
 
                         {showPetunjuk && (
-                            <div className="px-4 pb-3 pt-1 border-t border-emerald-200/60 text-emerald-900 text-[11px] space-y-1 bg-white/60">
-                                <p>• <strong>Rumus Rapor (3-10)</strong>: (Nilai UAS × 2 + Harian) ÷ 3 $\rightarrow$ Dikonversi ke skala 3 s.d 10 (angka utuh).</p>
-                                <p>• <strong>Pewarnaan Rapor</strong>: <span className="font-bold text-black">Hitam (Nilai ≥ 6)</span> | <span className="font-bold text-red-600">Merah (Nilai ≤ 5)</span>.</p>
+                            <div className="px-4 pb-3.5 pt-2 border-t border-emerald-100/60 text-emerald-900 text-xs space-y-2 bg-white/40">
+                                <div className="flex items-start gap-2 bg-white/70 p-2.5 rounded-xl border border-emerald-50 text-[11px] leading-relaxed">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+                                    <div>
+                                        <strong className="text-emerald-950">Rumus Rapor (3-10):</strong> (Nilai UAS × 2 + Harian) ÷ 3 &rarr; Dikonversi ke skala 3 s.d 10 (angka bulat).
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-2 bg-white/70 p-2.5 rounded-xl border border-emerald-50 text-[11px] leading-relaxed">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+                                    <div>
+                                        <strong className="text-emerald-950">Pewarnaan Rapor:</strong> <span className="font-bold text-gray-900 bg-gray-100 px-1.5 py-0.5 rounded">Hitam (Nilai &ge; 6)</span> &bull; <span className="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">Merah (Nilai &le; 5)</span>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

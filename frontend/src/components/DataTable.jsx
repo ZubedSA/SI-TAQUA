@@ -72,17 +72,14 @@ const DataTable = ({
             </div>
 
             {/* Table Container */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto custom-scrollbar">
+            <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+                {/* Desktop Table View (Hidden on mobile) */}
+                <div className="hidden md:block overflow-x-auto custom-scrollbar">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                             {table.getHeaderGroups().map(headerGroup => (
                                 <tr key={headerGroup.id}>
                                     {headerGroup.headers.map(header => {
-                                        // Skip rendering if header is part of a rowSpan/colSpan handled by another header
-                                        // In standard grouping, the placeholder headers are used to represent empty cells
-                                        // but here they are causing duplication if not handled.
-
                                         return (
                                             <th
                                                 key={header.id}
@@ -134,7 +131,7 @@ const DataTable = ({
                                             <Users className="w-8 h-8 text-gray-400" />
                                         </div>
                                         <h3 className="text-lg font-medium text-gray-900">{emptyMessage}</h3>
-                                        <p>Coba sesuaikan filter atau pencarian Anda.</p>
+                                        <p className="text-sm">Coba sesuaikan filter atau pencarian Anda.</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -163,32 +160,92 @@ const DataTable = ({
                     </table>
                 </div>
 
+                {/* Mobile Card List View (Visible < md) */}
+                <div className="md:hidden divide-y divide-gray-100">
+                    {isLoading ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-primary-500" />
+                            <p className="animate-pulse text-sm">Memuat data...</p>
+                        </div>
+                    ) : rows.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <div className="w-14 h-14 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Users className="w-6 h-6 text-gray-400" />
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-900">{emptyMessage}</h3>
+                            <p className="text-xs text-gray-500 mt-1">Coba sesuaikan pencarian Anda.</p>
+                        </div>
+                    ) : (
+                        rows.map((row, idx) => {
+                            const cells = row.getVisibleCells()
+                            const firstCell = cells[0]
+                            const remainingCells = cells.slice(1)
+                            
+                            return (
+                                <div key={row.id || idx} className="p-4 bg-white hover:bg-gray-50/60 transition-colors space-y-3">
+                                    <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-2.5">
+                                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                            #{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + idx + 1}
+                                        </div>
+                                        <div className="font-semibold text-sm text-gray-900 text-right">
+                                            {firstCell && flexRender(firstCell.column.columnDef.cell, firstCell.getContext())}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-2 text-xs">
+                                        {remainingCells.map(cell => {
+                                            const headerText = typeof cell.column.columnDef.header === 'string' 
+                                                ? cell.column.columnDef.header 
+                                                : cell.column.id
+                                            
+                                            // Don't render empty action headers as label
+                                            const isActionCol = cell.column.id.toLowerCase().includes('action') || cell.column.id === 'aksi'
+                                            
+                                            return (
+                                                <div key={cell.id} className={`flex items-start justify-between gap-2 ${isActionCol ? 'pt-2 border-t border-gray-100 mt-1 justify-end' : ''}`}>
+                                                    {!isActionCol && (
+                                                        <span className="font-medium text-gray-400 shrink-0 capitalize">
+                                                            {headerText}:
+                                                        </span>
+                                                    )}
+                                                    <span className={`text-gray-800 text-right font-medium ${isActionCol ? 'w-full flex justify-end gap-2' : ''}`}>
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                    </span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )
+                        })
+                    )}
+                </div>
+
                 {/* Pagination Bar */}
                 {!isLoading && data.length > 0 && (
-                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="text-sm text-gray-500 order-2 sm:order-1">
-                            Menampilkan <span className="font-medium text-gray-900">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span>
+                    <div className="px-4 py-3.5 sm:px-6 sm:py-4 bg-gray-50/80 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="text-xs sm:text-sm text-gray-500 order-2 sm:order-1 text-center sm:text-left">
+                            Menampilkan <span className="font-semibold text-gray-900">{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}</span>
                             {' '}-{' '}
-                            <span className="font-medium text-gray-900">
+                            <span className="font-semibold text-gray-900">
                                 {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)}
                             </span>
                             {' '}dari{' '}
-                            <span className="font-medium text-gray-900">{table.getFilteredRowModel().rows.length}</span> data
-                            {globalFilter && <span className="ml-1">(terfilter dari {data.length})</span>}
+                            <span className="font-semibold text-gray-900">{table.getFilteredRowModel().rows.length}</span> data
                         </div>
 
-                        <div className="flex items-center gap-2 order-1 sm:order-2">
+                        <div className="flex items-center gap-1.5 order-1 sm:order-2">
                             <button
                                 onClick={() => table.previousPage()}
                                 disabled={!table.getCanPreviousPage()}
-                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                                className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center"
+                                title="Sebelumnya"
                             >
                                 <ChevronLeft size={18} />
                             </button>
 
                             <div className="flex items-center gap-1">
                                 {table.getPageOptions().map(pageIdx => {
-                                    // Logic to show limited page numbers
                                     const currPage = table.getState().pagination.pageIndex;
                                     const totalPage = table.getPageCount();
 
@@ -202,10 +259,10 @@ const DataTable = ({
                                                 key={pageIdx}
                                                 onClick={() => table.setPageIndex(pageIdx)}
                                                 className={`
-                                                    min-w-[40px] h-10 flex items-center justify-center rounded-lg border text-sm font-medium transition-all shadow-sm
+                                                    min-w-[38px] h-9 sm:min-w-[40px] sm:h-10 flex items-center justify-center rounded-xl border text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 touch-manipulation
                                                     ${currPage === pageIdx
-                                                        ? 'bg-primary-600 border-primary-600 text-white'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                        ? 'bg-[#0A2619] border-[#0A2619] text-[#BCF32F]'
+                                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                                                     }
                                                 `}
                                             >
@@ -216,7 +273,7 @@ const DataTable = ({
                                         (pageIdx === 1 && currPage > 2) ||
                                         (pageIdx === totalPage - 2 && currPage < totalPage - 3)
                                     ) {
-                                        return <span key={pageIdx} className="px-2 text-gray-400">...</span>;
+                                        return <span key={pageIdx} className="px-1 text-gray-400 text-xs">...</span>;
                                     }
                                     return null;
                                 })}
@@ -225,7 +282,8 @@ const DataTable = ({
                             <button
                                 onClick={() => table.nextPage()}
                                 disabled={!table.getCanNextPage()}
-                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                                className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center"
+                                title="Selanjutnya"
                             >
                                 <ChevronRight size={18} />
                             </button>

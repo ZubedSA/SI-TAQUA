@@ -613,32 +613,31 @@ const InputPerilakuPage = () => {
     return (
         <div className="nilai-page">
             {/* PAGE HEADER */}
-            <div className="page-header flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="page-header flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
                 <div>
-                    <h1 className="page-title flex items-center gap-2">
-                        <span>Input Data Raport (Non-Akademik)</span>
+                    <h1 className="page-title text-lg sm:text-2xl font-black text-gray-900 tracking-tight mb-1">
+                        Input Data Raport (Non-Akademik)
                     </h1>
-                    <p className="page-subtitle">Perilaku, Tahfizh Summary, & Catatan Musyrif / Wali Kelas</p>
-                </div>
-
-                {/* ACCESS BADGE */}
-                <div>
-                    {isAdmin ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold shadow-xs">
-                            <Shield size={16} className="text-purple-600" />
-                            <span>Akses Penuh (Admin)</span>
-                        </div>
-                    ) : teacherInfo ? (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-xs">
-                            <UserCheck size={16} className="text-emerald-600" />
-                            <span>{mode === 'halaqoh' ? 'Musyrif' : 'Wali Kelas'}: {teacherInfo.nama}</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-200 rounded-xl text-xs font-semibold">
-                            <UserCheck size={16} className="text-gray-500" />
-                            <span>Akses Pengajar</span>
-                        </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <p className="page-subtitle text-xs sm:text-sm text-gray-500 m-0">Perilaku, Tahfizh Summary, & Catatan Musyrif / Wali Kelas</p>
+                        <span className="text-gray-300 hidden sm:inline">•</span>
+                        {isAdmin ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <Shield size={12} className="text-purple-600" />
+                                <span>Akses Penuh (Admin)</span>
+                            </div>
+                        ) : teacherInfo ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <UserCheck size={12} className="text-emerald-600" />
+                                <span>{mode === 'halaqoh' ? 'Musyrif' : 'Wali Kelas'}: {teacherInfo.nama}</span>
+                            </div>
+                        ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gray-50 text-gray-700 border border-gray-200/60 rounded-full text-[11px] font-semibold shadow-2xs">
+                                <UserCheck size={12} className="text-gray-500" />
+                                <span>Akses Pengajar</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

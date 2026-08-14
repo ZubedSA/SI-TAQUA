@@ -174,28 +174,28 @@ const WaliDashboardPage = () => {
     return (
         <div className="space-y-8 pb-24 sm:pb-8">
             {/* Premium Personalized Header */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-8 text-white shadow-2xl">
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-2">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 p-5 sm:p-8 text-white shadow-xl sm:shadow-2xl">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+                    <div className="space-y-1.5 sm:space-y-2">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                             Portal Wali Santri Aktif
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
                             Assalamu'alaikum, <br className="sm:hidden" />
                             <span>{userProfile?.nama?.split(' ')[0] || 'Bapak/Ibu'}</span>
                         </h1>
-                        <p className="text-indigo-100 text-sm md:text-base max-w-md font-medium opacity-90">
+                        <p className="text-indigo-100 text-xs sm:text-sm md:text-base max-w-md font-medium opacity-90">
                             Selamat datang kembali. Berikut ringkasan aktivitas dan administrasi santri Anda hari ini.
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 self-end md:self-auto">
                         <button
                             onClick={handleRefresh}
-                            className="p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all active:scale-95"
+                            className="p-2.5 sm:p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all active:scale-95 touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center"
                             title="Refresh Data"
                         >
-                            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 </div>
@@ -208,7 +208,7 @@ const WaliDashboardPage = () => {
             {santriList.length > 1 && (
                 <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
-                        <h3 className="text-lg font-bold text-gray-900">Pilih Santri</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900">Pilih Santri</h3>
                         <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">Total: {santriList.length}</span>
                     </div>
                     <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar -mx-2 px-2 mask-linear-fade">
@@ -229,12 +229,12 @@ const WaliDashboardPage = () => {
             {selectedSantri && (
                 <div className="space-y-8">
                     {/* Stats Grid - Glassmorphism Premium */}
-                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                         {/* Hafalan Card */}
-                        <div className="glass-card group p-4 md:p-6 rounded-2xl md:rounded-[2rem] bg-emerald-50/50 hover:bg-emerald-50 transition-all duration-300 border border-emerald-100/50 shadow-lg hover:shadow-emerald-200/50">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-4 bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
-                                    <BookOpen size={24} />
+                        <div className="glass-card group p-4 sm:p-6 rounded-2xl md:rounded-[2rem] bg-emerald-50/50 hover:bg-emerald-50 transition-all duration-300 border border-emerald-100/50 shadow-sm sm:shadow-lg active:scale-95 touch-manipulation">
+                            <div className="flex justify-between items-start mb-3 sm:mb-6">
+                                <div className="p-3 sm:p-4 bg-emerald-500 text-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
+                                    <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <Badge variant="success">Akademik</Badge>
@@ -243,7 +243,7 @@ const WaliDashboardPage = () => {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider">Hafalan Terakhir</p>
-                                <h3 className="text-2xl font-black text-gray-900 group-hover:text-emerald-700 transition-colors">
+                                <h3 className="text-xl sm:text-2xl font-black text-gray-900 group-hover:text-emerald-700 transition-colors truncate">
                                     {dashboardData.hafalanTerakhir?.surah || 'Belum ada data'}
                                 </h3>
                                 {dashboardData.hafalanTerakhir?.tanggal && (
@@ -256,10 +256,10 @@ const WaliDashboardPage = () => {
                         </div>
 
                         {/* Presensi Card */}
-                        <div className="glass-card group p-6 rounded-[2rem] bg-blue-50/50 hover:bg-blue-50 transition-all duration-300 border border-blue-100/50 shadow-lg hover:shadow-blue-200/50">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="p-4 bg-blue-500 text-white rounded-2xl shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
-                                    <Calendar size={24} />
+                        <div className="glass-card group p-4 sm:p-6 rounded-2xl md:rounded-[2rem] bg-blue-50/50 hover:bg-blue-50 transition-all duration-300 border border-blue-100/50 shadow-sm sm:shadow-lg active:scale-95 touch-manipulation">
+                            <div className="flex justify-between items-start mb-3 sm:mb-6">
+                                <div className="p-3 sm:p-4 bg-blue-500 text-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+                                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <Badge variant="info">Disiplin</Badge>
@@ -269,12 +269,12 @@ const WaliDashboardPage = () => {
                             <div className="space-y-1">
                                 <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">Kehadiran (30 Hari)</p>
                                 <div className="flex items-baseline gap-2">
-                                    <h3 className="text-3xl font-black text-gray-900 group-hover:text-blue-700 transition-colors">
+                                    <h3 className="text-2xl sm:text-3xl font-black text-gray-900 group-hover:text-blue-700 transition-colors">
                                         {dashboardData.presensiStats.hadir}
                                     </h3>
-                                    <span className="text-sm font-bold text-gray-500">Hari Hadir</span>
+                                    <span className="text-xs sm:text-sm font-bold text-gray-500">Hari Hadir</span>
                                 </div>
-                                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden mt-3">
+                                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden mt-2 sm:mt-3">
                                     <div
                                         className="bg-blue-500 h-full rounded-full transition-all duration-1000"
                                         style={{ width: `${Math.min((dashboardData.presensiStats.hadir / 25) * 100, 100)}%` }}
@@ -284,14 +284,14 @@ const WaliDashboardPage = () => {
                         </div>
 
                         {/* Keuangan Card */}
-                        <div className={`glass-card group p-6 rounded-[2rem] transition-all duration-300 border shadow-lg ${dashboardData.tagihanBelumLunas.length > 0
+                        <div className={`glass-card group p-4 sm:p-6 rounded-2xl md:rounded-[2rem] transition-all duration-300 border shadow-sm sm:shadow-lg active:scale-95 touch-manipulation ${dashboardData.tagihanBelumLunas.length > 0
                             ? 'bg-rose-50/50 hover:bg-rose-50 border-rose-100/50 hover:shadow-rose-200/50'
                             : 'bg-indigo-50/50 hover:bg-indigo-50 border-indigo-100/50 hover:shadow-indigo-200/50'
                             }`}>
-                            <div className="flex justify-between items-start mb-6">
-                                <div className={`p-4 text-white rounded-2xl shadow-lg group-hover:scale-110 transition-transform ${dashboardData.tagihanBelumLunas.length > 0 ? 'bg-rose-500 shadow-rose-200' : 'bg-indigo-500 shadow-indigo-200'
+                            <div className="flex justify-between items-start mb-3 sm:mb-6">
+                                <div className={`p-3 sm:p-4 text-white rounded-xl sm:rounded-2xl shadow-md sm:shadow-lg group-hover:scale-110 transition-transform ${dashboardData.tagihanBelumLunas.length > 0 ? 'bg-rose-500 shadow-rose-200' : 'bg-indigo-500 shadow-indigo-200'
                                     }`}>
-                                    <Wallet size={24} />
+                                    <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <Badge variant={dashboardData.tagihanBelumLunas.length > 0 ? 'danger' : 'success'}>Keuangan</Badge>

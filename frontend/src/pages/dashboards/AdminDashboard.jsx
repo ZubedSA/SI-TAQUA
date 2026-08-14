@@ -184,32 +184,32 @@ const AdminDashboard = () => {
             </div>
 
             {/* Core Metrics Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-8">
                 {[
                     { label: 'Akademik Staf', value: stats.totalGuru, icon: GraduationCap, color: 'blue', desc: 'Tenaga Pengajar' },
                     { label: 'Grup Belajar', value: stats.totalKelas, icon: Home, color: 'emerald', desc: 'Kelas Terdaftar' },
                     { label: 'Unit Qur\'aniyah', value: stats.totalHalaqoh, icon: BookMarked, color: 'amber', desc: 'Halaqoh Aktif' },
                     { label: 'System Logs', value: 'Live', icon: Activity, color: 'rose', desc: 'Real-time Audit' },
                 ].map((stat, i) => (
-                    <Card key={i} variant="premium" className="p-4 md:p-8 group hover:translate-y-[-8px] transition-all duration-500">
-                        <div className="flex justify-between items-start mb-4 md:mb-6">
-                            <div className={`p-3 md:p-5 rounded-xl md:rounded-[1.5rem] transition-transform group-hover:scale-110 duration-500 ${
+                    <Card key={i} variant="premium" className="p-3.5 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] group hover:translate-y-[-4px] sm:hover:translate-y-[-8px] transition-all duration-500 active:scale-95 touch-manipulation">
+                        <div className="flex justify-between items-start mb-2.5 sm:mb-4 md:mb-6">
+                            <div className={`p-2.5 sm:p-3.5 md:p-5 rounded-xl md:rounded-[1.5rem] transition-transform group-hover:scale-110 duration-500 ${
                                 stat.color === 'blue' ? 'bg-blue-50 text-blue-600 shadow-blue-100' :
                                 stat.color === 'emerald' ? 'bg-emerald-50 text-emerald-600 shadow-emerald-100' :
                                 stat.color === 'amber' ? 'bg-amber-50 text-amber-600 shadow-amber-100' :
                                 'bg-rose-50 text-rose-600 shadow-rose-100'
-                            } shadow-2xl`}>
-                                <stat.icon className="w-5 h-5 md:w-7 md:h-7" />
+                            } shadow-sm sm:shadow-md shrink-0`}>
+                                <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-7 md:h-7" />
                             </div>
-                            <div className="text-right">
-                                <h3 className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{loading ? '...' : stat.value}</h3>
-                                <p className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">{stat.label}</p>
+                            <div className="text-right min-w-0">
+                                <h3 className="text-lg sm:text-2xl md:text-3xl font-black text-gray-900 leading-none truncate">{loading ? '...' : stat.value}</h3>
+                                <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-wider mt-1 sm:mt-2 truncate">{stat.label}</p>
                             </div>
                         </div>
-                        <div className="pt-4 md:pt-6 border-t border-gray-50">
-                            <div className="flex items-center justify-between text-[8px] md:text-[10px] font-black uppercase tracking-tighter text-gray-400">
-                                <span>{stat.desc}</span>
-                                <TrendingUp size={14} className="text-emerald-500" />
+                        <div className="pt-2 sm:pt-3 md:pt-6 border-t border-gray-50">
+                            <div className="flex items-center justify-between text-[8px] sm:text-[10px] font-black uppercase tracking-tighter text-gray-400">
+                                <span className="truncate">{stat.desc}</span>
+                                <TrendingUp size={12} className="text-emerald-500 shrink-0 ml-1" />
                             </div>
                         </div>
                     </Card>

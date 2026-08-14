@@ -24,6 +24,8 @@ const TahfizhSyahriPage = () => {
         selectedHalaqohId: selectedHalaqoh,
         setSelectedHalaqohId: setSelectedHalaqoh,
         isLoading: loadingHalaqoh,
+        hasHalaqoh,
+        isAdmin: isUserAdmin,
         isOnlyMusyrif,
         musyrifInfo
     } = useUserHalaqoh()
