@@ -403,14 +403,14 @@ const CetakRaport = () => {
                     <button
                         onClick={handleDownloadPDF}
                         disabled={isDownloading}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 disabled:opacity-50 text-xs md:text-sm font-semibold"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg shadow-xs hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 text-xs md:text-sm font-semibold transition-all"
                     >
-                        <Download size={16} />
-                        <span>{isDownloading ? 'Downloading...' : 'PDF'}</span>
+                        <Download size={16} className="text-gray-500" />
+                        <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
                     </button>
                     <button
                         onClick={handlePrint}
-                        className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 text-white rounded-lg shadow-sm hover:bg-emerald-700 text-xs md:text-sm font-semibold"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#0A2619] text-[#BCF32F] rounded-lg shadow-sm hover:bg-[#143d2a] hover:shadow-md text-xs md:text-sm font-bold transition-all"
                     >
                         <Printer size={16} />
                         <span>Cetak Raport</span>

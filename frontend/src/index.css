@@ -438,14 +438,15 @@
 
   /* Outline Button */
   .btn-outline {
-    background-color: transparent;
-    color: var(--primary-600);
-    border-color: var(--primary-600);
+    background-color: #FFFFFF;
+    color: var(--text-body);
+    border: 1px solid var(--border-default);
   }
 
   .btn-outline:hover:not(:disabled) {
-    background-color: var(--primary-600);
-    color: #FFFFFF;
+    background-color: var(--bg-section);
+    color: var(--text-heading);
+    border-color: #CBD5E1;
   }
 
   /* Ghost Button */

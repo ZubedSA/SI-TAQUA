@@ -182,7 +182,7 @@ const MapelPage = () => {
                 }
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4">
                 <StatsCard title="Total Mapel" value={stats.total} icon={BookOpen} color="primary" />
                 <StatsCard title="Tahfizhiyah" value={stats.tahfizhiyah} icon={BookMarked} color="green" />
                 <StatsCard title="Madrosiyah" value={stats.madrosiyah} icon={GraduationCap} color="orange" />

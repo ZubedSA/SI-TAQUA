@@ -57,9 +57,9 @@ const ResponsiveTable = ({
             {/* Mobile Card View (Hidden on desktop) */}
             <div className="md:hidden flex flex-col gap-3 w-full">
                 {data.map((row, rowIndex) => (
-                    <div key={row[keyField] || rowIndex} className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                    <div key={row[keyField] || rowIndex} className="w-full bg-white rounded-2xl shadow-sm border border-gray-200/80 relative overflow-hidden">
                         {/* Mobile Card Header */}
-                        <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                        <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-200/70 flex justify-between items-center">
                             <div className="font-bold text-[#0A2619] text-sm flex-1 truncate pr-2">
                                 {mobileCardHeader ? mobileCardHeader(row, rowIndex) : `#${rowIndex + 1}`}
                             </div>
@@ -71,7 +71,7 @@ const ResponsiveTable = ({
                         </div>
                         
                         {/* Mobile Card Body */}
-                        <div className="p-4 flex flex-col gap-2.5">
+                        <div className="px-4 py-1 flex flex-col divide-y divide-gray-100">
                             {mobileCardContent ? (
                                 mobileCardContent(row, rowIndex)
                             ) : (
@@ -79,8 +79,8 @@ const ResponsiveTable = ({
                                     if (col.hideOnMobile) return null;
                                     
                                     return (
-                                        <div key={colIndex} className="flex flex-row justify-between items-start gap-3">
-                                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider w-1/3 flex-shrink-0 pt-0.5">
+                                        <div key={colIndex} className="flex flex-row justify-between items-start gap-3 py-2.5">
+                                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3 flex-shrink-0 pt-0.5">
                                                 {col.header}
                                             </div>
                                             <div className="text-xs sm:text-sm font-medium text-gray-900 w-2/3 text-right break-words">
@@ -94,7 +94,7 @@ const ResponsiveTable = ({
                         
                         {/* Mobile Card Footer (Primary Action) */}
                         {mobileCardPrimaryAction && (
-                            <div className="p-4 pt-1 border-t border-gray-50 bg-gray-50/30">
+                            <div className="p-4 pt-3 border-t border-gray-100 bg-gray-50/40">
                                 {mobileCardPrimaryAction(row, rowIndex)}
                             </div>
                         )}

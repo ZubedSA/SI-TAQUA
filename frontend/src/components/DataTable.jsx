@@ -182,8 +182,8 @@ const DataTable = ({
                             const remainingCells = cells.slice(1)
                             
                             return (
-                                <div key={row.id || idx} className="p-4 bg-white hover:bg-gray-50/60 transition-colors space-y-3">
-                                    <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-2.5">
+                                <div key={row.id || idx} className="p-4 bg-white hover:bg-gray-50/60 transition-colors">
+                                    <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-2.5 mb-1">
                                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                                             #{table.getState().pagination.pageIndex * table.getState().pagination.pageSize + idx + 1}
                                         </div>
@@ -192,7 +192,7 @@ const DataTable = ({
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-2 text-xs">
+                                    <div className="flex flex-col divide-y divide-gray-100 text-xs">
                                         {remainingCells.map(cell => {
                                             const headerText = typeof cell.column.columnDef.header === 'string' 
                                                 ? cell.column.columnDef.header 
@@ -202,9 +202,9 @@ const DataTable = ({
                                             const isActionCol = cell.column.id.toLowerCase().includes('action') || cell.column.id === 'aksi'
                                             
                                             return (
-                                                <div key={cell.id} className={`flex items-start justify-between gap-2 ${isActionCol ? 'pt-2 border-t border-gray-100 mt-1 justify-end' : ''}`}>
+                                                <div key={cell.id} className={`flex items-start justify-between gap-2 py-2 ${isActionCol ? 'pt-2.5 justify-end' : ''}`}>
                                                     {!isActionCol && (
-                                                        <span className="font-medium text-gray-400 shrink-0 capitalize">
+                                                        <span className="font-medium text-gray-500 shrink-0 capitalize">
                                                             {headerText}:
                                                         </span>
                                                     )}

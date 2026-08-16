@@ -414,11 +414,12 @@ const LaporanAkademikSantriPage = () => {
                 </div>
                 <div className="header-actions">
                     <button 
-                        className="btn btn-primary" 
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#0A2619] text-[#BCF32F] rounded-lg text-sm font-bold hover:bg-[#143d2a] hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xs" 
                         disabled={!selectedSantri}
                         onClick={() => window.print()}
                     >
-                        <Printer size={18} /> Cetak / Download Raport
+                        <Printer size={18} />
+                        <span>Cetak / Download Raport</span>
                     </button>
                 </div>
             </div>

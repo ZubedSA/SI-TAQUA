@@ -87,7 +87,7 @@ const SuspiciousAccountsPage = () => {
             />
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 lg:gap-6">
                 <StatsCard title="Total Anomali" value={accounts.length} icon={AlertTriangle} color="blue" />
                 <StatsCard title="Risiko Tinggi" value={accounts.filter(a => a.risk_score >= 50).length} icon={Slash} color="red" />
                 <StatsCard title="Dalam Pemantauan" value={accounts.filter(a => a.risk_score < 50).length} icon={Eye} color="orange" />

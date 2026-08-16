@@ -550,12 +550,12 @@ const Sidebar = ({ mobileOpen, onClose }) => {
 
     // Memoize menu items to prevent re-calculation on every render
     const filteredMenuItems = useMemo(() => {
-        const base = 
+        const base =
             activeRole === 'admin' ? adminMenuItems :
-            activeRole === 'pengurus' ? pengurusMenuItems :
-            activeRole === 'ota' ? otaMenuItems :
-            activeRole === 'musyrif' ? musyrifMenuItems :
-            operatorMenuItems;
+                activeRole === 'pengurus' ? pengurusMenuItems :
+                    activeRole === 'ota' ? otaMenuItems :
+                        activeRole === 'musyrif' ? musyrifMenuItems :
+                            operatorMenuItems;
 
         return base.filter(item => {
             if (!item.roles || item.roles.length === 0) return true
@@ -802,7 +802,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
                         <span>Keluar</span>
                     </button>
                     <div className="mt-2 text-xs text-center text-gray-500 font-mono">
-                        v.2025.01.02.1
+                        v.2026.01.02
                     </div>
                 </div>
             </aside>

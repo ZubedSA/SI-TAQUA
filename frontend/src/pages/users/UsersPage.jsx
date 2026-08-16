@@ -927,7 +927,7 @@ const UsersPage = () => {
             />
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
                 <StatsCard title="Total Pengguna" value={users.length} icon={Users} color="blue" />
                 <StatsCard title="Administrator" value={users.filter(u => u.roles.includes('admin')).length} icon={Shield} color="red" />
                 <StatsCard title="Guru & Pengajar" value={users.filter(u => u.roles.includes('guru') || u.roles.includes('musyrif')).length} icon={Briefcase} color="emerald" />
@@ -936,14 +936,14 @@ const UsersPage = () => {
 
             {/* Main Table Section */}
             <Card variant="premium" className="overflow-hidden border-none shadow-2xl">
-                <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4 flex-1 max-w-2xl">
+                <div className="p-3.5 sm:p-6 lg:p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-6">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 flex-1 max-w-2xl">
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
                             <input
                                 type="text"
                                 placeholder="Cari nama, email, atau username..."
-                                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 outline-none transition-all font-medium text-sm"
+                                className="w-full pl-11 pr-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 outline-none transition-all font-medium text-xs sm:text-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -951,7 +951,7 @@ const UsersPage = () => {
                         <div className="relative group">
                             <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
                             <select
-                                className="pl-12 pr-10 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 outline-none transition-all appearance-none font-medium text-sm min-w-[160px]"
+                                className="w-full sm:w-auto pl-11 pr-10 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 outline-none transition-all appearance-none font-medium text-xs sm:text-sm min-w-full sm:min-w-[160px]"
                                 value={filterRole}
                                 onChange={(e) => setFilterRole(e.target.value)}
                             >

@@ -357,22 +357,22 @@ const WaliSantriPage = () => {
                                         </div>
                                     )}
                                     mobileCardContent={(row) => (
-                                        <div className="flex flex-col gap-1 text-sm text-gray-600 mt-2">
-                                            <div className="flex justify-between">
-                                                <span>Tanggal:</span>
+                                        <div className="flex flex-col divide-y divide-gray-100 text-xs sm:text-sm text-gray-600">
+                                            <div className="flex justify-between py-1.5">
+                                                <span className="font-medium text-gray-400">Tanggal:</span>
                                                 <DateDisplay date={row.tanggal} />
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>Juz:</span>
-                                                <span>{row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
+                                            <div className="flex justify-between py-1.5">
+                                                <span className="font-medium text-gray-400">Juz:</span>
+                                                <span className="font-medium text-gray-800">{row.juz_mulai || row.juz || '-'}{(row.juz_selesai && row.juz_selesai !== row.juz_mulai) ? ` - ${row.juz_selesai}` : ''}</span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>Ayat:</span>
-                                                <span>{row.ayat_mulai || 1} - {row.ayat_selesai || 1}</span>
+                                            <div className="flex justify-between py-1.5">
+                                                <span className="font-medium text-gray-400">Ayat:</span>
+                                                <span className="font-medium text-gray-800">{row.ayat_mulai || 1} - {row.ayat_selesai || 1}</span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>Jenis:</span>
-                                                <span className="text-gray-500">{row.jenis || 'Setoran'}</span>
+                                            <div className="flex justify-between py-1.5">
+                                                <span className="font-medium text-gray-400">Jenis:</span>
+                                                <span className="text-gray-600 font-medium">{row.jenis || 'Setoran'}</span>
                                             </div>
                                         </div>
                                     )}

@@ -147,7 +147,7 @@ const AuditLogPage = () => {
             />
 
             {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
                 <StatsCard title="Total Aktivitas" value={logs.length} icon={Activity} color="blue" />
                 <StatsCard title="Modul Aktif" value={metadata.modules.length} icon={Database} color="emerald" />
                 <StatsCard title="User Terlibat" value={[...new Set(logs.map(l => l.user_id))].length} icon={User} color="purple" />
@@ -156,13 +156,13 @@ const AuditLogPage = () => {
 
             <Card variant="premium" className="overflow-hidden border-none shadow-2xl">
                 {/* Unified Filter Bar */}
-                <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                <div className="p-3.5 sm:p-6 lg:p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-6">
                     <div className="relative flex-1 max-w-xl group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
                         <input
                             type="text"
                             placeholder="Cari aksi, modul, tabel, atau username..."
-                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 outline-none transition-all font-medium text-sm"
+                            className="w-full pl-11 pr-4 py-2.5 sm:py-3 bg-white border border-gray-200 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-600 outline-none transition-all font-medium text-xs sm:text-sm"
                             value={filters.search}
                             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                         />
