@@ -8,6 +8,7 @@ import { exportToExcel, exportToCSV } from '../../../../../utils/exportUtils'
 import RaportTemplate from '../../../../../components/akademik/RaportTemplate'
 import { calculateSidogiriGrade } from '../../../../../components/akademik/RaportMadrasahTemplate'
 import { calculateAutoPresensi, getResolvedAttendance } from '../../../../../utils/attendanceHelper'
+import { fetchUnifiedSantriNonAkademik } from '../../../../../utils/raportNonAkademikHelper'
 import '../../../../../pages/laporan/Laporan.css'
 
 /**
@@ -264,28 +265,52 @@ const LaporanAkademikSantriPage = () => {
         try {
             const selected = santriList.find(s => s.id === santriId)
 
-            let musyrifName = selected?.halaqoh?.musyrif?.nama || null
+            const filterAdminName = (nameStr) => {
+                if (!nameStr) return null
+                const parts = nameStr.split(',').map(s => s.trim()).filter(s => s && !s.toUpperCase().includes('ADMIN'))
+                return parts.length > 0 ? parts.join(', ') : null
+            }
+
+            let musyrifName = filterAdminName(selected?.halaqoh?.musyrif?.nama)
             if (!musyrifName && selected?.halaqoh?.musyrif_id) {
                 const { data: guruData } = await supabase
                     .from('guru')
                     .select('nama')
                     .eq('id', selected.halaqoh.musyrif_id)
                     .maybeSingle()
-                if (guruData) musyrifName = guruData.nama
+                if (guruData) musyrifName = filterAdminName(guruData.nama)
+            }
+            if (!musyrifName && (selected?.halaqoh?.id || selected?.halaqoh_id)) {
+                const halId = selected?.halaqoh?.id || selected?.halaqoh_id
+                const { data: mhData } = await supabase
+                    .from('musyrif_halaqoh')
+                    .select('user_id')
+                    .eq('halaqoh_id', halId)
+                if (mhData && mhData.length > 0) {
+                    const userIds = mhData.map(m => m.user_id)
+                    const { data: profileData } = await supabase
+                        .from('user_profiles')
+                        .select('nama')
+                        .in('user_id', userIds)
+                    if (profileData && profileData.length > 0) {
+                        const names = profileData.map(p => p.nama).filter(n => n && !n.toUpperCase().includes('ADMIN'))
+                        if (names.length > 0) musyrifName = names.join(', ')
+                    }
+                }
             }
 
-            let waliKelasName = selected?.kelas?.wali_kelas?.nama || null
+            let waliKelasName = filterAdminName(selected?.kelas?.wali_kelas?.nama)
             if (!waliKelasName && selected?.kelas?.wali_kelas_id) {
                 const { data: guruData } = await supabase
                     .from('guru')
                     .select('nama')
                     .eq('id', selected.kelas.wali_kelas_id)
                     .maybeSingle()
-                if (guruData) waliKelasName = guruData.nama
+                if (guruData) waliKelasName = filterAdminName(guruData.nama)
             }
 
             if (selected) {
-                selected.musyrif_nama = musyrifName || "UST. SUBAIDI"
+                selected.musyrif_nama = musyrifName || "....................."
                 selected.wali_kelas_nama = waliKelasName || "....................."
             }
             setSelectedSantri(selected ? { ...selected } : null)
@@ -323,9 +348,9 @@ const LaporanAkademikSantriPage = () => {
                     const kelancaran = activeRecord.nilai_kelancaran || 0
 
                     nilaiTahfizhList = [
-                        { aspek: 'Hafalan', nilai: hafalan },
-                        { aspek: 'Tajwid', nilai: tajwid },
-                        { aspek: 'Kelancaran', nilai: kelancaran }
+                        { mapel: { nama: 'Hafalan' }, komponen: 'Hafalan', aspek: 'Hafalan', nama: 'Hafalan', nilai: hafalan },
+                        { mapel: { nama: 'Tajwid' }, komponen: 'Tajwid', aspek: 'Tajwid', nama: 'Tajwid', nilai: tajwid },
+                        { mapel: { nama: 'Fashohah / Kelancaran' }, komponen: 'Fashohah / Kelancaran', aspek: 'Kelancaran', nama: 'Fashohah / Kelancaran', nilai: kelancaran }
                     ]
                 }
             }
@@ -333,7 +358,7 @@ const LaporanAkademikSantriPage = () => {
 
             // Map all expected Madrasiyah mapels with Sidogiri grade calculation
             const nilaiMadrosList = expectedMapels.map(m => {
-                const mapelScores = mapelGrades.filter(n => n.mapel_id === m.id)
+                const mapelScores = mapelGrades.filter(n => n.mapel_id === m.id || n.mapel?.nama === m.nama)
                 const harianRec = mapelScores.find(n => n.jenis_ujian === 'harian')
                 const uasRec = mapelScores.find(n => n.jenis_ujian === 'semester' || n.jenis_ujian === 'uas')
 
@@ -342,59 +367,28 @@ const LaporanAkademikSantriPage = () => {
 
                 const calculated = calculateSidogiriGrade(uasVal, harianVal)
 
+                if (harianVal === null && uasVal === null && (calculated.finalGrade === '-' || calculated.finalGrade === null)) {
+                    return null
+                }
+
                 return {
+                    mapel: m,
                     mapel_nama: m.nama,
                     mapel_kode: m.kode || m.nama,
-                    nilai: calculated.finalGrade
+                    nilai_harian: harianVal !== null ? harianVal : '-',
+                    nilai_ujian: uasVal !== null ? uasVal : '-',
+                    nilai_raport: calculated.finalGrade,
+                    nilai: calculated.finalGrade,
+                    isRed: calculated.isRed
                 }
-            })
+            }).filter(Boolean)
             setNilaiMadros(nilaiMadrosList)
 
-            // --- 3. Fetch Taujihad & Perilaku ---
-            const { data: taujihadData } = await supabase
-                .from('taujihad')
-                .select('*')
-                .eq('santri_id', santriId)
-                .eq('semester_id', filters.semester_id)
-                .maybeSingle()
-            setTaujihad(taujihadData)
-
-            const { data: perilakuData } = await supabase
-                .from('perilaku_semester')
-                .select('*')
-                .eq('santri_id', santriId)
-                .eq('semester_id', filters.semester_id)
-                .maybeSingle()
-            setPerilaku(perilakuData)
-
-            // --- 4. Query Presensi Logs by Semester Date Range (Fallback calculation from daily logs) ---
-            const activeSemObj = semester.find(s => String(s.id) === String(filters.semester_id))
-            let presensiQuery = supabase
-                .from('presensi')
-                .select('status, keterangan, tanggal')
-                .eq('santri_id', santriId)
-
-            if (activeSemObj?.tanggal_mulai && activeSemObj?.tanggal_selesai) {
-                presensiQuery = presensiQuery
-                    .gte('tanggal', activeSemObj.tanggal_mulai)
-                    .lte('tanggal', activeSemObj.tanggal_selesai)
-            }
-
-            const { data: rawPresensi } = await presensiQuery
-            const autoCounts = calculateAutoPresensi(rawPresensi || [], [santriId])
-            const autoObj = autoCounts[santriId] || { madrosah: {}, quraniyah: {} }
-            const resolved = getResolvedAttendance(perilakuData, autoObj)
-
-            setPresensiData({
-                sakit: resolved.quraniyah.sakit,
-                izin: resolved.quraniyah.izin,
-                alpha: resolved.quraniyah.alpha,
-                pulang: resolved.quraniyah.pulang,
-                sakit_kelas: resolved.madrosah.sakit,
-                izin_kelas: resolved.madrosah.izin,
-                alpha_kelas: resolved.madrosah.alpha,
-                pulang_kelas: resolved.madrosah.pulang
-            })
+            // --- 3. Fetch Unified Non-Academic Data (Perilaku, Taujihad, Presensi, Tahfizh) ---
+            const nonAkademikData = await fetchUnifiedSantriNonAkademik(supabase, santriId, filters.semester_id)
+            setPerilaku(nonAkademikData.perilaku)
+            setTaujihad(nonAkademikData.taujihad)
+            setPresensiData(nonAkademikData.ketidakhadiran)
 
         } catch (err) {
             console.error('Error fetching report:', err.message)

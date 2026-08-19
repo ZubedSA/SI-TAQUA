@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Shield, UserCheck, Lock, AlertCircle, CheckCircle2, BookOpen, GraduationCap, Calendar } from 'lucide-react'
+import { Save, RefreshCw, Shield, UserCheck, Lock, AlertCircle, CheckCircle2, BookOpen, GraduationCap, Calendar, Zap } from 'lucide-react'
 import { supabase } from '../../../../lib/supabase'
 import { useAuth } from '../../../../context/AuthContext'
 import ResponsiveTable from '../../../../components/ui/ResponsiveTable'
@@ -189,15 +189,23 @@ const InputPerilakuPage = () => {
 
             setIsAdmin(Boolean(adminRole))
 
-            const [semRes, kelRes, halRes] = await Promise.all([
+            const [semRes, kelRes, halRes, musyrifHalRes, guruRes] = await Promise.all([
                 supabase.from('semester').select('*').order('tahun_ajaran', { ascending: false }),
                 supabase.from('kelas').select('id, nama, wali_kelas_id').order('nama'),
-                supabase.from('halaqoh').select('id, nama, musyrif_id').order('nama')
+                supabase.from('halaqoh').select('id, nama, musyrif_id').order('nama'),
+                supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
+                supabase.from('guru').select('id, nama, email, user_id')
             ])
+
+            if (semRes.error) console.error("Semester error:", semRes.error)
+            if (kelRes.error) console.error("Kelas error:", kelRes.error)
+            if (halRes.error) console.error("Halaqoh error:", halRes.error)
 
             const allSemesters = semRes.data || []
             const allKelas = kelRes.data || []
             const allHalaqoh = halRes.data || []
+            const musyrifHalaqohList = musyrifHalRes.data || []
+            const guruList = guruRes.data || []
 
             setSemester(allSemesters)
 
@@ -210,45 +218,40 @@ const InputPerilakuPage = () => {
             let targetMode = mode
 
             if (!adminRole && user) {
-                let guruData = null
+                let guruData = guruList.find(g => 
+                    (user.email && g.email?.toLowerCase() === user.email.toLowerCase()) ||
+                    (user.id && String(g.user_id) === String(user.id))
+                )
 
-                if (user.email) {
-                    const { data: byEmail } = await supabase
-                        .from('guru')
-                        .select('id, nama')
-                        .eq('email', user.email)
-                        .maybeSingle()
-                    guruData = byEmail
-                }
+                setTeacherInfo(guruData || { nama: userProfile?.full_name || user.email })
 
-                if (!guruData && user.id) {
-                    const { data: byUserId } = await supabase
-                        .from('guru')
-                        .select('id, nama')
-                        .eq('user_id', user.id)
-                        .maybeSingle()
-                    guruData = byUserId
-                }
+                const userEmails = [user.email, userProfile?.email, guruData?.email].filter(Boolean).map(e => e.toLowerCase())
+                const userIds = [user.id, guruData?.id, guruData?.user_id].filter(Boolean).map(id => String(id))
 
-                if (guruData) {
-                    setTeacherInfo(guruData)
+                const assignedHalaqoh = allHalaqoh.filter(h => {
+                    if (guruData?.id && String(h.musyrif_id) === String(guruData.id)) return true
+                    if (h.musyrif_id && userIds.includes(String(h.musyrif_id))) return true
+                    return musyrifHalaqohList.some(mh => 
+                        String(mh.halaqoh_id) === String(h.id) && userIds.includes(String(mh.user_id))
+                    )
+                })
 
-                    const assignedHalaqoh = allHalaqoh.filter(h => h.musyrif_id === guruData.id)
-                    const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
+                const assignedKelas = allKelas.filter(k => {
+                    if (guruData?.id && String(k.wali_kelas_id) === String(guruData.id)) return true
+                    if (k.wali_kelas_id && userIds.includes(String(k.wali_kelas_id))) return true
+                    return false
+                })
 
-                    activeHalaqohList = assignedHalaqoh
-                    activeKelasList = assignedKelas
+                // Fallback to all list if no specific assignment found, so teacher is never blocked
+                activeHalaqohList = assignedHalaqoh.length > 0 ? assignedHalaqoh : allHalaqoh
+                activeKelasList = assignedKelas.length > 0 ? assignedKelas : allKelas
 
-                    if (assignedHalaqoh.length === 0 && assignedKelas.length > 0) {
-                        targetMode = 'kelas'
-                        setMode('kelas')
-                    } else if (assignedKelas.length === 0 && assignedHalaqoh.length > 0) {
-                        targetMode = 'halaqoh'
-                        setMode('halaqoh')
-                    }
-                } else {
-                    activeHalaqohList = []
-                    activeKelasList = []
+                if (assignedHalaqoh.length === 0 && assignedKelas.length > 0) {
+                    targetMode = 'kelas'
+                    setMode('kelas')
+                } else if (assignedKelas.length === 0 && assignedHalaqoh.length > 0) {
+                    targetMode = 'halaqoh'
+                    setMode('halaqoh')
                 }
             }
 
@@ -378,10 +381,10 @@ const InputPerilakuPage = () => {
                             perilaku_id: p?.id,
                             taujihad_id: t?.id,
 
-                            ketekunan: p?.ketekunan || 'Sangat Baik',
-                            kedisiplinan: p?.kedisiplinan || 'Sangat Baik',
-                            kebersihan: p?.kebersihan || 'Sangat Baik',
-                            kerapian: p?.kerapian || 'Sangat Baik',
+                            ketekunan: p?.ketekunan || p?.ketekunan_kelas || 'Sangat Baik',
+                            kedisiplinan: p?.kedisiplinan || p?.kedisiplinan_kelas || 'Sangat Baik',
+                            kebersihan: p?.kebersihan || p?.kebersihan_kelas || 'Sangat Baik',
+                            kerapian: p?.kerapian || p?.kerapian_kelas || 'Sangat Baik',
 
                             jumlah_hafalan: p?.jumlah_hafalan || '',
                             predikat_hafalan: p?.predikat_hafalan || 'Baik',
@@ -407,10 +410,10 @@ const InputPerilakuPage = () => {
                             perilaku_id: p?.id,
                             taujihad_id: t?.id,
 
-                            ketekunan: p?.ketekunan_kelas || 'Sangat Baik',
-                            kedisiplinan: p?.kedisiplinan_kelas || 'Sangat Baik',
-                            kebersihan: p?.kebersihan_kelas || 'Sangat Baik',
-                            kerapian: p?.kerapian_kelas || 'Sangat Baik',
+                            ketekunan: p?.ketekunan || p?.ketekunan_kelas || 'Sangat Baik',
+                            kedisiplinan: p?.kedisiplinan || p?.kedisiplinan_kelas || 'Sangat Baik',
+                            kebersihan: p?.kebersihan || p?.kebersihan_kelas || 'Sangat Baik',
+                            kerapian: p?.kerapian || p?.kerapian_kelas || 'Sangat Baik',
 
                             jumlah_hafalan: p?.jumlah_hafalan || '',
                             predikat_hafalan: p?.predikat_hafalan || 'Baik',
@@ -462,6 +465,29 @@ const InputPerilakuPage = () => {
                 }
             })
             setSuccess(`✅ Data ketidakhadiran berhasil disinkronkan otomatis dari presensi ${mode === 'halaqoh' ? 'Halaqoh' : 'Madrasah'} (${count} santri)!`)
+            setTimeout(() => setSuccess(''), 4000)
+            return updated
+        })
+    }
+
+    // 2.2 Handle Bulk Auto-Fill Perilaku for All Santri
+    const handleAutoFillPerilakuAll = (targetValue) => {
+        if (!targetValue) return
+        setFormData(prev => {
+            const updated = { ...prev }
+            let count = 0
+            santri.forEach(s => {
+                const prevItem = updated[s.id] || {}
+                updated[s.id] = {
+                    ...prevItem,
+                    ketekunan: targetValue,
+                    kedisiplinan: targetValue,
+                    kebersihan: targetValue,
+                    kerapian: targetValue
+                }
+                count++
+            })
+            setSuccess(`⚡ Seluruh aspek perilaku (Ketekunan, Kedisiplinan, Kebersihan, Kerapian) untuk ${count} santri berhasil di-set menjadi "${targetValue}"!`)
             setTimeout(() => setSuccess(''), 4000)
             return updated
         })
@@ -520,23 +546,39 @@ const InputPerilakuPage = () => {
                         kedisiplinan: data.kedisiplinan,
                         kebersihan: data.kebersihan,
                         kerapian: data.kerapian,
+                        ketekunan_kelas: data.ketekunan,
+                        kedisiplinan_kelas: data.kedisiplinan,
+                        kebersihan_kelas: data.kebersihan,
+                        kerapian_kelas: data.kerapian,
                         jumlah_hafalan: data.jumlah_hafalan,
                         predikat_hafalan: data.predikat_hafalan,
                         total_hafalan: data.total_hafalan,
                         sakit: parseInt(data.sakit) || 0,
                         izin: parseInt(data.izin) || 0,
                         alpha: parseInt(data.alpha) || 0,
-                        pulang: parseInt(data.pulang) || 0
+                        pulang: parseInt(data.pulang) || 0,
+                        sakit_kelas: parseInt(data.sakit) || 0,
+                        izin_kelas: parseInt(data.izin) || 0,
+                        alpha_kelas: parseInt(data.alpha) || 0,
+                        pulang_kelas: parseInt(data.pulang) || 0
                     })
                 } else {
                     perilakuUpserts.push({
                         id: data.perilaku_id || crypto.randomUUID(),
                         santri_id: santriId,
                         semester_id: filters.semester_id,
+                        ketekunan: data.ketekunan,
+                        kedisiplinan: data.kedisiplinan,
+                        kebersihan: data.kebersihan,
+                        kerapian: data.kerapian,
                         ketekunan_kelas: data.ketekunan,
                         kedisiplinan_kelas: data.kedisiplinan,
                         kebersihan_kelas: data.kebersihan,
                         kerapian_kelas: data.kerapian,
+                        sakit: parseInt(data.sakit) || 0,
+                        izin: parseInt(data.izin) || 0,
+                        alpha: parseInt(data.alpha) || 0,
+                        pulang: parseInt(data.pulang) || 0,
                         sakit_kelas: parseInt(data.sakit) || 0,
                         izin_kelas: parseInt(data.izin) || 0,
                         alpha_kelas: parseInt(data.alpha) || 0,
@@ -798,6 +840,25 @@ const InputPerilakuPage = () => {
                     <div className="table-header flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
                         <h3 className="table-title">Daftar Santri ({santri.length})</h3>
                         <div className="flex items-center gap-2 flex-wrap">
+                            {/* BULK AUTO-SET PERILAKU TOOLBAR */}
+                            <div className="flex items-center gap-1 bg-emerald-50/80 border border-emerald-200 p-1 rounded-xl shadow-2xs">
+                                <span className="text-[11px] font-bold text-emerald-800 px-1.5 flex items-center gap-1 shrink-0">
+                                    <Zap size={13} className="text-amber-500 fill-amber-400" /> Set Perilaku:
+                                </span>
+                                {['Sangat Baik', 'Baik', 'Cukup', 'Kurang'].map(opt => (
+                                    <button
+                                        key={opt}
+                                        type="button"
+                                        disabled={loading || santri.length === 0 || !isSemesterActive}
+                                        onClick={() => handleAutoFillPerilakuAll(opt)}
+                                        className="px-2 py-1 text-[11px] font-bold rounded-lg bg-white text-gray-700 hover:bg-emerald-600 hover:text-white border border-gray-300/80 shadow-2xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title={`Set semua aspek perilaku (Ketekunan, Kedisiplinan, Kebersihan, Kerapian) seluruh santri menjadi "${opt}"`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+
                             <button
                                 type="button"
                                 className="btn btn-outline text-xs flex items-center gap-1.5 bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"

@@ -145,8 +145,9 @@ const RaportTemplate = ({
                     semester={semester}
                     nilaiMadrasah={nilaiMadrasah}
                     perilaku={perilaku}
+                    taujihad={taujihad}
                     ketidakhadiran={ketidakhadiran}
-                    catatanWali={catatanWali || taujihad?.catatan}
+                    catatanWali={catatanWali || taujihad?.catatan_wali || perilaku?.catatan_wali}
                     waliKelasName={waliKelasName || santri?.wali_kelas_nama}
                     musyrifName={musyrifName || santri?.musyrif_nama}
                 />

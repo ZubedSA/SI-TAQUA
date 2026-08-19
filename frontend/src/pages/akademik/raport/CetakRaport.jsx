@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import RaportTemplate from '../../../components/akademik/RaportTemplate';
 import { calculateSidogiriGrade } from '../../../components/akademik/RaportMadrasahTemplate';
 import { calculateAutoPresensi, getResolvedAttendance } from '../../../utils/attendanceHelper';
+import { fetchUnifiedSantriNonAkademik } from '../../../utils/raportNonAkademikHelper';
 
 const CetakRaport = () => {
     const { santriId, semesterId } = useParams();
@@ -82,27 +83,50 @@ const CetakRaport = () => {
 
             if (santriError) throw santriError;
 
-            let musyrifName = santriData.halaqoh?.musyrif?.nama || null;
+            const filterAdminName = (nameStr) => {
+                if (!nameStr) return null;
+                const parts = nameStr.split(',').map(s => s.trim()).filter(s => s && !s.toUpperCase().includes('ADMIN'));
+                return parts.length > 0 ? parts.join(', ') : null;
+            };
+
+            let musyrifName = filterAdminName(santriData.halaqoh?.musyrif?.nama);
             if (!musyrifName && santriData.halaqoh?.musyrif_id) {
                 const { data: guruData } = await supabase
                     .from('guru')
                     .select('nama')
                     .eq('id', santriData.halaqoh.musyrif_id)
                     .maybeSingle();
-                if (guruData) musyrifName = guruData.nama;
+                if (guruData) musyrifName = filterAdminName(guruData.nama);
+            }
+            if (!musyrifName && santriData.halaqoh_id) {
+                const { data: mhData } = await supabase
+                    .from('musyrif_halaqoh')
+                    .select('user_id')
+                    .eq('halaqoh_id', santriData.halaqoh_id);
+                if (mhData && mhData.length > 0) {
+                    const userIds = mhData.map(m => m.user_id);
+                    const { data: profileData } = await supabase
+                        .from('user_profiles')
+                        .select('nama')
+                        .in('user_id', userIds);
+                    if (profileData && profileData.length > 0) {
+                        const names = profileData.map(p => p.nama).filter(n => n && !n.toUpperCase().includes('ADMIN'));
+                        if (names.length > 0) musyrifName = names.join(', ');
+                    }
+                }
             }
 
-            let waliKelasName = santriData.kelas?.wali_kelas?.nama || null;
+            let waliKelasName = filterAdminName(santriData.kelas?.wali_kelas?.nama);
             if (!waliKelasName && santriData.kelas?.wali_kelas_id) {
                 const { data: guruData } = await supabase
                     .from('guru')
                     .select('nama')
                     .eq('id', santriData.kelas.wali_kelas_id)
                     .maybeSingle();
-                if (guruData) waliKelasName = guruData.nama;
+                if (guruData) waliKelasName = filterAdminName(guruData.nama);
             }
 
-            santriData.musyrif_nama = musyrifName || "UST. SUBAIDI";
+            santriData.musyrif_nama = musyrifName || ".....................";
             santriData.wali_kelas_nama = waliKelasName || ".....................";
             setSantri(santriData);
 
@@ -223,40 +247,11 @@ const CetakRaport = () => {
             }
             setNilaiTahfizh(tahfizhRows);
 
-            // 5. Fetch Taujihad & Perilaku
-            const { data: taujihadData } = await supabase.from('taujihad').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).maybeSingle();
-            setTaujihad(taujihadData);
-
-            const { data: perilakuData } = await supabase.from('perilaku_semester').select('*').eq('santri_id', santriId).eq('semester_id', semesterId).maybeSingle();
-            setPerilaku(perilakuData);
-
-            // 6. Query Presensi Log by Semester Date Range (Fallback calculation from daily presensi logs)
-            let presensiQuery = supabase
-                .from('presensi')
-                .select('santri_id, status, keterangan, tanggal')
-                .eq('santri_id', santriId);
-
-            if (semesterData?.tanggal_mulai && semesterData?.tanggal_selesai) {
-                presensiQuery = presensiQuery
-                    .gte('tanggal', semesterData.tanggal_mulai)
-                    .lte('tanggal', semesterData.tanggal_selesai);
-            }
-
-            const { data: rawPresensi } = await presensiQuery;
-            const autoCounts = calculateAutoPresensi(rawPresensi || [], [santriId]);
-            const autoObj = autoCounts[santriId] || { madrosah: {}, quraniyah: {} };
-            const resolved = getResolvedAttendance(perilakuData, autoObj);
-
-            setKetidakhadiran({
-                sakit: resolved.quraniyah.sakit,
-                izin: resolved.quraniyah.izin,
-                alpha: resolved.quraniyah.alpha,
-                pulang: resolved.quraniyah.pulang,
-                sakit_kelas: resolved.madrosah.sakit,
-                izin_kelas: resolved.madrosah.izin,
-                alpha_kelas: resolved.madrosah.alpha,
-                pulang_kelas: resolved.madrosah.pulang
-            });
+            // 5. Fetch Unified Non-Academic Data (Perilaku, Taujihad, Presensi, Tahfizh)
+            const nonAkademikData = await fetchUnifiedSantriNonAkademik(supabase, santriId, semesterId);
+            setPerilaku(nonAkademikData.perilaku);
+            setTaujihad(nonAkademikData.taujihad);
+            setKetidakhadiran(nonAkademikData.ketidakhadiran);
 
         } catch (error) {
             console.error("Error fetching raport data:", error);

@@ -33,6 +33,7 @@ const RaportMadrasahTemplate = ({
     semester,
     nilaiMadrasah = [],
     perilaku = {},
+    taujihad = {},
     ketidakhadiran = {},
     catatanWali = '',
     waliKelasName = '',
@@ -93,11 +94,12 @@ const RaportMadrasahTemplate = ({
 
     const processedList = nilaiMadrasah.map(item => {
         let calc;
-        if (item.nilai_raport !== undefined && item.nilai_raport !== null && item.nilai_raport !== '' && item.nilai_raport !== '-' && !isNaN(item.nilai_raport) && Number(item.nilai_raport) <= 10) {
-            const fg = Number(item.nilai_raport);
+        const valRaport = item.nilai_raport ?? item.nilai ?? item.nilai_akhir;
+        if (valRaport !== undefined && valRaport !== null && valRaport !== '' && valRaport !== '-' && !isNaN(valRaport) && Number(valRaport) <= 10) {
+            const fg = Number(valRaport);
             calc = { finalGrade: fg, isRed: fg <= 5 };
-        } else if (item.nilai_akhir !== undefined && item.nilai_akhir !== null && item.nilai_akhir !== '' && item.nilai_akhir !== '-' && !isNaN(item.nilai_akhir)) {
-            const val = Number(item.nilai_akhir);
+        } else if (valRaport !== undefined && valRaport !== null && valRaport !== '' && valRaport !== '-' && !isNaN(valRaport)) {
+            const val = Number(valRaport);
             const fg = val > 10 ? Math.round(val / 10) : Math.round(val);
             calc = { finalGrade: Math.max(3, Math.min(10, fg)), isRed: fg <= 5 };
         } else {
@@ -105,8 +107,8 @@ const RaportMadrasahTemplate = ({
         }
 
         const { finalGrade } = calc || {};
-        const rawGrade = (item.nilai_akhir !== null && item.nilai_akhir !== undefined && item.nilai_akhir !== '' && item.nilai_akhir !== '-' && item.nilai_akhir !== 'NaN' && !isNaN(item.nilai_akhir))
-            ? item.nilai_akhir
+        const rawGrade = (valRaport !== null && valRaport !== undefined && valRaport !== '' && valRaport !== '-' && valRaport !== 'NaN' && !isNaN(valRaport))
+            ? valRaport
             : (finalGrade && finalGrade !== 'NaN' && !isNaN(finalGrade) ? finalGrade : '-');
         const displayGrade = (rawGrade === null || rawGrade === undefined || rawGrade === '-' || rawGrade === 'NaN' || isNaN(rawGrade)) ? '-' : rawGrade;
 
@@ -217,7 +219,7 @@ const RaportMadrasahTemplate = ({
                                     return (
                                         <tr key={idx}>
                                             <td style={{ ...cellStyle, textAlign: 'center' }}>{idx + 1}</td>
-                                            <td style={{ ...cellStyle, fontWeight: '500' }}>{item.mapel?.nama || item.nama || '-'}</td>
+                                            <td style={{ ...cellStyle, fontWeight: '500' }}>{item.mapel?.nama || item.mapel_nama || item.nama || '-'}</td>
                                             <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold', color: isRed ? '#dc2626' : '#000000' }}>
                                                 {displayGrade}
                                             </td>
@@ -254,11 +256,11 @@ const RaportMadrasahTemplate = ({
                         <tbody>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>A. Ketekunan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.ketekunan_kelas || perilaku?.ketekunan || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.ketekunan_kelas || perilaku?.ketekunan || 'Sangat Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>B. Kedisiplinan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kedisiplinan_kelas || perilaku?.kedisiplinan || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kedisiplinan_kelas || perilaku?.kedisiplinan || 'Sangat Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>C. Kebersihan</td>
@@ -312,7 +314,7 @@ const RaportMadrasahTemplate = ({
                     fontStyle: 'italic',
                     color: '#374151'
                 }}>
-                    {catatanWali || 'baiklah'}
+                    {catatanWali || perilaku?.catatan_wali || taujihad?.catatan_wali || taujihad?.catatan || perilaku?.catatan || '-'}
                 </div>
             </div>
 
@@ -330,7 +332,11 @@ const RaportMadrasahTemplate = ({
                     </p>
                     <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Wali Kelas</p>
                     <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                        {waliKelasName || santri?.wali_kelas_nama || santri?.kelas?.wali_kelas?.nama || '.....................'}
+                        {(() => {
+                            const raw = waliKelasName || santri?.wali_kelas_nama || santri?.kelas?.wali_kelas?.nama || '';
+                            const parts = raw.split(',').map(s => s.trim()).filter(s => s && !s.toUpperCase().includes('ADMIN'));
+                            return parts.length > 0 ? parts.join(', ') : '.....................';
+                        })()}
                     </p>
                 </div>
             </div>

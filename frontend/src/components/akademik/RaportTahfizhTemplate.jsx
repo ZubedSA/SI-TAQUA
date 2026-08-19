@@ -168,7 +168,7 @@ const RaportTahfizhTemplate = ({
                                 filteredTahfizh.map((item, idx) => (
                                     <tr key={idx}>
                                         <td style={{ ...cellStyle, textAlign: 'center' }}>{idx + 1}</td>
-                                        <td style={{ ...cellStyle, fontWeight: '500' }}>{item.mapel?.nama || item.komponen || '-'}</td>
+                                        <td style={{ ...cellStyle, fontWeight: '500' }}>{item.mapel?.nama || item.komponen || item.aspek || item.nama || item.mapel_nama || item.label || '-'}</td>
                                         <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{item.roundedVal}</td>
                                         <td style={{ ...cellStyle, textAlign: 'center', fontWeight: 'bold' }}>{item.predikat || getPredikat(item.roundedVal)}</td>
                                     </tr>
@@ -207,15 +207,15 @@ const RaportTahfizhTemplate = ({
                         <tbody>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>Jumlah Hafalan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.jumlah_hafalan || '3'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.jumlah_hafalan || '-'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>Predikat</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.predikat_hafalan || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.predikat_hafalan || '-'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>Total Hafalan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.total_hafalan || '5'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.total_hafalan || '-'}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -234,19 +234,19 @@ const RaportTahfizhTemplate = ({
                         <tbody>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>A. Ketekunan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.ketekunan || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.ketekunan || perilaku?.ketekunan_kelas || 'Sangat Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>B. Kedisiplinan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kedisiplinan || 'Cukup'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kedisiplinan || perilaku?.kedisiplinan_kelas || 'Sangat Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>C. Kebersihan</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kebersihan || 'Cukup'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kebersihan || perilaku?.kebersihan_kelas || 'Sangat Baik'}</td>
                             </tr>
                             <tr>
                                 <td style={{ ...cellStyle, fontWeight: '500' }}>D. Kerapian</td>
-                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kerapian || 'Baik'}</td>
+                                <td style={{ ...cellStyle, fontWeight: 'bold', textAlign: 'center' }}>{perilaku?.kerapian || perilaku?.kerapian_kelas || 'Sangat Baik'}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -292,7 +292,7 @@ const RaportTahfizhTemplate = ({
                     fontStyle: 'italic',
                     color: '#374151'
                 }}>
-                    {taujihad?.catatan || 'baiklah'}
+                    {taujihad?.catatan || perilaku?.catatan_musyrif || taujihad?.catatan_wali || perilaku?.catatan_wali || '-'}
                 </div>
             </div>
 
@@ -310,7 +310,11 @@ const RaportTahfizhTemplate = ({
                     </p>
                     <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Musyrif</p>
                     <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                        {musyrifName || santri?.musyrif_nama || 'UST. SUBAIDI'}
+                        {(() => {
+                            const raw = musyrifName || santri?.musyrif_nama || '';
+                            const parts = raw.split(',').map(s => s.trim()).filter(s => s && !s.toUpperCase().includes('ADMIN'));
+                            return parts.length > 0 ? parts.join(', ') : '.....................';
+                        })()}
                     </p>
                 </div>
             </div>
