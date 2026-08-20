@@ -344,9 +344,9 @@ const RaportMadrasahTemplate = ({
             {/* ========== MENGETAHUI PENGASUH ========== */}
             <div style={{ textAlign: 'center', marginTop: '6px' }}>
                 <p style={{ fontSize: '10px', marginBottom: '2px', color: '#111827' }}>Mengetahui,</p>
-                <p style={{ fontSize: '10px', marginBottom: '40px', color: '#111827' }}>Pengasuh PTQA Batuan</p>
+                <p style={{ fontSize: '10px', marginBottom: '40px', color: '#111827' }}>Wakil Pengasuh Bag. Madrosiyah</p>
                 <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                    KH. MIFTAHUL ARIFIN, LC.
+                    LUTFI NURULLAH
                 </p>
             </div>
         </div>
