@@ -180,11 +180,22 @@ const LaporanAkademikSantriPage = () => {
 
             if (!adminRole && user) {
                 let guruData = null
-                if (user.email) {
+                const userEmail = (userProfile?.email || user?.email || '').trim().toLowerCase()
+                const userNames = [userProfile?.nama, userProfile?.full_name, user?.email?.split('@')[0]].filter(Boolean).map(n => n.trim().toLowerCase())
+
+                if (userProfile?.guru_id) {
+                    const { data: byGuruId } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('id', userProfile.guru_id)
+                        .maybeSingle()
+                    guruData = byGuruId
+                }
+                if (!guruData && userEmail) {
                     const { data: byEmail } = await supabase
                         .from('guru')
                         .select('id, nama')
-                        .eq('email', user.email)
+                        .ilike('email', userEmail)
                         .maybeSingle()
                     guruData = byEmail
                 }
@@ -196,12 +207,21 @@ const LaporanAkademikSantriPage = () => {
                         .maybeSingle()
                     guruData = byUserId
                 }
+                if (!guruData && userNames.length > 0) {
+                    const { data: allGuru } = await supabase.from('guru').select('id, nama')
+                    guruData = (allGuru || []).find(g => g.nama && userNames.some(name => g.nama.trim().toLowerCase() === name))
+                }
 
-                if (guruData) {
-                    const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
-                    if (assignedKelas.length > 0) {
-                        activeKelasList = assignedKelas
-                    }
+                const userIds = [user?.id, userProfile?.id, userProfile?.user_id, userProfile?.guru_id, guruData?.id].filter(Boolean).map(id => String(id))
+
+                const assignedKelas = allKelas.filter(k => {
+                    if (k.wali_kelas_id && userIds.includes(String(k.wali_kelas_id))) return true
+                    if (k.wali_kelas?.nama && userNames.some(name => k.wali_kelas.nama.trim().toLowerCase() === name)) return true
+                    return false
+                })
+
+                if (assignedKelas.length > 0) {
+                    activeKelasList = assignedKelas
                 }
             }
 

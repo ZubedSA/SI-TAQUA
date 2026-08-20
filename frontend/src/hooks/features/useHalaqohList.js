@@ -39,10 +39,23 @@ export const useHalaqohList = () => {
 
             // Map assignments to halaqohs
             const halaqohList = (halaqohs || []).map(h => {
-                const halaqohAssigns = assignments.filter(a => a.halaqoh_id === h.id)
+                const halaqohAssigns = assignments.filter(a => String(a.halaqoh_id) === String(h.id))
                 const assignedMusyrifs = halaqohAssigns.map(a => {
-                    const prof = profiles.find(p => p.user_id === a.user_id)
-                    return prof ? { user_id: prof.user_id, nama: prof.nama, email: prof.email } : null
+                    if (!a.user_id) return null
+                    const targetId = String(a.user_id).trim().toLowerCase()
+                    const prof = profiles.find(p => 
+                        (p.user_id && String(p.user_id).trim().toLowerCase() === targetId) ||
+                        (p.id && String(p.id).trim().toLowerCase() === targetId)
+                    )
+                    if (prof) return { user_id: prof.user_id || prof.id, nama: prof.nama, email: prof.email }
+
+                    const g = (guruRes.data || []).find(g => 
+                        (g.id && String(g.id).trim().toLowerCase() === targetId) ||
+                        (g.user_id && String(g.user_id).trim().toLowerCase() === targetId)
+                    )
+                    if (g) return { user_id: g.user_id || g.id, nama: g.nama, email: g.email }
+
+                    return null
                 }).filter(Boolean)
 
                 return {

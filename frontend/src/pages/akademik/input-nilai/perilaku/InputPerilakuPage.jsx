@@ -219,18 +219,22 @@ const InputPerilakuPage = () => {
 
             if (!adminRole && user) {
                 let guruData = guruList.find(g => 
+                    (userProfile?.guru_id && String(g.id) === String(userProfile.guru_id)) ||
                     (user.email && g.email?.toLowerCase() === user.email.toLowerCase()) ||
-                    (user.id && String(g.user_id) === String(user.id))
+                    (user.id && String(g.user_id) === String(user.id)) ||
+                    (userProfile?.nama && g.nama?.trim().toLowerCase() === userProfile.nama.trim().toLowerCase())
                 )
 
-                setTeacherInfo(guruData || { nama: userProfile?.full_name || user.email })
+                setTeacherInfo(guruData || { nama: userProfile?.nama || userProfile?.full_name || user.email })
 
                 const userEmails = [user.email, userProfile?.email, guruData?.email].filter(Boolean).map(e => e.toLowerCase())
-                const userIds = [user.id, guruData?.id, guruData?.user_id].filter(Boolean).map(id => String(id))
+                const userIds = [user.id, userProfile?.id, userProfile?.user_id, userProfile?.guru_id, guruData?.id, guruData?.user_id].filter(Boolean).map(id => String(id))
+                const userNames = [userProfile?.nama, userProfile?.full_name, guruData?.nama].filter(Boolean).map(n => n.trim().toLowerCase())
 
                 const assignedHalaqoh = allHalaqoh.filter(h => {
                     if (guruData?.id && String(h.musyrif_id) === String(guruData.id)) return true
                     if (h.musyrif_id && userIds.includes(String(h.musyrif_id))) return true
+                    if (h.guru?.nama && userNames.includes(h.guru.nama.trim().toLowerCase())) return true
                     return musyrifHalaqohList.some(mh => 
                         String(mh.halaqoh_id) === String(h.id) && userIds.includes(String(mh.user_id))
                     )
@@ -239,6 +243,7 @@ const InputPerilakuPage = () => {
                 const assignedKelas = allKelas.filter(k => {
                     if (guruData?.id && String(k.wali_kelas_id) === String(guruData.id)) return true
                     if (k.wali_kelas_id && userIds.includes(String(k.wali_kelas_id))) return true
+                    if (k.wali_kelas?.nama && userNames.includes(k.wali_kelas.nama.trim().toLowerCase())) return true
                     return false
                 })
 

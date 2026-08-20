@@ -77,11 +77,22 @@ const LaporanUjianSemesterPage = () => {
 
             if (!adminRole && user) {
                 let guruData = null
-                if (user.email) {
+                const userEmail = (userProfile?.email || user?.email || '').trim().toLowerCase()
+                const userNames = [userProfile?.nama, userProfile?.full_name, user?.email?.split('@')[0]].filter(Boolean).map(n => n.trim().toLowerCase())
+
+                if (userProfile?.guru_id) {
+                    const { data: byGuruId } = await supabase
+                        .from('guru')
+                        .select('id, nama')
+                        .eq('id', userProfile.guru_id)
+                        .maybeSingle()
+                    guruData = byGuruId
+                }
+                if (!guruData && userEmail) {
                     const { data: byEmail } = await supabase
                         .from('guru')
                         .select('id, nama')
-                        .eq('email', user.email)
+                        .ilike('email', userEmail)
                         .maybeSingle()
                     guruData = byEmail
                 }
@@ -93,25 +104,41 @@ const LaporanUjianSemesterPage = () => {
                         .maybeSingle()
                     guruData = byUserId
                 }
+                if (!guruData && userNames.length > 0) {
+                    const { data: allGuru } = await supabase.from('guru').select('id, nama')
+                    guruData = (allGuru || []).find(g => g.nama && userNames.some(name => g.nama.trim().toLowerCase() === name))
+                }
 
-                if (guruData) {
-                    setTeacherInfo(guruData)
-                    const assignedHalaqoh = allHalaqoh.filter(h => h.musyrif_id === guruData.id)
-                    const assignedKelas = allKelas.filter(k => k.wali_kelas_id === guruData.id)
+                setTeacherInfo(guruData || { nama: userProfile?.nama || userProfile?.full_name || user.email })
 
-                    activeHalaqohList = assignedHalaqoh
-                    activeKelasList = assignedKelas
+                const userIds = [user?.id, userProfile?.id, userProfile?.user_id, userProfile?.guru_id, guruData?.id].filter(Boolean).map(id => String(id))
 
-                    if (assignedHalaqoh.length === 0 && assignedKelas.length > 0) {
-                        targetMode = 'kelas'
-                        setMode('kelas')
-                    } else if (assignedKelas.length === 0 && assignedHalaqoh.length > 0) {
-                        targetMode = 'halaqoh'
-                        setMode('halaqoh')
-                    }
-                } else {
-                    activeHalaqohList = []
-                    activeKelasList = []
+                const { data: mhLinks } = await supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id, musyrif_id')
+
+                const assignedHalaqoh = allHalaqoh.filter(h => {
+                    if (h.musyrif_id && userIds.includes(String(h.musyrif_id))) return true
+                    if (h.guru?.nama && userNames.some(name => h.guru.nama.trim().toLowerCase() === name)) return true
+                    return (mhLinks || []).some(mh => 
+                        String(mh.halaqoh_id) === String(h.id) && 
+                        (userIds.includes(String(mh.user_id)) || userIds.includes(String(mh.musyrif_id)))
+                    )
+                })
+
+                const assignedKelas = allKelas.filter(k => {
+                    if (k.wali_kelas_id && userIds.includes(String(k.wali_kelas_id))) return true
+                    if (k.wali_kelas?.nama && userNames.some(name => k.wali_kelas.nama.trim().toLowerCase() === name)) return true
+                    return false
+                })
+
+                activeHalaqohList = assignedHalaqoh
+                activeKelasList = assignedKelas
+
+                if (assignedHalaqoh.length === 0 && assignedKelas.length > 0) {
+                    targetMode = 'kelas'
+                    setMode('kelas')
+                } else if (assignedKelas.length === 0 && assignedHalaqoh.length > 0) {
+                    targetMode = 'halaqoh'
+                    setMode('halaqoh')
                 }
             }
 

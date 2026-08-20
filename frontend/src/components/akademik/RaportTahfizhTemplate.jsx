@@ -301,7 +301,7 @@ const RaportTahfizhTemplate = ({
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ fontSize: '10px', marginBottom: '45px', color: '#111827' }}>Wali Murid</p>
                     <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#111827', textTransform: 'uppercase' }}>
-                        ({santri?.nama_wali || '.....................'})
+                        {santri?.nama_wali || '.....................'}
                     </p>
                 </div>
                 <div style={{ textAlign: 'center' }}>

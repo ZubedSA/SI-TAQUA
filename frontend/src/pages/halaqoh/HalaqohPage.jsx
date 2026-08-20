@@ -49,10 +49,20 @@ const HalaqohPage = () => {
     const openEdit = (item, e) => {
         if (e) e.stopPropagation();
         setEditItem(item)
+        const currentMusyrifIds = []
+        if (item.musyrifs && item.musyrifs.length > 0) {
+            item.musyrifs.forEach(m => {
+                if (m.user_id) currentMusyrifIds.push(m.user_id)
+                if (m.id && !currentMusyrifIds.includes(m.id)) currentMusyrifIds.push(m.id)
+            })
+        }
+        if (item.musyrif_id && !currentMusyrifIds.includes(item.musyrif_id)) {
+            currentMusyrifIds.push(item.musyrif_id)
+        }
         setFormData({
             nama: item.nama,
             musyrif_id: item.musyrif_id || '',
-            musyrif_ids: item.musyrifs ? item.musyrifs.map(m => m.user_id) : []
+            musyrif_ids: currentMusyrifIds
         })
         setShowModal(true)
     }
@@ -69,21 +79,27 @@ const HalaqohPage = () => {
     const handleFormSubmit = (e) => {
         e.preventDefault()
         if (!formData.nama.trim()) {
-            showToast.error('Nama halaqoh wajib diisi')
+            showToast.error('Nama halaqoh harus diisi')
             return
         }
         setSaveModal({ isOpen: true })
     }
 
     const executeSave = async () => {
+        setSaveModal({ isOpen: false })
         setSaving(true)
+
         try {
             // Find corresponding guru_id for the first selected musyrif for legacy compatibility
             let firstLegacyMusyrifId = null;
             if (formData.musyrif_ids && formData.musyrif_ids.length > 0) {
-                const firstUserObj = musyrifList.find(m => m.user_id === formData.musyrif_ids[0]);
+                const firstUserObj = musyrifList.find(m => m.user_id === formData.musyrif_ids[0] || m.id === formData.musyrif_ids[0]);
                 if (firstUserObj) {
-                    const matchedGuru = guruList.find(g => g.email === firstUserObj.email);
+                    const matchedGuru = guruList.find(g => 
+                        (g.user_id && String(g.user_id) === String(firstUserObj.user_id)) ||
+                        (g.email && firstUserObj.email && g.email.trim().toLowerCase() === firstUserObj.email.trim().toLowerCase()) ||
+                        (g.nama && firstUserObj.nama && g.nama.trim().toLowerCase() === firstUserObj.nama.trim().toLowerCase())
+                    );
                     if (matchedGuru) {
                         firstLegacyMusyrifId = matchedGuru.id;
                     }
@@ -124,16 +140,38 @@ const HalaqohPage = () => {
 
             if (resetError) throw resetError
 
-            // 2. Insert new assignments
+            // 2. Insert new assignments safely into musyrif_halaqoh
             if (formData.musyrif_ids && formData.musyrif_ids.length > 0) {
-                const links = formData.musyrif_ids.map(uid => ({
-                    halaqoh_id: halaqohId,
-                    user_id: uid
-                }))
-                const { error: linkError } = await supabase
-                    .from('musyrif_halaqoh')
-                    .insert(links)
-                if (linkError) throw linkError
+                const validLinks = []
+                for (const uid of formData.musyrif_ids) {
+                    const mUser = musyrifList.find(m => 
+                        (m.user_id && String(m.user_id) === String(uid)) ||
+                        (m.id && String(m.id) === String(uid))
+                    )
+                    const authUserId = mUser?.user_id || (typeof uid === 'string' && uid.length > 20 ? uid : null)
+                    if (authUserId) {
+                        validLinks.push({
+                            halaqoh_id: halaqohId,
+                            user_id: authUserId
+                        })
+                    }
+                }
+
+                if (validLinks.length > 0) {
+                    const uniqueLinks = Array.from(
+                        new Map(validLinks.map(item => [item.user_id, item])).values()
+                    )
+                    try {
+                        const { error: linkError } = await supabase
+                            .from('musyrif_halaqoh')
+                            .insert(uniqueLinks)
+                        if (linkError) {
+                            console.warn('⚠️ Non-fatal warning inserting musyrif_halaqoh:', linkError.message)
+                        }
+                    } catch (linkErr) {
+                        console.warn('⚠️ Non-fatal link error:', linkErr)
+                    }
+                }
             }
 
             closeModal()

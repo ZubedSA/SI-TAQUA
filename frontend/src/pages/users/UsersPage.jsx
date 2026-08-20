@@ -258,21 +258,7 @@ const UsersPage = () => {
         }
     }
 
-    // Fetch halaqoh linked to a musyrif user
-    const fetchLinkedHalaqoh = async (musyrifUserId) => {
-        try {
-            const { data, error } = await supabase
-                .from('musyrif_halaqoh')
-                .select('halaqoh_id')
-                .eq('user_id', musyrifUserId)
 
-            if (error) throw error
-            setSelectedHalaqohIds(data?.map(h => h.halaqoh_id) || [])
-        } catch (error) {
-            console.error('Error fetching linked halaqoh:', error.message)
-            setSelectedHalaqohIds([])
-        }
-    }
 
     const [fetchError, setFetchError] = useState(null)
 
@@ -655,11 +641,58 @@ const UsersPage = () => {
         }
     }
 
-    // Helper for linking Halaqoh
-    const handleHalaqohLinking = async (userId, halaqohIds) => {
-        console.log('🔗 Linking Halaqoh for Musyrif:', userId, 'Selected:', halaqohIds)
+    // Fetch halaqoh linked to a musyrif user (2-Way Sync)
+    const fetchLinkedHalaqoh = async (musyrifUserId) => {
+        try {
+            // 1. Fetch from musyrif_halaqoh junction table
+            const { data: mhData } = await supabase
+                .from('musyrif_halaqoh')
+                .select('halaqoh_id')
+                .eq('user_id', musyrifUserId)
 
-        // 1. Reset old links
+            const mhHalaqohIds = mhData?.map(h => h.halaqoh_id) || []
+
+            // 2. Fetch from halaqoh.musyrif_id table (via guru.id or user_id)
+            const { data: userProf } = await supabase
+                .from('user_profiles')
+                .select('id, user_id, nama, email, guru_id')
+                .eq('user_id', musyrifUserId)
+                .maybeSingle()
+
+            let guruId = userProf?.guru_id
+            if (!guruId) {
+                const userEmails = [userProf?.email].filter(Boolean)
+                const userNames = [userProf?.nama].filter(Boolean)
+                const { data: guruData } = await supabase
+                    .from('guru')
+                    .select('id')
+                    .or(`user_id.eq.${musyrifUserId}${userProf?.email ? `,email.eq.${userProf.email}` : ''}`)
+                    .maybeSingle()
+                guruId = guruData?.id
+            }
+
+            let legacyHalaqohIds = []
+            if (guruId) {
+                const { data: hData } = await supabase
+                    .from('halaqoh')
+                    .select('id')
+                    .eq('musyrif_id', guruId)
+                legacyHalaqohIds = hData?.map(h => h.id) || []
+            }
+
+            const combinedIds = [...new Set([...mhHalaqohIds, ...legacyHalaqohIds])]
+            setSelectedHalaqohIds(combinedIds)
+        } catch (error) {
+            console.error('Error fetching linked halaqoh:', error.message)
+            setSelectedHalaqohIds([])
+        }
+    }
+
+    // Helper for linking Halaqoh (2-Way Bidirectional Sync)
+    const handleHalaqohLinking = async (userId, halaqohIds) => {
+        console.log('🔗 Linking Halaqoh for Musyrif (2-Way Sync):', userId, 'Selected:', halaqohIds)
+
+        // 1. Reset old links in musyrif_halaqoh
         const { error: resetHalaqohError } = await supabase
             .from('musyrif_halaqoh')
             .delete()
@@ -667,7 +700,7 @@ const UsersPage = () => {
 
         if (resetHalaqohError) console.error('❌ Error resetting halaqoh links:', resetHalaqohError)
 
-        // 2. Insert new links
+        // 2. Insert new links into musyrif_halaqoh
         if (halaqohIds.length > 0) {
             const halaqohLinks = halaqohIds.map(hid => ({
                 user_id: userId,
@@ -678,6 +711,43 @@ const UsersPage = () => {
                 .insert(halaqohLinks)
 
             if (linkHalaqohError) console.error('❌ Error linking halaqoh:', linkHalaqohError)
+        }
+
+        // 3. Sync halaqoh.musyrif_id column for legacy & direct page compatibility
+        try {
+            const { data: userProf } = await supabase
+                .from('user_profiles')
+                .select('id, user_id, nama, email, guru_id')
+                .eq('user_id', userId)
+                .maybeSingle()
+
+            let targetGuruId = userProf?.guru_id
+            if (!targetGuruId && (userId || userProf?.email)) {
+                const { data: guruData } = await supabase
+                    .from('guru')
+                    .select('id')
+                    .or(`user_id.eq.${userId}${userProf?.email ? `,email.eq.${userProf.email}` : ''}`)
+                    .maybeSingle()
+                targetGuruId = guruData?.id
+            }
+
+            if (targetGuruId) {
+                // Clear old halaqoh assignments where musyrif_id was targetGuruId
+                await supabase
+                    .from('halaqoh')
+                    .update({ musyrif_id: null })
+                    .eq('musyrif_id', targetGuruId)
+
+                // Set new halaqoh assignments
+                if (halaqohIds.length > 0) {
+                    await supabase
+                        .from('halaqoh')
+                        .update({ musyrif_id: targetGuruId })
+                        .in('id', halaqohIds)
+                }
+            }
+        } catch (syncErr) {
+            console.error('❌ Error in 2-way halaqoh.musyrif_id sync:', syncErr)
         }
     }
 
