@@ -96,13 +96,14 @@ export declare class SupabaseService {
     markMessageProcessed(messageId: string): Promise<void>;
     logWebhookPayload(body: any, query: any): Promise<void>;
     getRecentWebhookLogs(): Promise<import("@supabase/postgrest-js").PostgrestSingleResponse<any[]>>;
-    findSantriByWaliPhone(phone: string): Promise<boolean | {
+    findSantriByWaliPhone(phone: string): Promise<{
         id: any;
         nama: any;
         nis: any;
         status: any;
         no_telp_wali: any;
-    }[] | {
+    }[]>;
+    getDebugDbData(): Promise<{
         santri: {
             id: any;
             nama: any;
@@ -132,6 +133,8 @@ export declare class SupabaseService {
         kategori?: undefined;
         tagihan?: undefined;
     }>;
+    ensureSampleData(): Promise<void>;
+    isGuru(phone: string): Promise<boolean>;
     hasAccessToSantri(phone: string, santriId: string): Promise<boolean>;
     logAiInteraction(userPrompt: string, intent: string, functionName: string, parameters: any, query: string, queryResult: any, finalReply: string, responseTimeMs: number, errorMsg?: string): Promise<void>;
     getPelanggaran(santriId: string): Promise<any[]>;

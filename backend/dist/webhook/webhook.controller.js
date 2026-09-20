@@ -101,7 +101,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
     }
     async sendFonnteMessage(target, message) {
         this.sentMessages.set(this.normalizeText(message), Date.now());
-        const token = process.env.FONNTE_TOKEN || 'M77WadPpCFgeAaLWS67Z';
+        const token = process.env.FONNTE_TOKEN || 'ytZayjjW1QaTtx4EQn4d';
         const formData = new URLSearchParams();
         formData.append('target', target);
         formData.append('message', message);
@@ -237,6 +237,9 @@ let WebhookController = WebhookController_1 = class WebhookController {
             }
             try {
                 parsed = await this.aiService.parseIntent(message, sender);
+                if (parsed.parameters && typeof parsed.parameters.santri_name === 'string') {
+                    parsed.parameters.santri_name = parsed.parameters.santri_name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
+                }
             }
             catch (parseError) {
                 this.logger.error('AI intent parsing gagal, fallback chitchat:', parseError);
@@ -408,7 +411,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     case 'chitchat':
                     default:
                         executedQuery = 'N/A (Chitchat)';
-                        dbResult = { status: 'chitchat', reply: parsed.parameters?.pesan || 'Halo! Ada yang bisa saya bantu?' };
+                        dbResult = { status: 'chitchat' };
                         break;
                 }
             }
@@ -436,7 +439,16 @@ let WebhookController = WebhookController_1 = class WebhookController {
             }
             else {
                 if (parsed.intent === 'chitchat') {
-                    reply = dbResult.reply;
+                    reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
+
+Saya bisa membantu Anda dengan:
+📖 Cek hafalan santri
+💰 Status pembayaran SPP
+📊 Nilai akademis
+✅ Data kehadiran
+💳 Rincian tagihan
+
+Silakan tanyakan kebutuhan Anda! 🤲`;
                 }
                 else {
                     reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);

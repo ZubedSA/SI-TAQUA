@@ -17,6 +17,7 @@ import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import Badge from '../../components/ui/Badge'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isAfter, isBefore, isSameDay } from 'date-fns'
 import { id } from 'date-fns/locale'
+import { findStaffScan } from '../../utils/attendanceHelper'
 
 const RiwayatKehadiranPage = () => {
     const { user, userProfile } = useAuth()
@@ -40,13 +41,13 @@ const RiwayatKehadiranPage = () => {
                 fetchGuruData(userProfile.guru_id)
                 return
             }
-            if (!user?.email) return
+            if (!user?.email && !user?.id) return
 
             try {
                 const { data } = await supabase
                     .from('guru')
                     .select('id, nama')
-                    .eq('email', user.email)
+                    .or(`user_id.eq.${user.id},email.ilike.${user.email}`)
                     .maybeSingle()
                 if (data) {
                     setGuruId(data.id)
@@ -66,6 +67,7 @@ const RiwayatKehadiranPage = () => {
 
     // 2. Fetch Data per Month
     useEffect(() => {
+        // Jangan fetch jika guruId belum siap agar tidak memuat seluruh jadwal satu pesantren
         if (!guruId) return
 
         const fetchData = async () => {
@@ -74,45 +76,123 @@ const RiwayatKehadiranPage = () => {
                 const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
                 const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
 
-                // A. Jadwal Pelajaran (Direct & via Musyrif_Halaqoh)
-                const [jadwalRes, halaqohLinksRes, presensiRes, izinRes] = await Promise.all([
-                    supabase.from('jadwal_pelajaran').select('*').eq('guru_id', guruId),
-                    supabase.from('musyrif_halaqoh').select('halaqoh_id').eq('user_id', user?.id),
-                    supabase.from('presensi_staf')
-                        .select('*')
-                        .eq('staf_id', guruId)
-                        .gte('tanggal', startDate)
-                        .lte('tanggal', endDate),
-                    supabase.from('izin_guru')
-                        .select('*')
-                        .eq('guru_id', guruId)
-                        .eq('status', 'Disetujui')
-                        .lte('tanggal_mulai', endDate)
-                        .gte('tanggal_selesai', startDate)
+                // A. Direct Schedules for this teacher
+                const directJadwalQuery = supabase
+                    .from('jadwal_pelajaran')
+                    .select('*')
+                    .eq('guru_id', guruId)
+
+                // B. Musyrif Halaqoh links (from halaqoh table where this teacher is musyrif)
+                const halaqohDirectPromise = supabase
+                    .from('halaqoh')
+                    .select('id')
+                    .or(`musyrif_id.eq.${guruId}${user?.id ? `,musyrif_id.eq.${user.id}` : ''}`)
+
+                const musyrifHalaqohPromise = user?.id
+                    ? supabase.from('musyrif_halaqoh').select('halaqoh_id').eq('user_id', user.id)
+                    : Promise.resolve({ data: [] })
+
+                // C. Presensi Staf Scan for this teacher
+                const presensiPromise = (async () => {
+                    try {
+                        let q = supabase
+                            .from('presensi_staf')
+                            .select('*')
+                            .gte('tanggal', startDate)
+                            .lte('tanggal', endDate)
+                        
+                        if (user?.id && guruId !== user.id) {
+                            q = q.or(`staf_id.eq.${guruId},staf_id.eq.${user.id}`)
+                        } else {
+                            q = q.eq('staf_id', guruId)
+                        }
+                        const res = await q
+                        return res.data || []
+                    } catch (e) {
+                        console.warn('Presensi staf fetch error:', e)
+                        return []
+                    }
+                })()
+
+                // D. Presensi Mapel / Jurnal Mengajar Terlaksana for this teacher
+                const mapelPromise = (async () => {
+                    try {
+                        const res = await supabase
+                            .from('presensi_mapel')
+                            .select('*')
+                            .gte('tanggal', startDate)
+                            .lte('tanggal', endDate)
+                            .eq('status', 'Terlaksana')
+                            .eq('guru_id', guruId)
+                        
+                        return (res.data || []).map(m => ({
+                            id: `mapel_${m.id}`,
+                            staf_id: m.guru_id,
+                            tanggal: m.tanggal,
+                            tipe: m.halaqoh_id ? 'QURANIYAH' : 'MADROSAH',
+                            referensi_id: m.kelas_id || m.halaqoh_id,
+                            jadwal_id: m.jadwal_id,
+                            waktu_scan: m.created_at || `${m.tanggal}T08:00:00Z`,
+                            source: 'jurnal'
+                        }))
+                    } catch (e) {
+                        console.warn('Presensi mapel fetch error:', e)
+                        return []
+                    }
+                })()
+
+                // E. Izin Guru
+                const izinQuery = supabase
+                    .from('izin_guru')
+                    .select('*')
+                    .eq('guru_id', guruId)
+                    .eq('status', 'Disetujui')
+                    .lte('tanggal_mulai', endDate)
+                    .gte('tanggal_selesai', startDate)
+
+                const [jadwalRes, hDirectRes, mhRes, stafScans, mapelScans, izinRes] = await Promise.all([
+                    directJadwalQuery,
+                    halaqohDirectPromise,
+                    musyrifHalaqohPromise,
+                    presensiPromise,
+                    mapelPromise,
+                    izinQuery
                 ])
 
-                let combinedJadwal = jadwalRes.data || []
+                let combinedJadwal = (jadwalRes.data || []).map(j => ({
+                    ...j,
+                    referensi_id: j.referensi_id || j.kelas_id || j.halaqoh_id
+                }))
                 
-                // If they have linked halaqoh, fetch those schedules too
-                const hIds = (halaqohLinksRes.data || []).map(h => h.halaqoh_id)
-                if (hIds.length > 0) {
+                // Collect all linked halaqoh IDs for this musyrif
+                const hDirectIds = (hDirectRes.data || []).map(h => h.id)
+                const mhIds = (mhRes.data || []).map(h => h.halaqoh_id)
+                const allLinkedHalaqohIds = [...new Set([...hDirectIds, ...mhIds].filter(Boolean))]
+
+                if (allLinkedHalaqohIds.length > 0) {
                     const { data: halaqohJadwal } = await supabase
                         .from('jadwal_pelajaran')
                         .select('*')
-                        .in('referensi_id', hIds)
+                        .in('halaqoh_id', allLinkedHalaqohIds)
                         .eq('tipe', 'HALAQOH')
                     
-                    if (halaqohJadwal) {
-                        // Merge avoiding duplicates if any
+                    if (halaqohJadwal && halaqohJadwal.length > 0) {
                         const existingIds = new Set(combinedJadwal.map(j => j.id))
                         halaqohJadwal.forEach(j => {
-                            if (!existingIds.has(j.id)) combinedJadwal.push(j)
+                            // Hanya masukkan jika belum ada dan jadwal ini milik guru ini atau belum ada pengajar lain
+                            if (!existingIds.has(j.id) && (!j.guru_id || j.guru_id === guruId)) {
+                                combinedJadwal.push({
+                                    ...j,
+                                    guru_id: guruId,
+                                    referensi_id: j.halaqoh_id || j.referensi_id
+                                })
+                            }
                         })
                     }
                 }
 
                 setAllJadwal(combinedJadwal)
-                setPresensiList(presensiRes.data || [])
+                setPresensiList([...stafScans, ...mapelScans])
                 setIzinList(izinRes.data || [])
 
             } catch (err) {
@@ -152,37 +232,27 @@ const RiwayatKehadiranPage = () => {
             const isIzin = izinList.some(izin => {
                 const start = new Date(izin.tanggal_mulai)
                 const end = new Date(izin.tanggal_selesai)
-                // Normalize times to midnight for safe comparison
                 start.setHours(0,0,0,0)
                 end.setHours(0,0,0,0)
                 const current = new Date(dateObj)
                 current.setHours(0,0,0,0)
-                
                 return current >= start && current <= end
             })
 
-            todaysSchedules.forEach(jadwal => {
-                // Find matching scan
-                const scan = presensiList.find(p => {
-                    if (p.tanggal !== dateStr) return false;
-                    
-                    if (p.jam_ke && Number(p.jam_ke) === Number(jadwal.jam_ke)) return true;
+            const dayScans = presensiList.filter(p => p.tanggal === dateStr)
+            const matchedScanIds = new Set()
 
-                    // Fallback: Check time window if jam_ke is missing
-                    if (p.waktu_scan && jadwal.jam_mulai && jadwal.jam_selesai) {
-                        const scanTime = new Date(p.waktu_scan)
-                        const scanMinutes = scanTime.getHours() * 60 + scanTime.getMinutes()
-                        
-                        const [hM, mM] = jadwal.jam_mulai.split(':').map(Number)
-                        const [hS, mS] = jadwal.jam_selesai.split(':').map(Number)
-                        
-                        const startLimit = hM * 60 + mM - 30
-                        const endLimit = hS * 60 + mS + 30
-                        
-                        return scanMinutes >= startLimit && scanMinutes <= endLimit
-                    }
-                    return false;
-                })
+            todaysSchedules.forEach(jadwal => {
+                // Find matching scan using unified logic
+                const scan = findStaffScan(
+                    dayScans.filter(p => !matchedScanIds.has(p.id)),
+                    jadwal,
+                    dateStr
+                )
+
+                if (scan) {
+                    matchedScanIds.add(scan.id)
+                }
                 
                 let status = 'Belum Absen'
                 if (scan) {
@@ -193,12 +263,10 @@ const RiwayatKehadiranPage = () => {
                     // Cek apakah jadwal ini sudah lewat
                     const now = new Date()
                     const classDate = new Date(dateObj)
-                    // Set waktu ke jam_selesai jadwal
                     if (jadwal.jam_selesai) {
                         const [h, m] = jadwal.jam_selesai.split(':').map(Number)
                         classDate.setHours(h, m, 0, 0)
                     } else {
-                        // Jika tidak ada jam selesai, gunakan akhir hari
                         classDate.setHours(23, 59, 59, 999)
                     }
                     
@@ -221,21 +289,7 @@ const RiwayatKehadiranPage = () => {
             })
             
             // Also add ANY scans that happened on this day but weren't in schedule (Tambahan)
-            const extraScans = presensiList.filter(p => {
-                if (p.tanggal !== dateStr) return false;
-                const matchedSchedule = todaysSchedules.some(j => {
-                    if (p.jam_ke && Number(p.jam_ke) === Number(j.jam_ke)) return true;
-                    if (p.waktu_scan && j.jam_mulai && j.jam_selesai) {
-                        const scanTime = new Date(p.waktu_scan)
-                        const scanMinutes = scanTime.getHours() * 60 + scanTime.getMinutes()
-                        const [hM, mM] = j.jam_mulai.split(':').map(Number)
-                        const [hS, mS] = j.jam_selesai.split(':').map(Number)
-                        return scanMinutes >= hM * 60 + mM - 30 && scanMinutes <= hS * 60 + mS + 30
-                    }
-                    return false;
-                })
-                return !matchedSchedule
-            })
+            const extraScans = dayScans.filter(p => !matchedScanIds.has(p.id))
             extraScans.forEach(scan => {
                 records.push({
                     id: scan.id,

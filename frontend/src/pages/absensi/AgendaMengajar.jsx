@@ -64,17 +64,26 @@ const AgendaMengajar = () => {
 
     useEffect(() => {
         const fetchGuruId = async () => {
-            if (!user?.email) {
+            if (userProfile?.guru_id) {
+                setGuruId(userProfile.guru_id)
                 setLoadingGuru(false)
                 return
             }
-            const { data, error } = await supabase.from('guru').select('id').eq('email', user.email).maybeSingle()
+            if (!user?.email && !user?.id) {
+                setLoadingGuru(false)
+                return
+            }
+            const { data, error } = await supabase
+                .from('guru')
+                .select('id')
+                .or(`user_id.eq.${user.id},email.ilike.${user.email}`)
+                .maybeSingle()
             if (data) setGuruId(data.id)
-            if (error) console.warn('Info guru tidak ditemukan (Admin):', error.message)
+            if (error) console.warn('Info guru tidak ditemukan:', error.message)
             setLoadingGuru(false)
         }
         fetchGuruId()
-    }, [user])
+    }, [user, userProfile])
 
     const isSystemAdmin = hasRole(['admin', 'admin_akademik', 'admin_absensi']) || isAdmin() || isAdminAkademik() || isAdminAbsensi()
 
@@ -129,11 +138,11 @@ const AgendaMengajar = () => {
             
             const [hM, mM] = jadwalItem.jam_mulai.split(':').map(Number)
             const [hS, mS] = jadwalItem.jam_selesai.split(':').map(Number)
-            const startLimit = hM * 60 + mM - 15
-            const endLimit = hS * 60 + mS + 45
+            const startLimit = hM * 60 + mM - 10
+            const endLimit = hS * 60 + mS + 10
 
             if (jadwalItem.hari !== currentDay || currentTime < startLimit || currentTime > endLimit) {
-                showToast.error(`Di luar jam mengajar (${jadwalItem.jam_mulai} - ${jadwalItem.jam_selesai})`)
+                showToast.error(`Di luar jam mengajar (${jadwalItem.jam_mulai} - ${jadwalItem.jam_selesai}, toleransi ±10 menit)`)
                 return
             }
         }
@@ -286,6 +295,32 @@ const AgendaMengajar = () => {
                         
                         if (presensiError) {
                             console.warn('Sync ke tabel presensi gagal:', presensiError.message)
+                        }
+
+                        // 3. Sync ke tabel 'presensi_staf' untuk status kehadiran pengajar
+                        if (selectedJadwal.guru_id) {
+                            try {
+                                const scanPayload = {
+                                    staf_id: selectedJadwal.guru_id,
+                                    tanggal: selectedDate,
+                                    tipe: selectedJadwal.tipe || (selectedJadwal.halaqoh_id ? 'QURANIYAH' : 'MADROSAH'),
+                                    referensi_id: selectedJadwal.referensi_id || selectedJadwal.kelas_id || selectedJadwal.halaqoh_id,
+                                    jam_ke: selectedJadwal.jam_ke || 1,
+                                    waktu_scan: new Date().toISOString()
+                                }
+                                const { error: psError } = await supabase.from('presensi_staf').insert(scanPayload)
+                                if (psError) {
+                                    await supabase.from('presensi_staf').insert({
+                                        staf_id: selectedJadwal.guru_id,
+                                        tanggal: selectedDate,
+                                        tipe: scanPayload.tipe,
+                                        referensi_id: scanPayload.referensi_id,
+                                        waktu_scan: scanPayload.waktu_scan
+                                    })
+                                }
+                            } catch (stafSyncErr) {
+                                console.warn('Sync presensi_staf warning:', stafSyncErr.message)
+                            }
                         }
                     }
                 }

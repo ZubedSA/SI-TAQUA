@@ -45,8 +45,12 @@ const AbsensiLayout = () => {
             // 1. Get Guru ID
             let guruId = userProfile?.guru_id
             
-            if (!guruId) {
-                const { data: guru } = await supabase.from('guru').select('id').eq('email', user.email).maybeSingle()
+            if (!guruId && user?.email) {
+                const { data: guru } = await supabase
+                    .from('guru')
+                    .select('id')
+                    .or(`user_id.eq.${user.id},email.ilike.${user.email}`)
+                    .maybeSingle()
                 if (guru) {
                     guruId = guru.id
                 }
@@ -60,22 +64,6 @@ const AbsensiLayout = () => {
 
             // ── QURANIYAH: Sistem Cerdas Deteksi Jam ──
             if (qrType === 'QURANIYAH') {
-                // Catat presensi staf
-                try {
-                    const { error: psError } = await supabase.from('presensi_staf').insert({
-                        staf_id: guruId,
-                        tanggal: todayDate,
-                        tipe: qrType,
-                        referensi_id: qrId,
-                        waktu_scan: new Date().toISOString()
-                    })
-                    if (psError) {
-                        console.warn('Gagal mencatat presensi staf:', psError.message)
-                    }
-                } catch (dbErr) {
-                    console.warn('Gagal mencatat presensi staf (Catch):', dbErr.message)
-                }
-
                 // Simpan verifikasi QR di session
                 sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
 
@@ -89,7 +77,7 @@ const AbsensiLayout = () => {
                 const { data: jadwalHalaqoh } = await supabase
                     .from('jadwal_pelajaran')
                     .select('id, jam_ke, jam_mulai, jam_selesai, halaqoh_id, tipe')
-                    .eq('halaqoh_id', qrId)
+                    .or(`halaqoh_id.eq.${qrId},referensi_id.eq.${qrId}`)
                     .eq('tipe', 'HALAQOH')
                     .eq('hari', dayName)
                     .order('jam_ke')
@@ -99,21 +87,24 @@ const AbsensiLayout = () => {
                 if (jadwalHalaqoh && jadwalHalaqoh.length > 0) {
                     // Cari jadwal yang sesuai waktu saat ini (buffer: 15 menit sebelum, 45 menit sesudah)
                     for (const jd of jadwalHalaqoh) {
-                        const [hM, mM] = jd.jam_mulai.split(':').map(Number)
-                        const [hS, mS] = jd.jam_selesai.split(':').map(Number)
-                        const startLimit = hM * 60 + mM - 15
-                        const endLimit = hS * 60 + mS + 45
+                        if (jd.jam_mulai && jd.jam_selesai) {
+                            const [hM, mM] = jd.jam_mulai.split(':').map(Number)
+                            const [hS, mS] = jd.jam_selesai.split(':').map(Number)
+                            const startLimit = hM * 60 + mM - 10
+                            const endLimit = hS * 60 + mS + 10
 
-                        if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
-                            detectedJam = jd.jam_ke
-                            sessionStorage.setItem(`SITAQUA_SCAN_${jd.id}`, 'true')
-                            break
+                            if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
+                                detectedJam = jd.jam_ke
+                                sessionStorage.setItem(`SITAQUA_SCAN_${jd.id}`, 'true')
+                                break
+                            }
                         }
                     }
 
                     // Jika tidak ada jam yang cocok, pilih jam terdekat berikutnya
                     if (!detectedJam) {
                         const upcoming = jadwalHalaqoh.find(jd => {
+                            if (!jd.jam_mulai) return false
                             const [hM, mM] = jd.jam_mulai.split(':').map(Number)
                             return (hM * 60 + mM) > currentMinutes
                         })
@@ -122,6 +113,33 @@ const AbsensiLayout = () => {
                 }
 
                 const finalJam = detectedJam || 1
+
+                // Catat presensi staf
+                if (guruId) {
+                    try {
+                        const scanPayload = {
+                            staf_id: guruId,
+                            tanggal: todayDate,
+                            tipe: qrType,
+                            referensi_id: qrId,
+                            jam_ke: finalJam,
+                            waktu_scan: new Date().toISOString()
+                        }
+                        const { error: psError } = await supabase.from('presensi_staf').insert(scanPayload)
+                        if (psError) {
+                            // Fallback jika tabel presensi_staf di DB belum punya kolom jam_ke
+                            await supabase.from('presensi_staf').insert({
+                                staf_id: guruId,
+                                tanggal: todayDate,
+                                tipe: qrType,
+                                referensi_id: qrId,
+                                waktu_scan: scanPayload.waktu_scan
+                            })
+                        }
+                    } catch (dbErr) {
+                        console.warn('Gagal mencatat presensi staf (Quraniyah):', dbErr.message)
+                    }
+                }
 
                 // Ambil info jadwal spesifik untuk dialihkan ke Agenda Mengajar
                 const targetJadwal = jadwalHalaqoh?.find(j => j.jam_ke === finalJam)
@@ -198,19 +216,31 @@ const AbsensiLayout = () => {
             }
 
             // Record Teacher Attendance (presensi_staf)
-            try {
-                const { error: psError } = await supabase.from('presensi_staf').insert({
-                    staf_id: guruId,
-                    tanggal: todayDate,
-                    tipe: qrType,
-                    referensi_id: qrId,
-                    waktu_scan: new Date().toISOString()
-                })
-                if (psError) {
-                    console.warn('Gagal mencatat presensi staf:', psError.message)
+            if (guruId) {
+                try {
+                    const currentJam = match?.jam_ke || 1
+                    const scanPayload = {
+                        staf_id: guruId,
+                        tanggal: todayDate,
+                        tipe: qrType,
+                        referensi_id: qrId,
+                        jam_ke: currentJam,
+                        waktu_scan: new Date().toISOString()
+                    }
+                    const { error: psError } = await supabase.from('presensi_staf').insert(scanPayload)
+                    if (psError) {
+                        // Fallback jika belum ada kolom jam_ke
+                        await supabase.from('presensi_staf').insert({
+                            staf_id: guruId,
+                            tanggal: todayDate,
+                            tipe: qrType,
+                            referensi_id: qrId,
+                            waktu_scan: scanPayload.waktu_scan
+                        })
+                    }
+                } catch (dbErr) {
+                    console.warn('Gagal mencatat presensi staf (Madrosah):', dbErr.message)
                 }
-            } catch (dbErr) {
-                console.warn('Gagal mencatat presensi staf (Catch):', dbErr.message)
             }
 
             // Unlock Session

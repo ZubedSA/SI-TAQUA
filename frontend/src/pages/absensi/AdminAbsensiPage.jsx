@@ -38,7 +38,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-import { calculateAutoPresensi, getResolvedAttendance } from '../../utils/attendanceHelper'
+import { calculateAutoPresensi, getResolvedAttendance, findStaffScan, isStaffScanMatch } from '../../utils/attendanceHelper'
 
 const AdminAbsensiPage = () => {
     const navigate = useNavigate()
@@ -104,7 +104,9 @@ const AdminAbsensiPage = () => {
                     setSelectedSemesterId(activeSem.id)
                     if (activeSem.tanggal_mulai && activeSem.tanggal_selesai) {
                         setFilterStartDate(activeSem.tanggal_mulai)
-                        setFilterEndDate(activeSem.tanggal_selesai)
+                        const tObj = new Date()
+                        const todayStr = `${tObj.getFullYear()}-${String(tObj.getMonth() + 1).padStart(2, '0')}-${String(tObj.getDate()).padStart(2, '0')}`
+                        setFilterEndDate(activeSem.tanggal_selesai > todayStr ? todayStr : activeSem.tanggal_selesai)
                     }
                 } else if (sList.length > 0) {
                     setSelectedSemesterId(sList[0].id)
@@ -165,7 +167,9 @@ const AdminAbsensiPage = () => {
         const sem = semesterList.find(s => s.id === semId)
         if (sem && sem.tanggal_mulai && sem.tanggal_selesai) {
             setFilterStartDate(sem.tanggal_mulai)
-            setFilterEndDate(sem.tanggal_selesai)
+            const tObj = new Date()
+            const todayStr = `${tObj.getFullYear()}-${String(tObj.getMonth() + 1).padStart(2, '0')}-${String(tObj.getDate()).padStart(2, '0')}`
+            setFilterEndDate(sem.tanggal_selesai > todayStr ? todayStr : sem.tanggal_selesai)
         }
     }
 
@@ -178,6 +182,8 @@ const AdminAbsensiPage = () => {
     // QR Management State
     const [selectedQR, setSelectedQR] = useState(null)
     const printRef = useRef(null)
+    const startDateRef = useRef(null)
+    const endDateRef = useRef(null)
     const [laporanSubTab, setLaporanSubTab] = useState('staf') // 'staf' atau 'santri'
     const [showDownloadDropdown, setShowDownloadDropdown] = useState(false)
 
@@ -484,46 +490,94 @@ const AdminAbsensiPage = () => {
     }, [])
 
     const fetchAllJadwal = async () => {
-        const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes] = await Promise.all([
+        const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes, profilesRes] = await Promise.all([
             supabase.from('jadwal_pelajaran').select('*'),
-            supabase.from('halaqoh').select('id, musyrif_id'),
-            supabase.from('guru').select('id, status'),
-            supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id')
+            supabase.from('halaqoh').select('id, nama, musyrif_id'),
+            supabase.from('guru').select('id, nama, email, user_id, status'),
+            supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
+            supabase.from('user_profiles').select('user_id, nama, email, guru_id')
         ])
         
         const rawJadwal = jadwalRes.data || []
         const halaqohMap = (halaqohRes.data || []).reduce((acc, h) => ({...acc, [h.id]: h}), {})
         const guruMap = (guruRes.data || []).reduce((acc, g) => ({...acc, [g.id]: g}), {})
+        const guruList = guruRes.data || []
+        const profilesList = profilesRes.data || []
         const mhData = musyrifHalaqohRes.data || []
+
+        // Helper untuk menyelesaikan user_id auth atau referensi ke guru.id
+        const resolveToGuruId = (targetId) => {
+            if (!targetId) return null
+            const cleanId = String(targetId).toLowerCase()
+            // 1. Jika sudah merupakan guru.id langsung
+            if (guruMap[targetId]) return targetId
+            // 2. Berdasarkan guru.user_id
+            const byUserId = guruList.find(g => g.user_id && String(g.user_id).toLowerCase() === cleanId)
+            if (byUserId) return byUserId.id
+            // 3. Berdasarkan user_profiles.guru_id
+            const prof = profilesList.find(p => p.user_id && String(p.user_id).toLowerCase() === cleanId)
+            if (prof?.guru_id && guruMap[prof.guru_id]) return prof.guru_id
+            // 4. Berdasarkan kecocokan email
+            if (prof?.email) {
+                const byEmail = guruList.find(g => g.email && g.email.toLowerCase() === prof.email.toLowerCase())
+                if (byEmail) return byEmail.id
+            }
+            return null
+        }
         
         const halaqohToMusyrifs = {}
         mhData.forEach(mh => {
             if (!halaqohToMusyrifs[mh.halaqoh_id]) halaqohToMusyrifs[mh.halaqoh_id] = []
-            halaqohToMusyrifs[mh.halaqoh_id].push(mh.user_id)
+            const resolvedGid = resolveToGuruId(mh.user_id)
+            if (resolvedGid) {
+                halaqohToMusyrifs[mh.halaqoh_id].push(resolvedGid)
+            }
         })
         
         const fixedJadwal = []
         
         rawJadwal.forEach(j => {
-            if (j.tipe === 'HALAQOH' && j.referensi_id) {
-                const musyrifs = halaqohToMusyrifs[j.referensi_id] || []
+            const isHalaqoh = j.tipe === 'HALAQOH' || Boolean(j.halaqoh_id)
+            const targetHalaqohId = j.halaqoh_id || j.referensi_id
+
+            if (isHalaqoh && targetHalaqohId) {
+                const musyrifGids = halaqohToMusyrifs[targetHalaqohId] || []
                 
-                if (musyrifs.length > 0) {
-                    musyrifs.forEach(uid => {
-                        const guruData = guruMap[uid]
+                if (musyrifGids.length > 0) {
+                    musyrifGids.forEach(gid => {
+                        const guruData = guruMap[gid]
                         if (guruData && guruData.status === 'Aktif') {
-                            fixedJadwal.push({ ...j, guru_id: uid })
+                            fixedJadwal.push({
+                                ...j,
+                                guru_id: gid,
+                                tipe: 'HALAQOH',
+                                referensi_id: targetHalaqohId
+                            })
                         }
                     })
                 } else {
-                    const h = halaqohMap[j.referensi_id]
-                    if (h && h.musyrif_id) {
-                        const guruData = guruMap[h.musyrif_id]
-                        if (guruData && guruData.status === 'Aktif') {
-                            fixedJadwal.push({ ...j, guru_id: h.musyrif_id })
-                        }
+                    const h = halaqohMap[targetHalaqohId]
+                    const directMusyrifId = resolveToGuruId(h?.musyrif_id) || h?.musyrif_id
+                    if (directMusyrifId && guruMap[directMusyrifId]?.status === 'Aktif') {
+                        fixedJadwal.push({
+                            ...j,
+                            guru_id: directMusyrifId,
+                            tipe: 'HALAQOH',
+                            referensi_id: targetHalaqohId
+                        })
+                    } else if (j.guru_id && guruMap[j.guru_id]?.status === 'Aktif') {
+                        fixedJadwal.push({
+                            ...j,
+                            tipe: 'HALAQOH',
+                            referensi_id: targetHalaqohId
+                        })
                     } else {
-                        fixedJadwal.push({ ...j, guru_id: null })
+                        fixedJadwal.push({
+                            ...j,
+                            guru_id: null,
+                            tipe: 'HALAQOH',
+                            referensi_id: targetHalaqohId
+                        })
                     }
                 }
             } else {
@@ -534,7 +588,12 @@ const AdminAbsensiPage = () => {
                         resolvedGuruId = null;
                     }
                 }
-                fixedJadwal.push({ ...j, guru_id: resolvedGuruId })
+                fixedJadwal.push({
+                    ...j,
+                    tipe: j.tipe || 'MADROSAH',
+                    referensi_id: j.referensi_id || j.kelas_id,
+                    guru_id: resolvedGuruId
+                })
             }
         })
         
@@ -567,7 +626,12 @@ const AdminAbsensiPage = () => {
         try {
             let query = supabase
                 .from('presensi_staf')
-                .select('*, guru:guru!staf_id(nama, email)')
+                .select('*')
+            
+            let queryMapel = supabase
+                .from('presensi_mapel')
+                .select('*')
+                .eq('status', 'Terlaksana')
             
             let queryIzin = supabase
                 .from('izin_guru')
@@ -576,25 +640,40 @@ const AdminAbsensiPage = () => {
 
             if (activeTab === 'laporan') {
                 query = query.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
+                queryMapel = queryMapel.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
                 queryIzin = queryIzin.lte('tanggal_mulai', filterEndDate).gte('tanggal_selesai', filterStartDate)
             } else {
                 query = query.eq('tanggal', filterDate)
+                queryMapel = queryMapel.eq('tanggal', filterDate)
                 queryIzin = queryIzin.lte('tanggal_mulai', filterDate).gte('tanggal_selesai', filterDate)
             }
 
-            const [resPresensi, resIzin] = await Promise.all([
+            const [resPresensi, resMapel, resIzin] = await Promise.all([
                 query.order('waktu_scan', { ascending: false }),
+                queryMapel,
                 queryIzin
             ])
 
-            if (resPresensi.error) throw resPresensi.error
-            if (resIzin.error) throw resIzin.error
+            if (resPresensi.error) console.warn('Warning fetching presensi_staf:', resPresensi.error)
+            if (resMapel.error) console.warn('Warning fetching presensi_mapel:', resMapel.error)
+            if (resIzin.error) console.warn('Warning fetching izin_guru:', resIzin.error)
 
-            setPresensiStaf(resPresensi.data || [])
+            const rawStaf = resPresensi.data || []
+            const rawMapel = (resMapel.data || []).map(m => ({
+                id: `mapel_${m.id}`,
+                staf_id: m.guru_id,
+                tanggal: m.tanggal,
+                tipe: m.halaqoh_id ? 'QURANIYAH' : 'MADROSAH',
+                referensi_id: m.kelas_id || m.halaqoh_id,
+                jadwal_id: m.jadwal_id,
+                waktu_scan: m.created_at || `${m.tanggal}T08:00:00Z`,
+                source: 'jurnal'
+            }))
+
+            setPresensiStaf([...rawStaf, ...rawMapel])
             setIzinGuruList(resIzin.data || [])
         } catch (err) {
             console.error('Error fetching presensi staf:', err)
-            // If table doesn't exist, we don't want to break the whole page
             setPresensiStaf([])
             setIzinGuruList([])
         } finally {
@@ -603,7 +682,9 @@ const AdminAbsensiPage = () => {
     }
 
     const handleSaveManualStatus = async () => {
-        if (!editingSession || !manualKeterangan) return
+        if (!editingSession || !selectedGuruId) return
+
+        const finalKeterangan = (manualKeterangan || '').trim() || (manualStatus === 'Hadir' ? 'Penyesuaian Hadir Manual oleh Admin' : `Izin ${manualStatus} disetujui Admin`)
 
         try {
             if (manualStatus === 'Hadir') {
@@ -627,7 +708,7 @@ const AdminAbsensiPage = () => {
                         tanggal_mulai: editingSession.tanggal,
                         tanggal_selesai: editingSession.tanggal,
                         jenis_izin: manualStatus,
-                        keterangan: manualKeterangan,
+                        keterangan: finalKeterangan,
                         status: 'Disetujui',
                         catatan_admin: 'Diinput manual oleh Admin dari Rincian Kehadiran'
                     })
@@ -640,6 +721,7 @@ const AdminAbsensiPage = () => {
             setManualKeterangan('')
             setManualStatus('Hadir')
             fetchPresensiStaf()
+            fetchAllJadwal()
             fetchData() // Refresh jadwal/izin juga
         } catch (err) {
             console.error('Error manual adjustment:', err)
@@ -848,12 +930,16 @@ const AdminAbsensiPage = () => {
 
         const stafSummary = {}
         
-        // 1. Dapatkan daftar tanggal dalam rentang
+        // 1. Dapatkan daftar tanggal dalam rentang (maksimal sampai hari ini)
         const start = new Date(filterStartDate)
         const end = new Date(filterEndDate)
+        const today = new Date()
+        today.setHours(23, 59, 59, 999)
+        const effectiveEnd = end > today ? today : end
+
         const dates = []
         let curr = new Date(start)
-        while (curr <= end) {
+        while (curr <= effectiveEnd) {
             dates.push(new Date(curr))
             curr.setDate(curr.getDate() + 1)
         }
@@ -882,38 +968,21 @@ const AdminAbsensiPage = () => {
             const dayName = dayMap[date.getDay()]
 
             const jadwalHariIni = relevantJadwal.filter(j => j.hari === dayName)
+            const dayScans = presensiStaf.filter(p => p.tanggal === dateStr)
+            const matchedScanIds = new Set()
             
             jadwalHariIni.forEach(j => {
                 if (!stafSummary[j.guru_id]) return
 
-                // Cek apakah ada scan untuk jadwal ini
-                const hasScan = presensiStaf.some(p => {
-                    const isSameGuru = p.staf_id === j.guru_id
-                    const isSameDate = p.tanggal === dateStr
-                    
-                    if (!isSameGuru || !isSameDate) return false
+                // Cek apakah ada scan untuk jadwal ini menggunakan helper terpadu
+                const scan = findStaffScan(
+                    dayScans.filter(p => !matchedScanIds.has(p.id)),
+                    j,
+                    dateStr
+                )
 
-                    // 1. Cek kecocokan jam_ke (Utama)
-                    if (Number(p.jam_ke) === Number(j.jam_ke)) return true
-
-                    // 2. Fallback: Cek apakah waktu scan masuk dalam rentang jam pelajaran (Toleransi 30 Menit)
-                    if (p.waktu_scan && j.jam_mulai && j.jam_selesai) {
-                        const scanTime = new Date(p.waktu_scan)
-                        const scanMinutes = scanTime.getHours() * 60 + scanTime.getMinutes()
-                        
-                        const [hM, mM] = j.jam_mulai.split(':').map(Number)
-                        const [hS, mS] = j.jam_selesai.split(':').map(Number)
-                        
-                        const startLimit = hM * 60 + mM - 30
-                        const endLimit = hS * 60 + mS + 30
-                        
-                        return scanMinutes >= startLimit && scanMinutes <= endLimit
-                    }
-
-                    return false
-                })
-
-                if (hasScan) {
+                if (scan) {
+                    matchedScanIds.add(scan.id)
                     stafSummary[j.guru_id].Hadir++
                     stafSummary[j.guru_id].totalSelesai++
                     stafSummary[j.guru_id].details.push({
@@ -921,6 +990,7 @@ const AdminAbsensiPage = () => {
                         jam_ke: j.jam_ke,
                         tipe: j.tipe,
                         referensi_id: j.referensi_id,
+                        waktu_scan: scan.waktu_scan,
                         status: 'Hadir'
                     })
                 } else {
@@ -982,33 +1052,37 @@ const AdminAbsensiPage = () => {
 
     // Logika untuk Kehadiran Staf Harian (Daftar seluruh jadwal hari ini + status kehadirannya)
     const dailyStaffAttendance = React.useMemo(() => {
-        if (!allJadwal.length) return []
+        if (!allJadwal.length && !presensiStaf.length) return []
         
         const dateObj = new Date(filterDate)
         const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
         const dayName = dayMap[dateObj.getDay()]
+        const dateStr = filterDate
+
+        const dayScans = presensiStaf.filter(p => p.tanggal === dateStr)
+        const matchedScanIds = new Set()
         
         // 1. Ambil jadwal hari ini
         const jadwalHariIni = allJadwal.filter(j => j.hari === dayName).map(j => {
             const guru = guruList.find(g => g.id === j.guru_id)
             
-            // Cari scan yang cocok
-            const scan = presensiStaf.find(p => {
-                const isSameGuru = p.staf_id === j.guru_id
-                if (!isSameGuru) return false
-                if (Number(p.jam_ke) === Number(j.jam_ke)) return true
-                if (p.waktu_scan && j.jam_mulai && j.jam_selesai) {
-                    const scanTime = new Date(p.waktu_scan)
-                    const scanMinutes = scanTime.getHours() * 60 + scanTime.getMinutes()
-                    const [hM, mM] = j.jam_mulai.split(':').map(Number)
-                    const [hS, mS] = j.jam_selesai.split(':').map(Number)
-                    return scanMinutes >= (hM * 60 + mM - 30) && scanMinutes <= (hS * 60 + mS + 30)
-                }
-                return false
-            })
+            // Cari scan yang cocok menggunakan helper terpadu
+            const scan = findStaffScan(
+                dayScans.filter(p => !matchedScanIds.has(p.id)),
+                j,
+                dateStr
+            )
+
+            if (scan) {
+                matchedScanIds.add(scan.id)
+            }
 
             // Cek Izin
-            const isIzin = izinGuruList.some(izin => izin.guru_id === j.guru_id)
+            const isIzin = izinGuruList.some(izin => 
+                izin.guru_id === j.guru_id &&
+                izin.tanggal_mulai <= dateStr &&
+                izin.tanggal_selesai >= dateStr
+            )
 
             let status = 'Belum Absen'
             if (scan) {
@@ -1033,7 +1107,7 @@ const AdminAbsensiPage = () => {
                 id: j.id,
                 guru: guru || { nama: 'Unknown', email: '-' },
                 tipe: j.tipe,
-                referensi_id: j.referensi_id,
+                referensi_id: j.referensi_id || j.kelas_id || j.halaqoh_id,
                 waktu_scan: scan ? scan.waktu_scan : null,
                 jam_ke: j.jam_ke,
                 jam_mulai: j.jam_mulai,
@@ -1043,10 +1117,10 @@ const AdminAbsensiPage = () => {
         })
 
         // 2. Tambahkan jika ada scan yang diluar jadwal reguler (misal: guru pengganti/badal)
-        const presensiLuarJadwal = presensiStaf.filter(p => !jadwalHariIni.some(j => j.guru?.id === p.staf_id && j.jam_ke === p.jam_ke)).map(p => {
+        const presensiLuarJadwal = dayScans.filter(p => !matchedScanIds.has(p.id)).map(p => {
             return {
                 id: p.id,
-                guru: p.guru || { nama: 'Unknown', email: '-' },
+                guru: p.guru || guruList.find(g => g.id === p.staf_id) || { nama: 'Unknown', email: '-' },
                 tipe: p.tipe,
                 referensi_id: p.referensi_id,
                 waktu_scan: p.waktu_scan,
@@ -1760,14 +1834,52 @@ const AdminAbsensiPage = () => {
                                 <p className="text-[10px] md:text-sm text-gray-400 font-bold uppercase tracking-widest">Rekapitulasi kehadiran lintas periode</p>
                             </div>
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-2 md:p-3 bg-gray-100/50 rounded-[2rem] border border-gray-100">
-                                <div className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
+                                <div 
+                                    onClick={() => {
+                                        if (startDateRef.current?.showPicker) {
+                                            startDateRef.current.showPicker()
+                                        } else {
+                                            startDateRef.current?.focus()
+                                        }
+                                    }}
+                                    className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-300 transition-all flex-1 cursor-pointer"
+                                >
                                     <Calendar size={18} className="text-emerald-500 shrink-0" />
-                                    <input type="date" value={filterStartDate} onChange={(e) => setFilterStartDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full" />
+                                    <input 
+                                        ref={startDateRef}
+                                        type="date" 
+                                        value={filterStartDate} 
+                                        onChange={(e) => setFilterStartDate(e.target.value)} 
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (e.target.showPicker) e.target.showPicker()
+                                        }}
+                                        className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer" 
+                                    />
                                 </div>
                                 <div className="text-gray-400 font-black uppercase text-[10px] tracking-widest px-2 text-center">s/d</div>
-                                <div className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 flex-1">
+                                <div 
+                                    onClick={() => {
+                                        if (endDateRef.current?.showPicker) {
+                                            endDateRef.current.showPicker()
+                                        } else {
+                                            endDateRef.current?.focus()
+                                        }
+                                    }}
+                                    className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-300 transition-all flex-1 cursor-pointer"
+                                >
                                     <Calendar size={18} className="text-emerald-500 shrink-0" />
-                                    <input type="date" value={filterEndDate} onChange={(e) => setFilterEndDate(e.target.value)} className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full" />
+                                    <input 
+                                        ref={endDateRef}
+                                        type="date" 
+                                        value={filterEndDate} 
+                                        onChange={(e) => setFilterEndDate(e.target.value)} 
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (e.target.showPicker) e.target.showPicker()
+                                        }}
+                                        className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer" 
+                                    />
                                 </div>
                             </div>
                         {laporanSubTab === 'santri' && (
@@ -2409,7 +2521,8 @@ const AdminAbsensiPage = () => {
                         <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6 md:p-8">
                             <div className="space-y-3">
                                     {(aggregatedStaf.find(s => s.id === selectedGuruId)?.details || [])
-                                        .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal) || b.jam_ke - a.jam_ke)
+                                        .slice()
+                                        .sort((a, b) => b.tanggal.localeCompare(a.tanggal) || Number(b.jam_ke || 0) - Number(a.jam_ke || 0))
                                         .map((p, idx) => (
                                             <div key={idx} className="bg-white p-4 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:border-indigo-200 transition-all group">
                                                 <div className="grid grid-cols-[auto,1fr] gap-4 md:gap-6 items-center">
@@ -2434,18 +2547,23 @@ const AdminAbsensiPage = () => {
                                                         </div>
                                                         
                                                         <div className="flex items-center gap-2">
-                                                            <Badge variant={p.status === 'Hadir' ? 'success' : 'danger'} className="px-3 py-1 text-[9px] font-black uppercase tracking-widest">
+                                                            <Badge 
+                                                                variant={p.status === 'Hadir' ? 'success' : p.status === 'Izin' ? 'info' : p.status === 'Belum Absen' ? 'warning' : 'danger'} 
+                                                                className="px-3 py-1 text-[9px] font-black uppercase tracking-widest"
+                                                            >
                                                                 {p.status}
                                                             </Badge>
-                                                            {p.status === 'Alpha' && (
-                                                                <button 
-                                                                    onClick={() => setEditingSession(p)}
-                                                                    className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"
-                                                                    title="Ubah Status Kehadiran"
-                                                                >
-                                                                    <Edit2 size={14} />
-                                                                </button>
-                                                            )}
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setEditingSession(p)
+                                                                    setManualStatus(p.status === 'Alpha' || p.status === 'Belum Absen' ? 'Hadir' : p.status)
+                                                                    setManualKeterangan('')
+                                                                }}
+                                                                className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"
+                                                                title="Ubah Status Kehadiran / Aksi"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -2486,11 +2604,11 @@ const AdminAbsensiPage = () => {
                                             </select>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan / Alasan</label>
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan / Alasan (Opsional)</label>
                                             <textarea 
                                                 value={manualKeterangan}
                                                 onChange={(e) => setManualKeterangan(e.target.value)}
-                                                placeholder={manualStatus === 'Hadir' ? "Contoh: Lupa scan, HP tertinggal..." : "Alasan izin/sakit..."}
+                                                placeholder={manualStatus === 'Hadir' ? "Opsional: Lupa scan, HP tertinggal..." : "Alasan izin/sakit..."}
                                                 className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm min-h-[100px] p-4 bg-gray-50 transition-all outline-none"
                                             />
                                         </div>
@@ -2504,8 +2622,7 @@ const AdminAbsensiPage = () => {
                                         </button>
                                         <button 
                                             onClick={handleSaveManualStatus}
-                                            disabled={!manualKeterangan}
-                                            className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest"
+                                            className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest active:scale-95 cursor-pointer"
                                         >
                                             Simpan
                                         </button>

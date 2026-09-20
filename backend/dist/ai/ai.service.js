@@ -26,16 +26,17 @@ let AiService = AiService_1 = class AiService {
                 this.genAI = new generative_ai_1.GoogleGenerativeAI(geminiKey);
                 this.geminiParserModel = this.genAI.getGenerativeModel({
                     model: 'gemini-1.5-flash',
+                    systemInstruction: 'Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA. Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya. Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi chitchat. Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang aslinya saja, JANGAN sertakan kata sebutan awalan seperti "santri", "siswa", "anak", "atas nama", atau "ananda".',
                     tools: [{
                             functionDeclarations: [
                                 {
                                     name: 'cekPembayaran',
                                     description: 'Mengecek status tagihan atau pembayaran SPP/uang makan/asrama santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja (tanpa kata tanya/kata kerja)' },
-                                            bulan: { type: 'STRING', description: 'Bulan tagihan (misal: "Juli" atau "bulan ini")' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja (tanpa kata tanya/kata kerja)' },
+                                            bulan: { type: generative_ai_1.SchemaType.STRING, description: 'Bulan tagihan (misal: Juli atau bulan ini)' }
                                         }
                                     }
                                 },
@@ -43,9 +44,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekHafalan',
                                     description: 'Mengecek progress atau riwayat setoran hafalan santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -53,9 +54,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekNilai',
                                     description: 'Mengecek nilai akademis atau pelajaran santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -63,9 +64,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekAbsensi',
                                     description: 'Mengecek rekap kehadiran atau absensi santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -73,9 +74,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekSantri',
                                     description: 'Mengecek detail profil atau informasi pribadi santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -83,9 +84,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekTagihan',
                                     description: 'Mengecek rincian tagihan aktif santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -93,9 +94,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekPrestasi',
                                     description: 'Mengecek prestasi akademis atau pujian santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -103,9 +104,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekPerizinan',
                                     description: 'Mengecek status izin keluar/pulang santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -113,11 +114,11 @@ let AiService = AiService_1 = class AiService {
                                     name: 'tambahPembayaran',
                                     description: 'Input atau catat transaksi pembayaran baru untuk santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' },
-                                            nominal: { type: 'NUMBER', description: 'Nominal uang pembayaran' },
-                                            kategori: { type: 'STRING', description: 'Kategori pembayaran (SPP Bulanan, Uang Makan, Uang Asrama)' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' },
+                                            nominal: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nominal uang pembayaran' },
+                                            kategori: { type: generative_ai_1.SchemaType.STRING, description: 'Kategori pembayaran (SPP Bulanan, Uang Makan, Uang Asrama)' }
                                         },
                                         required: ['santri_name', 'nominal']
                                     }
@@ -126,13 +127,13 @@ let AiService = AiService_1 = class AiService {
                                     name: 'tambahHafalan',
                                     description: 'Input setoran hafalan baru santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' },
-                                            juz: { type: 'NUMBER', description: 'Nomor juz (1-30)' },
-                                            surah: { type: 'STRING', description: 'Nama surah' },
-                                            ayat_awal: { type: 'NUMBER', description: 'Nomor ayat mulai' },
-                                            ayat_akhir: { type: 'NUMBER', description: 'Nomor ayat selesai (opsional)' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' },
+                                            juz: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nomor juz (1-30)' },
+                                            surah: { type: generative_ai_1.SchemaType.STRING, description: 'Nama surah' },
+                                            ayat_awal: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nomor ayat mulai' },
+                                            ayat_akhir: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nomor ayat selesai (opsional)' }
                                         },
                                         required: ['santri_name', 'juz', 'surah', 'ayat_awal']
                                     }
@@ -141,28 +142,38 @@ let AiService = AiService_1 = class AiService {
                                     name: 'tambahAbsensi',
                                     description: 'Input absensi kehadiran santri',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: 'STRING', description: 'Nama santri saja' },
-                                            status: { type: 'STRING', description: 'Status (hadir, sakit, izin, alpha)' }
+                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' },
+                                            status: { type: generative_ai_1.SchemaType.STRING, description: 'Status (hadir, sakit, izin, alpha)' }
                                         },
                                         required: ['santri_name', 'status']
                                     }
                                 },
                                 {
                                     name: 'chitchat',
-                                    description: 'Percakapan umum, salam pembuka, sapaan, terima kasih, chitchat',
+                                    description: 'Percakapan umum, salam pembuka, sapaan, terima kasih, chitchat, pertanyaan di luar konteks pondok',
                                     parameters: {
-                                        type: 'OBJECT',
+                                        type: generative_ai_1.SchemaType.OBJECT,
                                         properties: {
-                                            pesan: { type: 'STRING', description: 'Pesan balasan ramah' }
+                                            pesan: { type: generative_ai_1.SchemaType.STRING, description: 'Pesan balasan ramah' }
                                         }
                                     }
                                 }
                             ]
                         }]
                 });
-                this.geminiResponseModel = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+                this.geminiResponseModel = this.genAI.getGenerativeModel({
+                    model: 'gemini-1.5-flash',
+                    systemInstruction: `Kamu adalah AI Assistant Sistem Manajemen Pondok.
+Tugasmu hanya menyusun jawaban berdasarkan data yang diberikan backend.
+Jangan pernah membuat data sendiri. Jangan pernah menebak. Jangan pernah mengarang.
+Jika backend tidak memberikan data maka katakan data tidak ditemukan.
+Semua jawaban harus berasal dari database.
+Gunakan bahasa yang sopan, Islami, dan ramah.
+Gunakan *bold* untuk penegasan. Jangan gunakan markdown lain seperti HTML/backticks.
+Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
+                });
                 this.logger.log('AiService initialized: Gemini 1.5 Flash Parser & Response mode AKTIF.');
             }
             catch (e) {
@@ -202,23 +213,17 @@ let AiService = AiService_1 = class AiService {
     }
     async parseIntentWithGemini(userPrompt, sender) {
         const ctx = this.getContext(sender);
-        const systemPrompt = `Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA.
-Konteks nama santri terakhir = "${ctx.lastSantriName || 'belum ada'}".
-
-Tugasmu: Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya.
-- Jika ada kata ganti (dia, nanda, anak saya, hafalannya, nilainya, pembayarannya) dan ada nama santri terakhir di konteks, gunakan nama tersebut untuk argumen santri_name.
-- Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi 'chitchat'.
-- Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang.`;
         if (!this.geminiParserModel) {
             throw new Error('Gemini Parser Model not initialized');
         }
-        const response = await this.geminiParserModel.generateContent({
-            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-            systemInstruction: systemPrompt,
-        });
-        const functionCalls = response.response.functionCalls;
-        if (functionCalls && functionCalls.length > 0) {
-            const call = functionCalls[0];
+        let enrichedPrompt = userPrompt;
+        if (ctx.lastSantriName) {
+            enrichedPrompt = `[Konteks: nama santri terakhir = "${ctx.lastSantriName}"] ${userPrompt}`;
+        }
+        const response = await this.geminiParserModel.generateContent(enrichedPrompt);
+        const calls = response.response.functionCalls();
+        if (calls && calls.length > 0) {
+            const call = calls[0];
             const args = call.args || {};
             const cleanedArgs = {};
             Object.keys(args).forEach(k => {
@@ -226,14 +231,16 @@ Tugasmu: Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling
                     cleanedArgs[k] = args[k];
                 }
             });
+            this.logger.log(`[Gemini FC] Function: ${call.name}, Args: ${JSON.stringify(cleanedArgs)}`);
             return {
                 intent: call.name,
                 parameters: cleanedArgs,
             };
         }
+        this.logger.warn('[Gemini FC] Tidak ada function call terdeteksi, fallback ke chitchat statis.');
         return {
             intent: 'chitchat',
-            parameters: { pesan: response.response.text().trim() },
+            parameters: {},
         };
     }
     parseIntentLocal(userPrompt, sender) {
@@ -274,6 +281,7 @@ Tugasmu: Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling
             santriName = context.lastSantriName;
         }
         if (santriName) {
+            santriName = santriName.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
             result.parameters.santri_name = santriName;
         }
         const nominalMatch = text.replace(/[\s\.]/g, '').match(/(?:rp|nominal|bayar|sebesar|sejumlah)?(\d{4,9})/);
@@ -317,79 +325,47 @@ Tugasmu: Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling
         };
         if (keywords.pembayaran.some(k => text.includes(k))) {
             if (result.parameters.nominal && santriName && (text.includes('input') || text.includes('tambah') || text.includes('bayar') || text.includes('catat'))) {
-                result.intent = 'tambah_pembayaran';
-            }
-            else if (text.includes('tunggakan terbesar') || text.includes('paling banyak tunggakan') || text.includes('tunggakan terbanyak') || text.includes('terbesar')) {
-                result.intent = 'get_tunggakan_terbesar';
+                result.intent = 'tambahPembayaran';
             }
             else {
-                result.intent = 'check_pembayaran';
+                result.intent = 'cekPembayaran';
             }
         }
         else if (keywords.hafalan.some(k => text.includes(k))) {
             if ((text.includes('setor') || text.includes('input') || text.includes('tambah') || text.includes('catat')) && result.parameters.surah && result.parameters.juz) {
-                result.intent = 'tambah_hafalan';
-            }
-            else if (text.includes('belum setor') || text.includes('tidak setor') || text.includes('belum hafalan')) {
-                result.intent = 'get_tidak_setor_today';
-            }
-            else if (text.includes('tertinggi') || text.includes('terbanyak') || text.includes('top') || text.includes('terbaik')) {
-                result.intent = 'get_top_10_hafalan';
+                result.intent = 'tambahHafalan';
             }
             else {
-                result.intent = 'get_hafalan';
+                result.intent = 'cekHafalan';
             }
         }
         else if (keywords.nilai.some(k => text.includes(k))) {
             if (text.includes('input') || text.includes('tambah') || text.includes('simpan') || text.includes('catat')) {
-                result.intent = 'tambah_nilai';
+                result.intent = 'tambahNilai';
             }
             else {
-                result.intent = 'get_nilai';
-            }
-        }
-        else if (keywords.keuangan.some(k => text.includes(k))) {
-            if (text.includes('bulan lalu') || text.includes('banding') || text.includes('dibanding') || text.includes('perbandingan')) {
-                result.intent = 'get_pemasukan_perbandingan';
-            }
-            else {
-                result.intent = 'get_pemasukan_bulan';
+                result.intent = 'cekNilai';
             }
         }
         else if (keywords.absensi.some(k => text.includes(k))) {
-            if (text.includes('aktif') && (text.includes('jumlah') || text.includes('berapa'))) {
-                result.intent = 'get_jumlah_santri_aktif';
-            }
-            else if (text.includes('paling banyak izin') || text.includes('banyak izin') || text.includes('sering izin')) {
-                result.intent = 'get_santri_most_izin';
-            }
-            else if (text.includes('guru belum') || text.includes('guru yang belum') || text.includes('ustadz belum')) {
-                result.intent = 'get_guru_belum_absen';
-            }
-            else if (text.includes('input') || text.includes('tambah') || text.includes('catat')) {
-                result.intent = 'tambah_absensi';
+            if (text.includes('input') || text.includes('tambah') || text.includes('catat')) {
+                result.intent = 'tambahAbsensi';
             }
             else {
-                result.intent = 'get_presence_today';
+                result.intent = 'cekAbsensi';
             }
         }
-        else if (text.includes('ringkas') || text.includes('perkembangan') || text.includes('summary') || text.includes('rekap santri')) {
-            result.intent = 'get_perkembangan_summary';
-        }
         else if (text.includes('pelanggaran') || text.includes('melanggar') || text.includes('hukuman')) {
-            result.intent = 'tambah_pelanggaran';
+            result.intent = 'tambahPelanggaran';
         }
         else if (text.includes('prestasi') || text.includes('juara') || text.includes('pujian')) {
-            result.intent = 'tambah_prestasi';
+            result.intent = 'cekPrestasi';
         }
-        else if (text.includes('catatan guru') || text.includes('catatan pembinaan') || text.includes('catatan musyrif')) {
-            result.intent = 'tambah_catatan_guru';
+        else if (text.includes('izin') || text.includes('perizinan')) {
+            result.intent = 'cekPerizinan';
         }
-        else if (text.includes('jumlah santri') || (text.includes('berapa') && text.includes('santri'))) {
-            result.intent = 'get_jumlah_santri_aktif';
-        }
-        else if (text.includes('jumlah guru') || (text.includes('berapa') && text.includes('guru'))) {
-            result.intent = 'get_guru_belum_absen';
+        else if (text.includes('santri') && (text.includes('profil') || text.includes('data') || text.includes('info'))) {
+            result.intent = 'cekSantri';
         }
         this.setContext(sender, result.intent, santriName);
         return result;
@@ -422,27 +398,11 @@ Tugasmu: Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling
         else if (dbResult?.error) {
             dataContext = `\nError dari database: ${dbResult.error}`;
         }
-        const systemPrompt = `Kamu adalah AI Assistant Sistem Manajemen Pondok.
-Tugasmu hanya memahami maksud pengguna dan menyusun jawaban berdasarkan data yang diberikan backend.
-Jangan pernah membuat data sendiri.
-Jangan pernah menebak.
-Jangan pernah mengarang.
-Jika backend tidak memberikan data maka katakan data tidak ditemukan.
-Semua jawaban harus berasal dari database.
-
-ATURAN FORMAT WHATSAPP:
-- Gunakan bahasa yang sopan, Islami, dan ramah (salam pembuka/penutup).
-- Gunakan *bold* untuk penegasan (misal: *Ahmad Fauzi*, *Lunas*, *SPP Bulanan*).
-- Jangan gunakan markdown lain seperti HTML/backticks.
-- Jika data kosong atau error, sampaikan dengan jujur bahwa data tidak ditemukan. Jangan berhalusinasi.`;
         const promptText = `Pesan user: "${userPrompt}"
 Nama santri konteks: ${santriName || 'tidak ada'}
 Fungsi dijalankan: ${intent}
 ${dataContext}`;
-        const response = await this.geminiResponseModel.generateContent({
-            contents: [{ role: 'user', parts: [{ text: promptText }] }],
-            systemInstruction: systemPrompt,
-        });
+        const response = await this.geminiResponseModel.generateContent(promptText);
         return response.response.text().trim();
     }
     generateResponseLocal(userPrompt, intent, dbResult, sender) {

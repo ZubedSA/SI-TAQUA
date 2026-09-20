@@ -78,22 +78,20 @@ const AbsensiPortal = () => {
                 return
             }
 
-            if (!user?.email) return
+            if (!user?.email && !user?.id) return
 
             try {
                 const { data, error } = await supabase
                     .from('guru')
                     .select('id')
-                    .eq('email', user.email)
+                    .or(`user_id.eq.${user.id},email.ilike.${user.email}`)
                     .maybeSingle()
 
                 if (data) {
                     setGuruId(data.id)
-                } else if (error) {
-                    console.error('Error fetching guru id:', error)
                 }
             } catch (err) {
-                console.error('Catch fetching guru id:', err)
+                console.error('Error fetching guru id:', err)
             }
         }
         fetchGuruId()
@@ -176,8 +174,8 @@ const AbsensiPortal = () => {
                         if (!jd.jam_mulai || !jd.jam_selesai) continue;
                         const [hM, mM] = jd.jam_mulai.split(':').map(Number)
                         const [hS, mS] = jd.jam_selesai.split(':').map(Number)
-                        const startLimit = hM * 60 + mM - 15
-                        const endLimit = hS * 60 + mS + 15
+                        const startLimit = hM * 60 + mM - 10
+                        const endLimit = hS * 60 + mS + 10
                         if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
                             detectedJam = jd.jam_ke
                             targetJadwal = jd
@@ -210,14 +208,24 @@ const AbsensiPortal = () => {
                             .maybeSingle()
 
                         if (!existingScan) {
-                            await supabase.from('presensi_staf').insert({
+                            const scanPayload = {
                                 staf_id: guruId,
                                 tanggal: todayDate,
                                 tipe: qrType,
                                 referensi_id: qrId,
                                 jam_ke: finalJam,
                                 waktu_scan: new Date().toISOString()
-                            })
+                            }
+                            const { error: insErr } = await supabase.from('presensi_staf').insert(scanPayload)
+                            if (insErr) {
+                                await supabase.from('presensi_staf').insert({
+                                    staf_id: guruId,
+                                    tanggal: todayDate,
+                                    tipe: qrType,
+                                    referensi_id: qrId,
+                                    waktu_scan: scanPayload.waktu_scan
+                                })
+                            }
                             console.log('Presensi staf tercatat (Quraniyah)')
                         }
                     } catch (dbErr) {
@@ -262,16 +270,23 @@ const AbsensiPortal = () => {
                             .maybeSingle()
 
                         if (!existingScan) {
-                            const { error: psError } = await supabase.from('presensi_staf').insert({
+                            const scanPayload = {
                                 staf_id: guruId,
                                 tanggal: todayDate,
                                 tipe: qrType,
                                 referensi_id: qrId,
                                 jam_ke: currentJam,
                                 waktu_scan: new Date().toISOString()
-                            })
+                            }
+                            const { error: psError } = await supabase.from('presensi_staf').insert(scanPayload)
                             if (psError) {
-                                console.warn('Gagal mencatat presensi staf:', psError.message)
+                                await supabase.from('presensi_staf').insert({
+                                    staf_id: guruId,
+                                    tanggal: todayDate,
+                                    tipe: qrType,
+                                    referensi_id: qrId,
+                                    waktu_scan: scanPayload.waktu_scan
+                                })
                             } else {
                                 console.log('Presensi staf tercatat (Madrosah)')
                             }
