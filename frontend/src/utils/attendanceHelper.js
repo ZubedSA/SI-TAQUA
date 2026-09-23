@@ -161,18 +161,25 @@ export const isStaffScanMatch = (scan, schedule, dateStr) => {
     // A. Perfect match: Same reference AND same session number
     if (isSameRef && isSameJam) return true
 
-    // B. Same session number and either same reference or reference not constrained
-    if (isSameJam && (!scanRefId || !schedRefId || isSameRef)) return true
-
-    // C. Physical Location Match: Staf scanned the QR code of this exact classroom or halaqoh today
-    if (isSameRef) {
-        // If scan.jam_ke is missing/null, this scan explicitly confirms presence in this classroom/halaqoh
-        if (!hasScanJam) return true
-        // If jam_ke is present and matches
-        if (isSameJam) return true
+    // B. Direct schedule link
+    if (scan.jadwal_id && schedule.id && String(scan.jadwal_id).toLowerCase() === String(schedule.id).toLowerCase()) {
+        return true
     }
 
-    // D. Time Window Check (flexible window with ±10 minutes tolerance)
+    // C. Same session number and compatible reference
+    if (isSameJam && (!scanRefId || !schedRefId || isSameRef)) return true
+
+    // D. If both have jam_ke and they differ, they MUST NOT match (especially for Halaqoh)
+    if (hasScanJam && hasSchedJam && !isSameJam) {
+        return false
+    }
+
+    // E. Physical Location Match for legacy scans without jam_ke
+    if (isSameRef && !hasScanJam && !isQuraniyah) {
+        return true
+    }
+
+    // F. Time Window Check (flexible window with ±30 minutes tolerance)
     if (scan.waktu_scan && schedule.jam_mulai && schedule.jam_selesai) {
         try {
             const scanTime = new Date(scan.waktu_scan)
@@ -181,20 +188,17 @@ export const isStaffScanMatch = (scan, schedule, dateStr) => {
             const [hM, mM] = schedule.jam_mulai.split(':').map(Number)
             const [hS, mS] = schedule.jam_selesai.split(':').map(Number)
             
-            const startLimit = hM * 60 + mM - 10
-            const endLimit = hS * 60 + mS + 10
+            const startLimit = hM * 60 + mM - 30
+            const endLimit = hS * 60 + mS + 45
             
             if (scanMinutes >= startLimit && scanMinutes <= endLimit) {
-                if (!scanRefId || !schedRefId || isSameRef) return true
+                if (!scanRefId || !schedRefId || isSameRef) {
+                    if (!hasScanJam || isSameJam) return true
+                }
             }
         } catch (err) {
             // Ignore time parse error
         }
-    }
-
-    // E. Halaqoh fallback: If musyrif scanned the halaqoh QR today
-    if (isQuraniyah && isSameRef) {
-        return true
     }
 
     return false
@@ -206,7 +210,11 @@ export const isStaffScanMatch = (scan, schedule, dateStr) => {
 export const findStaffScan = (scanList = [], schedule, dateStr) => {
     if (!scanList || scanList.length === 0 || !schedule) return null
 
-    // 1. First priority: Exact match on reference and jam_ke
+    // 1. First priority: Direct jadwal_id match
+    const directMatch = scanList.find(p => p.jadwal_id && schedule.id && String(p.jadwal_id).toLowerCase() === String(schedule.id).toLowerCase())
+    if (directMatch) return directMatch
+
+    // 2. Second priority: Exact match on reference and jam_ke
     const exactMatch = scanList.find(p => {
         if (!isStaffScanMatch(p, schedule, dateStr)) return false
         const schedRefId = String(schedule.kelas_id || schedule.halaqoh_id || schedule.referensi_id || '').toLowerCase()
@@ -217,16 +225,18 @@ export const findStaffScan = (scanList = [], schedule, dateStr) => {
     })
     if (exactMatch) return exactMatch
 
-    // 2. Second priority: Exact match on reference
-    const refMatch = scanList.find(p => {
+    // 3. Third priority: Exact match on jam_ke and staff
+    const jamMatch = scanList.find(p => {
         if (!isStaffScanMatch(p, schedule, dateStr)) return false
-        const schedRefId = String(schedule.kelas_id || schedule.halaqoh_id || schedule.referensi_id || '').toLowerCase()
-        const scanRefId = String(p.referensi_id || '').toLowerCase()
-        return Boolean(schedRefId && scanRefId && schedRefId === scanRefId)
+        return p.jam_ke && schedule.jam_ke && Number(p.jam_ke) === Number(schedule.jam_ke)
     })
-    if (refMatch) return refMatch
+    if (jamMatch) return jamMatch
 
-    // 3. Third priority: Any valid match via isStaffScanMatch
-    return scanList.find(p => isStaffScanMatch(p, schedule, dateStr)) || null
+    // 4. Non-quraniyah fallback for legacy data
+    const isQuraniyah = ['QURANIYAH', 'HALAQOH'].includes((schedule.tipe || '').toUpperCase())
+    if (!isQuraniyah) {
+        return scanList.find(p => isStaffScanMatch(p, schedule, dateStr)) || null
+    }
+
+    return null
 }
-

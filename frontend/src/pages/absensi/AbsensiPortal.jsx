@@ -129,113 +129,128 @@ const AbsensiPortal = () => {
                 // 1. Ambil jadwal halaqoh hari ini
                 const now = new Date()
                 const currentMinutes = now.getHours() * 60 + now.getMinutes()
+                const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
+                const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
+                const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
 
-                // Cek apakah ada jadwal halaqoh ini di jurnalList (jadwal hari ini untuk guru yang login)
+                // Cek jadwal halaqoh ini di jurnalList (jadwal hari ini untuk guru yang login)
                 const targetType = 'HALAQOH'
-                const jadwalHalaqohMatch = jurnalList.filter(j => {
+                let jadwalHalaqoh = jurnalList.filter(j => {
                     const itemType = j.tipe || 'HALAQOH'
                     const itemId = j.halaqoh_id || j.referensi_id
-                    return itemType === targetType && String(itemId) === String(qrId)
+                    return itemType === targetType && String(itemId).toLowerCase() === String(qrId).toLowerCase()
                 })
 
+                // Jika belum ada di jurnalList (misal saat inisialisasi belum selesai), fetch langsung dari DB
+                if (jadwalHalaqoh.length === 0) {
+                    let q = supabase
+                        .from('jadwal_pelajaran')
+                        .select('id, jam_ke, jam_mulai, jam_selesai, halaqoh_id, referensi_id, tipe, guru_id')
+                        .or(`halaqoh_id.eq.${qrId},referensi_id.eq.${qrId}`)
+                        .eq('tipe', 'HALAQOH')
+                        .eq('hari', dayName)
+                        .order('jam_ke')
+                    if (!isBypass && guruId) {
+                        q = q.eq('guru_id', guruId)
+                    }
+                    const { data: dbJadwal } = await q
+                    if (dbJadwal && dbJadwal.length > 0) {
+                        jadwalHalaqoh = dbJadwal
+                    }
+                }
+
                 // Jika bukan admin dan tidak ada jadwal sama sekali hari ini
-                if (!isBypass && jadwalHalaqohMatch.length === 0) {
+                if (!isBypass && jadwalHalaqoh.length === 0) {
                     showToast.error('Jadwal halaqoh Anda tidak ditemukan untuk lokasi ini pada hari ini.')
                     setIsProcessing(false)
                     setIsScannerOpen(false)
                     return
                 }
 
-                // Gunakan jadwalHalaqohMatch (jika musyrif) ATAU fetch semua jika admin
-                let jadwalHalaqoh = jadwalHalaqohMatch;
-                
-                if (isBypass && jadwalHalaqoh.length === 0) {
-                    // Admin fetch semua jadwal untuk halaqoh ini tanpa peduli siapa gurunya
-                    const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
-                    const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
-                    const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
-                    
-                    const { data } = await supabase
-                        .from('jadwal_pelajaran')
-                        .select('id, jam_ke, jam_mulai, jam_selesai, halaqoh_id, tipe')
-                        .eq('halaqoh_id', qrId)
-                        .eq('tipe', 'HALAQOH')
-                        .eq('hari', dayName)
-                        .order('jam_ke')
-                        
-                    jadwalHalaqoh = data || []
-                }
-
-                let detectedJam = null
-                let targetJadwal = null
-
-                if (jadwalHalaqoh && jadwalHalaqoh.length > 0) {
-                    for (const jd of jadwalHalaqoh) {
-                        if (!jd.jam_mulai || !jd.jam_selesai) continue;
-                        const [hM, mM] = jd.jam_mulai.split(':').map(Number)
-                        const [hS, mS] = jd.jam_selesai.split(':').map(Number)
-                        const startLimit = hM * 60 + mM - 10
-                        const endLimit = hS * 60 + mS + 10
-                        if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
-                            detectedJam = jd.jam_ke
-                            targetJadwal = jd
-                            break
-                        }
-                    }
-                    if (!detectedJam) {
-                        const upcoming = jadwalHalaqoh.find(jd => {
-                            if (!jd.jam_mulai) return false;
-                            const [hM, mM] = jd.jam_mulai.split(':').map(Number)
-                            return (hM * 60 + mM) > currentMinutes
-                        })
-                        detectedJam = upcoming ? upcoming.jam_ke : jadwalHalaqoh[0].jam_ke
-                        targetJadwal = upcoming || jadwalHalaqoh[0]
-                    }
-                }
-
-                const finalJam = detectedJam || 1
-
-                // 2. Catat presensi staf (Hanya jika belum ada scan untuk jam ini)
+                // Ambil data scan staf hari ini untuk mengetahui jam mana saja yang SUDAH discan
+                let scannedJams = new Set()
                 if (guruId) {
                     try {
-                        const { data: existingScan } = await supabase
+                        const { data: existingScans } = await supabase
                             .from('presensi_staf')
-                            .select('id')
+                            .select('jam_ke')
                             .eq('staf_id', guruId)
                             .eq('tanggal', todayDate)
                             .eq('referensi_id', qrId)
-                            .eq('jam_ke', finalJam)
-                            .maybeSingle()
-
-                        if (!existingScan) {
-                            const scanPayload = {
-                                staf_id: guruId,
-                                tanggal: todayDate,
-                                tipe: qrType,
-                                referensi_id: qrId,
-                                jam_ke: finalJam,
-                                waktu_scan: new Date().toISOString()
-                            }
-                            const { error: insErr } = await supabase.from('presensi_staf').insert(scanPayload)
-                            if (insErr) {
-                                await supabase.from('presensi_staf').insert({
-                                    staf_id: guruId,
-                                    tanggal: todayDate,
-                                    tipe: qrType,
-                                    referensi_id: qrId,
-                                    waktu_scan: scanPayload.waktu_scan
-                                })
-                            }
-                            console.log('Presensi staf tercatat (Quraniyah)')
+                        if (existingScans) {
+                            existingScans.forEach(s => scannedJams.add(Number(s.jam_ke)))
                         }
+                    } catch (err) {
+                        console.warn('Gagal membaca existing scan:', err)
+                    }
+                }
+
+                let targetJadwal = null
+
+                // A. Prioritas 1: Cocokkan dengan sesi yang aktif saat ini (toleransi 30 menit sebelum s/d 60 menit sesudah)
+                for (const jd of jadwalHalaqoh) {
+                    if (!jd.jam_mulai || !jd.jam_selesai) continue;
+                    const [hM, mM] = jd.jam_mulai.split(':').map(Number)
+                    const [hS, mS] = jd.jam_selesai.split(':').map(Number)
+                    const startLimit = hM * 60 + mM - 30
+                    const endLimit = hS * 60 + mS + 60
+                    if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
+                        targetJadwal = jd
+                        break
+                    }
+                }
+
+                // B. Prioritas 2: Jika di luar jendela aktif, cari sesi hari ini yang BELUM discan
+                if (!targetJadwal) {
+                    const unscanned = jadwalHalaqoh.filter(jd => !scannedJams.has(Number(jd.jam_ke)))
+                    if (unscanned.length > 0) {
+                        // Cari yang terdekat berikutnya
+                        const upcoming = unscanned.find(jd => {
+                            if (!jd.jam_mulai) return false
+                            const [hM, mM] = jd.jam_mulai.split(':').map(Number)
+                            return (hM * 60 + mM) >= currentMinutes
+                        })
+                        targetJadwal = upcoming || unscanned[0]
+                    }
+                }
+
+                // C. Prioritas 3: Fallback ke jadwal pertama jika semua telah discan
+                if (!targetJadwal && jadwalHalaqoh.length > 0) {
+                    targetJadwal = jadwalHalaqoh[0]
+                }
+
+                const finalJam = targetJadwal ? (targetJadwal.jam_ke || 1) : 1
+
+                // 2. Catat presensi staf
+                if (guruId && targetJadwal) {
+                    try {
+                        const scanPayload = {
+                            staf_id: guruId,
+                            tanggal: todayDate,
+                            tipe: qrType,
+                            referensi_id: qrId,
+                            jam_ke: finalJam,
+                            jadwal_id: targetJadwal.id,
+                            waktu_scan: new Date().toISOString()
+                        }
+                        const { error: insErr } = await supabase.from('presensi_staf').insert(scanPayload)
+                        if (insErr) {
+                            await supabase.from('presensi_staf').insert({
+                                staf_id: scanPayload.staf_id,
+                                tanggal: scanPayload.tanggal,
+                                tipe: scanPayload.tipe,
+                                referensi_id: scanPayload.referensi_id,
+                                jam_ke: scanPayload.jam_ke,
+                                waktu_scan: scanPayload.waktu_scan
+                            })
+                        }
+                        console.log(`Presensi staf tercatat (Quraniyah Jam ${finalJam})`)
                     } catch (dbErr) {
                         console.warn('Gagal mencatat presensi staf:', dbErr.message)
                     }
                 }
 
-                // 3. Simpan verifikasi QR di session & Navigasi
-                sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
-
+                // 3. Simpan verifikasi QR di session KHUSUS untuk jadwal ini (TIDAK menyimpan qrId global agar jam lain tidak terbuka bebas)
                 if (targetJadwal && targetJadwal.id) {
                     sessionStorage.setItem(`SITAQUA_SCAN_${targetJadwal.id}`, 'true')
                     showToast.success(`Terverifikasi: Halaqoh Jam Ke-${finalJam}`)

@@ -9,12 +9,16 @@
 
 BEGIN;
 
--- 1. Tambah kolom jam_ke jika belum ada
+-- 1. Tambah kolom jam_ke & jadwal_id jika belum ada
 ALTER TABLE public.presensi_staf ADD COLUMN IF NOT EXISTS jam_ke INT;
+ALTER TABLE public.presensi_staf ADD COLUMN IF NOT EXISTS jadwal_id UUID REFERENCES public.jadwal_pelajaran(id) ON DELETE CASCADE;
 
 -- Index untuk mempercepat query pencocokan jadwal
 CREATE INDEX IF NOT EXISTS idx_presensi_staf_staf_tanggal_jam 
 ON public.presensi_staf(staf_id, tanggal, jam_ke);
+
+CREATE INDEX IF NOT EXISTS idx_presensi_staf_jadwal_id 
+ON public.presensi_staf(jadwal_id);
 
 CREATE INDEX IF NOT EXISTS idx_presensi_staf_tanggal 
 ON public.presensi_staf(tanggal);

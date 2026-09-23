@@ -20,6 +20,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useJurnal } from '../../hooks/useAkademik'
+import QRScannerModal from '../../components/absensi/QRScannerModal'
 import { Card } from '../../components/ui/Card'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
@@ -59,6 +60,11 @@ const AgendaMengajar = () => {
     const [loadingSantri, setLoadingSantri] = useState(false)
     const [saving, setSaving] = useState(false)
 
+    // QR Scanner State for In-Page Scanning
+    const [isScannerOpen, setIsScannerOpen] = useState(false)
+    const [targetScanJadwal, setTargetScanJadwal] = useState(null)
+    const [scannedJadwalIds, setScannedJadwalIds] = useState(new Set())
+
     // Auto-select from URL (if scanned)
     const scannedJadwalId = queryParams.get('jadwal_id')
 
@@ -92,27 +98,137 @@ const AgendaMengajar = () => {
         guru_id: isSystemAdmin ? null : guruId
     })
 
+    // Fetch existing scans from presensi_staf for this date & teacher
+    useEffect(() => {
+        if (!guruId || !selectedDate) return
+        const fetchScans = async () => {
+            try {
+                const { data } = await supabase
+                    .from('presensi_staf')
+                    .select('id, jadwal_id, jam_ke, tipe, referensi_id')
+                    .eq('staf_id', guruId)
+                    .eq('tanggal', selectedDate)
+                
+                const ids = new Set()
+                data?.forEach(s => {
+                    if (s.jadwal_id) ids.add(String(s.jadwal_id).toLowerCase())
+                })
+
+                // Also match by halaqoh/kelas + jam_ke
+                jurnalList.forEach(j => {
+                    const jIdStr = String(j.id).toLowerCase()
+                    if (j.tipe === 'HALAQOH') {
+                        const hId = String(j.halaqoh_id || j.referensi_id || '').toLowerCase()
+                        const match = data?.find(s => 
+                            (s.jadwal_id && String(s.jadwal_id).toLowerCase() === jIdStr) ||
+                            (Number(s.jam_ke) === Number(j.jam_ke) && String(s.referensi_id || '').toLowerCase() === hId)
+                        )
+                        if (match) ids.add(jIdStr)
+                    } else {
+                        const kId = String(j.kelas_id || j.referensi_id || '').toLowerCase()
+                        const match = data?.find(s => 
+                            (s.jadwal_id && String(s.jadwal_id).toLowerCase() === jIdStr) ||
+                            (Number(s.jam_ke) === Number(j.jam_ke) && String(s.referensi_id || '').toLowerCase() === kId) ||
+                            (String(s.referensi_id || '').toLowerCase() === kId)
+                        )
+                        if (match) ids.add(jIdStr)
+                    }
+                })
+                setScannedJadwalIds(ids)
+            } catch (err) {
+                console.warn('Gagal fetch presensi staf:', err)
+            }
+        }
+        fetchScans()
+    }, [guruId, selectedDate, jurnalList])
+
+    const checkIfScanned = (jadwalItem) => {
+        if (isSystemAdmin) return true
+        if (!jadwalItem) return false
+        const jId = String(jadwalItem.id).toLowerCase()
+        if (scannedJadwalIds.has(jId)) return true
+        if (sessionStorage.getItem(`SITAQUA_SCAN_${jadwalItem.id}`) === 'true') return true
+        
+        // Untuk kelas Madrosah biasa diperbolehkan cek per kelas_id jika ada
+        if (jadwalItem.tipe !== 'HALAQOH' && jadwalItem.kelas_id) {
+            if (sessionStorage.getItem(`SITAQUA_SCAN_${jadwalItem.kelas_id}`) === 'true') return true
+        }
+        return false
+    }
+
+    const handleScanSuccessInAgenda = async (decodedText) => {
+        if (!decodedText.startsWith('SITAQUA_ABSENSI_')) {
+            showToast.error('Kode QR tidak dikenali.')
+            return
+        }
+
+        const parts = decodedText.split('_')
+        const qrType = parts[2] // MADROSAH or QURANIYAH
+        const qrId = parts.slice(3).join('_')
+
+        if (!targetScanJadwal) {
+            setIsScannerOpen(false)
+            return
+        }
+
+        const isHalaqoh = targetScanJadwal.tipe === 'HALAQOH'
+        const expectedType = isHalaqoh ? 'QURANIYAH' : 'MADROSAH'
+        const expectedId = isHalaqoh ? (targetScanJadwal.halaqoh_id || targetScanJadwal.referensi_id) : targetScanJadwal.kelas_id
+
+        if (qrType !== expectedType || String(qrId).toLowerCase() !== String(expectedId).toLowerCase()) {
+            showToast.error(`QR Code tidak cocok untuk ${isHalaqoh ? 'Halaqoh ' + (targetScanJadwal.halaqoh?.nama || '') : 'Kelas ' + (targetScanJadwal.kelas?.nama || '')}.`)
+            return
+        }
+
+        try {
+            const scanPayload = {
+                staf_id: targetScanJadwal.guru_id || guruId,
+                tanggal: selectedDate,
+                tipe: qrType,
+                referensi_id: qrId,
+                jam_ke: targetScanJadwal.jam_ke || 1,
+                jadwal_id: targetScanJadwal.id,
+                waktu_scan: new Date().toISOString()
+            }
+            const { error: insErr } = await supabase.from('presensi_staf').insert(scanPayload)
+            if (insErr) {
+                await supabase.from('presensi_staf').insert({
+                    staf_id: scanPayload.staf_id,
+                    tanggal: scanPayload.tanggal,
+                    tipe: scanPayload.tipe,
+                    referensi_id: scanPayload.referensi_id,
+                    jam_ke: scanPayload.jam_ke,
+                    waktu_scan: scanPayload.waktu_scan
+                })
+            }
+        } catch (dbErr) {
+            console.warn('Gagal mencatat presensi staf:', dbErr.message)
+        }
+
+        sessionStorage.setItem(`SITAQUA_SCAN_${targetScanJadwal.id}`, 'true')
+        setScannedJadwalIds(prev => new Set([...prev, String(targetScanJadwal.id).toLowerCase()]))
+        setIsScannerOpen(false)
+
+        const target = targetScanJadwal
+        setTargetScanJadwal(null)
+        showToast.success(`QR Terverifikasi: ${isHalaqoh ? 'Halaqoh Jam Ke-' + target.jam_ke : (target.mapel?.nama || 'Pelajaran')}`)
+        openJurnalForm(target)
+    }
+
     useEffect(() => {
         if (scannedJadwalId && jurnalList.length > 0 && !selectedJadwal) {
-            // Gunakan pembersihan ID dan perbandingan string yang aman
             const targetId = String(scannedJadwalId).trim()
             const found = jurnalList.find(j => String(j.id).trim() === targetId)
             
             if (found) {
                 openJurnalForm(found)
             } else if (!loadingJurnal) {
-                // Timeout sedikit lebih lama untuk memastikan data benar-benar sudah tersinkronisasi
                 const timer = setTimeout(() => {
-                    // Cek lagi setelah timeout, siapa tahu data baru masuk
                     const doubleCheck = jurnalList.find(j => String(j.id).trim() === targetId)
                     if (doubleCheck) {
                         openJurnalForm(doubleCheck)
                     } else if (!selectedJadwal) {
                         showToast.error('Jadwal tidak ditemukan atau bukan jadwal Anda hari ini.')
-                        if (searchParams.get('tanggal')) {
-                            // Jangan langsung redirect agar user bisa lihat jadwal lain
-                            // navigate('/absensi/home') 
-                        }
                     }
                 }, 1000)
                 return () => clearTimeout(timer)
@@ -121,11 +237,13 @@ const AgendaMengajar = () => {
     }, [scannedJadwalId, jurnalList, loadingJurnal, selectedJadwal])
 
     const openJurnalForm = async (jadwalItem) => {
-        const isScanned = sessionStorage.getItem(`SITAQUA_SCAN_${jadwalItem.kelas_id}`) || 
-                         sessionStorage.getItem(`SITAQUA_SCAN_${jadwalItem.id}`)
+        const isScanned = checkIfScanned(jadwalItem)
         
         if (!isSystemAdmin && !isScanned) {
-            showToast.error('Anda harus melakukan Scan QR Kode di kelas terlebih dahulu untuk mengisi jurnal.')
+            // Langsung buka scanner untuk jadwal spesifik ini
+            setTargetScanJadwal(jadwalItem)
+            setIsScannerOpen(true)
+            showToast.info(`Silakan scan QR untuk membuka absensi ${jadwalItem.tipe === 'HALAQOH' ? 'Halaqoh Jam Ke-' + jadwalItem.jam_ke : (jadwalItem.mapel?.nama || 'Pelajaran')}`)
             return
         }
 
@@ -136,14 +254,26 @@ const AgendaMengajar = () => {
             const currentDay = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
             const currentTime = now.getHours() * 60 + now.getMinutes()
             
-            const [hM, mM] = jadwalItem.jam_mulai.split(':').map(Number)
-            const [hS, mS] = jadwalItem.jam_selesai.split(':').map(Number)
-            const startLimit = hM * 60 + mM - 10
-            const endLimit = hS * 60 + mS + 10
-
-            if (jadwalItem.hari !== currentDay || currentTime < startLimit || currentTime > endLimit) {
-                showToast.error(`Di luar jam mengajar (${jadwalItem.jam_mulai} - ${jadwalItem.jam_selesai}, toleransi ±10 menit)`)
+            if (jadwalItem.hari !== currentDay) {
+                showToast.error(`Jadwal ini untuk hari ${jadwalItem.hari}, hari ini ${currentDay}`)
                 return
+            }
+
+            if (jadwalItem.jam_mulai && jadwalItem.jam_selesai) {
+                const [hM, mM] = jadwalItem.jam_mulai.split(':').map(Number)
+                const [hS, mS] = jadwalItem.jam_selesai.split(':').map(Number)
+                
+                // Toleransi waktu pengisian:
+                // Jika sudah scan QR (terbukti hadir di halaqoh/kelas), berikan rentang longgar:
+                // 45 menit sebelum mulai hingga 180 menit sesudah selesai (agar bisa mengisi setelah dzikir/halaqoh selesai)
+                const isAlreadyScanned = checkIfScanned(jadwalItem)
+                const startLimit = isAlreadyScanned ? (hM * 60 + mM - 45) : (hM * 60 + mM - 30)
+                const endLimit = isAlreadyScanned ? (hS * 60 + mS + 180) : (hS * 60 + mS + 45)
+
+                if (currentTime < startLimit || currentTime > endLimit) {
+                    showToast.error(`Di luar jam mengajar (${jadwalItem.jam_mulai.slice(0, 5)} - ${jadwalItem.jam_selesai.slice(0, 5)})`)
+                    return
+                }
             }
         }
 
@@ -694,6 +824,7 @@ const AgendaMengajar = () => {
                     <div className="grid gap-6">
                         {jurnalList.map((jadwal, idx) => {
                             const isFilled = !!jadwal.jurnal
+                            const isScanned = checkIfScanned(jadwal)
                             return (
                                 <button
                                     key={jadwal.id}
@@ -759,19 +890,48 @@ const AgendaMengajar = () => {
                                                 )}
                                             </div>
 
-                                            {jadwal.jurnal ? (
-                                                <div className="bg-gray-50/80 rounded-2xl p-5 text-sm text-gray-600 border border-gray-100 line-clamp-2 italic font-medium leading-relaxed">
+                                            {jadwal.jurnal && (
+                                                <div className="bg-gray-50/80 rounded-2xl p-4 text-sm text-gray-600 border border-gray-100 line-clamp-2 italic font-medium leading-relaxed">
                                                     <span className="font-black text-emerald-600 uppercase text-[10px] tracking-widest not-italic mb-1 block">Materi Terisi:</span> 
                                                     "{jadwal.jurnal.materi}"
                                                 </div>
-                                            ) : (
-                                                <div className="flex items-center gap-3 text-emerald-600 font-black text-xs uppercase tracking-widest pt-2">
-                                                    <span>Lengkapi Jurnal</span>
-                                                    <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center group-hover:translate-x-2 transition-transform">
-                                                        <ArrowRight size={16} />
-                                                    </div>
-                                                </div>
                                             )}
+
+                                            {/* QR Status & Action Badge */}
+                                            <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-gray-50">
+                                                {isScanned ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                        <CheckCircle size={13} className="text-emerald-600" /> QR Terverifikasi
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setTargetScanJadwal(jadwal)
+                                                            setIsScannerOpen(true)
+                                                        }}
+                                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+                                                    >
+                                                        <QrCode size={14} /> Scan QR Buka Absen
+                                                    </button>
+                                                )}
+
+                                                {jadwal.jurnal ? (
+                                                    <span className="text-[10px] font-bold text-gray-400">Jurnal Tersimpan</span>
+                                                ) : isScanned ? (
+                                                    <div className="flex items-center gap-2 text-emerald-600 font-black text-xs uppercase tracking-widest">
+                                                        <span>Buka Formulir</span>
+                                                        <div className="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                                                            <ArrowRight size={14} />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                                                        <AlertCircle size={12} /> Scan QR Diperlukan
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </button>
@@ -787,9 +947,9 @@ const AgendaMengajar = () => {
                             <BookOpen size={40} />
                         </div>
                         <div className="space-y-2">
-                            <h4 className="text-2xl font-black tracking-tight text-white">Panduan Verifikasi QR</h4>
+                            <h4 className="text-2xl font-black tracking-tight text-white">Panduan Verifikasi QR Halaqoh & Kelas</h4>
                             <p className="text-white text-sm leading-relaxed max-w-2xl font-medium">
-                                Untuk menjaga integritas data, setiap agenda mengajar wajib diawali dengan melakukan <span className="text-white font-bold underline underline-offset-4 decoration-emerald-500">Scan Kode QR</span> yang ada di ruang belajar. Ini akan membuka akses pengisian jurnal secara otomatis.
+                                Untuk Halaqoh (3 sesi sehari), musyrif <span className="text-emerald-400 font-bold">wajib scan QR di setiap jam halaqoh</span> (Jam 1, 2, dan 3) sesuai jadwal. Scan Jam 1 hanya membuka Jam 1, sedangkan Jam 2 dan 3 tetap wajib scan pada jamnya masing-masing.
                             </p>
                         </div>
                     </div>
@@ -798,6 +958,16 @@ const AgendaMengajar = () => {
 
                 <div className="h-20"></div>
             </main>
+
+            {/* QR Scanner Modal for In-Page Scanning */}
+            <QRScannerModal 
+                isOpen={isScannerOpen} 
+                onClose={() => {
+                    setIsScannerOpen(false)
+                    setTargetScanJadwal(null)
+                }} 
+                onScanSuccess={handleScanSuccessInAgenda} 
+            />
         </div>
     )
 }
