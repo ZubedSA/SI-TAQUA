@@ -23,10 +23,11 @@ import { supabase } from '../../lib/supabase'
 import QRScannerModal from '../../components/absensi/QRScannerModal'
 import UpdateNotificationModal from '../../components/absensi/UpdateNotificationModal'
 import RiwayatNotificationModal from '../../components/absensi/RiwayatNotificationModal'
+import { processAbsensiScan } from '../../utils/qrScanHelper'
 
 const AbsensiPortal = () => {
     const navigate = useNavigate()
-    const { user, userProfile, isAdmin, isAdminAkademik } = useAuth()
+    const { user, userProfile, isAdmin, isAdminAkademik, isAdminAbsensi } = useAuth()
     const { formatDate: globalFormatDate } = useCalendar()
     const showToast = useToast()
     const [currentTime, setCurrentTime] = useState(new Date())
@@ -38,7 +39,6 @@ const AbsensiPortal = () => {
 
     useEffect(() => {
         // Cek apakah user adalah staf/pengajar dan belum pernah melihat notifikasi update
-        // Kita tampilkan modal untuk semua user (karena Admin juga butuh tahu, atau bisa dibatasi untuk non-santri)
         const hasSeenUpdate = localStorage.getItem('has_seen_update_izin_v1')
         if (!hasSeenUpdate) {
             setShowUpdateModal(true)
@@ -47,7 +47,6 @@ const AbsensiPortal = () => {
         // Pemberitahuan Riwayat Kehadiran
         const hasSeenRiwayat = localStorage.getItem('has_seen_riwayat_v1')
         if (!hasSeenRiwayat) {
-            // Jangan tumpuk modal. Jika modal pertama sudah dilihat, baru tampilkan yang kedua
             if (hasSeenUpdate) {
                 setShowRiwayatModal(true)
             }
@@ -58,7 +57,6 @@ const AbsensiPortal = () => {
         localStorage.setItem('has_seen_update_izin_v1', 'true')
         setShowUpdateModal(false)
         
-        // Setelah modal izin ditutup, tampilkan modal riwayat jika belum pernah dilihat
         const hasSeenRiwayat = localStorage.getItem('has_seen_riwayat_v1')
         if (!hasSeenRiwayat) {
             setShowRiwayatModal(true)
@@ -72,7 +70,6 @@ const AbsensiPortal = () => {
 
     useEffect(() => {
         const fetchGuruId = async () => {
-            // Prioritaskan dari userProfile
             if (userProfile?.guru_id) {
                 setGuruId(userProfile.guru_id)
                 return
@@ -107,255 +104,28 @@ const AbsensiPortal = () => {
     const todayDate = format(currentTime, 'yyyy-MM-dd')
     const { data: jurnalList = [] } = useJurnal({
         tanggal: todayDate,
-        guru_id: (isAdmin() || isAdminAkademik()) ? null : guruId
+        guru_id: (isAdmin() || isAdminAkademik() || isAdminAbsensi()) ? null : guruId
     })
 
     const handleScanSuccess = async (decodedText) => {
-        if (!decodedText.startsWith('SITAQUA_ABSENSI_')) {
-            showToast.error('Kode QR tidak dikenali.')
-            return
-        }
-
         setIsProcessing(true)
         try {
-            const parts = decodedText.split('_')
-            const qrType = parts[2] // MADROSAH or QURANIYAH
-            const qrId = parts.slice(3).join('_')
+            const result = await processAbsensiScan({
+                decodedText,
+                user,
+                userProfile,
+                isAdmin,
+                isAdminAkademik,
+                isAdminAbsensi
+            })
 
-            // ── QURANIYAH: Sistem Cerdas Deteksi Jam ──
-            if (qrType === 'QURANIYAH') {
-                const isBypass = isAdmin() || isAdminAkademik()
-                
-                // 1. Ambil jadwal halaqoh hari ini
-                const now = new Date()
-                const currentMinutes = now.getHours() * 60 + now.getMinutes()
-                const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
-                const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
-                const dayName = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
-
-                // Cek jadwal halaqoh ini di jurnalList (jadwal hari ini untuk guru yang login)
-                const targetType = 'HALAQOH'
-                let jadwalHalaqoh = jurnalList.filter(j => {
-                    const itemType = j.tipe || 'HALAQOH'
-                    const itemId = j.halaqoh_id || j.referensi_id
-                    return itemType === targetType && String(itemId).toLowerCase() === String(qrId).toLowerCase()
-                })
-
-                // Jika belum ada di jurnalList (misal saat inisialisasi belum selesai), fetch langsung dari DB
-                if (jadwalHalaqoh.length === 0) {
-                    let q = supabase
-                        .from('jadwal_pelajaran')
-                        .select('id, jam_ke, jam_mulai, jam_selesai, halaqoh_id, referensi_id, tipe, guru_id')
-                        .or(`halaqoh_id.eq.${qrId},referensi_id.eq.${qrId}`)
-                        .eq('tipe', 'HALAQOH')
-                        .eq('hari', dayName)
-                        .order('jam_ke')
-                    if (!isBypass && guruId) {
-                        q = q.eq('guru_id', guruId)
-                    }
-                    const { data: dbJadwal } = await q
-                    if (dbJadwal && dbJadwal.length > 0) {
-                        jadwalHalaqoh = dbJadwal
-                    }
-                }
-
-                // Jika bukan admin dan tidak ada jadwal sama sekali hari ini
-                if (!isBypass && jadwalHalaqoh.length === 0) {
-                    showToast.error('Jadwal halaqoh Anda tidak ditemukan untuk lokasi ini pada hari ini.')
-                    setIsProcessing(false)
-                    setIsScannerOpen(false)
-                    return
-                }
-
-                // Ambil data scan staf hari ini untuk mengetahui jam mana saja yang SUDAH discan
-                let scannedJams = new Set()
-                if (guruId) {
-                    try {
-                        const { data: existingScans } = await supabase
-                            .from('presensi_staf')
-                            .select('jam_ke')
-                            .eq('staf_id', guruId)
-                            .eq('tanggal', todayDate)
-                            .eq('referensi_id', qrId)
-                        if (existingScans) {
-                            existingScans.forEach(s => scannedJams.add(Number(s.jam_ke)))
-                        }
-                    } catch (err) {
-                        console.warn('Gagal membaca existing scan:', err)
-                    }
-                }
-
-                let targetJadwal = null
-
-                // A. Prioritas 1: Cocokkan dengan sesi yang aktif saat ini (toleransi 30 menit sebelum s/d 60 menit sesudah)
-                for (const jd of jadwalHalaqoh) {
-                    if (!jd.jam_mulai || !jd.jam_selesai) continue;
-                    const [hM, mM] = jd.jam_mulai.split(':').map(Number)
-                    const [hS, mS] = jd.jam_selesai.split(':').map(Number)
-                    const startLimit = hM * 60 + mM - 30
-                    const endLimit = hS * 60 + mS + 60
-                    if (currentMinutes >= startLimit && currentMinutes <= endLimit) {
-                        targetJadwal = jd
-                        break
-                    }
-                }
-
-                // B. Prioritas 2: Jika di luar jendela aktif, cari sesi hari ini yang BELUM discan
-                if (!targetJadwal) {
-                    const unscanned = jadwalHalaqoh.filter(jd => !scannedJams.has(Number(jd.jam_ke)))
-                    if (unscanned.length > 0) {
-                        // Cari yang terdekat berikutnya
-                        const upcoming = unscanned.find(jd => {
-                            if (!jd.jam_mulai) return false
-                            const [hM, mM] = jd.jam_mulai.split(':').map(Number)
-                            return (hM * 60 + mM) >= currentMinutes
-                        })
-                        targetJadwal = upcoming || unscanned[0]
-                    }
-                }
-
-                // C. Prioritas 3: Fallback ke jadwal pertama jika semua telah discan
-                if (!targetJadwal && jadwalHalaqoh.length > 0) {
-                    targetJadwal = jadwalHalaqoh[0]
-                }
-
-                const finalJam = targetJadwal ? (targetJadwal.jam_ke || 1) : 1
-
-                // 2. Catat presensi staf
-                if (guruId && targetJadwal) {
-                    try {
-                        const scanPayload = {
-                            staf_id: guruId,
-                            tanggal: todayDate,
-                            tipe: qrType,
-                            referensi_id: qrId,
-                            jam_ke: finalJam,
-                            jadwal_id: targetJadwal.id,
-                            waktu_scan: new Date().toISOString()
-                        }
-                        const { error: insErr } = await supabase.from('presensi_staf').insert(scanPayload)
-                        if (insErr) {
-                            await supabase.from('presensi_staf').insert({
-                                staf_id: scanPayload.staf_id,
-                                tanggal: scanPayload.tanggal,
-                                tipe: scanPayload.tipe,
-                                referensi_id: scanPayload.referensi_id,
-                                jam_ke: scanPayload.jam_ke,
-                                waktu_scan: scanPayload.waktu_scan
-                            })
-                        }
-                        console.log(`Presensi staf tercatat (Quraniyah Jam ${finalJam})`)
-                    } catch (dbErr) {
-                        console.warn('Gagal mencatat presensi staf:', dbErr.message)
-                    }
-                }
-
-                // 3. Simpan verifikasi QR di session KHUSUS untuk jadwal ini (TIDAK menyimpan qrId global agar jam lain tidak terbuka bebas)
-                if (targetJadwal && targetJadwal.id) {
-                    sessionStorage.setItem(`SITAQUA_SCAN_${targetJadwal.id}`, 'true')
-                    showToast.success(`Terverifikasi: Halaqoh Jam Ke-${finalJam}`)
-                    navigate(`/absensi/agenda?jadwal_id=${targetJadwal.id}`)
-                } else {
-                    showToast.success(`Terverifikasi: Halaqoh Jam Ke-${finalJam} (Mode Admin)`)
-                    navigate(`/absensi/quraniyah?id=${qrId}&jam=${finalJam}`)
-                }
+            if (!result.success) {
+                showToast.error(result.message)
                 return
             }
 
-            // ── MADROSAH: Alur biasa via Agenda Mengajar ──
-            const targetType = 'MADROSAH'
-            const match = jurnalList.find(j => {
-                const itemType = j.tipe || 'MADROSAH'
-                const itemId = j.kelas_id
-                return itemType === targetType && String(itemId) === String(qrId)
-            })
-
-            if (match) {
-                // Record Teacher Attendance (presensi_staf) - Hanya jika belum ada scan untuk jam ini
-                if (guruId) {
-                    try {
-                        const currentJam = match.jam_ke || 1
-                        const { data: existingScan } = await supabase
-                            .from('presensi_staf')
-                            .select('id')
-                            .eq('staf_id', guruId)
-                            .eq('tanggal', todayDate)
-                            .eq('referensi_id', qrId)
-                            .eq('jam_ke', currentJam)
-                            .maybeSingle()
-
-                        if (!existingScan) {
-                            const scanPayload = {
-                                staf_id: guruId,
-                                tanggal: todayDate,
-                                tipe: qrType,
-                                referensi_id: qrId,
-                                jam_ke: currentJam,
-                                waktu_scan: new Date().toISOString()
-                            }
-                            const { error: psError } = await supabase.from('presensi_staf').insert(scanPayload)
-                            if (psError) {
-                                await supabase.from('presensi_staf').insert({
-                                    staf_id: guruId,
-                                    tanggal: todayDate,
-                                    tipe: qrType,
-                                    referensi_id: qrId,
-                                    waktu_scan: scanPayload.waktu_scan
-                                })
-                            } else {
-                                console.log('Presensi staf tercatat (Madrosah)')
-                            }
-                        } else {
-                            console.log('Presensi staf sudah ada untuk jam ini (Madrosah), melewati simpan.')
-                        }
-                    } catch (dbErr) {
-                        console.warn('Gagal mencatat presensi staf (Catch):', dbErr.message)
-                    }
-                } else {
-                    console.warn('Tidak dapat mencatat presensi staf: guruId tidak ditemukan')
-                }
-
-                sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
-                sessionStorage.setItem(`SITAQUA_SCAN_${match.id}`, 'true')
-
-                showToast.success(`Berhasil! Terverifikasi untuk ${match.kelas?.nama || 'Kelas'}`)
-                navigate(`/absensi/agenda?jadwal_id=${match.id}`)
-            } else if (isAdmin() || isAdminAkademik()) {
-                // Record Staff Attendance for Admin (Bypass agenda check for testing/manual)
-                if (guruId) {
-                    try {
-                        const testJam = 1
-                        const { data: existingScan } = await supabase
-                            .from('presensi_staf')
-                            .select('id')
-                            .eq('staf_id', guruId)
-                            .eq('tanggal', todayDate)
-                            .eq('referensi_id', qrId)
-                            .eq('jam_ke', testJam)
-                            .maybeSingle()
-
-                        if (!existingScan) {
-                            await supabase.from('presensi_staf').insert({
-                                staf_id: guruId,
-                                tanggal: todayDate,
-                                tipe: qrType,
-                                referensi_id: qrId,
-                                jam_ke: testJam,
-                                waktu_scan: new Date().toISOString()
-                            })
-                            console.log('Presensi staf tercatat (Mode Admin Bypass)')
-                        }
-                    } catch (dbErr) {
-                        console.warn('Gagal mencatat presensi staf Admin:', dbErr.message)
-                    }
-                }
-
-                sessionStorage.setItem(`SITAQUA_SCAN_${qrId}`, 'true')
-                showToast.success('QR Terverifikasi (Mode Admin)')
-                navigate(`/absensi/agenda?kelas_id=${qrId}`)
-            } else {
-                showToast.error('Jadwal tidak ditemukan untuk lokasi ini hari ini.')
-            }
+            showToast.success(result.message)
+            navigate(`/absensi/agenda?jadwal_id=${result.targetJadwal.id}&t=${Date.now()}`)
         } catch (err) {
             console.error('Scan process error:', err)
             showToast.error('Terjadi kesalahan saat memproses data QR.')
@@ -379,7 +149,6 @@ const AbsensiPortal = () => {
         <div className="max-w-4xl mx-auto space-y-12 pb-36 px-4">
             {/* Background Decorations */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-                {/* Custom Image Background */}
                 <div
                     className="absolute inset-0 opacity-[0.07]"
                     style={{
@@ -390,7 +159,6 @@ const AbsensiPortal = () => {
                     }}
                 ></div>
 
-                {/* Blob Decorations (hidden on small mobile) */}
                 <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-emerald-100/30 rounded-full blur-[100px] hidden sm:block"></div>
                 <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-indigo-100/30 rounded-full blur-[80px] hidden sm:block"></div>
             </div>
@@ -415,49 +183,54 @@ const AbsensiPortal = () => {
                         </p>
                     </div>
 
-                    {/* Gerbang Pijar Trigger Button */}
-                    <div className="flex justify-center mb-6">
+                    {/* Dynamic Shortcut Button */}
+                    <div className="pt-2 flex justify-center">
                         <button
-                            onClick={() => navigate('/absensi/gerbang-pijar')}
-                            className="group flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
+                            onClick={() => navigate('/absensi/gerbang')}
+                            className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 border border-white/20"
                         >
-                            <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
-                            <span className="text-xs font-black uppercase tracking-[0.2em]">Gerbang Pijar</span>
-                            <ArrowRight size={16} className="opacity-50 group-hover:translate-x-1 group-hover:opacity-100 transition-all" />
+                            <Sparkles size={18} className="animate-spin-slow text-amber-200" />
+                            <span>Gerbang Pijar</span>
+                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                         </button>
-                    </div>
-
-                    {/* Minimal Date/Time Widget */}
-                    <div className="flex items-center justify-center gap-3">
-                        <div className="px-5 py-3 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-sm flex items-center gap-3">
-                            <Calendar size={18} className="text-emerald-500" />
-                            <div className="text-left">
-                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter leading-none">Hari Ini</p>
-                                <p className="text-xs font-bold text-gray-800">{todayStr}</p>
-                            </div>
-                        </div>
-                        <div className="px-5 py-3 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60 shadow-sm flex items-center gap-3">
-                            <Clock size={18} className="text-indigo-500" />
-                            <div className="text-left">
-                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter leading-none">Waktu</p>
-                                <p className="text-xs font-bold text-gray-800 tabular-nums">
-                                    {timeStr}<span className="opacity-40 ml-0.5">{secondStr}</span>
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </header>
 
-                {/* Primary Action Card - Redesigned for Premium Look */}
-                <section className="relative">
+                {/* Clock & Today Status Bar */}
+                <section className="bg-white/80 backdrop-blur-xl border border-gray-100 shadow-xl shadow-gray-200/50 rounded-[2.5rem] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                            <Calendar size={24} />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black tracking-widest text-emerald-600 uppercase">Hari Ini</span>
+                            <h3 className="text-lg md:text-xl font-black text-gray-800 tracking-tight capitalize">{todayStr}</h3>
+                        </div>
+                    </div>
+
+                    <div className="h-px w-full md:w-px md:h-12 bg-gray-100"></div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
+                            <Clock size={24} />
+                        </div>
+                        <div>
+                            <span className="text-[10px] font-black tracking-widest text-teal-600 uppercase">Waktu</span>
+                            <div className="flex items-baseline gap-1">
+                                <h3 className="text-2xl font-black text-gray-800 tracking-tight font-mono">{timeStr}</h3>
+                                <span className="text-xs font-bold text-gray-400 font-mono">{secondStr}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Primary Action Hero: SCAN QR */}
+                <section>
                     <button
                         onClick={() => setIsScannerOpen(true)}
-                        className="group w-full relative overflow-hidden rounded-[3.5rem] p-8 md:p-12 text-left transition-all duration-500 hover:scale-[1.02] active:scale-[0.98] shadow-[0_30px_60px_-15px_rgba(16,185,129,0.25)] hover:shadow-[0_40px_80px_-15px_rgba(16,185,129,0.35)]"
+                        disabled={isProcessing}
+                        className="group relative w-full overflow-hidden rounded-[3rem] bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-950 p-8 md:p-14 text-left shadow-2xl shadow-emerald-950/20 hover:shadow-emerald-900/30 transition-all duration-500 hover:scale-[1.01] active:scale-[0.99] border border-emerald-500/20"
                     >
-                        {/* Gradient Background */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500"></div>
-
-                        {/* Glass Overlay Patterns */}
                         <div className="absolute top-0 right-0 w-1/2 h-full bg-white/10 skew-x-12 translate-x-24 transition-transform duration-1000 group-hover:translate-x-32"></div>
 
                         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 md:gap-12">
@@ -473,7 +246,7 @@ const AbsensiPortal = () => {
                                 <div className="space-y-1">
                                     <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">Scan QR Absensi</h2>
                                     <p className="text-emerald-50 font-medium text-sm md:text-base opacity-90 max-w-lg leading-relaxed">
-                                        Lakukan pemindaian kode QR di lokasi untuk langsung menuju pengisian jurnal dan presensi santri.
+                                        Lakukan pemindaian kode QR di lokasi untuk langsung menuju pengisian jurnal dan presensi santri sesuai jam mengajar Anda.
                                     </p>
                                 </div>
 
@@ -483,13 +256,11 @@ const AbsensiPortal = () => {
                                 </div>
                             </div>
 
-                            {/* Arrow Indicator Circle */}
                             <div className="hidden md:flex items-center justify-center w-20 h-20 rounded-full border-2 border-white/20 text-white group-hover:bg-white group-hover:text-emerald-600 transition-all duration-500 shadow-lg">
                                 <Camera size={32} />
                             </div>
                         </div>
 
-                        {/* Animated Sparkles or Blobs */}
                         <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-colors"></div>
                     </button>
                 </section>
@@ -512,7 +283,6 @@ const AbsensiPortal = () => {
                     </button>
                 </section>
 
-
                 {/* Secondary Actions / Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* QR Code Security Card */}
@@ -530,7 +300,6 @@ const AbsensiPortal = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Decorative Background Icon */}
                         <QrCode size={120} className="absolute -bottom-10 -right-10 text-white/[0.03] -rotate-12 transition-transform duration-1000 group-hover:scale-110 group-hover:rotate-0" />
                     </div>
 

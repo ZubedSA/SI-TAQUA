@@ -216,8 +216,12 @@ const AgendaMengajar = () => {
     }
 
     useEffect(() => {
-        if (scannedJadwalId && jurnalList.length > 0 && !selectedJadwal) {
+        if (scannedJadwalId) {
             const targetId = String(scannedJadwalId).trim()
+            if (selectedJadwal && String(selectedJadwal.id).trim() === targetId) {
+                return
+            }
+
             const found = jurnalList.find(j => String(j.id).trim() === targetId)
             
             if (found) {
@@ -227,10 +231,22 @@ const AgendaMengajar = () => {
                     const doubleCheck = jurnalList.find(j => String(j.id).trim() === targetId)
                     if (doubleCheck) {
                         openJurnalForm(doubleCheck)
-                    } else if (!selectedJadwal) {
-                        showToast.error('Jadwal tidak ditemukan atau bukan jadwal Anda hari ini.')
+                    } else {
+                        // Fallback query langsung dari DB jika ada jeda reload state
+                        supabase
+                            .from('jadwal_pelajaran')
+                            .select('*, mapel(nama), kelas(nama), halaqoh(nama)')
+                            .eq('id', targetId)
+                            .maybeSingle()
+                            .then(({ data: dbJadwal }) => {
+                                if (dbJadwal) {
+                                    openJurnalForm(dbJadwal)
+                                } else if (!selectedJadwal) {
+                                    showToast.error('Jadwal tidak ditemukan atau bukan jadwal Anda hari ini.')
+                                }
+                            })
                     }
-                }, 1000)
+                }, 400)
                 return () => clearTimeout(timer)
             }
         }
@@ -249,9 +265,8 @@ const AgendaMengajar = () => {
 
         if (!isSystemAdmin) {
             const now = new Date()
-            const dayNameRaw = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(now)
-            const capitalizedDay = dayNameRaw.charAt(0).toUpperCase() + dayNameRaw.slice(1).toLowerCase()
-            const currentDay = capitalizedDay === 'Minggu' ? 'Ahad' : capitalizedDay
+            const DAYS = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+            const currentDay = DAYS[now.getDay()]
             const currentTime = now.getHours() * 60 + now.getMinutes()
             
             if (jadwalItem.hari !== currentDay) {
