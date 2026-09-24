@@ -197,32 +197,28 @@ const AbsensiPortal = () => {
                 </header>
 
                 {/* Clock & Today Status Bar */}
-                <section className="bg-white/80 backdrop-blur-xl border border-gray-100 shadow-xl shadow-gray-200/50 rounded-[2.5rem] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                            <Calendar size={24} />
-                        </div>
-                        <div>
-                            <span className="text-[10px] font-black tracking-widest text-emerald-600 uppercase">Hari Ini</span>
-                            <h3 className="text-lg md:text-xl font-black text-gray-800 tracking-tight capitalize">{todayStr}</h3>
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div className="bg-white/90 backdrop-blur-xl border border-gray-100/80 shadow-sm rounded-3xl p-4 md:p-5 flex items-center gap-3 md:gap-3.5">
+                        <Calendar size={20} className="text-gray-700 shrink-0" />
+                        <div className="min-w-0">
+                            <span className="text-[9px] md:text-[10px] font-black tracking-widest text-gray-400 uppercase block mb-0.5">HARI INI</span>
+                            <p className="text-xs md:text-sm font-bold text-gray-900 tracking-tight capitalize leading-tight">
+                                {todayStr}
+                            </p>
                         </div>
                     </div>
 
-                    <div className="h-px w-full md:w-px md:h-12 bg-gray-100"></div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shrink-0">
-                            <Clock size={24} />
-                        </div>
-                        <div>
-                            <span className="text-[10px] font-black tracking-widest text-teal-600 uppercase">Waktu</span>
+                    <div className="bg-white/90 backdrop-blur-xl border border-gray-100/80 shadow-sm rounded-3xl p-4 md:p-5 flex items-center gap-3 md:gap-3.5">
+                        <Clock size={20} className="text-gray-700 shrink-0" />
+                        <div className="min-w-0">
+                            <span className="text-[9px] md:text-[10px] font-black tracking-widest text-gray-400 uppercase block mb-0.5">WAKTU</span>
                             <div className="flex items-baseline gap-1">
-                                <h3 className="text-2xl font-black text-gray-800 tracking-tight font-mono">{timeStr}</h3>
-                                <span className="text-xs font-bold text-gray-400 font-mono">{secondStr}</span>
+                                <span className="text-base md:text-lg font-black text-gray-900 font-mono tracking-tight">{timeStr}</span>
+                                <span className="text-[10px] md:text-xs font-bold text-gray-400 font-mono">{secondStr}</span>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
 
                 {/* Primary Action Hero: SCAN QR */}
                 <section>

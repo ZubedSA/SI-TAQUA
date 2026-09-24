@@ -111,7 +111,7 @@ export const processAbsensiScan = async ({
             .from('jadwal_pelajaran')
             .select('*, mapel(nama), kelas(nama), halaqoh(nama)')
             .eq('hari', dayName)
-            .or(`halaqoh_id.eq.${qrId},referensi_id.eq.${qrId}`)
+            .eq('halaqoh_id', qrId)
             .order('jam_ke')
 
         if (jErr) {
