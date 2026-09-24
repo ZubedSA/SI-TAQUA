@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
     ChevronLeft, User, Phone, Mail, Save, Loader,
-    GraduationCap, BookOpen, LogOut, Shield, Lock, Key, Eye, EyeOff
+    GraduationCap, BookOpen, LogOut, Shield, Lock, Key, Eye, EyeOff, ShieldCheck
 } from 'lucide-react'
+import KartuSantriModal from '../../../components/santri/KartuSantriModal'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import { useCalendar } from '../../../context/CalendarContext'
@@ -26,6 +27,7 @@ const ProfilWaliPage = () => {
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [santriList, setSantriList] = useState([])
+    const [selectedCardSantri, setSelectedCardSantri] = useState(null)
 
     // Form state
     const [formData, setFormData] = useState({
@@ -422,12 +424,21 @@ const ProfilWaliPage = () => {
                                             </div>
                                         </div>
 
-                                        <Link
-                                            to={`/wali/akademik/halaqoh`}
-                                            className="w-full py-3 bg-white text-indigo-600 border-2 border-indigo-50 hover:bg-indigo-600 hover:text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all text-center shadow-sm"
-                                        >
-                                            Detail Akademik
-                                        </Link>
+                                        <div className="w-full grid grid-cols-2 gap-2">
+                                            <Link
+                                                to={`/wali/akademik/halaqoh`}
+                                                className="w-full py-2.5 bg-white text-indigo-600 border border-indigo-100 hover:bg-indigo-600 hover:text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all text-center shadow-xs flex items-center justify-center"
+                                            >
+                                                Akademik
+                                            </Link>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedCardSantri(santri)}
+                                                className="w-full py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 hover:bg-emerald-600 hover:text-white rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all text-center shadow-xs flex items-center justify-center gap-1"
+                                            >
+                                                <ShieldCheck size={13} /> Kartu KTS
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-100/40 transition-colors"></div>
                                 </div>
@@ -456,6 +467,13 @@ const ProfilWaliPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Kartu Santri Modal */}
+            <KartuSantriModal
+                isOpen={Boolean(selectedCardSantri)}
+                onClose={() => setSelectedCardSantri(null)}
+                santri={selectedCardSantri}
+            />
         </div>
     )
 }

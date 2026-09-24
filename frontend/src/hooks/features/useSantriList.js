@@ -15,7 +15,7 @@ export const useSantriList = (status = 'Aktif') => {
                 let query = supabase
                     .from('santri')
                     .select(`
-                        id, nis, nama, status, jenis_kelamin, tempat_lahir, tanggal_lahir, alamat, nama_wali, no_telp_wali, kelas_id, halaqoh_id, angkatan_id,
+                        id, nis, nama, status, jenis_kelamin, tempat_lahir, tanggal_lahir, alamat, nama_wali, no_telp_wali, kelas_id, halaqoh_id, angkatan_id, foto_url,
                         kelas:kelas!kelas_id(nama),
                         halaqoh:halaqoh!halaqoh_id(nama)
                     `)

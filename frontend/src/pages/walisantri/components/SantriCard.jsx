@@ -1,11 +1,11 @@
-import { User, GraduationCap, BookOpen, CheckCircle, AlertCircle, Clock } from 'lucide-react'
+import { User, GraduationCap, BookOpen, CheckCircle, AlertCircle, Clock, ShieldCheck } from 'lucide-react'
 
 /**
  * SantriCard - Card untuk menampilkan info santri
  * Digunakan di dashboard dan halaman lain untuk menampilkan info santri
  * Refactored to use Tailwind CSS (Phase 2)
  */
-const SantriCard = ({ santri, selected = false, onClick, showDetails = false }) => {
+const SantriCard = ({ santri, selected = false, onClick, showDetails = false, onViewCard }) => {
     if (!santri) return null
 
     const getStatusConfig = (status) => {
@@ -76,6 +76,19 @@ const SantriCard = ({ santri, selected = false, onClick, showDetails = false }) 
                         </div>
                     )}
                 </div>
+            )}
+
+            {onViewCard && (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onViewCard(santri)
+                    }}
+                    className="mt-3 w-full py-1.5 px-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-emerald-200/60"
+                >
+                    <ShieldCheck size={14} /> Kartu Santri
+                </button>
             )}
         </div>
     )

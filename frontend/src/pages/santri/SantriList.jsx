@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Plus, Search, Edit, Trash2, Eye, RefreshCw, Upload, FileSpreadsheet, X, MoreVertical, UserX } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Eye, RefreshCw, Upload, FileSpreadsheet, X, MoreVertical, UserX, ShieldCheck, User } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import KartuSantriModal from '../../components/santri/KartuSantriModal'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { logDelete } from '../../lib/auditLog'
@@ -40,6 +41,17 @@ const SantriList = () => {
     // Delete state
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [selectedSantri, setSelectedSantri] = useState(null)
+
+    // Kartu Santri state
+    const [showCardModal, setShowCardModal] = useState(false)
+    const [selectedCardSantri, setSelectedCardSantri] = useState(null)
+    const [cardModalIndex, setCardModalIndex] = useState(0)
+
+    const handleOpenCard = (row, index = 0) => {
+        setSelectedCardSantri(row)
+        setCardModalIndex(index)
+        setShowCardModal(true)
+    }
 
     // Performance: Use Cached Hook - Fetch all statuses to support tab counts
     const { data: rawSantri = [], isLoading: loading, error, refetch } = useSantriList('semua')
@@ -488,7 +500,20 @@ const SantriList = () => {
                 description="Kelola data santri pondok pesantren"
                 icon={UserX}
                 actions={
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (filteredSantri.length > 0) {
+                                    handleOpenCard(filteredSantri[0], 0)
+                                } else {
+                                    showToast.error('Tidak ada santri untuk ditampilkan kartunya')
+                                }
+                            }}
+                            className="text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 font-bold"
+                        >
+                            <ShieldCheck size={18} /> Kartu Santri
+                        </Button>
                         <DownloadButton
                             onDownloadPDF={handleDownloadPDF}
                             onDownloadExcel={handleDownloadExcel}
@@ -583,12 +608,21 @@ const SantriList = () => {
                         { 
                             header: 'Identitas Santri', 
                             render: (row) => (
-                                <div className="flex flex-col">
-                                    <div className="font-black text-gray-900 leading-tight">{row.nama}</div>
-                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">NIS: {row.nis}</div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-emerald-50 border border-emerald-100 shrink-0 flex items-center justify-center text-emerald-700 font-bold shadow-xs">
+                                        {row.foto_url ? (
+                                            <img src={row.foto_url} alt={row.nama} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="text-xs font-black">{row.nama?.charAt(0) || 'S'}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <div className="font-black text-gray-900 leading-tight truncate">{row.nama}</div>
+                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">NIS: {row.nis}</div>
+                                    </div>
                                 </div>
                             ),
-                            className: 'px-8 py-5',
+                            className: 'px-6 py-4',
                             hideOnMobile: true
                         },
                         { 
@@ -634,6 +668,13 @@ const SantriList = () => {
                             className: 'px-8 py-5 text-right',
                             render: (row) => (
                                 <div className="flex items-center justify-end gap-2 transition-all">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleOpenCard(row, filteredSantri.findIndex(s => s.id === row.id)) }} 
+                                        className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" 
+                                        title="Kartu Santri (KTS)"
+                                    >
+                                        <ShieldCheck size={18} />
+                                    </button>
                                     <Link to={`/santri/${row.id}`} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Detail"><Eye size={18} /></Link>
                                     <Link to={`/santri/${row.id}/edit`} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="Edit"><Edit size={18} /></Link>
                                     <button onClick={(e) => { e.stopPropagation(); setSelectedSantri(row); setShowDeleteModal(true) }} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Hapus"><Trash2 size={18} /></button>
@@ -651,14 +692,24 @@ const SantriList = () => {
                         />
                     }
                     mobileCardHeader={(row) => (
-                        <div className="flex flex-col" onClick={() => navigate(`/santri/${row.id}`)}>
-                            <div className="font-black text-gray-900 text-base leading-tight">{row.nama}</div>
-                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">NIS: {row.nis}</div>
+                        <div className="flex items-center gap-3" onClick={() => navigate(`/santri/${row.id}`)}>
+                            <div className="w-11 h-11 rounded-xl overflow-hidden bg-emerald-50 border border-emerald-100 shrink-0 flex items-center justify-center text-emerald-700 font-bold">
+                                {row.foto_url ? (
+                                    <img src={row.foto_url} alt={row.nama} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs font-black">{row.nama?.charAt(0) || 'S'}</span>
+                                )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <div className="font-black text-gray-900 text-base leading-tight truncate">{row.nama}</div>
+                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">NIS: {row.nis}</div>
+                            </div>
                         </div>
                     )}
                     mobileCardActions={(row) => (
                         <MobileActionMenu
                             actions={[
+                                { icon: <ShieldCheck size={16} />, label: 'Kartu Santri', onClick: () => handleOpenCard(row, filteredSantri.findIndex(s => s.id === row.id)) },
                                 { icon: <Eye size={16} />, label: 'Detail', path: `/santri/${row.id}` },
                                 { icon: <Edit size={16} />, label: 'Edit', path: `/santri/${row.id}/edit` },
                                 { icon: <Trash2 size={16} />, label: 'Hapus', onClick: () => { setSelectedSantri(row); setShowDeleteModal(true) }, danger: true }
@@ -864,6 +915,19 @@ const SantriList = () => {
                 onConfirm={handleDelete}
                 itemName={selectedSantri?.nama}
                 message={`Apakah Anda yakin ingin menghapus santri ${selectedSantri?.nama}? Tindakan ini tidak dapat dibatalkan.`}
+            />
+
+            {/* Kartu Santri Modal */}
+            <KartuSantriModal
+                isOpen={showCardModal}
+                onClose={() => setShowCardModal(false)}
+                santri={selectedCardSantri}
+                santriList={filteredSantri}
+                currentIndex={cardModalIndex}
+                onNavigateIndex={(newIdx) => {
+                    setCardModalIndex(newIdx)
+                    setSelectedCardSantri(filteredSantri[newIdx])
+                }}
             />
 
             {/* Mobile Floating Action Button (FAB) */}

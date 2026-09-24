@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
     BookOpen, Wallet, Calendar, Bell, CheckCircle, AlertCircle,
-    Clock, TrendingUp, ChevronRight, RefreshCw, User
+    Clock, TrendingUp, ChevronRight, RefreshCw, User, ShieldCheck
 } from 'lucide-react'
+import KartuSantriModal from '../../../components/santri/KartuSantriModal'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../../context/AuthContext'
 import { useCalendar } from '../../../context/CalendarContext'
@@ -30,6 +31,8 @@ const WaliDashboardPage = () => {
         tagihanBelumLunas: [],
         pengumumanTerbaru: []
     })
+    const [showCardModal, setShowCardModal] = useState(false)
+    const [cardModalSantri, setCardModalSantri] = useState(null)
 
     // Fetch santri list milik wali
     const fetchSantriList = async () => {
@@ -218,6 +221,10 @@ const WaliDashboardPage = () => {
                                     santri={santri}
                                     selected={selectedSantri?.id === santri.id}
                                     onClick={() => setSelectedSantri(santri)}
+                                    onViewCard={(s) => {
+                                        setCardModalSantri(s)
+                                        setShowCardModal(true)
+                                    }}
                                 />
                             </div>
                         ))}
@@ -228,6 +235,37 @@ const WaliDashboardPage = () => {
             {/* Main Info Display (If only 1 santri or currently showing details) */}
             {selectedSantri && (
                 <div className="space-y-8">
+                    {/* Santri Quick Banner with Kartu Santri Action */}
+                    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-12 h-14 rounded-xl overflow-hidden bg-emerald-50 border-2 border-emerald-500/30 flex items-center justify-center shrink-0 shadow-xs">
+                                {selectedSantri.foto_url ? (
+                                    <img src={selectedSantri.foto_url} alt={selectedSantri.nama} className="w-full h-full object-cover" />
+                                ) : (
+                                    <User size={24} className="text-emerald-700" />
+                                )}
+                            </div>
+                            <div>
+                                <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Santri Terpilih</div>
+                                <h2 className="text-lg font-black text-gray-900 leading-tight">{selectedSantri.nama}</h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    NIS: <span className="font-mono font-bold text-gray-700">{selectedSantri.nis}</span> • Kelas: {selectedSantri.kelas?.nama || '-'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setCardModalSantri(selectedSantri)
+                                setShowCardModal(true)
+                            }}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all active:scale-95 shrink-0"
+                        >
+                            <ShieldCheck size={16} /> Kartu Santri (KTS)
+                        </button>
+                    </div>
+
                     {/* Stats Grid - Glassmorphism Premium */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                         {/* Hafalan Card */}
@@ -413,6 +451,13 @@ const WaliDashboardPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Kartu Santri Modal */}
+            <KartuSantriModal
+                isOpen={showCardModal}
+                onClose={() => setShowCardModal(false)}
+                santri={cardModalSantri || selectedSantri}
+            />
         </div>
     )
 }
