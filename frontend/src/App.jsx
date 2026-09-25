@@ -58,6 +58,7 @@ const RaportWaliPage = lazy(() => import('./pages/walisantri/laporan/RaportWaliP
 // Other Pages
 const ProfilSettingsPage = lazy(() => import('./pages/profil/ProfilSettingsPage'));
 const MessagesPage = lazy(() => import('./pages/messages/MessagesPage'));
+const VerifikasiSantriPage = lazy(() => import('./pages/public/VerifikasiSantriPage'));
 
 import './index.css'
 import './components/common/ErrorBoundary.css'
@@ -105,7 +106,11 @@ const AbsensiIsolationManager = ({ children }) => {
   useEffect(() => {
     const isAbsensiMode = localStorage.getItem('sitaqua_absensi_mode') === 'true'
     const isAbsensiPath = location.pathname.startsWith('/absensi')
-    const isPublicPath = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/absensi/login'
+    const isPublicPath = location.pathname === '/' || 
+                         location.pathname === '/login' || 
+                         location.pathname === '/absensi/login' ||
+                         location.pathname.startsWith('/verifikasi') ||
+                         location.pathname.startsWith('/v/')
     const isMainSystemPath = location.pathname.startsWith('/dashboard') || 
                              location.pathname.startsWith('/home') ||
                              location.pathname.startsWith('/role-selection') ||
@@ -172,6 +177,8 @@ function App() {
                     {/* Public Routes */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/verifikasi/santri/:nis" element={<VerifikasiSantriPage />} />
+                    <Route path="/v/:nis" element={<VerifikasiSantriPage />} />
                     
                     {/* Absensi Portal Routes */}
                     <Route path="/absensi/login" element={<AbsensiLogin />} />
