@@ -561,7 +561,7 @@ const HafalanList = () => {
                 <head>
                     <title>Rekap Hafalan - PTQA Batuan</title>
                     <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        body { font-family: 'Open Sans', Arial, sans-serif; margin: 20px; }
                         h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
                         .subtitle { text-align: center; color: #666; margin-bottom: 20px; }
                         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -1282,7 +1282,7 @@ const HafalanList = () => {
                                                     <meta charset="utf-8">
                                                     <title>Laporan Pencapaian Hafalan</title>
                                                     <style>
-                                                        body { font-family: Arial, sans-serif; padding: 20px; }
+                                                        body { font-family: 'Open Sans', Arial, sans-serif; padding: 20px; }
                                                         h1 { text-align: center; margin-bottom: 10px; color: #059669; }
                                                         .info { margin-bottom: 20px; }
                                                         table { width: 100%; border-collapse: collapse; margin-top: 10px; }

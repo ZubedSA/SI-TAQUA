@@ -21,7 +21,9 @@ import {
     X,
     Edit2,
     ArrowLeft,
-    ClipboardList
+    ClipboardList,
+    AlertCircle,
+    Briefcase
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -38,7 +40,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-import { calculateAutoPresensi, getResolvedAttendance, findStaffScan, isStaffScanMatch } from '../../utils/attendanceHelper'
+import { calculateAutoPresensi, getResolvedAttendance, findStaffScan, isStaffScanMatch, isBeforeScheduleActive, getLocalDateStr } from '../../utils/attendanceHelper'
 
 const AdminAbsensiPage = () => {
     const navigate = useNavigate()
@@ -79,6 +81,7 @@ const AdminAbsensiPage = () => {
     const [editingSession, setEditingSession] = useState(null)
     const [manualKeterangan, setManualKeterangan] = useState('')
     const [manualStatus, setManualStatus] = useState('Hadir')
+    const [isSavingManual, setIsSavingManual] = useState(false)
     const [allJadwal, setAllJadwal] = useState([])
     const [filterType, setFilterType] = useState('Semua') // 'Semua', 'Madrosah', 'Quraniyah'
     const [filterKelasId, setFilterKelasId] = useState('')
@@ -450,7 +453,7 @@ const AdminAbsensiPage = () => {
                 <meta charset="utf-8">
                 <title>${title}</title>
                 <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; }
+                    body { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, Arial, sans-serif; }
                     h2 { text-align: center; margin-bottom: 5px; color: #111827; }
                     p.subtitle { text-align: center; margin-top: 0; color: #6b7280; font-size: 14px; margin-bottom: 30px; }
                     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -493,7 +496,7 @@ const AdminAbsensiPage = () => {
         const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes, profilesRes] = await Promise.all([
             supabase.from('jadwal_pelajaran').select('*'),
             supabase.from('halaqoh').select('id, nama, musyrif_id'),
-            supabase.from('guru').select('id, nama, email, user_id, status'),
+            supabase.from('guru').select('id, nama, email, user_id, status, created_at'),
             supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
             supabase.from('user_profiles').select('user_id, nama, email, guru_id')
         ])
@@ -601,7 +604,7 @@ const AdminAbsensiPage = () => {
     }
 
     const fetchGuru = async () => {
-        const { data } = await supabase.from('guru').select('id, nama').order('nama')
+        const { data } = await supabase.from('guru').select('id, nama, email, created_at').order('nama')
         setGuruList(data || [])
     }
 
@@ -628,49 +631,32 @@ const AdminAbsensiPage = () => {
                 .from('presensi_staf')
                 .select('*')
             
-            let queryMapel = supabase
-                .from('presensi_mapel')
-                .select('*')
-                .eq('status', 'Terlaksana')
-            
             let queryIzin = supabase
                 .from('izin_guru')
                 .select('*')
                 .eq('status', 'Disetujui')
+                .order('created_at', { ascending: false })
 
             if (activeTab === 'laporan') {
                 query = query.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
-                queryMapel = queryMapel.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
                 queryIzin = queryIzin.lte('tanggal_mulai', filterEndDate).gte('tanggal_selesai', filterStartDate)
             } else {
                 query = query.eq('tanggal', filterDate)
-                queryMapel = queryMapel.eq('tanggal', filterDate)
                 queryIzin = queryIzin.lte('tanggal_mulai', filterDate).gte('tanggal_selesai', filterDate)
             }
 
-            const [resPresensi, resMapel, resIzin] = await Promise.all([
+            const [resPresensi, resIzin] = await Promise.all([
                 query.order('waktu_scan', { ascending: false }),
-                queryMapel,
                 queryIzin
             ])
 
             if (resPresensi.error) console.warn('Warning fetching presensi_staf:', resPresensi.error)
-            if (resMapel.error) console.warn('Warning fetching presensi_mapel:', resMapel.error)
             if (resIzin.error) console.warn('Warning fetching izin_guru:', resIzin.error)
 
             const rawStaf = resPresensi.data || []
-            const rawMapel = (resMapel.data || []).map(m => ({
-                id: `mapel_${m.id}`,
-                staf_id: m.guru_id,
-                tanggal: m.tanggal,
-                tipe: m.halaqoh_id ? 'QURANIYAH' : 'MADROSAH',
-                referensi_id: m.kelas_id || m.halaqoh_id,
-                jadwal_id: m.jadwal_id,
-                waktu_scan: m.created_at || `${m.tanggal}T08:00:00Z`,
-                source: 'jurnal'
-            }))
-
-            setPresensiStaf([...rawStaf, ...rawMapel])
+            // Kehadiran staf HANYA diambil dari presensi_staf (scan QR asli atau penyesuaian manual Admin),
+            // TIDAK otomatis hadir hanya karena daftar hadir/jurnal santri diisi.
+            setPresensiStaf(rawStaf)
             setIzinGuruList(resIzin.data || [])
         } catch (err) {
             console.error('Error fetching presensi staf:', err)
@@ -682,13 +668,38 @@ const AdminAbsensiPage = () => {
     }
 
     const handleSaveManualStatus = async () => {
-        if (!editingSession || !selectedGuruId) return
+        if (!editingSession || !selectedGuruId || isSavingManual) return
+        setIsSavingManual(true)
 
-        const finalKeterangan = (manualKeterangan || '').trim() || (manualStatus === 'Hadir' ? 'Penyesuaian Hadir Manual oleh Admin' : `Izin ${manualStatus} disetujui Admin`)
+        const finalKeterangan = (manualKeterangan || '').trim() || (manualStatus === 'Hadir' ? 'Penyesuaian Hadir Manual oleh Admin' : manualStatus === 'Alpha' ? 'Direset ke Alpha oleh Admin' : `Izin ${manualStatus} disetujui Admin`)
 
         try {
+            // 1. Bersihkan presensi_staf scan untuk sesi tanggal dan jam tersebut (jika ada)
+            let delPresensiQuery = supabase
+                .from('presensi_staf')
+                .delete()
+                .eq('staf_id', selectedGuruId)
+                .eq('tanggal', editingSession.tanggal)
+
+            if (editingSession.jam_ke) {
+                delPresensiQuery = delPresensiQuery.eq('jam_ke', editingSession.jam_ke)
+            }
+            if (editingSession.referensi_id) {
+                delPresensiQuery = delPresensiQuery.eq('referensi_id', editingSession.referensi_id)
+            }
+            await delPresensiQuery
+
+            // 2. Bersihkan atau selaraskan izin_guru yang bertanggal sama agar tidak ada duplikasi data
+            await supabase
+                .from('izin_guru')
+                .delete()
+                .eq('guru_id', selectedGuruId)
+                .eq('tanggal_mulai', editingSession.tanggal)
+                .eq('tanggal_selesai', editingSession.tanggal)
+
+            // 3. Terapkan status baru sesuai pilihan Admin
             if (manualStatus === 'Hadir') {
-                const { error } = await supabase
+                const { error: insErr } = await supabase
                     .from('presensi_staf')
                     .insert({
                         staf_id: selectedGuruId,
@@ -698,10 +709,12 @@ const AdminAbsensiPage = () => {
                         jam_ke: editingSession.jam_ke,
                         waktu_scan: new Date().toISOString()
                     })
-
-                if (error) throw error
+                if (insErr) throw insErr
+            } else if (manualStatus === 'Alpha') {
+                // Untuk Alpha, penghapusan presensi_staf dan izin_guru di atas sudah mengembalikan status ke Alpha default.
             } else {
-                const { error } = await supabase
+                // Status Sakit / Izin / Dinas
+                const { error: izinErr } = await supabase
                     .from('izin_guru')
                     .insert({
                         guru_id: selectedGuruId,
@@ -712,20 +725,28 @@ const AdminAbsensiPage = () => {
                         status: 'Disetujui',
                         catatan_admin: 'Diinput manual oleh Admin dari Rincian Kehadiran'
                     })
-
-                if (error) throw error
+                if (izinErr) throw izinErr
             }
 
-            showToast.success(`Status berhasil diubah menjadi ${manualStatus}`)
+            // 4. Refetch data terbaru secara aman
+            try {
+                await Promise.all([
+                    fetchPresensiStaf(),
+                    fetchAllJadwal()
+                ])
+            } catch (refetchErr) {
+                console.warn('Peringatan saat menyegarkan data:', refetchErr)
+            }
+
+            showToast.success(`Status berhasil diubah menjadi ${manualStatus === 'Alpha' ? 'Alpha / Default' : manualStatus}`)
             setEditingSession(null)
             setManualKeterangan('')
             setManualStatus('Hadir')
-            fetchPresensiStaf()
-            fetchAllJadwal()
-            fetchData() // Refresh jadwal/izin juga
         } catch (err) {
             console.error('Error manual adjustment:', err)
-            showToast.error('Gagal mengubah status')
+            showToast.error(`Gagal mengubah status: ${err.message || 'Terjadi kesalahan sistem'}`)
+        } finally {
+            setIsSavingManual(false)
         }
     }
 
@@ -961,7 +982,27 @@ const AdminAbsensiPage = () => {
             }
         })
 
-        // 3. Iterasi setiap hari dan bandingkan dengan jadwal
+        // 3. Kumpulkan tanggal awal aktivitas presensi untuk setiap guru dalam rentang laporan
+        // Memastikan guru/musyrif yang baru aktif/mengajar pada tanggal tertentu tidak dicatat Alpha di masa lampau
+        const guruEarliestActivity = {}
+        presensiStaf.forEach(p => {
+            if (p.staf_id && p.tanggal) {
+                if (!guruEarliestActivity[p.staf_id] || p.tanggal < guruEarliestActivity[p.staf_id]) {
+                    guruEarliestActivity[p.staf_id] = p.tanggal
+                }
+            }
+        })
+        izinGuruList.forEach(i => {
+            if (i.guru_id && i.tanggal_mulai) {
+                if (!guruEarliestActivity[i.guru_id] || i.tanggal_mulai < guruEarliestActivity[i.guru_id]) {
+                    guruEarliestActivity[i.guru_id] = i.tanggal_mulai
+                }
+            }
+        })
+        const allActDates = Object.values(guruEarliestActivity).filter(Boolean).sort()
+        const systemMinActivityDate = allActDates.length > 0 ? allActDates[0] : null
+
+        // 4. Iterasi setiap hari dan bandingkan dengan jadwal
         dates.forEach(date => {
             const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
             const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
@@ -994,14 +1035,23 @@ const AdminAbsensiPage = () => {
                         status: 'Hadir'
                     })
                 } else {
+                    // Cek apakah guru atau jadwal sudah aktif pada tanggal ini
+                    // Mencegah guru baru tercatat Alpha sebelum tanggal pendaftaran/jadwal dibuat/aktivitas pertama dimulai
+                    const guru = guruList.find(g => g.id === j.guru_id)
+                    const guruFirstActivity = guruEarliestActivity[j.guru_id] || systemMinActivityDate
+                    if (isBeforeScheduleActive(dateStr, guru?.created_at, j.created_at, guruFirstActivity)) {
+                        return
+                    }
+
                     // Jika tidak scan, cek izin
-                    const hasIzin = izinGuruList.some(izin => {
+                    const matchedIzin = izinGuruList.find(izin => {
                         return izin.guru_id === j.guru_id && 
                                izin.tanggal_mulai <= dateStr && 
                                izin.tanggal_selesai >= dateStr
                     })
 
-                    if (hasIzin) {
+                    if (matchedIzin) {
+                        const jenis = matchedIzin.jenis_izin || 'Izin'
                         stafSummary[j.guru_id].Izin++
                         stafSummary[j.guru_id].totalSelesai++
                         stafSummary[j.guru_id].details.push({
@@ -1009,7 +1059,8 @@ const AdminAbsensiPage = () => {
                             jam_ke: j.jam_ke,
                             tipe: j.tipe,
                             referensi_id: j.referensi_id,
-                            status: 'Izin'
+                            status: jenis,
+                            keterangan: matchedIzin.keterangan
                         })
                     } else {
                         // Cek waktu, jika belum lewat batas, status Belum Absen
@@ -1063,7 +1114,15 @@ const AdminAbsensiPage = () => {
         const matchedScanIds = new Set()
         
         // 1. Ambil jadwal hari ini
-        const jadwalHariIni = allJadwal.filter(j => j.hari === dayName).map(j => {
+        const jadwalHariIni = allJadwal.filter(j => {
+            if (j.hari !== dayName) return false
+            const guru = guruList.find(g => g.id === j.guru_id)
+            const hasScan = dayScans.some(p => p.staf_id === j.guru_id)
+            if (!hasScan && isBeforeScheduleActive(dateStr, guru?.created_at, j.created_at)) {
+                return false
+            }
+            return true
+        }).map(j => {
             const guru = guruList.find(g => g.id === j.guru_id)
             
             // Cari scan yang cocok menggunakan helper terpadu
@@ -1078,7 +1137,7 @@ const AdminAbsensiPage = () => {
             }
 
             // Cek Izin
-            const isIzin = izinGuruList.some(izin => 
+            const matchedIzin = izinGuruList.find(izin => 
                 izin.guru_id === j.guru_id &&
                 izin.tanggal_mulai <= dateStr &&
                 izin.tanggal_selesai >= dateStr
@@ -1087,8 +1146,8 @@ const AdminAbsensiPage = () => {
             let status = 'Belum Absen'
             if (scan) {
                 status = 'Hadir'
-            } else if (isIzin) {
-                status = 'Izin'
+            } else if (matchedIzin) {
+                status = matchedIzin.jenis_izin || 'Izin'
             } else {
                 const now = new Date()
                 const classDate = new Date(dateObj)
@@ -1293,7 +1352,7 @@ const AdminAbsensiPage = () => {
                                         setFilterKelasId('')
                                         setFilterHalaqohId('')
                                     }}
-                                    className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-sm bg-gray-50/30 appearance-none"
+                                    className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs md:text-sm bg-gray-50/30 appearance-none cursor-pointer"
                                 >
                                     <option value="Semua">Semua Tipe</option>
                                     <option value="Madrosah">Madrosah (Kelas)</option>
@@ -1306,7 +1365,7 @@ const AdminAbsensiPage = () => {
                                     <select 
                                         value={filterKelasId}
                                         onChange={(e) => setFilterKelasId(e.target.value)}
-                                        className="w-full px-4 py-3.5 rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-sm bg-emerald-50/30 text-emerald-900 appearance-none"
+                                        className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs md:text-sm bg-emerald-50/30 text-emerald-900 appearance-none cursor-pointer"
                                     >
                                         <option value="">Semua Kelas</option>
                                         {kelasList.map(k => (
@@ -1320,7 +1379,7 @@ const AdminAbsensiPage = () => {
                                     <select 
                                         value={filterHalaqohId}
                                         onChange={(e) => setFilterHalaqohId(e.target.value)}
-                                        className="w-full px-4 py-3.5 rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-sm bg-blue-50/30 text-blue-900 appearance-none"
+                                        className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-xs md:text-sm bg-blue-50/30 text-blue-900 appearance-none cursor-pointer"
                                     >
                                         <option value="">Semua Halaqoh</option>
                                         {halaqohList.map(h => (
@@ -1564,11 +1623,25 @@ const AdminAbsensiPage = () => {
                                                     Hadir
                                                 </div>
                                             )
+                                        } else if (row.status === 'Sakit') {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-black text-[10px] uppercase tracking-widest border border-amber-200 shadow-sm shadow-amber-100/50">
+                                                    <AlertCircle size={12} />
+                                                    Sakit
+                                                </div>
+                                            )
                                         } else if (row.status === 'Izin') {
                                             return (
-                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-600 font-black text-[10px] uppercase tracking-widest border border-amber-100 shadow-sm shadow-amber-100/50">
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 font-black text-[10px] uppercase tracking-widest border border-blue-200 shadow-sm shadow-blue-100/50">
                                                     <ClipboardList size={12} />
                                                     Izin
+                                                </div>
+                                            )
+                                        } else if (row.status === 'Dinas') {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 font-black text-[10px] uppercase tracking-widest border border-indigo-200 shadow-sm shadow-indigo-100/50">
+                                                    <Briefcase size={12} />
+                                                    Dinas
                                                 </div>
                                             )
                                         } else if (row.status === 'Belum Absen') {
@@ -1672,7 +1745,7 @@ const AdminAbsensiPage = () => {
                                 <select 
                                     value={filterGuru}
                                     onChange={(e) => setFilterGuru(e.target.value)}
-                                    className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none font-bold text-sm bg-gray-50/30 appearance-none"
+                                    className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-gray-100 focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none font-bold text-xs md:text-sm bg-gray-50/30 appearance-none cursor-pointer"
                                 >
                                     <option value="">Semua Pengajar</option>
                                     {guruList.map(g => (
@@ -1893,13 +1966,13 @@ const AdminAbsensiPage = () => {
                         </div>
 
                         {/* Kategori & Semester Filter Bar inside Laporan Card */}
-                        <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Preset Periode Semester</label>
                                 <select 
                                     value={selectedSemesterId}
                                     onChange={(e) => handleSemesterChange(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
+                                    className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
                                 >
                                     <option value="">Rentang Kustom (Manual)</option>
                                     {semesterList.map(s => (
@@ -1919,7 +1992,7 @@ const AdminAbsensiPage = () => {
                                         setFilterKelasId('')
                                         setFilterHalaqohId('')
                                     }}
-                                    className="w-full px-4 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-gray-50/30 appearance-none"
+                                    className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-gray-50/30 appearance-none cursor-pointer"
                                 >
                                     <option value="Semua">Semua Kategori (Madrosah & Qur'aniyah)</option>
                                     <option value="Madrosah">Madrosah (Kelas)</option>
@@ -1933,7 +2006,7 @@ const AdminAbsensiPage = () => {
                                     <select 
                                         value={filterKelasId}
                                         onChange={(e) => setFilterKelasId(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
+                                        className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
                                     >
                                         <option value="">Semua Kelas</option>
                                         {kelasList.map(k => (
@@ -1949,7 +2022,7 @@ const AdminAbsensiPage = () => {
                                     <select 
                                         value={filterHalaqohId}
                                         onChange={(e) => setFilterHalaqohId(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-xs bg-blue-50/40 text-blue-900 appearance-none cursor-pointer"
+                                        className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-xs bg-blue-50/40 text-blue-900 appearance-none cursor-pointer"
                                     >
                                         <option value="">Semua Halaqoh</option>
                                         {halaqohList.map(h => (
@@ -2548,7 +2621,13 @@ const AdminAbsensiPage = () => {
                                                         
                                                         <div className="flex items-center gap-2">
                                                             <Badge 
-                                                                variant={p.status === 'Hadir' ? 'success' : p.status === 'Izin' ? 'info' : p.status === 'Belum Absen' ? 'warning' : 'danger'} 
+                                                                variant={
+                                                                    p.status === 'Hadir' ? 'success' : 
+                                                                    p.status === 'Sakit' ? 'warning' : 
+                                                                    p.status === 'Izin' ? 'info' : 
+                                                                    p.status === 'Dinas' ? 'primary' : 
+                                                                    p.status === 'Belum Absen' ? 'neutral' : 'danger'
+                                                                } 
                                                                 className="px-3 py-1 text-[9px] font-black uppercase tracking-widest"
                                                             >
                                                                 {p.status}
@@ -2581,7 +2660,7 @@ const AdminAbsensiPage = () => {
                     {editingSession && createPortal(
                         <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
                             <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setEditingSession(null)}></div>
-                            <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
+                            <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-scale-up">
                                 <div className="bg-indigo-600 p-6 text-white text-center">
                                     <h3 className="text-xl font-black">Ubah Status Kehadiran</h3>
                                     <p className="text-xs text-indigo-100 mt-1 uppercase tracking-widest font-bold">
@@ -2601,6 +2680,7 @@ const AdminAbsensiPage = () => {
                                                 <option value="Sakit">Sakit</option>
                                                 <option value="Izin">Izin</option>
                                                 <option value="Dinas">Dinas</option>
+                                                <option value="Alpha">Alpha / Reset (Hapus Penyesuaian)</option>
                                             </select>
                                         </div>
                                         <div className="space-y-2">
@@ -2608,7 +2688,7 @@ const AdminAbsensiPage = () => {
                                             <textarea 
                                                 value={manualKeterangan}
                                                 onChange={(e) => setManualKeterangan(e.target.value)}
-                                                placeholder={manualStatus === 'Hadir' ? "Opsional: Lupa scan, HP tertinggal..." : "Alasan izin/sakit..."}
+                                                placeholder={manualStatus === 'Hadir' ? "Opsional: Lupa scan, HP tertinggal..." : manualStatus === 'Alpha' ? "Reset penyesuaian..." : "Alasan izin/sakit..."}
                                                 className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm min-h-[100px] p-4 bg-gray-50 transition-all outline-none"
                                             />
                                         </div>
@@ -2621,10 +2701,11 @@ const AdminAbsensiPage = () => {
                                             Batal
                                         </button>
                                         <button 
+                                            disabled={isSavingManual}
                                             onClick={handleSaveManualStatus}
-                                            className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest active:scale-95 cursor-pointer"
+                                            className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest active:scale-95 cursor-pointer disabled:opacity-50"
                                         >
-                                            Simpan
+                                            {isSavingManual ? 'Menyimpan...' : 'Simpan'}
                                         </button>
                                     </div>
                                 </div>

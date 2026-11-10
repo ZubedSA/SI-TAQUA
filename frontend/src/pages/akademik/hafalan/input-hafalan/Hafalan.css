@@ -412,6 +412,9 @@
     .filter-group .form-select,
     .filter-group .form-input {
         min-width: 100%;
+        font-size: 0.8125rem !important;
+        padding: 8px 12px !important;
+        min-height: 38px !important;
     }
 
     .filter-group.filter-action {

@@ -128,7 +128,7 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
                     width: `${CARD_WIDTH}px`,
                     height: `${CARD_HEIGHT}px`,
                     boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(34, 197, 94, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
-                    fontFamily: "Arial, Helvetica, sans-serif"
+                    fontFamily: "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
                 }}
             >
                 {/* Watermark Logo Pondok Halus */}
@@ -311,7 +311,7 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
                 width: `${CARD_WIDTH}px`,
                 height: `${CARD_HEIGHT}px`,
                 boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(34, 197, 94, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
-                fontFamily: "Arial, Helvetica, sans-serif"
+                fontFamily: "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
             }}
         >
             {/* Watermark Logo di Belakang */}

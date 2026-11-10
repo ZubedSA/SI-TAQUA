@@ -777,6 +777,13 @@
         align-items: stretch;
     }
 
+    .ota-filter-group select,
+    .ota-filter-group input {
+        font-size: 0.8125rem !important;
+        padding: 0.4rem 0.65rem !important;
+        min-height: 36px !important;
+    }
+
     .ota-search {
         max-width: none;
     }

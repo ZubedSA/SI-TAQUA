@@ -20,7 +20,7 @@ const RaportTemplate = ({
         /* SCREEN & PRINT RAPORT STYLES (OVERRIDE GLOBAL SIOHIOMA THEME) */
         .raport-sheet {
             box-sizing: border-box !important;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             background-color: #ffffff !important;
         }
 

@@ -109,8 +109,9 @@ export default {
                 },
             },
             fontFamily: {
-                sans: ['var(--font-sans)', 'sans-serif'],
-                mono: ['var(--font-mono)', 'monospace'],
+                sans: ['"Open Sans"', 'var(--font-sans)', 'sans-serif'],
+                mono: ['"Open Sans"', 'var(--font-mono)', 'monospace'],
+                arabic: ['"Open Sans"', 'Amiri', 'serif'],
             },
             fontSize: {
                 xs: ['var(--font-size-xs)', { lineHeight: '1.4' }],

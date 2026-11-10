@@ -441,32 +441,6 @@ const AgendaMengajar = () => {
                         if (presensiError) {
                             console.warn('Sync ke tabel presensi gagal:', presensiError.message)
                         }
-
-                        // 3. Sync ke tabel 'presensi_staf' untuk status kehadiran pengajar
-                        if (selectedJadwal.guru_id) {
-                            try {
-                                const scanPayload = {
-                                    staf_id: selectedJadwal.guru_id,
-                                    tanggal: selectedDate,
-                                    tipe: selectedJadwal.tipe || (selectedJadwal.halaqoh_id ? 'QURANIYAH' : 'MADROSAH'),
-                                    referensi_id: selectedJadwal.referensi_id || selectedJadwal.kelas_id || selectedJadwal.halaqoh_id,
-                                    jam_ke: selectedJadwal.jam_ke || 1,
-                                    waktu_scan: new Date().toISOString()
-                                }
-                                const { error: psError } = await supabase.from('presensi_staf').insert(scanPayload)
-                                if (psError) {
-                                    await supabase.from('presensi_staf').insert({
-                                        staf_id: selectedJadwal.guru_id,
-                                        tanggal: selectedDate,
-                                        tipe: scanPayload.tipe,
-                                        referensi_id: scanPayload.referensi_id,
-                                        waktu_scan: scanPayload.waktu_scan
-                                    })
-                                }
-                            } catch (stafSyncErr) {
-                                console.warn('Sync presensi_staf warning:', stafSyncErr.message)
-                            }
-                        }
                     }
                 }
             } catch (syncErr) {

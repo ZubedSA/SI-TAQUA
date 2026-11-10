@@ -533,7 +533,7 @@ const PelanggaranRekap = () => {
                 <meta charset="utf-8">
                 <title>${title}</title>
                 <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; }
+                    body { font-family: 'Open Sans', Arial, sans-serif; }
                     h2 { text-align: center; margin-bottom: 5px; color: #111827; }
                     p.subtitle { text-align: center; margin-top: 0; color: #6b7280; font-size: 14px; margin-bottom: 30px; }
                     table { width: 100%; border-collapse: collapse; margin-top: 20px; }

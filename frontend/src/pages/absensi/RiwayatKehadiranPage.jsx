@@ -3,6 +3,8 @@ import {
     Calendar, 
     CheckCircle, 
     AlertTriangle, 
+    AlertCircle,
+    Briefcase,
     Clock, 
     FileText, 
     ChevronLeft, 
@@ -17,7 +19,7 @@ import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import Badge from '../../components/ui/Badge'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isAfter, isBefore, isSameDay } from 'date-fns'
 import { id } from 'date-fns/locale'
-import { findStaffScan } from '../../utils/attendanceHelper'
+import { findStaffScan, isBeforeScheduleActive } from '../../utils/attendanceHelper'
 
 const RiwayatKehadiranPage = () => {
     const { user, userProfile } = useAuth()
@@ -46,7 +48,7 @@ const RiwayatKehadiranPage = () => {
             try {
                 const { data } = await supabase
                     .from('guru')
-                    .select('id, nama')
+                    .select('id, nama, created_at')
                     .or(`user_id.eq.${user.id},email.ilike.${user.email}`)
                     .maybeSingle()
                 if (data) {
@@ -61,7 +63,7 @@ const RiwayatKehadiranPage = () => {
     }, [user, userProfile])
 
     const fetchGuruData = async (gId) => {
-        const { data } = await supabase.from('guru').select('nama').eq('id', gId).maybeSingle()
+        const { data } = await supabase.from('guru').select('nama, created_at').eq('id', gId).maybeSingle()
         if (data) setGuruData(data)
     }
 
@@ -114,34 +116,7 @@ const RiwayatKehadiranPage = () => {
                     }
                 })()
 
-                // D. Presensi Mapel / Jurnal Mengajar Terlaksana for this teacher
-                const mapelPromise = (async () => {
-                    try {
-                        const res = await supabase
-                            .from('presensi_mapel')
-                            .select('*')
-                            .gte('tanggal', startDate)
-                            .lte('tanggal', endDate)
-                            .eq('status', 'Terlaksana')
-                            .eq('guru_id', guruId)
-                        
-                        return (res.data || []).map(m => ({
-                            id: `mapel_${m.id}`,
-                            staf_id: m.guru_id,
-                            tanggal: m.tanggal,
-                            tipe: m.halaqoh_id ? 'QURANIYAH' : 'MADROSAH',
-                            referensi_id: m.kelas_id || m.halaqoh_id,
-                            jadwal_id: m.jadwal_id,
-                            waktu_scan: m.created_at || `${m.tanggal}T08:00:00Z`,
-                            source: 'jurnal'
-                        }))
-                    } catch (e) {
-                        console.warn('Presensi mapel fetch error:', e)
-                        return []
-                    }
-                })()
-
-                // E. Izin Guru
+                // D. Izin Guru
                 const izinQuery = supabase
                     .from('izin_guru')
                     .select('*')
@@ -150,12 +125,11 @@ const RiwayatKehadiranPage = () => {
                     .lte('tanggal_mulai', endDate)
                     .gte('tanggal_selesai', startDate)
 
-                const [jadwalRes, hDirectRes, mhRes, stafScans, mapelScans, izinRes] = await Promise.all([
+                const [jadwalRes, hDirectRes, mhRes, stafScans, izinRes] = await Promise.all([
                     directJadwalQuery,
                     halaqohDirectPromise,
                     musyrifHalaqohPromise,
                     presensiPromise,
-                    mapelPromise,
                     izinQuery
                 ])
 
@@ -192,7 +166,8 @@ const RiwayatKehadiranPage = () => {
                 }
 
                 setAllJadwal(combinedJadwal)
-                setPresensiList([...stafScans, ...mapelScans])
+                // Kehadiran staf murni dari hasil scan presensi_staf (bukan dari jurnal)
+                setPresensiList(stafScans)
                 setIzinList(izinRes.data || [])
 
             } catch (err) {
@@ -219,17 +194,34 @@ const RiwayatKehadiranPage = () => {
         const daysInMonth = eachDayOfInterval({ start: startDate, end: limitDate })
         const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
 
+        const allActDates = [
+            ...presensiList.map(p => p.tanggal),
+            ...izinList.map(i => i.tanggal_mulai)
+        ].filter(Boolean).sort()
+        const firstActivityDate = allActDates.length > 0 ? allActDates[0] : null
+
         const records = []
 
         daysInMonth.forEach(dateObj => {
             const dateStr = format(dateObj, 'yyyy-MM-dd')
             const dayName = dayMap[dateObj.getDay()]
 
+            const dayScans = presensiList.filter(p => p.tanggal === dateStr)
+            const matchedScanIds = new Set()
+
             // Find schedule for this day of week
-            const todaysSchedules = allJadwal.filter(j => j.hari === dayName)
+            const todaysSchedules = allJadwal.filter(j => {
+                if (j.hari !== dayName) return false
+                // Jangan anggap jadwal aktif sebelum tanggal pendaftaran guru, jadwal dibuat, atau aktivitas dimulai
+                const hasScan = dayScans.some(p => p.staf_id === guruId)
+                if (!hasScan && isBeforeScheduleActive(dateStr, guruData?.created_at, j.created_at, firstActivityDate)) {
+                    return false
+                }
+                return true
+            })
 
             // Check if there is an approved Izin for this date
-            const isIzin = izinList.some(izin => {
+            const matchedIzin = izinList.find(izin => {
                 const start = new Date(izin.tanggal_mulai)
                 const end = new Date(izin.tanggal_selesai)
                 start.setHours(0,0,0,0)
@@ -238,9 +230,6 @@ const RiwayatKehadiranPage = () => {
                 current.setHours(0,0,0,0)
                 return current >= start && current <= end
             })
-
-            const dayScans = presensiList.filter(p => p.tanggal === dateStr)
-            const matchedScanIds = new Set()
 
             todaysSchedules.forEach(jadwal => {
                 // Find matching scan using unified logic
@@ -257,8 +246,8 @@ const RiwayatKehadiranPage = () => {
                 let status = 'Belum Absen'
                 if (scan) {
                     status = 'Hadir'
-                } else if (isIzin) {
-                    status = 'Izin'
+                } else if (matchedIzin) {
+                    status = matchedIzin.jenis_izin || 'Izin'
                 } else {
                     // Cek apakah jadwal ini sudah lewat
                     const now = new Date()
@@ -338,7 +327,9 @@ const RiwayatKehadiranPage = () => {
     const getStatusBadge = (status, isTambahan) => {
         if (isTambahan) return <Badge variant="primary" className="bg-blue-50 text-blue-600 border-blue-200">Tambahan</Badge>
         if (status === 'Hadir') return <Badge variant="success" className="bg-emerald-50 text-emerald-600 border-emerald-200"><CheckCircle size={12} className="mr-1 inline" /> Hadir</Badge>
-        if (status === 'Izin') return <Badge variant="warning" className="bg-amber-50 text-amber-600 border-amber-200"><FileText size={12} className="mr-1 inline" /> Izin</Badge>
+        if (status === 'Sakit') return <Badge variant="warning" className="bg-amber-50 text-amber-700 border-amber-200"><AlertCircle size={12} className="mr-1 inline" /> Sakit</Badge>
+        if (status === 'Izin') return <Badge variant="info" className="bg-blue-50 text-blue-700 border-blue-200"><FileText size={12} className="mr-1 inline" /> Izin</Badge>
+        if (status === 'Dinas') return <Badge variant="primary" className="bg-indigo-50 text-indigo-700 border-indigo-200"><Briefcase size={12} className="mr-1 inline" /> Dinas</Badge>
         if (status === 'Belum Absen') return <Badge variant="neutral" className="bg-gray-50 text-gray-500 border-gray-200"><Clock size={12} className="mr-1 inline" /> Belum Absen</Badge>
         return <Badge variant="danger" className="bg-red-50 text-red-600 border-red-200"><AlertTriangle size={12} className="mr-1 inline" /> Alpha</Badge>
     }

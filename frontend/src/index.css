@@ -61,7 +61,7 @@
   --color-info-bg: #EFF6FF;
 
   /* === TYPOGRAPHY === */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
   --font-size-xs: 0.75rem;
@@ -172,17 +172,39 @@
    GLOBAL BASE STYLES
    ========================================================================== */
 @layer base {
-  * {
+  *, *::before, *::after {
     box-sizing: border-box;
+    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   }
 
   html {
+    /* Responsive root typography scaling: compact & spacious on mobile, standard on desktop */
+    font-size: 87.5%; /* 14px base on mobile devices */
+    font-family: var(--font-sans);
     scroll-behavior: smooth;
     overflow-x: hidden;
     /* Prevent horizontal scroll on mobile */
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (max-width: 480px) {
+    html {
+      font-size: 85%; /* 13.6px base on compact smartphones (prevents crowding) */
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 767px) {
+    html {
+      font-size: 93.75%; /* 15px base on phablets & small tablets */
+    }
+  }
+
+  @media (min-width: 768px) {
+    html {
+      font-size: 100%; /* 16px standard base on tablet, laptop & desktop */
+    }
   }
 
   body {
@@ -569,25 +591,33 @@
 /* Mobile-first breakpoints & Responsive Typography Scaling */
 @media (max-width: 768px) {
   :root {
-    --font-size-xs: 0.75rem;    /* 12px */
-    --font-size-sm: 0.875rem;   /* 14px */
-    --font-size-base: 0.9375rem;/* 15px */
-    --font-size-lg: 1.0625rem;  /* 17px */
-    --font-size-xl: 1.1875rem;  /* 19px */
-    --font-size-2xl: 1.375rem;   /* 22px */
-    --font-size-3xl: 1.65rem;   /* 26.4px */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.84375rem;
+    --font-size-base: 0.9375rem;
+    --font-size-lg: 1.0625rem;
+    --font-size-xl: 1.1875rem;
+    --font-size-2xl: 1.375rem;
+    --font-size-3xl: 1.65rem;
   }
 
   body {
     font-size: var(--font-size-base);
+    line-height: 1.5;
   }
 
-  h1 { font-size: var(--font-size-3xl); }
-  h2 { font-size: var(--font-size-2xl); }
-  h3 { font-size: var(--font-size-xl); }
-  h4 { font-size: var(--font-size-lg); }
-  h5 { font-size: var(--font-size-base); }
-  h6 { font-size: var(--font-size-sm); }
+  /* Tipografi form kompak di mobile */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 0.8125rem;
+  }
+
+  h1 { font-size: var(--font-size-3xl); line-height: 1.2; }
+  h2 { font-size: var(--font-size-2xl); line-height: 1.25; }
+  h3 { font-size: var(--font-size-xl); line-height: 1.3; }
+  h4 { font-size: var(--font-size-lg); line-height: 1.35; }
+  h5 { font-size: var(--font-size-base); line-height: 1.4; }
+  h6 { font-size: var(--font-size-sm); line-height: 1.4; }
 
   /* Welcome Header Mobile Optimizations */
   .dashboard-welcome {
@@ -1233,9 +1263,9 @@ body.modal-open {
     }
   }
 
-  /* Touch input sizing to prevent iOS Safari auto-zoom */
+  /* Touch input sizing: compact and clean on mobile */
   input:not([type="checkbox"]):not([type="radio"]), select, textarea {
-    font-size: 16px !important;
+    font-size: 0.8125rem !important;
   }
 }
 
@@ -1258,7 +1288,7 @@ input[type="search"]:not(.no-global),
 select:not(.no-global),
 textarea:not(.no-global) {
   width: 100%;
-  padding: 0.625rem 1rem;
+  padding: 0.5rem 0.875rem;
   border-radius: 0.75rem;
   border: 1px solid #CBD5E1;
   background-color: #FFFFFF;
@@ -1275,10 +1305,10 @@ textarea:not(.no-global) {
   input:not([type="checkbox"]):not([type="radio"]):not(.no-global),
   select:not(.no-global),
   textarea:not(.no-global) {
-    min-height: 46px !important;
-    font-size: 16px !important;
-    padding: 0.625rem 0.875rem !important;
-    border-radius: 0.875rem !important;
+    min-height: 38px !important;
+    font-size: 0.8125rem !important;
+    padding: 0.4rem 0.75rem !important;
+    border-radius: 0.75rem !important;
   }
 
   label:not(.no-global) {
@@ -1621,8 +1651,9 @@ textarea,
   textarea,
   .form-input,
   .search-input {
-    font-size: 16px !important; /* Prevent iOS zoom */
-    padding: 10px 14px !important;
+    font-size: 0.8125rem !important;
+    padding: 6px 12px !important;
+    min-height: 36px !important;
   }
 
   select,
@@ -1630,8 +1661,9 @@ textarea,
   .ota-select,
   .filter-group select,
   .filters-bar select {
-    font-size: 14px !important;
-    padding: 9px 26px 9px 10px !important;
+    font-size: 0.75rem !important;
+    padding: 6px 24px 6px 10px !important;
+    min-height: 36px !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -1698,13 +1730,16 @@ textarea,
     width: 100% !important;
   }
 
-  /* Override Tailwind pl-12, pl-10, pr-10 on select on mobile to prevent clipping */
+  /* Override Tailwind on select on mobile for compact, neat display */
   select,
-  select[class*="pl-"],
   select[class*="pr-"] {
-    padding-left: 2.2rem !important;
+    padding-left: 0.75rem !important;
     padding-right: 1.75rem !important;
-    font-size: 13px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    font-size: 0.75rem !important;
+    min-height: 36px !important;
+    border-radius: 0.75rem !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -1713,10 +1748,19 @@ textarea,
     box-sizing: border-box !important;
   }
 
+  /* Only apply large left padding if select has an icon inside relative wrapper */
+  div.relative:has(> svg.absolute.left-4) > select,
+  div.relative:has(> svg.absolute.left-3) > select,
+  select[class*="pl-8"],
+  select[class*="pl-10"],
+  select[class*="pl-12"] {
+    padding-left: 2.1rem !important;
+  }
+
   div.relative:has(> select) > svg.absolute.left-4 {
     left: 0.65rem !important;
-    width: 15px !important;
-    height: 15px !important;
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 
@@ -1726,13 +1770,22 @@ textarea,
   .ota-select,
   .filter-group select,
   .filters-bar select,
-  select[class*="pl-"],
   select[class*="pr-"] {
-    font-size: 12.5px !important;
-    padding-left: 2rem !important;
+    font-size: 0.75rem !important;
+    padding-left: 0.65rem !important;
     padding-right: 1.5rem !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+    min-height: 34px !important;
+    border-radius: 0.75rem !important;
+  }
+
+  div.relative:has(> svg.absolute.left-4) > select,
+  div.relative:has(> svg.absolute.left-3) > select,
+  select[class*="pl-8"],
+  select[class*="pl-10"],
+  select[class*="pl-12"] {
+    padding-left: 1.85rem !important;
   }
 
   .filter-group select,

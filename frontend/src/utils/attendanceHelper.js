@@ -240,3 +240,50 @@ export const findStaffScan = (scanList = [], schedule, dateStr) => {
 
     return null
 }
+
+/**
+ * Helper to safely convert an ISO string or Date to a local date string YYYY-MM-DD
+ */
+export const getLocalDateStr = (isoString) => {
+    if (!isoString) return null
+    try {
+        const d = new Date(isoString)
+        if (isNaN(d.getTime())) return String(isoString).slice(0, 10)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    } catch {
+        return String(isoString).slice(0, 10)
+    }
+}
+
+/**
+ * Check if a target date is strictly before a teacher or schedule was active/registered.
+ * Prevents teachers from receiving unfair Alpha penalties for dates before they joined or started teaching.
+ * 
+ * @param {string} dateStr - Target date 'YYYY-MM-DD'
+ * @param {string|Date} guruCreatedAt - Timestamp when the teacher was registered
+ * @param {string|Date} jadwalCreatedAt - Timestamp when the schedule was created
+ * @param {string|Date} firstActivityDate - Earliest date the teacher or system started attendance in the period
+ * @returns {boolean} True if the date is before the active period
+ */
+export const isBeforeScheduleActive = (dateStr, guruCreatedAt, jadwalCreatedAt, firstActivityDate = null) => {
+    if (!dateStr) return false
+    const gDate = getLocalDateStr(guruCreatedAt)
+    const jDate = getLocalDateStr(jadwalCreatedAt)
+    const fDate = getLocalDateStr(firstActivityDate)
+
+    const candidates = [gDate, jDate].filter(Boolean)
+    let effectiveStart = candidates.length > 0 ? candidates.sort().reverse()[0] : null
+
+    // If teacher or system has an earliest activity date in this period that is later
+    // than their registration (e.g. they registered in an earlier year/semester, but only started teaching/scanning on fDate),
+    // we respect fDate as the active attendance start so past dates are not penalised with hundreds of Alphas.
+    if (fDate) {
+        if (!effectiveStart || fDate > effectiveStart) {
+            effectiveStart = fDate
+        }
+    }
+
+    if (!effectiveStart) return false
+    return dateStr < effectiveStart
+}
+

@@ -1,0 +1,5 @@
+.env
+.env.local
+.env.clone
+node_modules/
+

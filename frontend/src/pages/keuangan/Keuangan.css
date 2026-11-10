@@ -488,7 +488,7 @@
 
 .data-table .amount {
     font-weight: 600;
-    font-family: 'Consolas', 'Monaco', monospace;
+    font-family: 'Open Sans', sans-serif;
     font-size: 0.875rem;
     white-space: nowrap;
 }
@@ -2374,7 +2374,7 @@
 .tagihan-amount {
     font-weight: 700;
     color: #dc2626;
-    font-family: 'Consolas', monospace;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .check-item-sub {
@@ -2512,7 +2512,7 @@
 .lunas-amount {
     font-weight: 600;
     color: #059669;
-    font-family: 'Consolas', monospace;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .lunas-badge {
@@ -2766,6 +2766,10 @@
         width: 100% !important;
         max-width: none !important;
         box-sizing: border-box !important;
+        font-size: 0.8125rem !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+        min-height: 38px !important;
     }
 
     .mobile-card-list {
