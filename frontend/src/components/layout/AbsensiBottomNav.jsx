@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, Calendar, QrCode, Users, UserCheck, FileText, ClipboardList } from 'lucide-react'
+import { Home, Calendar, QrCode, Users, UserCheck, FileText, ClipboardList, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 const AbsensiBottomNav = ({ onScanClick }) => {
@@ -14,17 +14,33 @@ const AbsensiBottomNav = ({ onScanClick }) => {
         const currentSearch = location.search
         const itemPath = path.split('?')[0]
         const itemSearch = path.includes('?') ? '?' + path.split('?')[1] : ''
-        if (itemSearch) return currentPath === itemPath && currentSearch === itemSearch
-        return currentPath === itemPath && !currentSearch.includes('tab=')
+
+        if (currentPath !== itemPath) return false
+
+        const currentTab = new URLSearchParams(currentSearch).get('tab') || 'dashboard'
+        const itemTab = new URLSearchParams(itemSearch).get('tab') || ''
+
+        if (itemTab) {
+            if (itemTab === 'dashboard') {
+                return currentTab === 'dashboard' || !new URLSearchParams(currentSearch).get('tab')
+            }
+            if (itemTab === 'kehadiran') {
+                return ['kehadiran', 'rekap', 'staf', 'laporan'].includes(currentTab)
+            }
+            if (itemTab === 'agenda') {
+                return ['agenda', 'jurnal', 'qr'].includes(currentTab)
+            }
+            return currentTab === itemTab
+        }
+
+        return !currentSearch.includes('tab=')
     }
 
     const adminMenuItems = [
-        { path: '/absensi/admin?tab=rekap', icon: Users, label: 'Rekap' },
-        { path: '/absensi/admin?tab=staf', icon: UserCheck, label: 'Staf' },
-        { path: '/absensi/admin?tab=jurnal', icon: Calendar, label: 'Agenda' },
-        { path: '/absensi/admin?tab=laporan', icon: FileText, label: 'Laporan' },
+        { path: '/absensi/admin?tab=dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { path: '/absensi/admin?tab=kehadiran', icon: Users, label: 'Kehadiran' },
+        { path: '/absensi/admin?tab=agenda', icon: Calendar, label: 'Agenda' },
         { path: '/absensi/admin-izin', icon: ClipboardList, label: 'Izin' },
-        { path: '/absensi/admin?tab=qr', icon: QrCode, label: 'QR' },
     ]
 
     const teacherMenuItems = [

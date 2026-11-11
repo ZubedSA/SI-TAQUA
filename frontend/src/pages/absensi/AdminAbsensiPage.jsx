@@ -23,7 +23,13 @@ import {
     ArrowLeft,
     ClipboardList,
     AlertCircle,
-    Briefcase
+    Briefcase,
+    LayoutDashboard,
+    TrendingUp,
+    CheckSquare,
+    ArrowRight,
+    Sparkles,
+    ChevronRight
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -57,8 +63,53 @@ const AdminAbsensiPage = () => {
     const { data: halaqohList = [] } = useHalaqoh()
     const { data: mapelList = [] } = useMapel()
 
-    const activeTab = searchParams.get('tab') || 'rekap'
-    const setActiveTab = (tab) => setSearchParams({ tab })
+    const rawTab = searchParams.get('tab') || 'dashboard'
+    const rawSub = searchParams.get('sub')
+
+    // Resolving Main Tab: 'dashboard' | 'kehadiran' | 'agenda'
+    let mainTab = 'dashboard'
+    if (['kehadiran', 'rekap', 'staf', 'laporan'].includes(rawTab)) {
+        mainTab = 'kehadiran'
+    } else if (['agenda', 'jurnal', 'qr'].includes(rawTab)) {
+        mainTab = 'agenda'
+    } else if (rawTab === 'dashboard') {
+        mainTab = 'dashboard'
+    }
+
+    // Resolving Sub-tab for Kehadiran: 'santri' | 'staf' | 'laporan'
+    const subKehadiran = rawSub || (rawTab === 'staf' ? 'staf' : rawTab === 'laporan' ? 'laporan' : 'santri')
+
+    // Resolving Sub-tab for Agenda: 'jurnal' | 'qr'
+    const subAgenda = rawSub || (rawTab === 'qr' ? 'qr' : 'jurnal')
+
+    const isDashboard = mainTab === 'dashboard'
+    const isRekap = mainTab === 'kehadiran' && subKehadiran === 'santri'
+    const isStaf = mainTab === 'kehadiran' && subKehadiran === 'staf'
+    const isLaporan = mainTab === 'kehadiran' && subKehadiran === 'laporan'
+    const isJurnal = mainTab === 'agenda' && subAgenda === 'jurnal'
+    const isQr = mainTab === 'agenda' && subAgenda === 'qr'
+
+    const handleSwitchMainTab = (newMain) => {
+        if (newMain === 'dashboard') {
+            setSearchParams({ tab: 'dashboard' })
+        } else if (newMain === 'kehadiran') {
+            setSearchParams({ tab: 'kehadiran', sub: subKehadiran })
+        } else if (newMain === 'agenda') {
+            setSearchParams({ tab: 'agenda', sub: subAgenda })
+        }
+    }
+
+    const handleSwitchSubKehadiran = (newSub) => {
+        setSearchParams({ tab: 'kehadiran', sub: newSub })
+    }
+
+    const handleSwitchSubAgenda = (newSub) => {
+        setSearchParams({ tab: 'agenda', sub: newSub })
+    }
+
+    const [pendingIzinList, setPendingIzinList] = useState([])
+    const [pendingIzinCount, setPendingIzinCount] = useState(0)
+    const [pendingGantiCount, setPendingGantiCount] = useState(0)
 
     const hasAccess = isAdmin() || isAdminAbsensi()
     const [presensiStaf, setPresensiStaf] = useState([])
@@ -608,17 +659,39 @@ const AdminAbsensiPage = () => {
         setGuruList(data || [])
     }
 
+    const fetchPendingPermits = async () => {
+        try {
+            const [resIzin, resGanti] = await Promise.all([
+                supabase.from('izin_guru').select('id, jenis_izin, tanggal_mulai, tanggal_selesai, created_at, guru:guru_id(nama)').eq('status', 'Diajukan').order('created_at', { ascending: false }).limit(5),
+                supabase.from('pergantian_jadwal').select('id, tanggal_absen, created_at, guru_pemohon:guru_pemohon_id(nama), guru_pengganti:guru_pengganti_id(nama)').eq('status', 'Diajukan').order('created_at', { ascending: false }).limit(5)
+            ])
+            if (!resIzin.error && resIzin.data) {
+                setPendingIzinList(resIzin.data)
+                setPendingIzinCount(resIzin.data.length)
+            }
+            if (!resGanti.error && resGanti.data) {
+                setPendingGantiCount(resGanti.data.length)
+            }
+        } catch (err) {
+            console.warn('Warning fetching pending permits:', err)
+        }
+    }
+
     useEffect(() => {
-        if (activeTab === 'rekap' || activeTab === 'laporan') {
+        fetchPendingPermits()
+    }, [filterDate])
+
+    useEffect(() => {
+        if (isDashboard || isRekap || isLaporan) {
             fetchPresensi()
         }
-        if (activeTab === 'staf' || activeTab === 'laporan') {
+        if (isDashboard || isStaf || isLaporan) {
             fetchPresensiStaf()
         }
-    }, [activeTab, filterDate, filterStartDate, filterEndDate, filterType, filterKelasId, filterHalaqohId, selectedSemesterId])
+    }, [mainTab, subKehadiran, subAgenda, filterDate, filterStartDate, filterEndDate, filterType, filterKelasId, filterHalaqohId, selectedSemesterId])
 
     const fetchPresensiStaf = async () => {
-        if (activeTab === 'laporan') {
+        if (isLaporan) {
             if (!filterStartDate || !filterEndDate) return
             if (filterStartDate > filterEndDate) return
         } else {
@@ -637,7 +710,7 @@ const AdminAbsensiPage = () => {
                 .eq('status', 'Disetujui')
                 .order('created_at', { ascending: false })
 
-            if (activeTab === 'laporan') {
+            if (isLaporan) {
                 query = query.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
                 queryIzin = queryIzin.lte('tanggal_mulai', filterEndDate).gte('tanggal_selesai', filterStartDate)
             } else {
@@ -751,7 +824,7 @@ const AdminAbsensiPage = () => {
     }
 
     const fetchPresensi = async () => {
-        const isRange = activeTab === 'laporan'
+        const isRange = isLaporan
         if (isRange) {
             if (!filterStartDate || !filterEndDate) return
             if (filterStartDate > filterEndDate) return
@@ -1205,6 +1278,38 @@ const AdminAbsensiPage = () => {
     }
 
 
+    const dashboardSantriStats = React.useMemo(() => {
+        const totalSantri = santriList.length || 0
+        const hadir = presensiData.filter(p => (p.status || '').toLowerCase() === 'hadir').length
+        const sakit = presensiData.filter(p => (p.status || '').toLowerCase() === 'sakit').length
+        const izin = presensiData.filter(p => (p.status || '').toLowerCase() === 'izin').length
+        const alpha = presensiData.filter(p => ['alpha', 'alfa', 'alpa'].includes((p.status || '').toLowerCase())).length
+        const pulang = presensiData.filter(p => (p.status || '').toLowerCase() === 'pulang').length
+        const terlambat = presensiData.filter(p => ['terlambat', 'telat'].includes((p.status || '').toLowerCase())).length
+        const totalTercatat = hadir + sakit + izin + alpha + pulang + terlambat
+        const persenHadir = totalTercatat > 0 ? Math.round((hadir / totalTercatat) * 100) : 0
+
+        return { totalSantri, hadir, sakit, izin, alpha, pulang, terlambat, totalTercatat, persenHadir }
+    }, [presensiData, santriList])
+
+    const dashboardStafStats = React.useMemo(() => {
+        const totalJadwal = dailyStaffAttendance.length || 0
+        const hadir = dailyStaffAttendance.filter(j => j.status === 'Hadir').length
+        const izin = dailyStaffAttendance.filter(j => ['Izin', 'Sakit', 'Dinas'].includes(j.status)).length
+        const belumAbsen = dailyStaffAttendance.filter(j => j.status === 'Belum Absen').length
+        const alpha = dailyStaffAttendance.filter(j => j.status === 'Alpha').length
+        const persenHadir = totalJadwal > 0 ? Math.round((hadir / totalJadwal) * 100) : 0
+
+        return { totalJadwal, hadir, izin, belumAbsen, alpha, persenHadir }
+    }, [dailyStaffAttendance])
+
+    const dashboardAgendaStats = React.useMemo(() => {
+        const totalAgenda = agendaList.length || 0
+        const terisi = agendaList.filter(a => a.jurnal).length
+        const persenTerisi = totalAgenda > 0 ? Math.round((terisi / totalAgenda) * 100) : 0
+        return { totalAgenda, terisi, persenTerisi }
+    }, [agendaList])
+
     const stats = React.useMemo(() => {
         const santriHadir = presensiData.filter(p => (p.status || '').toLowerCase() === 'hadir').length
         const stafHadir = presensiStaf.length
@@ -1220,35 +1325,55 @@ const AdminAbsensiPage = () => {
     }, [presensiData, presensiStaf, agendaList])
 
     return (
-        <div className={`relative space-y-8 animate-fade-in pb-20 ${isStandalone ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8' : ''}`}>
+        <div className={`relative space-y-6 md:space-y-8 animate-fade-in pb-20 ${isStandalone ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8' : ''}`}>
             <PageHeader 
                 title={
-                    activeTab === 'rekap' ? 'Rekap Santri' :
-                    activeTab === 'staf' ? 'Kehadiran Staf' :
-                    activeTab === 'jurnal' ? 'Agenda Mengajar' :
-                    activeTab === 'laporan' ? 'Laporan Kehadiran' :
-                    activeTab === 'qr' ? 'Manajemen QR Code' :
+                    isDashboard ? 'Dashboard Presensi' :
+                    isRekap ? 'Kehadiran Santri' :
+                    isStaf ? 'Kehadiran Staf & Guru' :
+                    isLaporan ? 'Laporan Kehadiran Periode' :
+                    isJurnal ? 'Agenda Mengajar' :
+                    isQr ? 'Manajemen QR Code' :
                     'Admin Absensi'
                 }
                 description={
-                    activeTab === 'rekap' ? 'Rekapitulasi data kehadiran santri' :
-                    activeTab === 'staf' ? 'Monitoring kehadiran staf pengajar' :
-                    activeTab === 'jurnal' ? 'Jurnal dan agenda mengajar hari ini' :
-                    activeTab === 'laporan' ? 'Laporan kehadiran santri per periode' :
-                    activeTab === 'qr' ? 'Kelola dan cetak kode QR kelas & halaqoh' :
+                    isDashboard ? 'Pusat monitoring dan analisis kehadiran harian pondok' :
+                    isRekap ? 'Rekapitulasi data kehadiran santri madrasah & halaqoh hari ini' :
+                    isStaf ? 'Monitoring kehadiran dan scan QR staf pengajar hari ini' :
+                    isLaporan ? 'Rekapitulasi dan analisis kehadiran per periode semester' :
+                    isJurnal ? 'Jurnal dan agenda mengajar kelas & halaqoh hari ini' :
+                    isQr ? 'Kelola dan cetak kode QR kelas & halaqoh' :
                     'Pusat rekapitulasi kehadiran'
                 }
                 icon={
-                    activeTab === 'rekap' ? Users :
-                    activeTab === 'staf' ? UserCheck :
-                    activeTab === 'jurnal' ? Calendar :
-                    activeTab === 'laporan' ? FileText :
-                    activeTab === 'qr' ? QrCode :
+                    isDashboard ? LayoutDashboard :
+                    isRekap ? Users :
+                    isStaf ? UserCheck :
+                    isLaporan ? FileText :
+                    isJurnal ? Calendar :
+                    isQr ? QrCode :
                     Users
                 }
                 actions={
-                    <div className="flex gap-2">
-                        {activeTab === 'laporan' && (
+                    <div className="flex items-center gap-2">
+                        {isDashboard && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                    fetchPresensi()
+                                    fetchPresensiStaf()
+                                    fetchAllJadwal()
+                                    fetchPendingPermits()
+                                }}
+                                className="rounded-xl flex items-center gap-2"
+                                disabled={loading}
+                            >
+                                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                                <span className="hidden sm:inline">Segarkan Data</span>
+                            </Button>
+                        )}
+                        {isLaporan && (
                             <div className="relative">
                                 <Button 
                                 variant="secondary" 
@@ -1303,8 +1428,80 @@ const AdminAbsensiPage = () => {
             }
             />
 
-            {/* Quick Stats Row - Premium Siohioma Style */}
-            {activeTab !== 'qr' && activeTab !== 'laporan' && (
+            {/* Sub-menu Navigation for KEHADIRAN (Santri vs Staf vs Laporan) */}
+            {mainTab === 'kehadiran' && (
+                <div className="flex items-center gap-2 p-1.5 bg-gray-100/90 rounded-2xl border border-gray-200/60 w-fit max-w-full overflow-x-auto scrollbar-none shadow-sm">
+                    <button 
+                        type="button"
+                        onClick={() => handleSwitchSubKehadiran('santri')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                            subKehadiran === 'santri' 
+                                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100 scale-[1.02]' 
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                    >
+                        <Users size={15} />
+                        <span>Kehadiran Santri</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => handleSwitchSubKehadiran('staf')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                            subKehadiran === 'staf' 
+                                ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100 scale-[1.02]' 
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                    >
+                        <UserCheck size={15} />
+                        <span>Kehadiran Staf &amp; Guru</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => handleSwitchSubKehadiran('laporan')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                            subKehadiran === 'laporan' 
+                                ? 'bg-white text-purple-700 shadow-sm border border-purple-100 scale-[1.02]' 
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                    >
+                        <FileText size={15} />
+                        <span>Laporan Periode</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Sub-menu Navigation for AGENDA (Jurnal vs QR Code) */}
+            {mainTab === 'agenda' && (
+                <div className="flex items-center gap-2 p-1.5 bg-gray-100/90 rounded-2xl border border-gray-200/60 w-fit max-w-full overflow-x-auto scrollbar-none shadow-sm">
+                    <button 
+                        type="button"
+                        onClick={() => handleSwitchSubAgenda('jurnal')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                            subAgenda === 'jurnal' 
+                                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100 scale-[1.02]' 
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                    >
+                        <Calendar size={15} />
+                        <span>Agenda Mengajar</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => handleSwitchSubAgenda('qr')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                            subAgenda === 'qr' 
+                                ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100 scale-[1.02]' 
+                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                        }`}
+                    >
+                        <QrCode size={15} />
+                        <span>Manajemen QR Code</span>
+                    </button>
+                </div>
+            )}
+
+            {/* Quick Stats Row - displayed on Kehadiran (Santri/Staf) and Agenda (Jurnal) */}
+            {(isRekap || isStaf || isJurnal) && (
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 mt-6">
                     {stats.map((stat, i) => (
                         <div key={i} className={`bg-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 flex flex-col justify-between group hover:border-${stat.color}-300 transition-all duration-300 relative overflow-hidden`}>
@@ -1325,9 +1522,466 @@ const AdminAbsensiPage = () => {
                 </div>
             )}
 
+            {isDashboard ? (
+                /* DASHBOARD VIEW */
+                <div className="space-y-8 animate-fade-in">
+                    {/* 1. Hero Welcome & Quick Date Banner */}
+                    <div className="bg-gradient-to-br from-[#0A2619] via-[#0E3523] to-[#144730] rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden border border-[#143d2a]">
+                        <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-[#BCF32F]/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="px-3 py-1 bg-[#BCF32F]/20 text-[#BCF32F] border border-[#BCF32F]/30 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                        <Sparkles size={12} />
+                                        {semesterList.find(s => s.id === selectedSemesterId)?.nama ? `Semester ${semesterList.find(s => s.id === selectedSemesterId)?.nama} (${semesterList.find(s => s.id === selectedSemesterId)?.tahun_ajaran})` : 'Semester Aktif'}
+                                    </span>
+                                    <span className="px-3 py-1 bg-white/10 text-emerald-200 border border-white/10 rounded-xl text-[10px] font-bold tracking-wide flex items-center gap-1.5">
+                                        <Clock size={12} />
+                                        {new Date(filterDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </span>
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                                    Dashboard Monitoring Presensi
+                                </h2>
+                                <p className="text-emerald-100/80 text-xs md:text-sm font-medium max-w-2xl leading-relaxed">
+                                    Pantau tingkat kehadiran santri, monitoring jadwal scan QR pengajar, dan verifikasi permohonan izin secara terpusat dan real-time.
+                                </p>
+                            </div>
 
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-black/20 p-2.5 rounded-2xl border border-white/10 backdrop-blur-sm self-start lg:self-auto">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-xl border border-white/10">
+                                    <Calendar size={16} className="text-[#BCF32F]" />
+                                    <input 
+                                        type="date"
+                                        value={filterDate}
+                                        onChange={(e) => setFilterDate(e.target.value)}
+                                        className="bg-transparent border-none text-white text-xs font-bold outline-none cursor-pointer [color-scheme:dark]"
+                                    />
+                                </div>
+                                {filterDate !== new Date().toISOString().split('T')[0] && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
+                                        className="px-3 py-2 bg-[#BCF32F] text-[#0A2619] rounded-xl text-xs font-black hover:bg-[#d0ff42] transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                                    >
+                                        Hari Ini
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-            {activeTab === 'rekap' ? (
+                    {/* 2. Top 4 Executive KPI Metric Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {/* Card 1: Santri */}
+                        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/30 flex flex-col justify-between hover:border-emerald-200 transition-all group">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                                        <Users size={22} />
+                                    </div>
+                                    <span className="text-2xl font-black text-emerald-600">
+                                        {dashboardSantriStats.persenHadir}%
+                                    </span>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Kehadiran Santri</div>
+                                    <div className="text-xl font-black text-gray-900 mt-1">
+                                        {dashboardSantriStats.hadir} <span className="text-xs font-bold text-gray-400">/ {dashboardSantriStats.totalTercatat || dashboardSantriStats.totalSantri} Santri</span>
+                                    </div>
+                                </div>
+                                {/* Progress Bar */}
+                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                                        style={{ width: `${dashboardSantriStats.persenHadir}%` }}
+                                    ></div>
+                                </div>
+                                {/* Pill Breakdown */}
+                                <div className="grid grid-cols-4 gap-1 pt-1 text-center">
+                                    <div className="bg-emerald-50 py-1 rounded-lg border border-emerald-100">
+                                        <div className="text-[8px] font-black text-emerald-500 uppercase">Hadir</div>
+                                        <div className="text-xs font-black text-emerald-700">{dashboardSantriStats.hadir}</div>
+                                    </div>
+                                    <div className="bg-amber-50 py-1 rounded-lg border border-amber-100">
+                                        <div className="text-[8px] font-black text-amber-500 uppercase">Sakit</div>
+                                        <div className="text-xs font-black text-amber-700">{dashboardSantriStats.sakit}</div>
+                                    </div>
+                                    <div className="bg-blue-50 py-1 rounded-lg border border-blue-100">
+                                        <div className="text-[8px] font-black text-blue-500 uppercase">Izin</div>
+                                        <div className="text-xs font-black text-blue-700">{dashboardSantriStats.izin}</div>
+                                    </div>
+                                    <div className="bg-red-50 py-1 rounded-lg border border-red-100">
+                                        <div className="text-[8px] font-black text-red-500 uppercase">Alpha</div>
+                                        <div className="text-xs font-black text-red-700">{dashboardSantriStats.alpha}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubKehadiran('santri')}
+                                className="mt-5 w-full py-2.5 px-3 rounded-xl bg-gray-50 hover:bg-emerald-50 text-gray-600 hover:text-emerald-700 font-bold text-xs transition-all flex items-center justify-between cursor-pointer border border-gray-100 hover:border-emerald-200"
+                            >
+                                <span>Buka Rekap Santri</span>
+                                <ArrowRight size={14} />
+                            </button>
+                        </div>
+
+                        {/* Card 2: Guru / Staf */}
+                        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/30 flex flex-col justify-between hover:border-indigo-200 transition-all group">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                                        <UserCheck size={22} />
+                                    </div>
+                                    <span className="text-2xl font-black text-indigo-600">
+                                        {dashboardStafStats.persenHadir}%
+                                    </span>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Presensi Guru &amp; Staf</div>
+                                    <div className="text-xl font-black text-gray-900 mt-1">
+                                        {dashboardStafStats.hadir} <span className="text-xs font-bold text-gray-400">/ {dashboardStafStats.totalJadwal} Sesi Terjadwal</span>
+                                    </div>
+                                </div>
+                                {/* Progress Bar */}
+                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-indigo-500 h-full rounded-full transition-all duration-500" 
+                                        style={{ width: `${dashboardStafStats.persenHadir}%` }}
+                                    ></div>
+                                </div>
+                                {/* Pill Breakdown */}
+                                <div className="grid grid-cols-3 gap-1 pt-1 text-center">
+                                    <div className="bg-emerald-50 py-1 rounded-lg border border-emerald-100">
+                                        <div className="text-[8px] font-black text-emerald-500 uppercase">Hadir</div>
+                                        <div className="text-xs font-black text-emerald-700">{dashboardStafStats.hadir}</div>
+                                    </div>
+                                    <div className="bg-amber-50 py-1 rounded-lg border border-amber-100">
+                                        <div className="text-[8px] font-black text-amber-500 uppercase">Izin/Dinas</div>
+                                        <div className="text-xs font-black text-amber-700">{dashboardStafStats.izin}</div>
+                                    </div>
+                                    <div className="bg-rose-50 py-1 rounded-lg border border-rose-100">
+                                        <div className="text-[8px] font-black text-rose-500 uppercase">Belum Absen</div>
+                                        <div className="text-xs font-black text-rose-700">{dashboardStafStats.belumAbsen}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubKehadiran('staf')}
+                                className="mt-5 w-full py-2.5 px-3 rounded-xl bg-gray-50 hover:bg-indigo-50 text-gray-600 hover:text-indigo-700 font-bold text-xs transition-all flex items-center justify-between cursor-pointer border border-gray-100 hover:border-indigo-200"
+                            >
+                                <span>Monitoring Staf</span>
+                                <ArrowRight size={14} />
+                            </button>
+                        </div>
+
+                        {/* Card 3: Pending Approvals */}
+                        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/30 flex flex-col justify-between hover:border-amber-200 transition-all group">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                                        <ClipboardList size={22} />
+                                    </div>
+                                    {(pendingIzinCount + pendingGantiCount) > 0 ? (
+                                        <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-black rounded-xl border border-amber-200 animate-pulse">
+                                            Menunggu
+                                        </span>
+                                    ) : (
+                                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-xl border border-emerald-200">
+                                            Selesai
+                                        </span>
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Izin &amp; Tukar Jadwal</div>
+                                    <div className="text-xl font-black text-gray-900 mt-1">
+                                        {pendingIzinCount + pendingGantiCount} <span className="text-xs font-bold text-gray-400">Berkas Perlu Verifikasi</span>
+                                    </div>
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                                    {(pendingIzinCount + pendingGantiCount) > 0 ? (
+                                        <div className="space-y-1">
+                                            <div className="text-amber-800 font-bold">• {pendingIzinCount} Pengajuan Izin Guru</div>
+                                            <div className="text-amber-800 font-bold">• {pendingGantiCount} Pengajuan Tukar Jam</div>
+                                        </div>
+                                    ) : (
+                                        <div className="text-emerald-700 font-bold flex items-center gap-1.5">
+                                            <CheckCircle2 size={14} />
+                                            Semua permohonan telah ditinjau
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/absensi/admin-izin')}
+                                className="mt-5 w-full py-2.5 px-3 rounded-xl bg-gray-50 hover:bg-amber-50 text-gray-600 hover:text-amber-700 font-bold text-xs transition-all flex items-center justify-between cursor-pointer border border-gray-100 hover:border-amber-200"
+                            >
+                                <span>Buka Kelola Izin</span>
+                                <ArrowRight size={14} />
+                            </button>
+                        </div>
+
+                        {/* Card 4: Agenda & Jurnal Kelas */}
+                        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/30 flex flex-col justify-between hover:border-purple-200 transition-all group">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                                        <BookOpen size={22} />
+                                    </div>
+                                    <span className="text-2xl font-black text-purple-600">
+                                        {dashboardAgendaStats.persenTerisi}%
+                                    </span>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Jurnal Kelas Hari Ini</div>
+                                    <div className="text-xl font-black text-gray-900 mt-1">
+                                        {dashboardAgendaStats.terisi} <span className="text-xs font-bold text-gray-400">/ {dashboardAgendaStats.totalAgenda} Jurnal Terisi</span>
+                                    </div>
+                                </div>
+                                {/* Progress Bar */}
+                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-purple-500 h-full rounded-full transition-all duration-500" 
+                                        style={{ width: `${dashboardAgendaStats.persenTerisi}%` }}
+                                    ></div>
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
+                                    {dashboardAgendaStats.totalAgenda - dashboardAgendaStats.terisi > 0 ? (
+                                        <span className="text-purple-700 font-bold">{dashboardAgendaStats.totalAgenda - dashboardAgendaStats.terisi} Jurnal belum diisi pengajar</span>
+                                    ) : (
+                                        <span className="text-emerald-700 font-bold">Seluruh jurnal kelas telah terisi</span>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubAgenda('jurnal')}
+                                className="mt-5 w-full py-2.5 px-3 rounded-xl bg-gray-50 hover:bg-purple-50 text-gray-600 hover:text-purple-700 font-bold text-xs transition-all flex items-center justify-between cursor-pointer border border-gray-100 hover:border-purple-200"
+                            >
+                                <span>Buka Agenda Mengajar</span>
+                                <ArrowRight size={14} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 3. Quick Action Grid (6 Menu Pintasan) */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-1">
+                            <div>
+                                <h3 className="text-lg font-black text-gray-900 tracking-tight">Pusat Navigasi Cepat</h3>
+                                <p className="text-xs text-gray-400 font-bold">Akses seluruh modul absensi dengan satu klik</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubKehadiran('santri')}
+                                className="bg-white p-4 rounded-2xl border border-gray-100 hover:border-emerald-300 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer active:scale-95"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold mb-3 group-hover:scale-110 transition-transform">
+                                    <Users size={20} />
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-xs sm:text-sm group-hover:text-emerald-600 transition-colors">Presensi Santri</div>
+                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">Madrasah &amp; Halaqoh</div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubKehadiran('staf')}
+                                className="bg-white p-4 rounded-2xl border border-gray-100 hover:border-indigo-300 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer active:scale-95"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold mb-3 group-hover:scale-110 transition-transform">
+                                    <UserCheck size={20} />
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-xs sm:text-sm group-hover:text-indigo-600 transition-colors">Presensi Staf</div>
+                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">Scan &amp; Status Guru</div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubKehadiran('laporan')}
+                                className="bg-white p-4 rounded-2xl border border-gray-100 hover:border-purple-300 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer active:scale-95"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold mb-3 group-hover:scale-110 transition-transform">
+                                    <FileText size={20} />
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-xs sm:text-sm group-hover:text-purple-600 transition-colors">Laporan Periode</div>
+                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">Rekap &amp; Unduh Berkas</div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubAgenda('jurnal')}
+                                className="bg-white p-4 rounded-2xl border border-gray-100 hover:border-amber-300 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer active:scale-95"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold mb-3 group-hover:scale-110 transition-transform">
+                                    <Calendar size={20} />
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-xs sm:text-sm group-hover:text-amber-600 transition-colors">Agenda Mengajar</div>
+                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">Jurnal Harian Sesi</div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleSwitchSubAgenda('qr')}
+                                className="bg-white p-4 rounded-2xl border border-gray-100 hover:border-blue-300 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer active:scale-95"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold mb-3 group-hover:scale-110 transition-transform">
+                                    <QrCode size={20} />
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-xs sm:text-sm group-hover:text-blue-600 transition-colors">Cetak QR Code</div>
+                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">Kartu Kelas &amp; Halaqoh</div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/absensi/admin-izin')}
+                                className="bg-white p-4 rounded-2xl border border-gray-100 hover:border-rose-300 shadow-sm hover:shadow-md transition-all text-left flex flex-col justify-between group cursor-pointer active:scale-95"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold mb-3 group-hover:scale-110 transition-transform relative">
+                                    <ClipboardList size={20} />
+                                    {(pendingIzinCount + pendingGantiCount) > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="font-black text-gray-900 text-xs sm:text-sm group-hover:text-rose-600 transition-colors">Kelola Izin</div>
+                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">Verifikasi Izin Pengajar</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 4. Live Activity Panel (2 Kolom) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Kolom 1: Status Pengajar Hari Ini (2 span) */}
+                        <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/20 p-6 space-y-4">
+                            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                        <Clock size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-gray-900 text-base">Monitoring Presensi Pengajar Hari Ini</h4>
+                                        <p className="text-[11px] text-gray-400 font-medium">Daftar jadwal dan status scan QR pengajar</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSwitchSubKehadiran('staf')}
+                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                                >
+                                    <span>Lihat Semua</span>
+                                    <ChevronRight size={14} />
+                                </button>
+                            </div>
+
+                            {dailyStaffAttendance.length === 0 ? (
+                                <div className="py-12 text-center text-gray-400 text-xs italic font-medium">
+                                    Tidak ada jadwal mengajar pada tanggal ini.
+                                </div>
+                            ) : (
+                                <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                                    {dailyStaffAttendance.slice(0, 7).map((item, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-gray-50/70 border border-gray-100 hover:bg-indigo-50/40 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
+                                                    {item.guru?.nama?.charAt(0) || 'G'}
+                                                </div>
+                                                <div>
+                                                    <div className="font-black text-gray-900 text-xs leading-tight">{item.guru?.nama}</div>
+                                                    <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mt-0.5">
+                                                        Jam Ke-{item.jam_ke} • {item.tipe === 'MADROSAH' ? (kelasList.find(k => k.id === item.referensi_id)?.nama || 'Kelas') : (halaqohList.find(h => h.id === item.referensi_id)?.nama || 'Halaqoh')}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {item.waktu_scan && (
+                                                    <span className="text-[10px] text-gray-400 font-bold hidden sm:inline">
+                                                        {new Date(item.waktu_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                )}
+                                                <Badge
+                                                    variant={
+                                                        item.status === 'Hadir' ? 'success' :
+                                                        ['Sakit', 'Izin', 'Dinas'].includes(item.status) ? 'warning' :
+                                                        item.status === 'Belum Absen' ? 'neutral' : 'danger'
+                                                    }
+                                                    className="text-[9px] font-black uppercase px-2.5 py-1"
+                                                >
+                                                    {item.status}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Kolom 2: Permohonan Izin Menunggu & Fast Actions */}
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/20 p-6 space-y-4 flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                                            <AlertTriangle size={18} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-gray-900 text-base">Permohonan Izin</h4>
+                                            <p className="text-[11px] text-gray-400 font-medium">Menunggu persetujuan</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {pendingIzinList.length === 0 ? (
+                                    <div className="py-10 text-center space-y-2">
+                                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                                            <CheckCircle2 size={24} />
+                                        </div>
+                                        <div className="font-black text-gray-800 text-xs">Semua Izin Telah Diverifikasi</div>
+                                        <p className="text-[10px] text-gray-400">Tidak ada pengajuan izin yang tertunda saat ini.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2.5">
+                                        {pendingIzinList.map((p, idx) => (
+                                            <div key={idx} className="p-3 bg-amber-50/60 rounded-2xl border border-amber-100/80 space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-black text-gray-900 text-xs">{p.guru?.nama || 'Guru'}</span>
+                                                    <span className="px-2 py-0.5 bg-amber-200/60 text-amber-900 rounded-lg text-[9px] font-black uppercase">{p.jenis_izin}</span>
+                                                </div>
+                                                <div className="text-[10px] text-gray-500 font-medium">
+                                                    {p.tanggal_mulai === p.tanggal_selesai ? p.tanggal_mulai : `${p.tanggal_mulai} s/d ${p.tanggal_selesai}`}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <Button
+                                onClick={() => navigate('/absensi/admin-izin')}
+                                variant="primary"
+                                className="w-full justify-center rounded-2xl py-3 font-black text-xs uppercase tracking-widest mt-4"
+                            >
+                                Buka Kelola Izin
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            ) : isRekap ? (
                 <div className="space-y-8 animate-slide-up">
                     <Card variant="premium" className="p-8">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1534,7 +2188,7 @@ const AdminAbsensiPage = () => {
                         />
                     </Card>
                 </div>
-            ) : activeTab === 'staf' ? (
+            ) : isStaf ? (
                 <div className="space-y-8 animate-slide-up">
                     <Card variant="premium" className="p-8">
                         <div className="max-w-xs space-y-2">
@@ -1727,7 +2381,7 @@ const AdminAbsensiPage = () => {
                         />
                     </Card>
                 </div>
-            ) : activeTab === 'jurnal' ? (
+            ) : isJurnal ? (
                 <div className="space-y-8 animate-slide-up">
                     <Card variant="premium" className="p-8">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1898,7 +2552,7 @@ const AdminAbsensiPage = () => {
                         />
                     </Card>
                 </div>
-            ) : activeTab === 'laporan' ? (
+            ) : isLaporan ? (
                 <div className="space-y-8 animate-slide-up">
                     <Card variant="premium" className="p-6 md:p-8 space-y-6">
                         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 md:gap-8">
@@ -2388,7 +3042,7 @@ const AdminAbsensiPage = () => {
                     )}
                 </div>
 
-            ) : (
+            ) : isQr ? (
                 <div className="space-y-8 no-print">
                     <div className="grid md:grid-cols-2 gap-8">
                         {/* Section Kelas */}
@@ -2482,7 +3136,7 @@ const AdminAbsensiPage = () => {
                         document.body
                     )}
                 </div>
-            )}
+            ) : null}
 
             {/* Print Specific styles */}
             <style>{`

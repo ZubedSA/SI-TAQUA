@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Home, Calendar, QrCode, LogOut, Users, UserCheck, FileText, ClipboardList } from 'lucide-react'
+import { Home, Calendar, QrCode, LogOut, Users, UserCheck, FileText, ClipboardList, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logoFile from '../../assets/Logo_PTQA_075759.png'
 
@@ -19,12 +19,10 @@ const AbsensiSidebar = ({ onScanClick }) => {
     ]
 
     const adminMenuItems = [
-        { id: 'admin-rekap', path: '/absensi/admin?tab=rekap', icon: Users, label: 'Rekap Santri' },
-        { id: 'admin-staf', path: '/absensi/admin?tab=staf', icon: UserCheck, label: 'Kehadiran Staf' },
-        { id: 'admin-jurnal', path: '/absensi/admin?tab=jurnal', icon: Calendar, label: 'Agenda Mengajar' },
+        { id: 'admin-dashboard', path: '/absensi/admin?tab=dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { id: 'admin-kehadiran', path: '/absensi/admin?tab=kehadiran', icon: Users, label: 'Kehadiran' },
+        { id: 'admin-agenda', path: '/absensi/admin?tab=agenda', icon: Calendar, label: 'Agenda & QR' },
         { id: 'admin-izin', path: '/absensi/admin-izin', icon: ClipboardList, label: 'Kelola Izin' },
-        { id: 'admin-laporan', path: '/absensi/admin?tab=laporan', icon: FileText, label: 'Laporan Kehadiran' },
-        { id: 'admin-qr', path: '/absensi/admin?tab=qr', icon: QrCode, label: 'Manajemen QR Code' },
     ]
 
     const menuItems = isSystemAdmin ? adminMenuItems : teacherMenuItems
@@ -39,8 +37,26 @@ const AbsensiSidebar = ({ onScanClick }) => {
         const currentSearch = location.search
         const itemPath = path.split('?')[0]
         const itemSearch = path.includes('?') ? '?' + path.split('?')[1] : ''
-        if (itemSearch) return currentPath === itemPath && currentSearch === itemSearch
-        return currentPath === itemPath && !currentSearch.includes('tab=')
+
+        if (currentPath !== itemPath) return false
+
+        const currentTab = new URLSearchParams(currentSearch).get('tab') || 'dashboard'
+        const itemTab = new URLSearchParams(itemSearch).get('tab') || ''
+
+        if (itemTab) {
+            if (itemTab === 'dashboard') {
+                return currentTab === 'dashboard' || !new URLSearchParams(currentSearch).get('tab')
+            }
+            if (itemTab === 'kehadiran') {
+                return ['kehadiran', 'rekap', 'staf', 'laporan'].includes(currentTab)
+            }
+            if (itemTab === 'agenda') {
+                return ['agenda', 'jurnal', 'qr'].includes(currentTab)
+            }
+            return currentTab === itemTab
+        }
+
+        return !currentSearch.includes('tab=')
     }
 
     return (
