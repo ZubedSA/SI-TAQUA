@@ -256,11 +256,23 @@ export const useJurnal = (filters = {}) => {
 
             // Handle Substitutions and Make-up Classes
             try {
-                const { data: pergantianData } = await supabase
+                let { data: pergantianData, error: pError } = await supabase
                     .from('pergantian_jadwal')
-                    .select('*, jadwal_asli:jadwal_asli_id(*), jadwal_tujuan:jadwal_tujuan_id(*)')
+                    .select('*, jadwal_asli:jadwal_pelajaran!jadwal_asli_id(*), jadwal_tujuan:jadwal_pelajaran!jadwal_tujuan_id(*)')
                     .eq('status', 'Disetujui')
                     .or(`tanggal_absen.eq.${filters.tanggal},tanggal_pengganti.eq.${filters.tanggal}`)
+
+                // Fallback jika kolom tanggal_pengganti belum dimigrasi di DB
+                if (pError) {
+                    const fallback = await supabase
+                        .from('pergantian_jadwal')
+                        .select('*, jadwal_asli:jadwal_pelajaran!jadwal_asli_id(*), jadwal_tujuan:jadwal_pelajaran!jadwal_tujuan_id(*)')
+                        .eq('status', 'Disetujui')
+                        .eq('tanggal_absen', filters.tanggal)
+                    if (!fallback.error) {
+                        pergantianData = fallback.data
+                    }
+                }
                 
                 const gantiList = pergantianData || []
                 

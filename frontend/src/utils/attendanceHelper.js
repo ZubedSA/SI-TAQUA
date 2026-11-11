@@ -287,3 +287,62 @@ export const isBeforeScheduleActive = (dateStr, guruCreatedAt, jadwalCreatedAt, 
     return dateStr < effectiveStart
 }
 
+/**
+ * Parse the holiday coverage scope ('Semua' | 'Madrosah' | 'Quraniyah') from a holiday record
+ */
+export const parseHolidayScope = (holiday) => {
+    if (!holiday) return 'Semua'
+    if (holiday.cakupan) {
+        const c = String(holiday.cakupan).trim()
+        if (['madrasah', 'madrosah'].includes(c.toLowerCase())) return 'Madrosah'
+        if (['halaqoh', 'quraniyah'].includes(c.toLowerCase())) return 'Quraniyah'
+        return 'Semua'
+    }
+    const match = (holiday.deskripsi || '').match(/\[Cakupan:\s*(Semua|Madrosah|Quraniyah)\]/i)
+    if (match) return match[1]
+    return 'Semua'
+}
+
+/**
+ * Check if a date string falls within a holiday's range
+ */
+export const isHolidayActiveOnDate = (dateStr, holiday) => {
+    if (!dateStr || !holiday || !holiday.tanggal_mulai) return false
+    const start = holiday.tanggal_mulai
+    const end = holiday.tanggal_selesai || holiday.tanggal_mulai
+    return dateStr >= start && dateStr <= end
+}
+
+/**
+ * Find holiday affecting a specific date and schedule type ('MADROSAH' or 'HALAQOH')
+ * @param {string} dateStr 'YYYY-MM-DD'
+ * @param {string} scheduleType 'MADROSAH' | 'HALAQOH' | 'ALL'
+ * @param {Array} holidays Array of records from `kalender_akademik`
+ * @returns {Object|null} Matching holiday with parsed scope, or null
+ */
+export const getActiveHolidayForSchedule = (dateStr, scheduleType = 'ALL', holidays = []) => {
+    if (!dateStr || !Array.isArray(holidays) || holidays.length === 0) return null
+
+    for (const h of holidays) {
+        const isLibur = (h.jenis || '').toLowerCase() === 'libur' || (h.judul || '').toLowerCase().includes('libur')
+        if (!isLibur) continue
+        if (!isHolidayActiveOnDate(dateStr, h)) continue
+
+        const scope = parseHolidayScope(h)
+        const typeUpper = (scheduleType || '').toUpperCase()
+
+        if (scope === 'Semua' || typeUpper === 'ALL') {
+            return { ...h, scope }
+        }
+        if (scope === 'Madrosah' && typeUpper === 'MADROSAH') {
+            return { ...h, scope }
+        }
+        if (scope === 'Quraniyah' && (typeUpper === 'HALAQOH' || typeUpper === 'QURANIYAH')) {
+            return { ...h, scope }
+        }
+    }
+
+    return null
+}
+
+

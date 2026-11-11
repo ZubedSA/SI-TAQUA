@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { QRCodeCanvas } from 'qrcode.react'
-import { 
-    X, Printer, Download, ChevronLeft, ChevronRight, User, 
+import {
+    X, Printer, Download, ChevronLeft, ChevronRight, User,
     ShieldCheck, Layers, Loader2, FileDown, FileText, CheckCircle2,
     ZoomIn, ZoomOut, Maximize2
 } from 'lucide-react'
@@ -83,8 +84,8 @@ const KtsBadge = () => {
     }, [])
 
     return (
-        <canvas 
-            ref={canvasRef} 
+        <canvas
+            ref={canvasRef}
             style={{ width: '54px', height: '30px', display: 'block' }}
         />
     )
@@ -122,7 +123,7 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
     // ==========================================
     if (side === 'front') {
         return (
-            <div 
+            <div
                 className="kartu-santri-card kartu-santri-front relative select-none shrink-0 flex flex-col justify-between overflow-hidden bg-white text-gray-800 rounded-2xl border border-gray-200"
                 style={{
                     width: `${CARD_WIDTH}px`,
@@ -133,9 +134,9 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
             >
                 {/* Watermark Logo Pondok Halus */}
                 <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-[0.04] pointer-events-none">
-                    <img 
-                        src="/logo-pondok.png" 
-                        alt="Watermark Logo" 
+                    <img
+                        src="/logo-pondok.png"
+                        alt="Watermark Logo"
                         crossOrigin="anonymous"
                         className="w-40 h-40 object-contain filter grayscale"
                         onError={(e) => { e.target.style.display = 'none' }}
@@ -143,16 +144,16 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
                 </div>
 
                 {/* HEADER RESMI KARTU (HIJAU MUDA TERANG & KOP PUTIH TAJAM) */}
-                <div 
+                <div
                     className="relative z-10 px-3.5 py-2 text-white border-b-2 border-amber-300 shadow-xs shrink-0"
                     style={brightGreenHeaderStyle}
                 >
                     <div className="flex items-center justify-between gap-2.5">
                         {/* Logo Pondok */}
                         <div className="w-10 h-10 shrink-0 rounded-full bg-white p-0.5 shadow-sm flex items-center justify-center">
-                            <img 
-                                src="/logo-pondok.png" 
-                                alt="Logo Pondok" 
+                            <img
+                                src="/logo-pondok.png"
+                                alt="Logo Pondok"
                                 crossOrigin="anonymous"
                                 className="w-full h-full object-contain"
                                 onError={(e) => { e.target.style.display = 'none' }}
@@ -185,9 +186,9 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
                     <div className="shrink-0 flex flex-col items-center justify-center">
                         <div className="w-[76px] h-[94px] rounded-lg overflow-hidden bg-gray-50 border-2 border-emerald-500 shadow-xs relative flex items-center justify-center">
                             {santri.foto_url ? (
-                                <img 
-                                    src={santri.foto_url} 
-                                    alt={santri.nama || 'Foto Santri'} 
+                                <img
+                                    src={santri.foto_url}
+                                    alt={santri.nama || 'Foto Santri'}
                                     crossOrigin="anonymous"
                                     className="w-full h-full object-cover"
                                 />
@@ -206,59 +207,59 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
                         </div>
                     </div>
 
-                    {/* Kolom Kanan: 6 Field Biodata Tabular (Anti-Clipping / Tanpa Truncate Potong Bawah) */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1 text-gray-800">
-                        <div className="grid grid-cols-[72px_8px_1fr] items-baseline py-0.5 text-[9px] leading-normal">
-                            <span className="font-semibold text-gray-500">NIS</span>
-                            <span className="font-semibold text-gray-400 text-center">:</span>
-                            <span className="font-bold text-gray-900 text-[10px] tracking-wide">
+                    {/* Kolom Kanan: 6 Field Biodata Tabular Rapi, Presisi & Elegan */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1.5 text-gray-800">
+                        <div className="grid grid-cols-[76px_10px_1fr] items-start text-[9px]">
+                            <span className="font-semibold text-slate-500 leading-tight">NIS</span>
+                            <span className="font-bold text-slate-400 text-center leading-tight">:</span>
+                            <span className="font-bold text-slate-900 font-mono text-[9.5px] tracking-wider leading-tight">
                                 {santri.nis || '-'}
                             </span>
                         </div>
-                        <div className="grid grid-cols-[72px_8px_1fr] items-baseline py-0.5 text-[9px] leading-normal">
-                            <span className="font-semibold text-gray-500">Nama</span>
-                            <span className="font-semibold text-gray-400 text-center">:</span>
-                            <span className="font-bold text-gray-900 uppercase text-[10px] leading-tight" title={santri.nama}>
+                        <div className="grid grid-cols-[76px_10px_1fr] items-start text-[9px]">
+                            <span className="font-semibold text-slate-500 leading-tight">Nama</span>
+                            <span className="font-bold text-slate-400 text-center leading-tight">:</span>
+                            <span className="font-extrabold text-slate-950 uppercase text-[10px] tracking-tight leading-tight" title={santri.nama}>
                                 {santri.nama || '-'}
                             </span>
                         </div>
-                        <div className="grid grid-cols-[72px_8px_1fr] items-baseline py-0.5 text-[9px] leading-normal">
-                            <span className="font-semibold text-gray-500">Jenis Kelamin</span>
-                            <span className="font-semibold text-gray-400 text-center">:</span>
-                            <span className="font-medium text-gray-800">
+                        <div className="grid grid-cols-[76px_10px_1fr] items-start text-[9px]">
+                            <span className="font-semibold text-slate-500 leading-tight">Jenis Kelamin</span>
+                            <span className="font-bold text-slate-400 text-center leading-tight">:</span>
+                            <span className="font-semibold text-slate-800 text-[9.5px] leading-tight">
                                 {santri.jenis_kelamin === 'L' ? 'Laki-laki' : santri.jenis_kelamin === 'P' ? 'Perempuan' : (santri.jenis_kelamin || santri.jk || '-')}
                             </span>
                         </div>
-                        <div className="grid grid-cols-[72px_8px_1fr] items-baseline py-0.5 text-[9px] leading-normal">
-                            <span className="font-semibold text-gray-500">TTL</span>
-                            <span className="font-semibold text-gray-400 text-center">:</span>
-                            <span className="font-medium text-gray-800" title={ttl}>
+                        <div className="grid grid-cols-[76px_10px_1fr] items-start text-[9px]">
+                            <span className="font-semibold text-slate-500 leading-tight">TTL</span>
+                            <span className="font-bold text-slate-400 text-center leading-tight">:</span>
+                            <span className="font-semibold text-slate-800 text-[9.5px] leading-tight" title={ttl}>
                                 {ttl}
                             </span>
                         </div>
-                        <div className="grid grid-cols-[72px_8px_1fr] items-start py-0.5 text-[9px] leading-normal">
-                            <span className="font-semibold text-gray-500">Alamat</span>
-                            <span className="font-semibold text-gray-400 text-center">:</span>
-                            <span className="font-medium text-gray-800 leading-tight" title={santri.alamat}>
+                        <div className="grid grid-cols-[76px_10px_1fr] items-start text-[9px]">
+                            <span className="font-semibold text-slate-500 leading-tight">Alamat</span>
+                            <span className="font-bold text-slate-400 text-center leading-tight">:</span>
+                            <span className="font-semibold text-slate-800 text-[9px] leading-snug line-clamp-2" title={santri.alamat}>
                                 {santri.alamat || '-'}
                             </span>
                         </div>
-                        <div className="grid grid-cols-[72px_8px_1fr] items-baseline py-0.5 text-[9px] leading-normal">
-                            <span className="font-semibold text-gray-500">Masa Berlaku</span>
-                            <span className="font-semibold text-gray-400 text-center">:</span>
-                            <span className="font-bold text-emerald-700">
+                        <div className="grid grid-cols-[76px_10px_1fr] items-start text-[9px]">
+                            <span className="font-semibold text-slate-500 leading-tight">Masa Berlaku</span>
+                            <span className="font-bold text-slate-400 text-center leading-tight">:</span>
+                            <span className="font-bold text-emerald-700 text-[9px] leading-tight">
                                 Selama Menjadi Santri
                             </span>
                         </div>
                     </div>
                 </div>
 
-                {/* FOOTER KARTU RESMI: QR CODE CANVAS PRESISI TINGGI */}
-                <div className="relative z-10 bg-gray-50/95 px-3.5 py-1.5 border-t border-gray-200 flex items-center justify-between shrink-0">
-                    {/* Kolom Kiri: QR Code dalam Wadah Presisi Bersih */}
-                    <div className="flex items-center gap-2">
-                        <div 
-                            className={`w-[34px] h-[34px] bg-white p-0.5 rounded border border-gray-300 shadow-2xs flex items-center justify-center shrink-0 ${!isExport ? 'cursor-pointer hover:border-emerald-500 transition-colors' : ''}`}
+                {/* FOOTER KARTU RESMI: QR CODE CANVAS ULTRA-TAJAM & LEBIH BESAR */}
+                <div className="relative z-10 bg-white/95 px-3.5 py-2 border-t border-gray-200 flex items-center justify-between shrink-0 shadow-xs">
+                    {/* Kolom Kiri: QR Code dalam Wadah Presisi Standar Kartu Pintar */}
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            className={`w-[66px] h-[66px] bg-white p-1 rounded-xl border-2 border-emerald-500 shadow-sm flex items-center justify-center shrink-0 ${!isExport ? 'cursor-pointer hover:scale-105 hover:border-emerald-600 transition-all' : ''}`}
                             onClick={(e) => {
                                 if (!isExport) {
                                     e.stopPropagation()
@@ -267,30 +268,36 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
                             }}
                             title={!isExport ? 'Klik untuk uji coba buka halaman verifikasi digital santri' : undefined}
                         >
-                            <QRCodeCanvas 
+                            <QRCodeCanvas
                                 value={qrValue}
-                                size={30}
-                                level="L"
-                                includeMargin={false}
+                                size={256}
+                                level="M"
+                                includeMargin={true}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'block',
+                                    imageRendering: 'pixelated'
+                                }}
                             />
                         </div>
                         <div className="flex flex-col justify-center">
-                            <div className="text-[7.5px] font-bold text-gray-700 uppercase leading-none">
+                            <div className="text-[10px] font-black text-gray-800 uppercase tracking-tight leading-tight">
                                 Verifikasi Digital SI-TAQUA
                             </div>
-                            <div className="text-[6.5px] text-gray-500 font-normal leading-tight mt-0.5">
-                                Scan untuk validasi & presensi santri
+                            <div className="text-[7.5px] text-gray-500 font-medium leading-tight mt-1 max-w-[210px]">
+                                Arahkan kamera untuk validasi dokumen resmi
                             </div>
                         </div>
                     </div>
 
                     {/* Kolom Kanan: Identitas Dokumen Resmi */}
-                    <div className="text-right flex flex-col justify-center">
-                        <div className="text-[7.5px] font-bold text-emerald-800 uppercase leading-none">
-                            PP. TAHFIZH QUR'AN AL-USYMUNI BATUAN
+                    <div className="text-right flex flex-col justify-center pl-2 border-l border-gray-200 shrink-0">
+                        <div className="text-[8.5px] font-black text-emerald-800 uppercase tracking-tight leading-none">
+                            SI-TAQUA
                         </div>
-                        <div className="text-[6.5px] text-gray-500 font-normal leading-tight mt-0.5">
-                            Dokumen Identitas Resmi
+                        <div className="text-[6.5px] text-gray-400 font-bold uppercase tracking-wider mt-1 leading-none">
+                            PTQA BATUAN
                         </div>
                     </div>
                 </div>
@@ -305,7 +312,7 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
     // 2. TAMPAK BELAKANG (BACK) - JANJI SANTRI
     // ==========================================
     return (
-        <div 
+        <div
             className="kartu-santri-card kartu-santri-back relative select-none shrink-0 flex flex-col justify-between overflow-hidden bg-white text-gray-800 rounded-2xl border border-gray-200"
             style={{
                 width: `${CARD_WIDTH}px`,
@@ -316,9 +323,9 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
         >
             {/* Watermark Logo di Belakang */}
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none">
-                <img 
-                    src="/logo-pondok.png" 
-                    alt="Watermark Logo" 
+                <img
+                    src="/logo-pondok.png"
+                    alt="Watermark Logo"
                     crossOrigin="anonymous"
                     className="w-40 h-40 object-contain filter grayscale"
                     onError={(e) => { e.target.style.display = 'none' }}
@@ -326,7 +333,7 @@ export const KartuSantriCardInner = ({ santri, side = 'front', isExport = false 
             </div>
 
             {/* HEADER RESMI BELAKANG (HIJAU MUDA TERANG) */}
-            <div 
+            <div
                 className="relative z-10 px-4 py-2 text-center text-white border-b-2 border-amber-300 shadow-xs shrink-0"
                 style={brightGreenHeaderStyle}
             >
@@ -402,9 +409,9 @@ const ScaledCardWrapper = ({ children, scale = 1 }) => {
     }
 
     return (
-        <div 
-            style={{ 
-                width: `${CARD_WIDTH * scale}px`, 
+        <div
+            style={{
+                width: `${CARD_WIDTH * scale}px`,
                 height: `${CARD_HEIGHT * scale}px`,
                 position: 'relative',
                 overflow: 'visible',
@@ -412,9 +419,9 @@ const ScaledCardWrapper = ({ children, scale = 1 }) => {
             }}
             className="flex justify-center items-center"
         >
-            <div 
-                style={{ 
-                    width: `${CARD_WIDTH}px`, 
+            <div
+                style={{
+                    width: `${CARD_WIDTH}px`,
                     height: `${CARD_HEIGHT}px`,
                     transform: `scale(${scale})`,
                     transformOrigin: 'top left',
@@ -548,7 +555,7 @@ const KartuSantriModal = ({
             setPdfProgress('Menyiapkan dokumen PDF...')
 
             // Tunggu render stage aktif di-paint dengan font dan canvas lengkap
-            await new Promise(resolve => setTimeout(resolve, 150))
+            await new Promise(resolve => setTimeout(resolve, 80))
 
             const frontEl = hiddenExportRef.current?.querySelector('#kts-export-front')
             const backEl = hiddenExportRef.current?.querySelector('#kts-export-back')
@@ -558,12 +565,12 @@ const KartuSantriModal = ({
             }
 
             const captureOptions = {
-                scale: 3, // 300+ DPI razor sharp
+                scale: 2.2, // ~300 DPI (Sangat tajam, cepat & ringan)
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
                 logging: false,
-                windowWidth: 1280
+                imageTimeout: 3000
             }
 
             if (selectedFormat === 'a4') {
@@ -608,7 +615,7 @@ const KartuSantriModal = ({
                 if (frontEl) {
                     setPdfProgress('Merender tampak depan...')
                     const canvasFront = await html2canvas(frontEl, captureOptions)
-                    frontImg = canvasFront.toDataURL('image/png')
+                    frontImg = canvasFront.toDataURL('image/jpeg', 0.95)
                 }
 
                 // Render Back
@@ -616,7 +623,7 @@ const KartuSantriModal = ({
                 if (backEl) {
                     setPdfProgress('Merender tampak belakang...')
                     const canvasBack = await html2canvas(backEl, captureOptions)
-                    backImg = canvasBack.toDataURL('image/png')
+                    backImg = canvasBack.toDataURL('image/jpeg', 0.95)
                 }
 
                 // Label Sisi
@@ -627,14 +634,14 @@ const KartuSantriModal = ({
                 doc.text('TAMPAK BELAKANG', startX + cardW + gap + cardW / 2, startY - 3, { align: 'center' })
 
                 if (frontImg) {
-                    doc.addImage(frontImg, 'PNG', startX, startY, cardW, cardH, undefined, 'FAST')
+                    doc.addImage(frontImg, 'JPEG', startX, startY, cardW, cardH, undefined, 'FAST')
                     doc.setDrawColor(180, 185, 195)
                     doc.setLineDashPattern([2, 2], 0)
                     doc.roundedRect(startX, startY, cardW, cardH, 2.5, 2.5)
                 }
 
                 if (backImg) {
-                    doc.addImage(backImg, 'PNG', startX + cardW + gap, startY, cardW, cardH, undefined, 'FAST')
+                    doc.addImage(backImg, 'JPEG', startX + cardW + gap, startY, cardW, cardH, undefined, 'FAST')
                     doc.setDrawColor(180, 185, 195)
                     doc.setLineDashPattern([2, 2], 0)
                     doc.roundedRect(startX + cardW + gap, startY, cardW, cardH, 2.5, 2.5)
@@ -645,7 +652,7 @@ const KartuSantriModal = ({
                 const infoY = startY + cardH + 16
                 doc.setFillColor(243, 244, 246)
                 doc.roundedRect(startX, infoY, cardW * 2 + gap, 36, 3, 3, 'F')
-                
+
                 doc.setFontSize(8.5)
                 doc.setFont('helvetica', 'bold')
                 doc.setTextColor(31, 41, 55)
@@ -686,8 +693,8 @@ const KartuSantriModal = ({
                 if (frontEl && (viewMode === 'front' || viewMode === 'both')) {
                     setPdfProgress('Merender tampak depan kartu...')
                     const canvas = await html2canvas(frontEl, captureOptions)
-                    const imgData = canvas.toDataURL('image/png')
-                    doc.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST')
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95)
+                    doc.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST')
                     addedPages++
                 }
 
@@ -698,8 +705,8 @@ const KartuSantriModal = ({
                     }
                     setPdfProgress('Merender tampak belakang kartu...')
                     const canvas = await html2canvas(backEl, captureOptions)
-                    const imgData = canvas.toDataURL('image/png')
-                    doc.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST')
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95)
+                    doc.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST')
                     addedPages++
                 }
 
@@ -720,7 +727,7 @@ const KartuSantriModal = ({
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
             <div className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-4xl w-full border border-gray-100 overflow-hidden flex flex-col max-h-[94vh]">
-                
+
                 {/* Modal Header */}
                 <div className="no-print flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-gray-100 bg-gray-50/80">
                     <div className="flex items-center gap-2.5 sm:gap-3">
@@ -768,7 +775,7 @@ const KartuSantriModal = ({
                             </div>
                         )}
 
-                        <button 
+                        <button
                             onClick={onClose}
                             className="p-1.5 sm:p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
                         >
@@ -832,9 +839,9 @@ const KartuSantriModal = ({
                         </div>
 
                         {/* Download PDF Button */}
-                        <Button 
-                            variant="secondary" 
-                            size="sm" 
+                        <Button
+                            variant="secondary"
+                            size="sm"
                             onClick={() => handleDownloadPDF(downloadFormat)}
                             disabled={isGeneratingPdf}
                             className="rounded-xl font-bold border-gray-200 text-xs py-1.5 px-3 min-h-[34px]"
@@ -854,8 +861,8 @@ const KartuSantriModal = ({
                         </Button>
 
                         {/* Direct Print Button */}
-                        <Button 
-                            size="sm" 
+                        <Button
+                            size="sm"
                             onClick={handlePrint}
                             className="rounded-xl font-bold bg-emerald-500 hover:bg-emerald-600 shadow-sm shadow-emerald-500/20 text-white text-xs py-1.5 px-3 min-h-[34px]"
                         >
@@ -866,9 +873,9 @@ const KartuSantriModal = ({
                 </div>
 
                 {/* Printable & Interactive Preview Area */}
-                <div 
+                <div
                     ref={printAreaRef}
-                    id="kartu-santri-print-area" 
+                    id="kartu-santri-print-area"
                     className="p-4 sm:p-6 md:p-8 overflow-y-auto flex-1 flex flex-col items-center justify-center bg-gray-100/70"
                 >
                     {isBulkPrint ? (
@@ -888,9 +895,9 @@ const KartuSantriModal = ({
                     ) : (
                         /* Single Santri View with dynamic scaling */
                         <div className="w-full flex items-center justify-center">
-                            <KartuSantriView 
-                                santri={currentSantri} 
-                                side={viewMode} 
+                            <KartuSantriView
+                                santri={currentSantri}
+                                side={viewMode}
                                 scale={previewScale}
                             />
                         </div>
@@ -909,29 +916,31 @@ const KartuSantriModal = ({
                 </div>
             </div>
 
-            {/* DEDICATED PDF EXPORT STAGE (DIRERENDER DI VIEWPORT AKTIF TEPAT SAAT GENERATE, TANPA KELIPING & TANPA OFFSET) */}
-            <div 
-                id="kts-export-container"
-                ref={hiddenExportRef}
-                className="pointer-events-none select-none"
-                style={{
-                    position: 'fixed',
-                    left: 0,
-                    top: 0,
-                    zIndex: -1,
-                    opacity: isGeneratingPdf ? 1 : 0,
-                    visibility: isGeneratingPdf ? 'visible' : 'hidden',
-                    transform: isGeneratingPdf ? 'none' : 'translateY(-200vh)'
-                }}
-                aria-hidden="true"
-            >
-                <div id="kts-export-front" style={{ width: `${CARD_WIDTH}px`, height: `${CARD_HEIGHT}px`, backgroundColor: '#ffffff' }}>
-                    <KartuSantriCardInner santri={currentSantri} side="front" isExport={true} />
-                </div>
-                <div id="kts-export-back" style={{ width: `${CARD_WIDTH}px`, height: `${CARD_HEIGHT}px`, backgroundColor: '#ffffff', marginTop: '20px' }}>
-                    <KartuSantriCardInner santri={currentSantri} side="back" isExport={true} />
-                </div>
-            </div>
+            {/* DEDICATED PDF EXPORT STAGE (DIRERENDER DI BODY PADA LAYER Z-INDEX TERDALAM AGAR TIDAK TERLIHAT / DUPLIKAT DI LAYAR) */}
+            {typeof document !== 'undefined' && createPortal(
+                <div
+                    id="kts-export-container"
+                    ref={hiddenExportRef}
+                    className="pointer-events-none select-none"
+                    style={{
+                        position: 'fixed',
+                        left: 0,
+                        top: 0,
+                        zIndex: -99999,
+                        opacity: 1,
+                        pointerEvents: 'none'
+                    }}
+                    aria-hidden="true"
+                >
+                    <div id="kts-export-front" style={{ width: `${CARD_WIDTH}px`, height: `${CARD_HEIGHT}px`, backgroundColor: '#ffffff' }}>
+                        <KartuSantriCardInner santri={currentSantri} side="front" isExport={true} />
+                    </div>
+                    <div id="kts-export-back" style={{ width: `${CARD_WIDTH}px`, height: `${CARD_HEIGHT}px`, backgroundColor: '#ffffff', marginTop: '20px' }}>
+                        <KartuSantriCardInner santri={currentSantri} side="back" isExport={true} />
+                    </div>
+                </div>,
+                document.body
+            )}
 
             {/* Custom Print Styles */}
             <style>{`

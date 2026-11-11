@@ -194,6 +194,7 @@ function App() {
                       <Route path="quraniyah" element={<AbsensiQuraniyah />} />
                       <Route path="izin" element={<IzinPengajarPage />} />
                       <Route path="gerbang-pijar" element={<GerbangPijar />} />
+                      <Route path="gerbang" element={<GerbangPijar />} />
                       <Route path="admin" element={
                         <ProtectedRoute roles={['admin', 'admin_absensi']} fallbackRedirect="/absensi/home">
                           <AdminAbsensiPage />

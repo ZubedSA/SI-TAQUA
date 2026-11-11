@@ -29,7 +29,9 @@ import {
     CheckSquare,
     ArrowRight,
     Sparkles,
-    ChevronRight
+    ChevronRight,
+    Palmtree,
+    CalendarX
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -46,7 +48,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-import { calculateAutoPresensi, getResolvedAttendance, findStaffScan, isStaffScanMatch, isBeforeScheduleActive, getLocalDateStr } from '../../utils/attendanceHelper'
+import { calculateAutoPresensi, getResolvedAttendance, findStaffScan, isStaffScanMatch, isBeforeScheduleActive, getLocalDateStr, getActiveHolidayForSchedule, isHolidayActiveOnDate, parseHolidayScope } from '../../utils/attendanceHelper'
 
 const AdminAbsensiPage = () => {
     const navigate = useNavigate()
@@ -110,6 +112,17 @@ const AdminAbsensiPage = () => {
     const [pendingIzinList, setPendingIzinList] = useState([])
     const [pendingIzinCount, setPendingIzinCount] = useState(0)
     const [pendingGantiCount, setPendingGantiCount] = useState(0)
+
+    const [holidayList, setHolidayList] = useState([])
+    const [showHolidayModal, setShowHolidayModal] = useState(false)
+    const [holidayForm, setHolidayForm] = useState({
+        judul: '',
+        tanggal_mulai: new Date().toISOString().split('T')[0],
+        tanggal_selesai: new Date().toISOString().split('T')[0],
+        cakupan: 'Semua',
+        deskripsi: ''
+    })
+    const [isSavingHoliday, setIsSavingHoliday] = useState(false)
 
     const hasAccess = isAdmin() || isAdminAbsensi()
     const [presensiStaf, setPresensiStaf] = useState([])
@@ -677,9 +690,82 @@ const AdminAbsensiPage = () => {
         }
     }
 
+    const fetchHolidays = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('kalender_akademik')
+                .select('*')
+                .or('jenis.eq.Libur,judul.ilike.%libur%')
+                .order('tanggal_mulai', { ascending: false })
+            if (!error && data) {
+                setHolidayList(data)
+            }
+        } catch (err) {
+            console.warn('Warning fetching kalender_akademik holidays:', err)
+        }
+    }
+
     useEffect(() => {
         fetchPendingPermits()
+        fetchHolidays()
     }, [filterDate])
+
+    const handleSaveHoliday = async (e) => {
+        if (e) e.preventDefault()
+        if (!holidayForm.judul || !holidayForm.tanggal_mulai || !holidayForm.tanggal_selesai) {
+            showToast.error('Mohon lengkapi judul dan rentang tanggal libur')
+            return
+        }
+        if (holidayForm.tanggal_mulai > holidayForm.tanggal_selesai) {
+            showToast.error('Tanggal mulai tidak boleh melebihi tanggal selesai')
+            return
+        }
+
+        setIsSavingHoliday(true)
+        try {
+            let finalDesc = (holidayForm.deskripsi || '').replace(/\[Cakupan:\s*(Semua|Madrosah|Quraniyah)\]\s*/i, '').trim()
+            finalDesc = `[Cakupan: ${holidayForm.cakupan || 'Semua'}] ${finalDesc}`.trim()
+
+            const payload = {
+                judul: holidayForm.judul,
+                deskripsi: finalDesc,
+                tanggal_mulai: holidayForm.tanggal_mulai,
+                tanggal_selesai: holidayForm.tanggal_selesai,
+                jenis: 'Libur'
+            }
+
+            const { error } = await supabase.from('kalender_akademik').insert([payload])
+            if (error) throw error
+
+            showToast.success('Hari libur berhasil disimpan dan diterapkan')
+            setShowHolidayModal(false)
+            setHolidayForm({
+                judul: '',
+                tanggal_mulai: filterDate || new Date().toISOString().split('T')[0],
+                tanggal_selesai: filterDate || new Date().toISOString().split('T')[0],
+                cakupan: 'Semua',
+                deskripsi: ''
+            })
+            fetchHolidays()
+        } catch (err) {
+            console.error('Error saving holiday:', err)
+            showToast.error('Gagal menyimpan hari libur: ' + err.message)
+        } finally {
+            setIsSavingHoliday(false)
+        }
+    }
+
+    const handleDeleteHoliday = async (id) => {
+        try {
+            const { error } = await supabase.from('kalender_akademik').delete().eq('id', id)
+            if (error) throw error
+            showToast.success('Hari libur berhasil dihapus')
+            fetchHolidays()
+        } catch (err) {
+            console.error('Error deleting holiday:', err)
+            showToast.error('Gagal menghapus hari libur: ' + err.message)
+        }
+    }
 
     useEffect(() => {
         if (isDashboard || isRekap || isLaporan) {
@@ -1108,6 +1194,20 @@ const AdminAbsensiPage = () => {
                         status: 'Hadir'
                     })
                 } else {
+                    // Cek apakah tanggal ini libur untuk tipe jadwal ini (Madrasah / Halaqoh / Semua)
+                    const holidayMatch = getActiveHolidayForSchedule(dateStr, j.tipe, holidayList)
+                    if (holidayMatch) {
+                        stafSummary[j.guru_id].details.push({
+                            tanggal: dateStr,
+                            jam_ke: j.jam_ke,
+                            tipe: j.tipe,
+                            referensi_id: j.referensi_id,
+                            status: 'Libur',
+                            keterangan: `${holidayMatch.judul || 'Libur'} (Cakupan: ${holidayMatch.scope})`
+                        })
+                        return // Hari Libur: Jangan hitung Alpha!
+                    }
+
                     // Cek apakah guru atau jadwal sudah aktif pada tanggal ini
                     // Mencegah guru baru tercatat Alpha sebelum tanggal pendaftaran/jadwal dibuat/aktivitas pertama dimulai
                     const guru = guruList.find(g => g.id === j.guru_id)
@@ -1216,11 +1316,19 @@ const AdminAbsensiPage = () => {
                 izin.tanggal_selesai >= dateStr
             )
 
+            // Cek apakah jadwal ini libur pada tanggal ini
+            const holidayMatch = getActiveHolidayForSchedule(dateStr, j.tipe, holidayList)
+
             let status = 'Belum Absen'
+            let statusKeterangan = ''
             if (scan) {
                 status = 'Hadir'
             } else if (matchedIzin) {
                 status = matchedIzin.jenis_izin || 'Izin'
+                statusKeterangan = matchedIzin.keterangan || ''
+            } else if (holidayMatch) {
+                status = 'Libur'
+                statusKeterangan = `${holidayMatch.judul || 'Libur'} (Cakupan: ${holidayMatch.scope})`
             } else {
                 const now = new Date()
                 const classDate = new Date(dateObj)
@@ -1244,7 +1352,8 @@ const AdminAbsensiPage = () => {
                 jam_ke: j.jam_ke,
                 jam_mulai: j.jam_mulai,
                 jam_selesai: j.jam_selesai,
-                status
+                status,
+                keterangan: statusKeterangan
             }
         })
 
@@ -1271,11 +1380,16 @@ const AdminAbsensiPage = () => {
             if (a.jam_ke !== b.jam_ke) return Number(a.jam_ke) - Number(b.jam_ke)
             return (a.guru?.nama || '').localeCompare(b.guru?.nama || '')
         })
-    }, [allJadwal, filterDate, guruList, presensiStaf, izinGuruList])
+    }, [allJadwal, filterDate, guruList, presensiStaf, izinGuruList, holidayList])
 
     const handlePrintQR = () => {
         window.print()
     }
+
+    const activeDateHolidays = React.useMemo(() => {
+        if (!holidayList.length || !filterDate) return []
+        return holidayList.filter(h => isHolidayActiveOnDate(filterDate, h))
+    }, [holidayList, filterDate])
 
 
     const dashboardSantriStats = React.useMemo(() => {
@@ -1549,6 +1663,23 @@ const AdminAbsensiPage = () => {
                             </div>
 
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-black/20 p-2.5 rounded-2xl border border-white/10 backdrop-blur-sm self-start lg:self-auto">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setHolidayForm({
+                                            judul: '',
+                                            tanggal_mulai: filterDate || new Date().toISOString().split('T')[0],
+                                            tanggal_selesai: filterDate || new Date().toISOString().split('T')[0],
+                                            cakupan: 'Semua',
+                                            deskripsi: ''
+                                        })
+                                        setShowHolidayModal(true)
+                                    }}
+                                    className="px-3 py-2 bg-white/10 hover:bg-white/20 text-[#BCF32F] border border-[#BCF32F]/40 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 whitespace-nowrap"
+                                >
+                                    <span>🏖️</span>
+                                    <span>Atur Libur</span>
+                                </button>
                                 <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-xl border border-white/10">
                                     <Calendar size={16} className="text-[#BCF32F]" />
                                     <input 
@@ -1570,6 +1701,45 @@ const AdminAbsensiPage = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Holiday Alert Banner (Dashboard) */}
+                    {activeDateHolidays.length > 0 && (
+                        <div className="bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-emerald-500/10 border-2 border-amber-300/80 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-amber-500/5 animate-slide-up">
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl shrink-0 shadow-sm border border-amber-200">
+                                    🏖️
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[10px] font-black text-amber-800 uppercase tracking-widest bg-amber-200/60 px-2 py-0.5 rounded-md">
+                                            AGENDA LIBUR AKTIF
+                                        </span>
+                                        {activeDateHolidays.map((h, i) => {
+                                            const scope = parseHolidayScope(h)
+                                            return (
+                                                <span key={i} className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-700 border border-purple-200 shadow-sm">
+                                                    Cakupan: {scope}
+                                                </span>
+                                            )
+                                        })}
+                                    </div>
+                                    <h4 className="text-sm md:text-base font-black text-gray-900">
+                                        {activeDateHolidays.map(h => h.judul).join(' & ')}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                                        Sistem secara otomatis menonaktifkan sanksi alpha pada jadwal pelajaran yang masuk dalam cakupan libur hari ini.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowHolidayModal(true)}
+                                className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer shadow-md shadow-amber-600/20 active:scale-95"
+                            >
+                                Kelola Hari Libur
+                            </button>
+                        </div>
+                    )}
 
                     {/* 2. Top 4 Executive KPI Metric Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -1917,6 +2087,7 @@ const AdminAbsensiPage = () => {
                                                 <Badge
                                                     variant={
                                                         item.status === 'Hadir' ? 'success' :
+                                                        item.status === 'Libur' ? 'purple' :
                                                         ['Sakit', 'Izin', 'Dinas'].includes(item.status) ? 'warning' :
                                                         item.status === 'Belum Absen' ? 'neutral' : 'danger'
                                                     }
@@ -2305,6 +2476,13 @@ const AdminAbsensiPage = () => {
                                                     Belum Absen
                                                 </div>
                                             )
+                                        } else if (row.status === 'Libur') {
+                                            return (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 font-black text-[10px] uppercase tracking-widest border border-purple-200 shadow-sm shadow-purple-100/50" title={row.keterangan}>
+                                                    <span>🏖️</span>
+                                                    <span>Libur</span>
+                                                </div>
+                                            )
                                         } else {
                                             return (
                                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest border border-red-100 shadow-sm shadow-red-100/50">
@@ -2325,10 +2503,12 @@ const AdminAbsensiPage = () => {
                                 <div className="flex items-center gap-3 w-full">
                                     <div className={`p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 shrink-0 ${
                                         row.status === 'Hadir' ? 'text-emerald-500' :
+                                        row.status === 'Libur' ? 'text-purple-500' :
                                         row.status === 'Izin' ? 'text-amber-500' : 
                                         row.status === 'Belum Absen' ? 'text-gray-400' : 'text-red-500'
                                     }`}>
                                         {row.status === 'Hadir' ? <CheckCircle2 size={16} /> :
+                                         row.status === 'Libur' ? <span className="text-sm">🏖️</span> :
                                          row.status === 'Izin' ? <ClipboardList size={16} /> : 
                                          row.status === 'Belum Absen' ? <Clock size={16} /> : <XCircle size={16} />}
                                     </div>
@@ -2339,6 +2519,7 @@ const AdminAbsensiPage = () => {
                                             </div>
                                             <span className={`font-black text-sm shrink-0 ml-2 ${
                                                 row.status === 'Hadir' ? 'text-emerald-600' :
+                                                row.status === 'Libur' ? 'text-purple-600' :
                                                 row.status === 'Izin' ? 'text-amber-600' : 
                                                 row.status === 'Belum Absen' ? 'text-gray-500' : 'text-red-600'
                                             }`}>
@@ -3361,6 +3542,201 @@ const AdminAbsensiPage = () => {
                                         >
                                             {isSavingManual ? 'Menyimpan...' : 'Simpan'}
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body
+                    )}
+
+                    {/* Holiday Modal (Portal) */}
+                    {showHolidayModal && createPortal(
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+                            <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowHolidayModal(false)}></div>
+                            <div className="relative bg-white rounded-3xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up my-auto max-h-[90vh] flex flex-col">
+                                {/* Header */}
+                                <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 p-6 text-white flex items-center justify-between shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
+                                            🏖️
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg sm:text-xl font-black">Pengaturan Hari Libur Absensi</h3>
+                                            <p className="text-xs text-emerald-100/80 font-medium">
+                                                Jadwalkan rentang libur & sesuaikan cakupan (Semua, Madrasah, atau Halaqoh)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowHolidayModal(false)}
+                                        className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+
+                                {/* Body with scroll */}
+                                <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
+                                    {/* Form Tambah Libur */}
+                                    <form onSubmit={handleSaveHoliday} className="bg-gray-50/80 rounded-2xl p-5 border border-gray-100 space-y-4">
+                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                                            <Sparkles size={16} className="text-emerald-600" />
+                                            <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                                                Tambah Agenda Libur Baru
+                                            </h4>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                                Nama Agenda / Judul Libur <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={holidayForm.judul}
+                                                onChange={(e) => setHolidayForm(prev => ({ ...prev, judul: e.target.value }))}
+                                                placeholder="Contoh: Libur Awal Ramadhan 1448 H / Libur Maulid"
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-xs sm:text-sm font-bold bg-white outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Rentang Tanggal */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                                    Tanggal Mulai <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    required
+                                                    value={holidayForm.tanggal_mulai}
+                                                    onChange={(e) => setHolidayForm(prev => ({ ...prev, tanggal_mulai: e.target.value }))}
+                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs font-bold bg-white outline-none"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                                    Tanggal Selesai <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    required
+                                                    value={holidayForm.tanggal_selesai}
+                                                    onChange={(e) => setHolidayForm(prev => ({ ...prev, tanggal_selesai: e.target.value }))}
+                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs font-bold bg-white outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Cakupan Libur (Pills) */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                                Cakupan Libur <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {[
+                                                    { id: 'Semua', label: 'Semua (Total)', desc: 'Madrasah & Halaqoh' },
+                                                    { id: 'Madrosah', label: 'Hanya Madrasah', desc: 'Halaqoh tetap aktif' },
+                                                    { id: 'Quraniyah', label: 'Hanya Halaqoh', desc: 'Madrasah tetap aktif' }
+                                                ].map(sc => (
+                                                    <button
+                                                        key={sc.id}
+                                                        type="button"
+                                                        onClick={() => setHolidayForm(prev => ({ ...prev, cakupan: sc.id }))}
+                                                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                                                            holidayForm.cakupan === sc.id
+                                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
+                                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        <div className="text-xs font-black leading-tight">{sc.label}</div>
+                                                        <div className={`text-[9px] mt-0.5 leading-tight ${holidayForm.cakupan === sc.id ? 'text-emerald-100' : 'text-gray-400'}`}>
+                                                            {sc.desc}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Keterangan */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                                Keterangan Tambahan (Opsional)
+                                            </label>
+                                            <textarea
+                                                rows={2}
+                                                value={holidayForm.deskripsi}
+                                                onChange={(e) => setHolidayForm(prev => ({ ...prev, deskripsi: e.target.value }))}
+                                                placeholder="Contoh: Berdasarkan surat edaran pimpinan pondok..."
+                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs bg-white outline-none"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={isSavingHoliday}
+                                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            {isSavingHoliday ? 'Menyimpan Libur...' : '💾 Simpan Hari Libur'}
+                                        </button>
+                                    </form>
+
+                                    {/* List Hari Libur Terdaftar */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                                                Daftar Hari Libur Terdaftar ({holidayList.length})
+                                            </h4>
+                                        </div>
+
+                                        {holidayList.length === 0 ? (
+                                            <div className="p-6 text-center text-xs text-gray-400 font-bold bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                Belum ada agenda libur terdaftar di kalender akademik.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                                {holidayList.map((h) => {
+                                                    const scope = parseHolidayScope(h)
+                                                    const isRange = h.tanggal_mulai !== h.tanggal_selesai
+                                                    return (
+                                                        <div key={h.id} className="p-3.5 bg-white rounded-xl border border-gray-200 flex items-center justify-between gap-3 hover:border-gray-300 transition-all shadow-sm">
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-xs text-gray-900">{h.judul}</span>
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
+                                                                        scope === 'Semua' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                                        scope === 'Madrosah' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                                                    }`}>
+                                                                        {scope}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5">
+                                                                    <Calendar size={12} className="text-emerald-500" />
+                                                                    <span>
+                                                                        {new Date(h.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                        {isRange && ` s/d ${new Date(h.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (window.confirm(`Hapus libur "${h.judul}"?`)) {
+                                                                        handleDeleteHoliday(h.id)
+                                                                    }
+                                                                }}
+                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                                                                title="Hapus Libur"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

@@ -124,11 +124,20 @@ export const processAbsensiScan = async ({
         // C. Fetch substitutions for today
         let substitutions = []
         try {
-            const { data: pergantianData } = await supabase
+            let { data: pergantianData, error: pErr } = await supabase
                 .from('pergantian_jadwal')
-                .select('*, jadwal_asli:jadwal_asli_id(*), jadwal_tujuan:jadwal_tujuan_id(*)')
+                .select('*, jadwal_asli:jadwal_pelajaran!jadwal_asli_id(*), jadwal_tujuan:jadwal_pelajaran!jadwal_tujuan_id(*)')
                 .eq('status', 'Disetujui')
                 .or(`tanggal_absen.eq.${todayDate},tanggal_pengganti.eq.${todayDate}`)
+            
+            if (pErr) {
+                const fallback = await supabase
+                    .from('pergantian_jadwal')
+                    .select('*, jadwal_asli:jadwal_pelajaran!jadwal_asli_id(*), jadwal_tujuan:jadwal_pelajaran!jadwal_tujuan_id(*)')
+                    .eq('status', 'Disetujui')
+                    .eq('tanggal_absen', todayDate)
+                if (!fallback.error) pergantianData = fallback.data
+            }
             substitutions = pergantianData || []
         } catch (subErr) {
             console.warn('[QR Scan] Gagal memuat pergantian jadwal:', subErr.message)
@@ -298,11 +307,20 @@ export const processAbsensiScan = async ({
         // C. Fetch substitutions for today
         let substitutions = []
         try {
-            const { data: pergantianData } = await supabase
+            let { data: pergantianData, error: pErr } = await supabase
                 .from('pergantian_jadwal')
-                .select('*, jadwal_asli:jadwal_asli_id(*), jadwal_tujuan:jadwal_tujuan_id(*)')
+                .select('*, jadwal_asli:jadwal_pelajaran!jadwal_asli_id(*), jadwal_tujuan:jadwal_pelajaran!jadwal_tujuan_id(*)')
                 .eq('status', 'Disetujui')
                 .or(`tanggal_absen.eq.${todayDate},tanggal_pengganti.eq.${todayDate}`)
+            
+            if (pErr) {
+                const fallback = await supabase
+                    .from('pergantian_jadwal')
+                    .select('*, jadwal_asli:jadwal_pelajaran!jadwal_asli_id(*), jadwal_tujuan:jadwal_pelajaran!jadwal_tujuan_id(*)')
+                    .eq('status', 'Disetujui')
+                    .eq('tanggal_absen', todayDate)
+                if (!fallback.error) pergantianData = fallback.data
+            }
             substitutions = pergantianData || []
         } catch (subErr) {
             console.warn('[QR Scan] Gagal memuat pergantian jadwal kelas:', subErr.message)

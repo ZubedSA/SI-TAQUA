@@ -5,6 +5,9 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import './NotificationDropdown.css'
 
+let hasCheckedTable = false
+let tableExists = true
+
 const NotificationDropdown = ({ isOpen, onClose }) => {
     const [notifications, setNotifications] = useState([])
     const [loading, setLoading] = useState(false)
@@ -26,7 +29,9 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
         // Initial fetch for unread count
         fetchUnreadCount()
 
-        // Subscribe to notifications table (if exists)
+        // Subscribe to notifications table only if table exists
+        if (!tableExists) return
+
         const channel = supabase
             .channel('notifications-changes')
             .on(
@@ -51,6 +56,10 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
 
     const fetchNotifications = async () => {
         if (!user) return
+        if (!tableExists) {
+            setNotifications(getDefaultNotifications())
+            return
+        }
         setLoading(true)
 
         try {
@@ -63,10 +72,11 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
                 .limit(10)
 
             if (error) {
-                // Table might not exist - use mock data
+                if (error.code === 'PGRST205') tableExists = false
                 console.log('Notifications table not found, using defaults')
                 setNotifications(getDefaultNotifications())
             } else {
+                tableExists = true
                 setNotifications(data || [])
             }
         } catch (err) {
@@ -79,6 +89,10 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
 
     const fetchUnreadCount = async () => {
         if (!user) return
+        if (!tableExists) {
+            setUnreadCount(getDefaultNotifications().filter(n => !n.is_read).length)
+            return
+        }
 
         try {
             const { count, error } = await supabase
@@ -88,12 +102,14 @@ const NotificationDropdown = ({ isOpen, onClose }) => {
                 .eq('is_read', false)
 
             if (!error) {
+                tableExists = true
                 setUnreadCount(count || 0)
             } else {
-                // Use default count if table doesn't exist
+                if (error.code === 'PGRST205') tableExists = false
                 setUnreadCount(getDefaultNotifications().filter(n => !n.is_read).length)
             }
-        } catch {
+        } catch (err) {
+            tableExists = false
             setUnreadCount(getDefaultNotifications().filter(n => !n.is_read).length)
         }
     }

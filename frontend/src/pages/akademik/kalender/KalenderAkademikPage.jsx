@@ -33,10 +33,22 @@ const KalenderAkademikPage = () => {
         deskripsi: '',
         tanggal_mulai: '',
         tanggal_selesai: '',
-        jenis: 'Kegiatan'
+        jenis: 'Kegiatan',
+        cakupan: 'Semua'
     })
     const [saving, setSaving] = useState(false)
     const [deleteModal, setDeleteModal] = useState({ isOpen: false, item: null })
+
+    const parseCakupan = (item) => {
+        if (!item) return 'Semua'
+        if (item.cakupan) return item.cakupan
+        const match = (item.deskripsi || '').match(/\[Cakupan:\s*(Semua|Madrosah|Quraniyah)\]/i)
+        return match ? match[1] : 'Semua'
+    }
+
+    const cleanDeskripsi = (deskripsi) => {
+        return (deskripsi || '').replace(/\[Cakupan:\s*(Semua|Madrosah|Quraniyah)\]\s*/i, '').trim()
+    }
 
     // Calendar Helpers
     const getDaysInMonth = (date) => {
@@ -73,8 +85,18 @@ const KalenderAkademikPage = () => {
         e.preventDefault()
         setSaving(true)
         try {
+            let finalDeskripsi = form.deskripsi || ''
+            finalDeskripsi = cleanDeskripsi(finalDeskripsi)
+            if (form.jenis === 'Libur') {
+                finalDeskripsi = `[Cakupan: ${form.cakupan || 'Semua'}] ${finalDeskripsi}`.trim()
+            }
+
             const payload = {
-                ...form,
+                judul: form.judul,
+                deskripsi: finalDeskripsi,
+                tanggal_mulai: form.tanggal_mulai,
+                tanggal_selesai: form.tanggal_selesai,
+                jenis: form.jenis,
                 created_by: user?.id
             }
 
@@ -118,7 +140,8 @@ const KalenderAkademikPage = () => {
             deskripsi: '',
             tanggal_mulai: formatDate(new Date()),
             tanggal_selesai: formatDate(new Date()),
-            jenis: 'Kegiatan'
+            jenis: 'Kegiatan',
+            cakupan: 'Semua'
         })
         setEditItem(null)
     }
@@ -127,10 +150,11 @@ const KalenderAkademikPage = () => {
         setEditItem(item)
         setForm({
             judul: item.judul,
-            deskripsi: item.deskripsi || '',
+            deskripsi: cleanDeskripsi(item.deskripsi),
             tanggal_mulai: item.tanggal_mulai,
             tanggal_selesai: item.tanggal_selesai,
-            jenis: item.jenis
+            jenis: item.jenis,
+            cakupan: parseCakupan(item)
         })
         setShowModal(true)
     }
@@ -285,10 +309,17 @@ const KalenderAkademikPage = () => {
                                         <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${typeConfig.dot}`}></div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-medium text-gray-900 text-sm">{ev.judul}</h4>
-                                            {ev.deskripsi && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{ev.deskripsi}</p>}
-                                            <span className="inline-block mt-1 text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                                                {typeConfig.label}
-                                            </span>
+                                            {ev.deskripsi && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{cleanDeskripsi(ev.deskripsi)}</p>}
+                                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                                <span className="inline-block text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                                    {typeConfig.label}
+                                                </span>
+                                                {ev.jenis === 'Libur' && (
+                                                    <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 bg-red-100 text-red-700 rounded-md">
+                                                        Cakupan: {parseCakupan(ev)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )
@@ -577,6 +608,40 @@ const KalenderAkademikPage = () => {
                                     ))}
                                 </div>
                             </div>
+
+                            {form.jenis === 'Libur' && (
+                                <div className="bg-red-50/70 p-4 rounded-2xl border border-red-100 space-y-2.5 animate-fadeIn">
+                                    <div className="flex items-center justify-between">
+                                        <label className="block text-xs font-black text-red-900 uppercase tracking-wider">Cakupan Libur</label>
+                                        <span className="text-[10px] font-bold text-red-600 bg-red-100/60 px-2 py-0.5 rounded-md">Aturan Absensi</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { id: 'Semua', label: 'Semua Libur' },
+                                            { id: 'Madrosah', label: 'Madrasah Saja' },
+                                            { id: 'Quraniyah', label: 'Halaqoh Saja' }
+                                        ].map(c => (
+                                            <button
+                                                key={c.id}
+                                                type="button"
+                                                onClick={() => setForm({ ...form, cakupan: c.id })}
+                                                className={`py-2 px-2.5 rounded-xl text-xs font-black border transition-all text-center cursor-pointer ${
+                                                    (form.cakupan || 'Semua') === c.id
+                                                        ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200 scale-[1.02]'
+                                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-red-50/50'
+                                                }`}
+                                            >
+                                                {c.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-red-700/80 font-medium leading-relaxed bg-white/70 p-2.5 rounded-xl border border-red-100">
+                                        {(form.cakupan || 'Semua') === 'Semua' && '🏖️ Madrasah & Halaqoh libur penuh. Seluruh jadwal di rentang tanggal ini dibebaskan dari absensi (tidak kena Alpha).'}
+                                        {(form.cakupan || 'Semua') === 'Madrosah' && '🏫 Hanya Madrasah yang libur (KBM kelas bebas absen). Musyrif & Santri Halaqoh Qur\'aniyah tetap wajib hadir absen.'}
+                                        {(form.cakupan || 'Semua') === 'Quraniyah' && '📖 Hanya Halaqoh Qur\'an yang libur (bebas absen). KBM kelas Madrasah tetap berjalan normal dan wajib diabsen.'}
+                                    </p>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi (Opsional)</label>

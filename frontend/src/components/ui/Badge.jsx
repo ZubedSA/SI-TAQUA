@@ -7,6 +7,7 @@ const Badge = ({ variant = 'info', className = '', children }) => {
         danger: "bg-red-50 text-red-700 border border-red-200",
         info: "bg-blue-50 text-blue-700 border border-blue-200",
         neutral: "bg-gray-100 text-gray-700 border border-gray-200",
+        purple: "bg-purple-50 text-purple-700 border border-purple-200",
         primary: "bg-primary-50 text-primary-700 border border-primary-200",
     };
 
