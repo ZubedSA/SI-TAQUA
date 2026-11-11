@@ -1,5 +1,5 @@
 import { lazyWithRetry as lazy } from '../utils/lazyWithRetry'
-import { Route } from 'react-router-dom'
+import { Route, Navigate } from 'react-router-dom'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 
 // Akademik Components
@@ -244,6 +244,10 @@ const AkademikRoutes = () => {
                     <LaporanAkademikSantriPage />
                 </ProtectedRoute>
             } />
+
+            {/* Gerbang Pijar Aliases */}
+            <Route path="/akademik/gerbang-pijar" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
+            <Route path="/akademik/gerbang" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
         </>
     )
 }

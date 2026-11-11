@@ -186,8 +186,9 @@ const AbsensiPortal = () => {
                     {/* Dynamic Shortcut Button */}
                     <div className="pt-2 flex justify-center">
                         <button
+                            type="button"
                             onClick={() => navigate('/absensi/gerbang-pijar')}
-                            className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 border border-white/20"
+                            className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-widest shadow-xl shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 border border-white/20 cursor-pointer"
                         >
                             <Sparkles size={18} className="animate-spin-slow text-amber-200" />
                             <span>Gerbang Pijar</span>

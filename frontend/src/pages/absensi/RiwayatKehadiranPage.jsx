@@ -8,7 +8,7 @@ import {
     Clock, 
     FileText, 
     ChevronLeft, 
-    ChevronRight,
+    ChevronRight, 
     Loader2,
     Palmtree,
     Sparkles,
@@ -31,7 +31,7 @@ const RiwayatKehadiranPage = () => {
     const [guruId, setGuruId] = useState(null)
     const [guruData, setGuruData] = useState(null)
     
-    // Filter State: Pilihan antara Bulan Spesifik vs Semester Penuh (Identik Admin)
+    // Filter State: Pilihan antara Per Bulan vs 1 Semester Penuh (Sinkron Admin)
     const [periodType, setPeriodType] = useState('bulan') // 'bulan' | 'semester'
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const [semesterList, setSemesterList] = useState([])
@@ -98,26 +98,40 @@ const RiwayatKehadiranPage = () => {
         if (data) setGuruData(data)
     }
 
-    // 3. Menghitung Rentang Tanggal Efektif
+    // 3. Menghitung Rentang Evaluasi & Rentang Query Supabase
     const selectedSemester = useMemo(() => {
         return semesterList.find(s => String(s.id) === String(selectedSemesterId)) || semesterList.find(s => s.is_active) || null
     }, [semesterList, selectedSemesterId])
 
-    const { startDateStr, endDateStr, limitDateStr } = useMemo(() => {
+    // Rentang Query yang mencakup semester aktif dan bulan yang sedang dibuka
+    const { queryStartStr, queryEndStr, evalStartStr, evalEndStr } = useMemo(() => {
         const today = new Date()
         const todayStr = format(today, 'yyyy-MM-dd')
 
-        if (periodType === 'semester' && selectedSemester?.tanggal_mulai && selectedSemester?.tanggal_selesai) {
-            const sStart = selectedSemester.tanggal_mulai
-            const sEnd = selectedSemester.tanggal_selesai
-            const sLimit = sEnd > todayStr ? todayStr : sEnd
-            return { startDateStr: sStart, endDateStr: sEnd, limitDateStr: sLimit }
-        }
-
         const mStart = format(startOfMonth(currentMonth), 'yyyy-MM-dd')
         const mEnd = format(endOfMonth(currentMonth), 'yyyy-MM-dd')
-        const mLimit = isBefore(today, endOfMonth(currentMonth)) ? todayStr : mEnd
-        return { startDateStr: mStart, endDateStr: mEnd, limitDateStr: mLimit }
+
+        const semStart = selectedSemester?.tanggal_mulai || mStart
+        const semEnd = selectedSemester?.tanggal_selesai || mEnd
+
+        // Rentang query Supabase luas agar scan semester selalu tersedia
+        const qStart = semStart < mStart ? semStart : mStart
+        const qEnd = semEnd > mEnd ? semEnd : mEnd
+
+        let eStart = mStart
+        let eEnd = isBefore(today, endOfMonth(currentMonth)) ? todayStr : mEnd
+
+        if (periodType === 'semester') {
+            eStart = semStart
+            eEnd = semEnd > todayStr ? todayStr : semEnd
+        }
+
+        return { 
+            queryStartStr: qStart, 
+            queryEndStr: qEnd, 
+            evalStartStr: eStart, 
+            evalEndStr: eEnd 
+        }
     }, [periodType, selectedSemester, currentMonth])
 
     // 4. Fetch Data Kehadiran, Jadwal & Izin
@@ -133,15 +147,16 @@ const RiwayatKehadiranPage = () => {
                     .select('*')
                     .eq('guru_id', guruId)
 
-                // B. Musyrif Halaqoh links (from halaqoh table where this teacher is musyrif)
+                // B. Musyrif Halaqoh links (from halaqoh table & musyrif_halaqoh)
                 const halaqohDirectPromise = supabase
                     .from('halaqoh')
                     .select('id')
                     .or(`musyrif_id.eq.${guruId}${user?.id ? `,musyrif_id.eq.${user.id}` : ''}`)
 
-                const musyrifHalaqohPromise = user?.id
-                    ? supabase.from('musyrif_halaqoh').select('halaqoh_id').eq('user_id', user.id)
-                    : Promise.resolve({ data: [] })
+                const musyrifHalaqohPromise = supabase
+                    .from('musyrif_halaqoh')
+                    .select('halaqoh_id')
+                    .or(`user_id.eq.${guruId}${user?.id ? `,user_id.eq.${user.id}` : ''}`)
 
                 // C. Presensi Staf Scan for this teacher
                 const presensiPromise = (async () => {
@@ -149,8 +164,8 @@ const RiwayatKehadiranPage = () => {
                         let q = supabase
                             .from('presensi_staf')
                             .select('*')
-                            .gte('tanggal', startDateStr)
-                            .lte('tanggal', endDateStr)
+                            .gte('tanggal', queryStartStr)
+                            .lte('tanggal', queryEndStr)
                         
                         if (user?.id && guruId !== user.id) {
                             q = q.or(`staf_id.eq.${guruId},staf_id.eq.${user.id}`)
@@ -171,8 +186,8 @@ const RiwayatKehadiranPage = () => {
                     .select('*')
                     .eq('guru_id', guruId)
                     .eq('status', 'Disetujui')
-                    .lte('tanggal_mulai', endDateStr)
-                    .gte('tanggal_selesai', startDateStr)
+                    .lte('tanggal_mulai', queryEndStr)
+                    .gte('tanggal_selesai', queryStartStr)
 
                 const [jadwalRes, hDirectRes, mhRes, stafScans, izinRes] = await Promise.all([
                     directJadwalQuery,
@@ -226,24 +241,21 @@ const RiwayatKehadiranPage = () => {
         }
 
         fetchData()
-    }, [guruId, startDateStr, endDateStr, user?.id])
+    }, [guruId, queryStartStr, queryEndStr, user?.id])
 
-    // 5. Olah Logika Kehadiran Terpadu (Identik dengan Admin Laporan)
+    // 5. Olah Logika Kehadiran Terpadu (Single Source of Truth, 100% Identik Admin)
     const attendanceRecords = useMemo(() => {
         if (!allJadwal.length && !presensiList.length) return []
 
-        const start = new Date(startDateStr)
-        const limit = new Date(limitDateStr)
+        const [yS, mS, dS] = evalStartStr.split('-').map(Number)
+        const [yE, mE, dE] = evalEndStr.split('-').map(Number)
+        const start = new Date(yS, mS - 1, dS)
+        const limit = new Date(yE, mE - 1, dE)
+
         if (isAfter(start, limit)) return []
 
         const daysInPeriod = eachDayOfInterval({ start, end: limit })
         const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-
-        const allActDates = [
-            ...presensiList.map(p => p.tanggal),
-            ...izinList.map(i => i.tanggal_mulai)
-        ].filter(Boolean).sort()
-        const firstActivityDate = allActDates.length > 0 ? allActDates[0] : null
 
         const records = []
 
@@ -257,9 +269,10 @@ const RiwayatKehadiranPage = () => {
             // Filter jadwal untuk hari ini
             const todaysSchedules = allJadwal.filter(j => {
                 if (j.hari !== dayName) return false
-                // Jangan anggap jadwal aktif sebelum tanggal pendaftaran guru, jadwal dibuat, atau aktivitas dimulai
-                const hasScan = dayScans.some(p => p.staf_id === guruId)
-                if (!hasScan && isBeforeScheduleActive(dateStr, guruData?.created_at, j.created_at, firstActivityDate)) {
+                
+                // Cek apakah guru atau jadwal sudah aktif pada tanggal ini (Mencegah Alpha sebelum pendaftaran guru / jadwal dibuat)
+                const hasScan = dayScans.some(p => p.staf_id === guruId || (user?.id && p.staf_id === user.id))
+                if (!hasScan && isBeforeScheduleActive(dateStr, guruData?.created_at, j.created_at)) {
                     return false
                 }
                 return true
@@ -350,7 +363,7 @@ const RiwayatKehadiranPage = () => {
             if (a.tanggal !== b.tanggal) return b.tanggal.localeCompare(a.tanggal)
             return Number(a.jam_ke) - Number(b.jam_ke)
         })
-    }, [allJadwal, presensiList, izinList, holidayList, startDateStr, limitDateStr, guruData, guruId])
+    }, [allJadwal, presensiList, izinList, holidayList, evalStartStr, evalEndStr, guruData, guruId, user?.id])
 
     // 6. Hitung Statistik Ringkasan (Identik dengan Admin Staf Summary)
     const stats = useMemo(() => {
@@ -476,7 +489,7 @@ const RiwayatKehadiranPage = () => {
                             </span>
                         </div>
                         <span className="text-gray-500 text-[11px] font-mono">
-                            {startDateStr} s/d {limitDateStr}
+                            {evalStartStr} s/d {evalEndStr}
                         </span>
                     </div>
                 )}

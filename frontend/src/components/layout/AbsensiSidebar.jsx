@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Home, Calendar, QrCode, LogOut, Users, UserCheck, FileText, ClipboardList, LayoutDashboard } from 'lucide-react'
+import { Home, Calendar, QrCode, LogOut, Users, UserCheck, FileText, ClipboardList, LayoutDashboard, Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import logoFile from '../../assets/Logo_PTQA_075759.png'
 
@@ -13,6 +13,7 @@ const AbsensiSidebar = ({ onScanClick }) => {
 
     const teacherMenuItems = [
         { id: 'teacher-home', path: '/absensi/home', icon: Home, label: 'Beranda' },
+        { id: 'teacher-gerbang', path: '/absensi/gerbang-pijar', icon: Sparkles, label: 'Gerbang Pijar' },
         { id: 'teacher-agenda', path: '/absensi/agenda', icon: Calendar, label: 'Agenda Mengajar' },
         { id: 'teacher-riwayat', path: '/absensi/riwayat', icon: ClipboardList, label: 'Riwayat Kehadiran' },
         { id: 'teacher-izin', path: '/absensi/izin', icon: FileText, label: 'Izin' },

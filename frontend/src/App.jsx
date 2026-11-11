@@ -105,7 +105,9 @@ const AbsensiIsolationManager = ({ children }) => {
   
   useEffect(() => {
     const isAbsensiMode = localStorage.getItem('sitaqua_absensi_mode') === 'true'
-    const isAbsensiPath = location.pathname.startsWith('/absensi')
+    const isAbsensiPath = location.pathname.startsWith('/absensi') || 
+                         location.pathname.startsWith('/gerbang') || 
+                         location.pathname.startsWith('/pijar')
     const isPublicPath = location.pathname === '/' || 
                          location.pathname === '/login' || 
                          location.pathname === '/absensi/login' ||
@@ -180,6 +182,11 @@ function App() {
                     <Route path="/verifikasi/santri/:nis" element={<VerifikasiSantriPage />} />
                     <Route path="/v/:nis" element={<VerifikasiSantriPage />} />
                     
+                    {/* Standalone Gerbang Pijar Aliases */}
+                    <Route path="/gerbang-pijar" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
+                    <Route path="/gerbang" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
+                    <Route path="/pijar" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
+                    
                     {/* Absensi Portal Routes */}
                     <Route path="/absensi/login" element={<AbsensiLogin />} />
                     <Route path="/absensi" element={
@@ -195,6 +202,7 @@ function App() {
                       <Route path="izin" element={<IzinPengajarPage />} />
                       <Route path="gerbang-pijar" element={<GerbangPijar />} />
                       <Route path="gerbang" element={<GerbangPijar />} />
+                      <Route path="pijar" element={<GerbangPijar />} />
                       <Route path="admin" element={
                         <ProtectedRoute roles={['admin', 'admin_absensi']} fallbackRedirect="/absensi/home">
                           <AdminAbsensiPage />
@@ -236,6 +244,11 @@ function App() {
                       {KeuanganRoutes()}
                       {PengurusRoutes()}
                       {OTARoutes()}
+
+                      {/* Fallback aliases for Gerbang Pijar inside main layout */}
+                      <Route path="/gerbang-pijar" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
+                      <Route path="/gerbang" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
+                      <Route path="/pijar" element={<Navigate to="/absensi/gerbang-pijar" replace />} />
 
                       <Route path="*" element={<Navigate to="/home" replace />} />
                     </Route>
