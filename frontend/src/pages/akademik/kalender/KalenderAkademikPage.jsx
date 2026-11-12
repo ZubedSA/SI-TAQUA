@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, ChevronLeft, ChevronRight, Calendar, Trash2, Edit2, X, Clock, MapPin } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
 import { useToast } from '../../../context/ToastContext'
@@ -541,94 +542,114 @@ const KalenderAkademikPage = () => {
                 </div>
             </div>
 
-            {/* Modal Form */}
-            {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal-box w-full max-w-lg">
-                        <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50">
-                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                {editItem ? <Edit2 size={18} className="text-primary-600" /> : <Plus size={18} className="text-primary-600" />}
-                                {editItem ? 'Edit Agenda' : 'Tambah Agenda'}
-                            </h3>
+            {/* Modal Form using Portal & Sticky Action Footer (Mobile-Ready) */}
+            {showModal && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    {/* Backdrop */}
+                    <div 
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+                        onClick={() => setShowModal(false)}
+                    />
+
+                    {/* Modal Box / Bottom Sheet */}
+                    <div 
+                        className="relative w-full sm:max-w-lg bg-white rounded-t-[2rem] sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] z-10 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* 1. Header (Sticky Top) */}
+                        <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 py-4 border-b border-gray-100 bg-gray-50/80">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+                                    {editItem ? <Edit2 size={18} /> : <Plus size={18} />}
+                                </div>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-black text-gray-900 leading-tight">
+                                        {editItem ? 'Edit Agenda' : 'Tambah Agenda'}
+                                    </h3>
+                                    <p className="text-[11px] text-gray-400 font-medium">Kalender Akademik Pondok</p>
+                                </div>
+                            </div>
                             <button
+                                type="button"
                                 onClick={() => setShowModal(false)}
-                                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                                className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors cursor-pointer"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSave} className="p-6 space-y-5">
+                        {/* 2. Form Body (Scrollable) */}
+                        <form id="modal-agenda-form" onSubmit={handleSave} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 overscroll-contain">
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Judul Agenda</label>
+                                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5">Judul Agenda <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={form.judul}
                                     onChange={e => setForm({ ...form, judul: e.target.value })}
-                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all text-gray-900 placeholder:text-gray-400"
-                                    placeholder="Contoh: Ujian Tengah Semester"
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all text-sm text-gray-900 placeholder:text-gray-400 bg-white"
+                                    placeholder="Contoh: Libur Awal Ramadhan / Ujian Semester"
                                     required
                                     autoFocus
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-5">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mulai</label>
+                                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5">Mulai</label>
                                     <div className="relative">
                                         <input
                                             type="date"
                                             value={form.tanggal_mulai}
                                             onChange={e => setForm({ ...form, tanggal_mulai: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all bg-white"
+                                            className="w-full pl-9 pr-2.5 py-2 sm:py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all bg-white text-xs sm:text-sm font-medium"
                                             required
                                         />
-                                        <Calendar size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Selesai</label>
+                                    <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5">Selesai</label>
                                     <div className="relative">
                                         <input
                                             type="date"
                                             value={form.tanggal_selesai}
                                             onChange={e => setForm({ ...form, tanggal_selesai: e.target.value })}
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all bg-white"
+                                            className="w-full pl-9 pr-2.5 py-2 sm:py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all bg-white text-xs sm:text-sm font-medium"
                                             required
                                         />
-                                        <Calendar size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                        <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                                     </div>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Jenis Kategori</label>
-                                <div className="grid grid-cols-3 gap-2">
+                                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5">Jenis Kategori</label>
+                                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2">
                                     {EVENT_TYPES.map(t => (
                                         <button
                                             key={t.id}
                                             type="button"
                                             onClick={() => setForm({ ...form, jenis: t.id })}
                                             className={`
-                                                flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all
+                                                flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer
                                                 ${form.jenis === t.id
-                                                    ? `${t.color} ring-1 ring-offset-1 ring-primary-200`
+                                                    ? `${t.color} ring-2 ring-primary-500 shadow-sm scale-[1.02]`
                                                     : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                                 }
                                             `}
                                         >
-                                            <span className={`w-2 h-2 rounded-full ${t.dot}`}></span>
-                                            {t.label}
+                                            <span className={`w-2 h-2 rounded-full ${t.dot} shrink-0`}></span>
+                                            <span>{t.label}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             {form.jenis === 'Libur' && (
-                                <div className="bg-red-50/70 p-4 rounded-2xl border border-red-100 space-y-2.5 animate-fadeIn">
+                                <div className="bg-red-50/70 p-3.5 sm:p-4 rounded-2xl border border-red-100 space-y-2.5 animate-in fade-in duration-200">
                                     <div className="flex items-center justify-between">
                                         <label className="block text-xs font-black text-red-900 uppercase tracking-wider">Cakupan Libur</label>
-                                        <span className="text-[10px] font-bold text-red-600 bg-red-100/60 px-2 py-0.5 rounded-md">Aturan Absensi</span>
+                                        <span className="text-[10px] font-bold text-red-600 bg-red-100/70 px-2 py-0.5 rounded-md">Aturan Absensi</span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         {[
@@ -640,7 +661,7 @@ const KalenderAkademikPage = () => {
                                                 key={c.id}
                                                 type="button"
                                                 onClick={() => setForm({ ...form, cakupan: c.id })}
-                                                className={`py-2 px-2.5 rounded-xl text-xs font-black border transition-all text-center cursor-pointer ${
+                                                className={`py-2 px-2 rounded-xl text-xs font-black border transition-all text-center cursor-pointer ${
                                                     (form.cakupan || 'Semua') === c.id
                                                         ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200 scale-[1.02]'
                                                         : 'bg-white text-gray-700 border-gray-200 hover:bg-red-50/50'
@@ -650,8 +671,8 @@ const KalenderAkademikPage = () => {
                                             </button>
                                         ))}
                                     </div>
-                                    <p className="text-[11px] text-red-700/80 font-medium leading-relaxed bg-white/70 p-2.5 rounded-xl border border-red-100">
-                                        {(form.cakupan || 'Semua') === 'Semua' && '🏖️ Madrasah & Halaqoh libur penuh. Seluruh jadwal di rentang tanggal ini dibebaskan dari absensi (tidak kena Alpha).'}
+                                    <p className="text-[11px] text-red-700 font-medium leading-relaxed bg-white/80 p-2.5 rounded-xl border border-red-100">
+                                        {(form.cakupan || 'Semua') === 'Semua' && '🏖️ Madrasah & Halaqoh libur penuh. Seluruh jadwal di rentang tanggal ini bebas absen (tidak kena Alpha).'}
                                         {(form.cakupan || 'Semua') === 'Madrosah' && '🏫 Hanya Madrasah yang libur (KBM kelas bebas absen). Musyrif & Santri Halaqoh Qur\'aniyah tetap wajib hadir absen.'}
                                         {(form.cakupan || 'Semua') === 'Quraniyah' && '📖 Hanya Halaqoh Qur\'an yang libur (bebas absen). KBM kelas Madrasah tetap berjalan normal dan wajib diabsen.'}
                                     </p>
@@ -659,46 +680,59 @@ const KalenderAkademikPage = () => {
                             )}
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi (Opsional)</label>
+                                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5">Deskripsi (Opsional)</label>
                                 <textarea
                                     value={form.deskripsi}
                                     onChange={e => setForm({ ...form, deskripsi: e.target.value })}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all text-gray-900 placeholder:text-gray-400 resize-none"
-                                    rows={3}
+                                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 resize-none bg-white"
+                                    rows={2}
                                     placeholder="Tambahkan catatan atau detail kegiatan..."
                                 ></textarea>
                             </div>
-
-                            <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">
-                                {editItem && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setDeleteModal({ isOpen: true, item: editItem })}
-                                        className="btn btn-outline-danger px-4"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                )}
-                                <div className="flex-1 flex gap-3 justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModal(false)}
-                                        className="btn btn-secondary"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="btn btn-primary"
-                                        disabled={saving}
-                                    >
-                                        {saving ? <Spinner size={16} /> : (editItem ? 'Simpan Perubahan' : 'Buat Agenda')}
-                                    </button>
-                                </div>
-                            </div>
                         </form>
+
+                        {/* 3. Footer Actions (STICKY AT BOTTOM - ALWAYS VISIBLE ON MOBILE & DESKTOP!) */}
+                        <div className="shrink-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-3.5 sm:py-4 bg-white border-t border-gray-100 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] pb-[max(1rem,env(safe-area-inset-bottom,16px))]">
+                            {editItem ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setDeleteModal({ isOpen: true, item: editItem })}
+                                    className="p-2.5 sm:px-3 sm:py-2.5 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all cursor-pointer flex items-center gap-1.5 active:scale-95 text-xs font-bold shrink-0"
+                                    title="Hapus Agenda"
+                                >
+                                    <Trash2 size={16} />
+                                    <span className="hidden sm:inline">Hapus</span>
+                                </button>
+                            ) : <div />}
+
+                            <div className="flex items-center gap-2.5 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer border border-gray-200 bg-white"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    form="modal-agenda-form"
+                                    className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-primary-600/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                                    disabled={saving}
+                                >
+                                    {saving ? (
+                                        <>
+                                            <Spinner size={16} />
+                                            <span>Menyimpan...</span>
+                                        </>
+                                    ) : (
+                                        <span>{editItem ? 'Simpan Perubahan' : 'Simpan Agenda'}</span>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <ConfirmationModal
