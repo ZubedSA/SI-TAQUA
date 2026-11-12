@@ -296,7 +296,7 @@ const AdminAbsensiPage = () => {
         let tableHeaders, tableRows, columnStyles;
 
         if (isStaf) {
-            tableHeaders = [["No", "Nama Pengajar", "Email", "Hadir", "Izin", "Alpha", "Score Kehadiran (%)"]];
+            tableHeaders = [["No", "Nama Pengajar", "Email", "Hadir", "Izin", "Libur", "Alpha", "Score Kehadiran (%)"]];
             tableRows = aggregatedStaf.map((item, index) => {
                 const total = item.Hadir + item.Izin + item.Alpha;
                 const score = total > 0 ? Math.round(((item.Hadir + item.Izin) / total) * 100) : 0;
@@ -306,6 +306,7 @@ const AdminAbsensiPage = () => {
                     item.email || '-',
                     item.Hadir,
                     item.Izin,
+                    item.Libur || 0,
                     item.Alpha,
                     `${score}%`
                 ];
@@ -313,10 +314,11 @@ const AdminAbsensiPage = () => {
             columnStyles = {
                 0: { cellWidth: 10, halign: 'center' },
                 1: { fontStyle: 'bold' },
-                3: { cellWidth: 15, halign: 'center' },
-                4: { cellWidth: 15, halign: 'center' },
-                5: { cellWidth: 15, halign: 'center' },
-                6: { cellWidth: 35, halign: 'center' }
+                3: { cellWidth: 14, halign: 'center' },
+                4: { cellWidth: 14, halign: 'center' },
+                5: { cellWidth: 14, halign: 'center' },
+                6: { cellWidth: 14, halign: 'center' },
+                7: { cellWidth: 32, halign: 'center' }
             };
         } else {
             tableHeaders = [["No", "Nama Santri", "NIS", "Kategori", "Kelas / Halaqoh", "Hadir", "Terlambat", "Sakit", "Izin", "Alpha", "Pulang"]];
@@ -388,6 +390,7 @@ const AdminAbsensiPage = () => {
                     "Email": item.email || '-',
                     "Hadir": item.Hadir,
                     "Izin": item.Izin,
+                    "Libur": item.Libur || 0,
                     "Alpha": item.Alpha,
                     "Score Kehadiran": `${score}%`
                 };
@@ -398,6 +401,7 @@ const AdminAbsensiPage = () => {
                 { wch: 25 },  // Email
                 { wch: 10 },  // Hadir
                 { wch: 10 },  // Izin
+                { wch: 10 },  // Libur
                 { wch: 10 },  // Alpha
                 { wch: 18 }   // Score
             ];
@@ -457,6 +461,7 @@ const AdminAbsensiPage = () => {
                     <th>Email</th>
                     <th>Hadir</th>
                     <th>Izin</th>
+                    <th>Libur</th>
                     <th>Alpha</th>
                     <th>Score Kehadiran</th>
                 </tr>
@@ -471,6 +476,7 @@ const AdminAbsensiPage = () => {
                         <td>${item.email || '-'}</td>
                         <td class="center">${item.Hadir}</td>
                         <td class="center">${item.Izin}</td>
+                        <td class="center">${item.Libur || 0}</td>
                         <td class="center">${item.Alpha}</td>
                         <td class="center">${score}%</td>
                     </tr>
@@ -708,7 +714,7 @@ const AdminAbsensiPage = () => {
     useEffect(() => {
         fetchPendingPermits()
         fetchHolidays()
-    }, [filterDate])
+    }, [filterDate, filterStartDate, filterEndDate, mainTab, subKehadiran, selectedSemesterId])
 
     const handleSaveHoliday = async (e) => {
         if (e) e.preventDefault()
@@ -1134,6 +1140,7 @@ const AdminAbsensiPage = () => {
                 email: guru?.email || '-',
                 Hadir: 0,
                 Izin: 0,
+                Libur: 0,
                 Alpha: 0,
                 BelumAbsen: 0,
                 totalSelesai: 0,
@@ -1197,6 +1204,7 @@ const AdminAbsensiPage = () => {
                     // Cek apakah tanggal ini libur untuk tipe jadwal ini (Madrasah / Halaqoh / Semua)
                     const holidayMatch = getActiveHolidayForSchedule(dateStr, j.tipe, holidayList)
                     if (holidayMatch) {
+                        stafSummary[j.guru_id].Libur++
                         stafSummary[j.guru_id].details.push({
                             tanggal: dateStr,
                             jam_ke: j.jam_ke,
@@ -1272,7 +1280,7 @@ const AdminAbsensiPage = () => {
         })
 
         return Object.values(stafSummary).sort((a, b) => b.Alpha - a.Alpha)
-    }, [presensiStaf, allJadwal, filterStartDate, filterEndDate, guruList, izinGuruList, filterType])
+    }, [presensiStaf, allJadwal, filterStartDate, filterEndDate, guruList, izinGuruList, filterType, holidayList])
 
     // Logika untuk Kehadiran Staf Harian (Daftar seluruh jadwal hari ini + status kehadirannya)
     const dailyStaffAttendance = React.useMemo(() => {
@@ -2918,6 +2926,12 @@ const AdminAbsensiPage = () => {
                                              hideOnMobile: true 
                                          },
                                          { 
+                                             header: 'Libur', 
+                                             render: (row) => <span className="font-black text-teal-700 bg-teal-50 px-4 py-1.5 rounded-xl border border-teal-200">{row.Libur || 0}</span>, 
+                                             className: 'px-8 py-6 text-center text-teal-700', 
+                                             hideOnMobile: true 
+                                         },
+                                         { 
                                              header: 'Alpha', 
                                              render: (row) => <span className="font-black text-red-600 bg-red-50 px-4 py-1.5 rounded-xl border border-red-100">{row.Alpha}</span>, 
                                              className: 'px-8 py-6 text-center text-red-600', 
@@ -2973,22 +2987,26 @@ const AdminAbsensiPage = () => {
                                          const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
                                          return (
                                              <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
-                                                 <div className="grid grid-cols-4 gap-2">
+                                                 <div className="grid grid-cols-5 gap-1.5">
                                                      <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-center">
                                                          <div className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Hadir</div>
-                                                         <div className="text-sm font-black text-emerald-600">{row.Hadir}</div>
+                                                         <div className="text-xs sm:text-sm font-black text-emerald-600">{row.Hadir}</div>
                                                      </div>
                                                      <div className="bg-amber-50 p-2 rounded-xl border border-amber-100 text-center">
                                                          <div className="text-[8px] font-black text-amber-400 uppercase tracking-widest mb-1">Izin</div>
-                                                         <div className="text-sm font-black text-amber-600">{row.Izin}</div>
+                                                         <div className="text-xs sm:text-sm font-black text-amber-600">{row.Izin}</div>
+                                                     </div>
+                                                     <div className="bg-teal-50 p-2 rounded-xl border border-teal-200 text-center">
+                                                         <div className="text-[8px] font-black text-teal-500 uppercase tracking-widest mb-1">Libur</div>
+                                                         <div className="text-xs sm:text-sm font-black text-teal-700">{row.Libur || 0}</div>
                                                      </div>
                                                      <div className="bg-red-50 p-2 rounded-xl border border-red-100 text-center">
                                                          <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Alpha</div>
-                                                         <div className="text-sm font-black text-red-600">{row.Alpha}</div>
+                                                         <div className="text-xs sm:text-sm font-black text-red-600">{row.Alpha}</div>
                                                      </div>
                                                      <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100 text-center">
                                                          <div className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Score</div>
-                                                         <div className="text-sm font-black text-indigo-600">{score}%</div>
+                                                         <div className="text-xs sm:text-sm font-black text-indigo-600">{score}%</div>
                                                      </div>
                                                  </div>
                                              </div>
@@ -3455,15 +3473,25 @@ const AdminAbsensiPage = () => {
                                                         </div>
                                                         
                                                         <div className="flex items-center gap-2">
+                                                            {p.keterangan && (
+                                                                <span className="hidden sm:inline-block text-[10px] text-teal-700 font-bold bg-teal-50/80 px-2.5 py-0.5 rounded-lg border border-teal-200 max-w-[220px] truncate" title={p.keterangan}>
+                                                                    {p.keterangan}
+                                                                </span>
+                                                            )}
                                                             <Badge 
                                                                 variant={
                                                                     p.status === 'Hadir' ? 'success' : 
                                                                     p.status === 'Sakit' ? 'warning' : 
                                                                     p.status === 'Izin' ? 'info' : 
                                                                     p.status === 'Dinas' ? 'primary' : 
+                                                                    p.status === 'Libur' ? 'neutral' :
                                                                     p.status === 'Belum Absen' ? 'neutral' : 'danger'
                                                                 } 
-                                                                className="px-3 py-1 text-[9px] font-black uppercase tracking-widest"
+                                                                className={
+                                                                    p.status === 'Libur'
+                                                                        ? "px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-teal-50 text-teal-700 border border-teal-200"
+                                                                        : "px-3 py-1 text-[9px] font-black uppercase tracking-widest"
+                                                                }
                                                             >
                                                                 {p.status}
                                                             </Badge>
