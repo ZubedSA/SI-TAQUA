@@ -71,11 +71,20 @@ const KalenderAkademikPage = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
     }
 
-    const formatDate = (d) => d.toISOString().split('T')[0]
+    const formatDate = (d) => {
+        if (!d) return ''
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
 
-    // Events for current month cells
+    // Events for current month cells (Menggunakan tanggal lokal agar tidak bergeser zona waktu)
     const getEventsForDay = (day) => {
-        const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0]
+        const year = currentDate.getFullYear()
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+        const dStr = String(day).padStart(2, '0')
+        const dateStr = `${year}-${month}-${dStr}`
         return events.filter(e => {
             return dateStr >= e.tanggal_mulai && dateStr <= e.tanggal_selesai
         })
@@ -281,8 +290,11 @@ const KalenderAkademikPage = () => {
                             <button
                                 onClick={() => {
                                     resetForm();
-                                    const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDay, 8).toISOString().split('T')[0];
-                                    setForm(prev => ({ ...prev, tanggal_mulai: dateStr, tanggal_selesai: dateStr }));
+                                    const year = currentDate.getFullYear();
+                                    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                    const dStr = String(selectedDay).padStart(2, '0');
+                                    const dateStr = `${year}-${month}-${dStr}`;
+                                    setForm(prev => ({ ...prev, tanggal_mulai: dateStr, tanggal_selesai: dateStr, jenis: 'Libur' }));
                                     setShowModal(true);
                                 }}
                                 className="w-8 h-8 flex items-center justify-center bg-white border border-gray-200 rounded-full text-primary-600 shadow-sm active:scale-95"
@@ -389,7 +401,10 @@ const KalenderAkademikPage = () => {
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 resetForm();
-                                                const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day, 8).toISOString().split('T')[0];
+                                                const year = currentDate.getFullYear();
+                                                const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                                const dStr = String(day).padStart(2, '0');
+                                                const dateStr = `${year}-${month}-${dStr}`;
                                                 setForm(prev => ({ ...prev, tanggal_mulai: dateStr, tanggal_selesai: dateStr }));
                                                 setShowModal(true);
                                             }}

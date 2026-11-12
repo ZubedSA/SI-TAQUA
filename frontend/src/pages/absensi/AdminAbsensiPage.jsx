@@ -117,8 +117,8 @@ const AdminAbsensiPage = () => {
     const [showHolidayModal, setShowHolidayModal] = useState(false)
     const [holidayForm, setHolidayForm] = useState({
         judul: '',
-        tanggal_mulai: new Date().toISOString().split('T')[0],
-        tanggal_selesai: new Date().toISOString().split('T')[0],
+        tanggal_mulai: getLocalDateStr(new Date()),
+        tanggal_selesai: getLocalDateStr(new Date()),
         cakupan: 'Semua',
         deskripsi: ''
     })
@@ -130,16 +130,16 @@ const AdminAbsensiPage = () => {
     const [loading, setLoading] = useState(false)
     const [presensiData, setPresensiData] = useState([])
     
-    // Filters
-    const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+    // Filters (Gunakan tanggal lokal agar tidak mundur 1 hari pada jam dini hari)
+    const [filterDate, setFilterDate] = useState(getLocalDateStr(new Date()))
     
     // Default to start of month for reports
     const getStartOfMonth = () => {
         const d = new Date()
-        return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0]
+        return getLocalDateStr(new Date(d.getFullYear(), d.getMonth(), 1))
     }
     const [filterStartDate, setFilterStartDate] = useState(getStartOfMonth())
-    const [filterEndDate, setFilterEndDate] = useState(new Date().toISOString().split('T')[0])
+    const [filterEndDate, setFilterEndDate] = useState(getLocalDateStr(new Date()))
     const [selectedSantriId, setSelectedSantriId] = useState(null)
     const [selectedGuruId, setSelectedGuruId] = useState(null)
     const [editingSession, setEditingSession] = useState(null)
@@ -741,8 +741,8 @@ const AdminAbsensiPage = () => {
             setShowHolidayModal(false)
             setHolidayForm({
                 judul: '',
-                tanggal_mulai: filterDate || new Date().toISOString().split('T')[0],
-                tanggal_selesai: filterDate || new Date().toISOString().split('T')[0],
+                tanggal_mulai: filterDate || getLocalDateStr(new Date()),
+                tanggal_selesai: filterDate || getLocalDateStr(new Date()),
                 cakupan: 'Semua',
                 deskripsi: ''
             })
@@ -1668,8 +1668,8 @@ const AdminAbsensiPage = () => {
                                     onClick={() => {
                                         setHolidayForm({
                                             judul: '',
-                                            tanggal_mulai: filterDate || new Date().toISOString().split('T')[0],
-                                            tanggal_selesai: filterDate || new Date().toISOString().split('T')[0],
+                                            tanggal_mulai: filterDate || getLocalDateStr(new Date()),
+                                            tanggal_selesai: filterDate || getLocalDateStr(new Date()),
                                             cakupan: 'Semua',
                                             deskripsi: ''
                                         })
@@ -1689,10 +1689,10 @@ const AdminAbsensiPage = () => {
                                         className="bg-transparent border-none text-white text-xs font-bold outline-none cursor-pointer [color-scheme:dark]"
                                     />
                                 </div>
-                                {filterDate !== new Date().toISOString().split('T')[0] && (
+                                {filterDate !== getLocalDateStr(new Date()) && (
                                     <button
                                         type="button"
-                                        onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
+                                        onClick={() => setFilterDate(getLocalDateStr(new Date()))}
                                         className="px-3 py-2 bg-[#BCF32F] text-[#0A2619] rounded-xl text-xs font-black hover:bg-[#d0ff42] transition-all cursor-pointer whitespace-nowrap active:scale-95"
                                     >
                                         Hari Ini
