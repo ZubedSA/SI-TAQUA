@@ -155,9 +155,11 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         nilai_uts,
         nilai_uas,
         nilai_akhir,
-        semester,
         tahun_ajaran,
-        mapel (nama)
+        jenis_ujian,
+        kategori,
+        mapel (nama),
+        semester:semester_id (nama)
       `)
             .eq('santri_id', santriId);
         if (error)
@@ -387,12 +389,22 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         if (mapelErr)
             throw mapelErr;
         const mapelId = mapelList && mapelList.length > 0 ? mapelList[0].id : null;
+        let semesterId = null;
+        const { data: semList } = await this.supabase
+            .from('semester')
+            .select('id')
+            .ilike('nama', `%${semester}%`)
+            .limit(1);
+        if (semList && semList.length > 0) {
+            semesterId = semList[0].id;
+        }
         const payload = {
             santri_id: santriId,
             nilai_akhir: nilaiAkhir,
-            semester: semester,
             tahun_ajaran: tahunAjaran,
         };
+        if (semesterId)
+            payload.semester_id = semesterId;
         if (mapelId)
             payload.mapel_id = mapelId;
         const { data, error } = await this.supabase

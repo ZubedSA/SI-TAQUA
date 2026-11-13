@@ -42,9 +42,13 @@ export declare class SupabaseService {
         nilai_uts: any;
         nilai_uas: any;
         nilai_akhir: any;
-        semester: any;
         tahun_ajaran: any;
+        jenis_ujian: any;
+        kategori: any;
         mapel: {
+            nama: any;
+        }[];
+        semester: {
             nama: any;
         }[];
     }[]>;

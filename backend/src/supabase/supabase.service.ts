@@ -174,9 +174,11 @@ export class SupabaseService {
         nilai_uts,
         nilai_uas,
         nilai_akhir,
-        semester,
         tahun_ajaran,
-        mapel (nama)
+        jenis_ujian,
+        kategori,
+        mapel (nama),
+        semester:semester_id (nama)
       `)
       .eq('santri_id', santriId);
 
@@ -471,13 +473,24 @@ export class SupabaseService {
 
     const mapelId = mapelList && mapelList.length > 0 ? mapelList[0].id : null;
 
+    // Cari semester berdasarkan nama jika ada
+    let semesterId: string | null = null;
+    const { data: semList } = await this.supabase
+      .from('semester')
+      .select('id')
+      .ilike('nama', `%${semester}%`)
+      .limit(1);
+    if (semList && semList.length > 0) {
+      semesterId = semList[0].id;
+    }
+
     // Upsert nilai
     const payload: any = {
       santri_id: santriId,
       nilai_akhir: nilaiAkhir,
-      semester: semester,
       tahun_ajaran: tahunAjaran,
     };
+    if (semesterId) payload.semester_id = semesterId;
     if (mapelId) payload.mapel_id = mapelId;
 
     const { data, error } = await this.supabase

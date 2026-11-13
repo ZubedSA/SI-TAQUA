@@ -718,7 +718,8 @@ ${dataContext}`;
     };
 
     if (dbResult && dbResult.error) {
-      return `⚠️ *Afwan Ayah/Bunda,* terjadi kendala: ${dbResult.error}`;
+      const roleCall = isGuru ? 'Ustadz/Ustadzah' : 'Ayah/Bunda';
+      return `⚠️ *Afwan ${roleCall},* terjadi kendala: ${dbResult.error}`;
     }
 
     switch (intent) {
@@ -844,15 +845,17 @@ ${dataContext}`;
         let nilText = `${getGreeting()}\n\nBerikut rekap *nilai akademis* nanda *${santriName}*:\n\n`;
 
         records.forEach((n: any) => {
-          const mapel = n.mapel?.nama || n.nama_mapel || 'Mata Pelajaran';
-          const sem = n.semester ? `Semester ${n.semester}` : '';
+          const mapel = n.mapel?.nama || n.nama_mapel || n.kategori || 'Mata Pelajaran';
+          const semNama = n.semester?.nama || n.semester || '';
+          const sem = semNama ? `Semester ${semNama}` : '';
           const ta = n.tahun_ajaran ? `TA ${n.tahun_ajaran}` : '';
-          const header = [mapel, sem, ta].filter(Boolean).join(' - ');
+          const jenis = n.jenis_ujian ? `[${String(n.jenis_ujian).toUpperCase()}]` : '';
+          const header = [mapel, jenis, sem, ta].filter(Boolean).join(' - ');
 
           nilText += `📚 *${header}*\n`;
-          nilText += `  • Tugas: *${n.nilai_tugas ?? '-'}*\n`;
-          nilText += `  • UTS: *${n.nilai_uts ?? '-'}*\n`;
-          nilText += `  • UAS: *${n.nilai_uas ?? '-'}*\n`;
+          if (n.nilai_tugas !== null && n.nilai_tugas !== undefined) nilText += `  • Tugas: *${n.nilai_tugas}*\n`;
+          if (n.nilai_uts !== null && n.nilai_uts !== undefined) nilText += `  • UTS: *${n.nilai_uts}*\n`;
+          if (n.nilai_uas !== null && n.nilai_uas !== undefined) nilText += `  • UAS: *${n.nilai_uas}*\n`;
           nilText += `  🎯 *Nilai Akhir: ${n.nilai_akhir ?? '-'}*\n\n`;
         });
 
