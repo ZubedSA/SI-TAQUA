@@ -101,7 +101,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
     }
     async sendFonnteMessage(target, message) {
         this.sentMessages.set(this.normalizeText(message), Date.now());
-        const token = process.env.FONNTE_TOKEN || 'ytZayjjW1QaTtx4EQn4d';
+        const token = process.env.FONNTE_TOKEN || '9TKo4vZBPyQ1bjwSniV8';
         const formData = new URLSearchParams();
         formData.append('target', target);
         formData.append('message', message);

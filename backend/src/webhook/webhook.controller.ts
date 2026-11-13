@@ -128,8 +128,8 @@ export class WebhookController {
     // Catat pesan yang dikirim oleh bot untuk mendeteksi loop saat self-chat
     this.sentMessages.set(this.normalizeText(message), Date.now());
 
-    // FIX #5: Gunakan token yang sesuai dengan .env terbaru
-    const token = process.env.FONNTE_TOKEN || 'ytZayjjW1QaTtx4EQn4d';
+    // Gunakan token yang sesuai dengan .env terbaru
+    const token = process.env.FONNTE_TOKEN || '9TKo4vZBPyQ1bjwSniV8';
 
     const formData = new URLSearchParams();
     formData.append('target', target);
