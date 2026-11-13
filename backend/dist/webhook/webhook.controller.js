@@ -156,6 +156,18 @@ let WebhookController = WebhookController_1 = class WebhookController {
     async handleWebhookGet(req, res) {
         return this.handleWebhook(req, res);
     }
+    async handleApiWebhookPost(req, res) {
+        return this.handleWebhook(req, res);
+    }
+    async handleApiWebhookGet(req, res) {
+        return this.handleWebhook(req, res);
+    }
+    async handlePhpWebhookPost(req, res) {
+        return this.handleWebhook(req, res);
+    }
+    async handlePhpWebhookGet(req, res) {
+        return this.handleWebhook(req, res);
+    }
     async handleRootPost(req, res) {
         return this.handleWebhook(req, res);
     }
@@ -625,6 +637,38 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "handleWebhookGet", null);
+__decorate([
+    (0, common_1.Post)('api/webhook'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handleApiWebhookPost", null);
+__decorate([
+    (0, common_1.Get)('api/webhook'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handleApiWebhookGet", null);
+__decorate([
+    (0, common_1.Post)('webhook.php'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handlePhpWebhookPost", null);
+__decorate([
+    (0, common_1.Get)('webhook.php'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handlePhpWebhookGet", null);
 __decorate([
     (0, common_1.Post)(''),
     __param(0, (0, common_1.Req)()),

@@ -22,6 +22,10 @@ export declare class WebhookController {
     getDebugDb(res: Response): Promise<Response<any, Record<string, any>>>;
     handleWebhookPost(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
     handleWebhookGet(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handleApiWebhookPost(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handleApiWebhookGet(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handlePhpWebhookPost(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handlePhpWebhookGet(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
     handleRootPost(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
     handleRootGet(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
     private handleWebhook;

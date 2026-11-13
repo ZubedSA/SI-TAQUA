@@ -189,7 +189,7 @@ export class WebhookController {
   }
 
   // =====================================================================
-  // GET & POST /webhook & / — Main entry point (mendukung GET & POST sesuai syarat Fonnte)
+  // GET & POST /webhook, /api/webhook, /webhook.php, & / — Main entry point
   // =====================================================================
   @Post('webhook')
   async handleWebhookPost(@Req() req: Request, @Res() res: Response) {
@@ -198,6 +198,26 @@ export class WebhookController {
 
   @Get('webhook')
   async handleWebhookGet(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  @Post('api/webhook')
+  async handleApiWebhookPost(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  @Get('api/webhook')
+  async handleApiWebhookGet(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  @Post('webhook.php')
+  async handlePhpWebhookPost(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  @Get('webhook.php')
+  async handlePhpWebhookGet(@Req() req: Request, @Res() res: Response) {
     return this.handleWebhook(req, res);
   }
 
