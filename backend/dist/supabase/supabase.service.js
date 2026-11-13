@@ -71,7 +71,8 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         await this.ensureSampleData();
         let query = this.supabase
             .from('tagihan_santri')
-            .select('id, jumlah, jatuh_tempo, status, keterangan, santri(nama), kategori_pembayaran(nama)');
+            .select('id, jumlah, jatuh_tempo, status, keterangan, santri(nama), kategori_pembayaran(nama)')
+            .order('jatuh_tempo', { ascending: false });
         if (santriId) {
             query = query.eq('santri_id', santriId);
         }

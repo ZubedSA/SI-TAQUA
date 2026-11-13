@@ -9,6 +9,7 @@ export declare class AiService {
     setContext(sender: string, intent: string, santriName: string): void;
     private addToHistory;
     private parseIntentWithGemini;
+    private cleanSantriName;
     private parseIntentLocal;
     parseIntent(userPrompt: string, sender: string): Promise<any>;
     private formatResponseWithGemini;

@@ -415,51 +415,86 @@ export class WebhookController {
       // ----------------------------------------------------------------
       let targetSantri: any = null;
 
-      if ((parsed.intent === 'cekPembayaran' || parsed.intent === 'cekTagihan') && !parsed.parameters?.santri_name) {
-        const isGuru = await this.supabaseService.isGuru(sender);
-        if (!isGuru) {
-          const replyText = 'Maaf, Anda tidak memiliki hak akses untuk melihat data tersebut.';
-          await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Global Access Check Failed', null, replyText, Date.now() - startTime, 'Access Denied');
-          return this.replyToUser(res, sender, replyText, messageId);
-        }
-      }
-
       const specSantriIntents = ['cekPembayaran', 'cekTagihan', 'cekHafalan', 'cekNilai', 'cekAbsensi', 'cekSantri', 'cekPrestasi', 'cekPerizinan'];
 
       if (specSantriIntents.includes(parsed.intent)) {
-        if (parsed.parameters?.santri_name) {
+        // Ambil data santri yang terhubung dengan nomor WhatsApp sender (jika terdaftar sebagai wali)
+        let waliSantri: any[] = [];
+        try {
+          waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
+        } catch (e) {
+          this.logger.warn('Gagal ambil data santri berdasarkan nomor wali:', e);
+        }
+
+        let candidateName = (parsed.parameters?.santri_name || '').trim();
+
+        // Cek jika nomor WhatsApp wali memiliki anak dan pesan mengandung nama/potongan nama anaknya
+        // (contoh: user cukup ketik "wildan", langsung kenali Ahmad Wildan Ramdlani tanpa klarifikasi!)
+        if (waliSantri.length > 0) {
+          const cleanMsg = message.toLowerCase();
+          for (const s of waliSantri) {
+            const parts = s.nama.toLowerCase().split(/\s+/);
+            const matchedPart = parts.find((p: string) => p.length >= 3 && cleanMsg.includes(p));
+            if (matchedPart) {
+              candidateName = s.nama;
+              targetSantri = s;
+              break;
+            }
+          }
+
+          // Cek jika user membalas dengan angka indeks anak (contoh: "1" atau "2")
+          if (!targetSantri && /^[1-9]$/.test(message.trim())) {
+            const idx = parseInt(message.trim(), 10) - 1;
+            if (idx >= 0 && idx < waliSantri.length) {
+              targetSantri = waliSantri[idx];
+            }
+          }
+        }
+
+        // Jika belum resolved dan ada candidateName (dari parameter AI atau regex), cari di database
+        if (!targetSantri && candidateName) {
           try {
-            const matches = await this.supabaseService.findSantriByName(parsed.parameters.santri_name);
-            const resolution = this.handleSantriMatches(matches, parsed.parameters.santri_name);
-            
-            if (resolution.clarification) {
-              await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Clarification Ganda', null, resolution.clarification, Date.now() - startTime);
-              return this.replyToUser(res, sender, resolution.clarification, messageId);
+            const matches = await this.supabaseService.findSantriByName(candidateName);
+
+            // Jika ada beberapa match di database, tapi salah satunya adalah anak si wali, langsung prioritaskan anak wali!
+            if (matches && matches.length > 1 && waliSantri.length > 0) {
+              const myChild = matches.find(m => waliSantri.some(w => w.id === m.id));
+              if (myChild) {
+                targetSantri = myChild;
+              }
             }
 
-            if (!resolution.target) {
-              const replyText = `Maaf, data santri dengan nama *"${parsed.parameters.santri_name}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`;
-              await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Santri Not Found', null, replyText, Date.now() - startTime, 'Santri Not Found');
-              return this.replyToUser(res, sender, replyText, messageId);
+            if (!targetSantri) {
+              const resolution = this.handleSantriMatches(matches, candidateName);
+              if (resolution.clarification) {
+                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Clarification Ganda', null, resolution.clarification, Date.now() - startTime);
+                return this.replyToUser(res, sender, resolution.clarification, messageId);
+              }
+              if (!resolution.target) {
+                const replyText = `Maaf, data santri dengan nama *"${candidateName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`;
+                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Santri Not Found', null, replyText, Date.now() - startTime, 'Santri Not Found');
+                return this.replyToUser(res, sender, replyText, messageId);
+              }
+              targetSantri = resolution.target;
             }
-            targetSantri = resolution.target;
           } catch (dbError) {
             this.logger.error('Gagal resolve santri name:', dbError);
           }
-        } else {
-          try {
-            const matches = await this.supabaseService.findSantriByWaliPhone(sender);
-            const resolution = this.handleSantriMatches(matches, 'Anak Anda');
-            
+        }
+
+        // Jika masih belum resolved dan tidak ada nama yang disebut
+        if (!targetSantri && !candidateName) {
+          if (waliSantri.length === 1) {
+            // Jika wali hanya punya 1 anak, otomatis pilih anak tersebut!
+            targetSantri = waliSantri[0];
+          } else if (waliSantri.length > 1) {
+            // Jika wali punya lebih dari 1 anak, mintakan pilihan
+            const resolution = this.handleSantriMatches(waliSantri, 'Anak Anda');
             if (resolution.clarification) {
               const clarText = resolution.clarification.replace(/dengan nama\s*\*?"Anak Anda"\*?/gi, 'yang terhubung dengan nomor WhatsApp Anda');
               await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Clarification Wali Ganda', null, clarText, Date.now() - startTime);
               return this.replyToUser(res, sender, clarText, messageId);
             }
-            
-            targetSantri = resolution.target;
-          } catch (dbError) {
-            this.logger.error('Gagal resolve santri berdasarkan nomor wali:', dbError);
           }
         }
 
@@ -474,7 +509,7 @@ export class WebhookController {
             return this.replyToUser(res, sender, replyText, messageId);
           }
         } else {
-          const replyText = `Maaf, data santri tidak ditemukan di sistem. Pastikan nama sudah benar ya.`;
+          const replyText = `Maaf, data santri tidak ditemukan di sistem. Mohon sebutkan nama santri dengan jelas ya. 😊`;
           await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'No Target Resolved', null, replyText, Date.now() - startTime, 'No Target Resolved');
           return this.replyToUser(res, sender, replyText, messageId);
         }

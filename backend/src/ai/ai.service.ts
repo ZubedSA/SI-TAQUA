@@ -27,43 +27,54 @@ export class AiService {
           tools: [{
             functionDeclarations: [
               {
-                name: 'cekPembayaran',
-                description: 'Mengecek status tagihan atau pembayaran SPP/uang makan/asrama santri',
+                name: 'cekTagihan',
+                description: 'Mengecek rincian tagihan aktif santri yang belum lunas atau harus dibayar',
                 parameters: {
                   type: SchemaType.OBJECT,
                   properties: {
-                    santri_name: { type: SchemaType.STRING, description: 'Nama santri saja (tanpa kata tanya/kata kerja)' },
-                    bulan: { type: SchemaType.STRING, description: 'Bulan tagihan (misal: Juli atau bulan ini)' }
+                    santri_name: { type: SchemaType.STRING, description: 'Nama santri atau nama panggilan santri saja (misal: Wildan)' },
+                    bulan: { type: SchemaType.STRING, description: 'Bulan tagihan opsional (misal: Juli)' }
+                  }
+                }
+              },
+              {
+                name: 'cekPembayaran',
+                description: 'Mengecek status pembayaran SPP/biaya santri (lunas maupun belum lunas per bulan)',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    santri_name: { type: SchemaType.STRING, description: 'Nama santri atau nama panggilan santri saja (misal: Wildan)' },
+                    bulan: { type: SchemaType.STRING, description: 'Bulan tagihan opsional (misal: Juli)' }
                   }
                 }
               },
               {
                 name: 'cekHafalan',
-                description: 'Mengecek progress atau riwayat setoran hafalan santri',
+                description: 'Mengecek progress atau riwayat setoran hafalan Al-Qur\'an santri (juz, surah, ayat)',
                 parameters: {
                   type: SchemaType.OBJECT,
                   properties: {
-                    santri_name: { type: SchemaType.STRING, description: 'Nama santri saja' }
+                    santri_name: { type: SchemaType.STRING, description: 'Nama santri atau nama panggilan saja (misal: Wildan)' }
                   }
                 }
               },
               {
                 name: 'cekNilai',
-                description: 'Mengecek nilai akademis atau pelajaran santri',
+                description: 'Mengecek nilai akademis, raport, atau ujian pelajaran santri',
                 parameters: {
                   type: SchemaType.OBJECT,
                   properties: {
-                    santri_name: { type: SchemaType.STRING, description: 'Nama santri saja' }
+                    santri_name: { type: SchemaType.STRING, description: 'Nama santri atau nama panggilan saja (misal: Wildan)' }
                   }
                 }
               },
               {
                 name: 'cekAbsensi',
-                description: 'Mengecek rekap kehadiran atau absensi santri',
+                description: 'Mengecek data presensi, kehadiran, atau absensi santri (hadir, sakit, izin, atau alfa)',
                 parameters: {
                   type: SchemaType.OBJECT,
                   properties: {
-                    santri_name: { type: SchemaType.STRING, description: 'Nama santri saja' }
+                    santri_name: { type: SchemaType.STRING, description: 'Nama santri atau nama panggilan saja (misal: Wildan)' }
                   }
                 }
               },
@@ -77,16 +88,7 @@ export class AiService {
                   }
                 }
               },
-              {
-                name: 'cekTagihan',
-                description: 'Mengecek rincian tagihan aktif santri',
-                parameters: {
-                  type: SchemaType.OBJECT,
-                  properties: {
-                    santri_name: { type: SchemaType.STRING, description: 'Nama santri saja' }
-                  }
-                }
-              },
+
               {
                 name: 'cekPrestasi',
                 description: 'Mengecek prestasi akademis atau pujian santri',
@@ -257,6 +259,40 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     };
   }
 
+  // Helper untuk membersihkan dan memformat nama santri
+  private cleanSantriName(raw: string): string {
+    if (!raw) return '';
+    let name = raw.trim();
+
+    // Hapus awalan sebutan atau kata kerja/tanya yang tidak sengaja tertangkap
+    name = name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas\s+nama|nama|si|tentang|data|info|cek|lihat|tampilkan|status|rekap)\s+/gi, '').trim();
+
+    // Hapus kata kunci kategori yang mungkin nempel di depan
+    name = name.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|absensi|kehadiran|presensi)\s+/gi, '').trim();
+
+    // Hapus stopwords di bagian akhir (trailing time/question markers)
+    const trailingStopwords = [
+      'hari\\s+ini', 'bulan\\s+ini', 'minggu\\s+ini', 'tahun\\s+ini',
+      'kemarin', 'besok', 'sekarang', 'saat\\s+ini',
+      'semester\\s+\\d+', 'semester\\s+ini', 'semester\\s+ganjil', 'semester\\s+genap',
+      'apakah\\s+sudah\\s+bayar', 'sudah\\s+bayar', 'belum\\s+bayar', 'sudah\\s+lunas', 'belum\\s+lunas',
+      'sudah\\s+setor', 'belum\\s+setor', 'sudah\\s+masuk', 'belum\\s+masuk',
+      'hadir\\s+gak', 'masuk\\s+gak', 'masuk\\s+tidak', 'hadir\\s+tidak',
+      'gimana', 'bagaimana', 'kabarnya', 'dong', 'ya', 'nggih', 'kah',
+      'nya', 'saja', 'berapa', 'apa', 'spp', 'tagihan', 'pembayaran', 'hafalan', 'nilai', 'absen', 'kehadiran'
+    ];
+
+    for (const sw of trailingStopwords) {
+      name = name.replace(new RegExp(`\\s+${sw}$`, 'i'), '').trim();
+    }
+
+    if (!name) return '';
+    return name
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   // =====================================================================
   // LOCAL NLP: Fallback parser (diperbaiki dari versi lama)
   // =====================================================================
@@ -282,34 +318,49 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     // 2. Extract Santri Name — ekstraksi nama dengan regex yang lebih cerdas dan fleksibel
     let santriName = '';
 
-    // Coba regex dengan konteks kata kunci (case insensitive)
+    // Pola 1: Konteks kata kunci diikuti nama santri
     const nameMatchWithKeyword = userPrompt.match(
-      /(?:santri|nama|untuk|milik|atas\s+nama|spp|pembayaran|biaya|perkembangan|jadwal|hafalan|nilai|absen|tagihan)\s+([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*)*)/i
+      /(?:santri|nama|untuk|milik|atas\s+nama|spp|pembayaran|biaya|tagihan|tunggakan|perkembangan|jadwal|hafalan|setoran|nilai|rapor|absen|absensi|kehadiran|presensi|prestasi|izin|perizinan|tentang|profil|data\s+kehadiran|data\s+hafalan|data\s+nilai|data\s+tagihan|status\s+spp|status\s+kehadiran|cek\s+kehadiran|cek\s+hafalan|cek\s+nilai|cek\s+tagihan|cek\s+pembayaran)\s+([A-Za-z0-9\s]+)/i
     );
     if (nameMatchWithKeyword && nameMatchWithKeyword[1]) {
-      let candidate = nameMatchWithKeyword[1].trim();
-      candidate = candidate.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|kehadiran)\s+/i, '').trim();
-      if (candidate) {
-        santriName = candidate
-          .split(' ')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-          .join(' ');
+      santriName = this.cleanSantriName(nameMatchWithKeyword[1]);
+    }
+
+    // Pola 2: Setelah kata kerja / kata tanya
+    if (!santriName) {
+      const nameAfterVerb = userPrompt.match(
+        /(?:cek|lihat|tampilkan|info|data|rekap|status)\s+(?:hafalan\s+|nilai\s+|tagihan\s+|pembayaran\s+|biaya\s+|absen\s+|absensi\s+|kehadiran\s+|presensi\s+|spp\s+|perkembangan\s+){1,3}([A-Za-z0-9\s]+)/i
+      );
+      if (nameAfterVerb && nameAfterVerb[1]) {
+        santriName = this.cleanSantriName(nameAfterVerb[1]);
       }
     }
 
-    // Fallback: cari nama setelah kata kerja / kata tanya
+    // Pola 3: Nama di depan kalimat diikuti kata kunci / pertanyaan
+    // Contoh: "wildan kehadiran", "wildan hafalan", "wildan spp", "ahmad wildan sudah bayar?"
     if (!santriName) {
-      const nameAfterVerb = userPrompt.match(
-        /(?:cek|lihat|tampilkan|info|data|rekap|status)\s+(?:hafalan\s+|nilai\s+|tagihan\s+|pembayaran\s+|biaya\s+|absen\s+|spp\s+|perkembangan\s+){1,3}([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*)*)/i
+      const nameAtStart = userPrompt.match(
+        /^([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,3})\s+(?:apakah|sudah|belum|hadir|masuk|absen|absensi|kehadiran|presensi|hafalan|setoran|nilai|spp|tagihan|pembayaran|biaya|gimana|bagaimana|hari\s+ini|bulan\s+ini)/i
       );
-      if (nameAfterVerb && nameAfterVerb[1]) {
-        let candidate = nameAfterVerb[1].trim();
-        candidate = candidate.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|kehadiran)\s+/i, '').trim();
-        if (candidate) {
-          santriName = candidate
-            .split(' ')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-            .join(' ');
+      if (nameAtStart && nameAtStart[1]) {
+        santriName = this.cleanSantriName(nameAtStart[1]);
+      }
+    }
+
+    // Pola 4: Standalone name / jawaban singkat (1-4 kata, tanpa sapaan chitchat)
+    // Contoh: "wildan", "ahmad wildan", "wildan ramdlani", "si wildan"
+    if (!santriName) {
+      const isGreeting = /^(halo|hai|assalamu|assalamualaikum|salam|pagi|siang|sore|malam|terima\s+kasih|makasih|bantuan|menu|help|info)$/i.test(text);
+      if (!isGreeting) {
+        const words = text.split(/\s+/).filter(Boolean);
+        if (words.length >= 1 && words.length <= 4) {
+          const isAlphaOnly = words.every(w => /^[a-z0-9]+$/i.test(w));
+          if (isAlphaOnly) {
+            const cleaned = this.cleanSantriName(userPrompt);
+            if (cleaned && cleaned.length >= 2) {
+              santriName = cleaned;
+            }
+          }
         }
       }
     }
@@ -324,8 +375,6 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     }
 
     if (santriName) {
-      // Hapus awalan sebutan yang sering tidak sengaja tertangkap regex
-      santriName = santriName.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
       result.parameters.santri_name = santriName;
     }
 
@@ -367,48 +416,57 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
       result.parameters.nilai = parseFloat(nilaiMatch[1].replace(',', '.'));
     }
 
-    // 7. Detect Intent
-    const keywords = {
-      pembayaran: ['bayar', 'lunas', 'pembayaran', 'spp', 'tagihan', 'tunggakan'],
-      hafalan: ['hafalan', 'setor', 'surah', 'juz', 'muroja', 'muraja'],
-      nilai: ['nilai', 'rapor', 'ulangan', 'ujian', 'uts', 'uas', 'tugas', 'pelajaran', 'akademis', 'akademik'],
-      absensi: ['hadir', 'kehadiran', 'presensi', 'absen', 'izin', 'sakit', 'alfa', 'alpha'],
-      keuangan: ['pemasukan', 'kas', 'keuangan', 'pendapatan'],
-    };
+    // 7. Detect Intent dengan pemisahan yang jelas
+    const isTagihan = /\b(tagihan|tunggakan|belum\s+lunas|harus\s+dibayar|kewajiban|tunggak)\b/i.test(text);
+    const isPembayaran = /\b(bayar|lunas|pembayaran|spp|transaksi|kwitansi|bukti\s+bayar|sudah\s+bayar|uang\s+makan|uang\s+gedung)\b/i.test(text);
+    const isHafalan = /\b(hafalan|setor|setoran|surah|surat|juz|muroja|muraja|tahfidz|ziyadah)\b/i.test(text);
+    const isNilai = /\b(nilai|rapor|raport|ulangan|ujian|uts|uas|tugas|pelajaran|akademis|akademik|skor|mapel)\b/i.test(text);
+    const isAbsensi = /\b(hadir|kehadiran|presensi|absen|absensi|masuk|bolos|alfa|alpha|sakit|masuk\s+gak|hadir\s+gak|tidak\s+masuk)\b/i.test(text);
+    const isPerizinan = /\b(izin\s+pulang|izin\s+keluar|perizinan|surat\s+izin)\b/i.test(text);
+    const isPrestasi = /\b(prestasi|juara|lomba|pujian|penghargaan)\b/i.test(text);
+    const isSantri = /\b(profil|biodata|data\s+santri|info\s+santri|tentang\s+santri|kelas|halaqoh)\b/i.test(text);
 
-    // FIX #4: Gunakan intent baru (cekPembayaran, cekHafalan, dll.) agar cocok dengan switch-case di webhook
-    if (keywords.pembayaran.some(k => text.includes(k))) {
+    if (isTagihan) {
+      result.intent = 'cekTagihan';
+    } else if (isPembayaran) {
       if (result.parameters.nominal && santriName && (text.includes('input') || text.includes('tambah') || text.includes('bayar') || text.includes('catat'))) {
         result.intent = 'tambahPembayaran';
       } else {
         result.intent = 'cekPembayaran';
       }
-    } else if (keywords.hafalan.some(k => text.includes(k))) {
-      if ((text.includes('setor') || text.includes('input') || text.includes('tambah') || text.includes('catat')) && result.parameters.surah && result.parameters.juz) {
-        result.intent = 'tambahHafalan';
-      } else {
-        result.intent = 'cekHafalan';
-      }
-    } else if (keywords.nilai.some(k => text.includes(k))) {
-      if (text.includes('input') || text.includes('tambah') || text.includes('simpan') || text.includes('catat')) {
-        result.intent = 'tambahNilai';
-      } else {
-        result.intent = 'cekNilai';
-      }
-    } else if (keywords.absensi.some(k => text.includes(k))) {
+    } else if (isPerizinan) {
+      result.intent = 'cekPerizinan';
+    } else if (isAbsensi) {
       if (text.includes('input') || text.includes('tambah') || text.includes('catat')) {
         result.intent = 'tambahAbsensi';
       } else {
         result.intent = 'cekAbsensi';
       }
+    } else if (isHafalan) {
+      if ((text.includes('setor') || text.includes('input') || text.includes('tambah') || text.includes('catat')) && result.parameters.surah && result.parameters.juz) {
+        result.intent = 'tambahHafalan';
+      } else {
+        result.intent = 'cekHafalan';
+      }
+    } else if (isNilai) {
+      if (text.includes('input') || text.includes('tambah') || text.includes('simpan') || text.includes('catat')) {
+        result.intent = 'tambahNilai';
+      } else {
+        result.intent = 'cekNilai';
+      }
+    } else if (isPrestasi) {
+      result.intent = 'cekPrestasi';
+    } else if (isSantri) {
+      result.intent = 'cekSantri';
     } else if (text.includes('pelanggaran') || text.includes('melanggar') || text.includes('hukuman')) {
       result.intent = 'tambahPelanggaran';
-    } else if (text.includes('prestasi') || text.includes('juara') || text.includes('pujian')) {
-      result.intent = 'cekPrestasi';
-    } else if (text.includes('izin') || text.includes('perizinan')) {
-      result.intent = 'cekPerizinan';
-    } else if (text.includes('santri') && (text.includes('profil') || text.includes('data') || text.includes('info'))) {
-      result.intent = 'cekSantri';
+    } else if (santriName) {
+      // Jika user hanya menuliskan nama santri (misal: "Wildan"), lanjutkan intent sebelumnya!
+      if (context.lastIntent && context.lastIntent !== 'chitchat') {
+        result.intent = context.lastIntent;
+      } else {
+        result.intent = 'cekSantri';
+      }
     }
 
     this.setContext(sender, result.intent, santriName);
@@ -471,6 +529,17 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     const promptText = `Pesan user: "${userPrompt}"
 Nama santri konteks: ${santriName || 'tidak ada'}
 Fungsi dijalankan: ${intent}
+Panduan menyusun jawaban:
+1. Jika tentang pembayaran/tagihan:
+   - Sebutkan Bulan/Periode tagihan (ambil dari field jatuh_tempo atau keterangan, contoh: Juli 2026).
+   - Sebutkan tanggal jatuh tempo, nominal, dan statusnya (Lunas/Belum Lunas).
+   - Jika intent cekTagihan: fokuskan pada tagihan yang BELUM LUNAS dan sebutkan total yang harus dibayar.
+2. Jika tentang kehadiran/absensi:
+   - Jelaskan kehadiran hari ini (jika ada catatan hari ini) dan rangkum total hadir, sakit, izin, alfa.
+3. Jika tentang hafalan:
+   - Sebutkan setoran terakhir (surah, juz, ayat, dan tanggal) serta riwayat sebelumnya.
+4. Jika tentang nilai:
+   - Sebutkan mata pelajaran, nilai tugas, UTS, UAS, dan nilai akhir.
 ${dataContext}`;
 
     const response = await this.geminiResponseModel.generateContent(promptText);
@@ -498,71 +567,241 @@ ${dataContext}`;
     ];
     const getClosing = () => closings[Math.floor(Math.random() * closings.length)];
 
+    const bulanIndo = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const formatPeriodeBulan = (jatuhTempo: string, ket?: string) => {
+      if (ket) {
+        for (const b of bulanIndo) {
+          if (new RegExp(`\\b${b}\\b`, 'i').test(ket)) {
+            const yr = ket.match(/\b(20\d{2})\b/);
+            return yr ? `${b} ${yr[1]}` : b;
+          }
+        }
+      }
+      if (jatuhTempo) {
+        const parts = String(jatuhTempo).split('-');
+        if (parts.length >= 2) {
+          const m = parseInt(parts[1], 10) - 1;
+          if (m >= 0 && m < 12) return `${bulanIndo[m]} ${parts[0]}`;
+        }
+      }
+      return 'Bulan Berjalan';
+    };
+    const formatTanggalIndo = (tgl: string) => {
+      if (!tgl) return '-';
+      try {
+        const d = new Date(tgl);
+        if (isNaN(d.getTime())) return tgl;
+        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      } catch {
+        return tgl;
+      }
+    };
+
     if (dbResult && dbResult.error) {
       return `⚠️ *Afwan Ayah/Bunda,* terjadi kendala: ${dbResult.error}`;
     }
 
     switch (intent) {
       case 'cekPembayaran':
-      case 'cekTagihan':
-      case 'check_pembayaran':
-        if (!dbResult || dbResult.length === 0) {
-          return `${getGreeting()}\n\nUntuk data tagihan nanda *${santriName}*, belum ada tagihan aktif yang terdata nggih.${getClosing()}`;
+      case 'check_pembayaran': {
+        if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
+          return `${getGreeting()}\n\nAlhamdulillah, tidak ada catatan tagihan/pembayaran tertunggak untuk nanda *${santriName}*. Status aman nggih.${getClosing()}`;
         }
-        let payText = `${getGreeting()}\n\nBerikut laporan status pembayaran nanda *${santriName}*:\n\n`;
-        (Array.isArray(dbResult) ? dbResult : [dbResult]).forEach((t: any) => {
-          const kategori = t.kategori_pembayaran?.nama || t.kategori || 'Tagihan';
-          const nominal = Number(t.jumlah || t.nominal || 0).toLocaleString('id-ID');
-          const status = t.status === 'Lunas' ? '✅ *Lunas*' : '❌ *Belum Lunas*';
-          payText += `- *${kategori}*: Rp${nominal} → ${status}\n`;
+        const bills = Array.isArray(dbResult) ? dbResult : [dbResult];
+        let payText = `${getGreeting()}\n\nBerikut laporan *status pembayaran & SPP* nanda *${santriName}*:\n\n`;
+
+        let totalTagihan = 0;
+        let totalLunas = 0;
+        let totalBelumLunas = 0;
+        let countBelum = 0;
+
+        bills.forEach((t: any) => {
+          const kategori = t.kategori_pembayaran?.nama || t.kategori || 'SPP/Tagihan';
+          const nominalNum = Number(t.jumlah || t.nominal || 0);
+          const nominalStr = nominalNum.toLocaleString('id-ID');
+          const isLunas = String(t.status).toLowerCase() === 'lunas';
+          const statusIcon = isLunas ? '✅ *Lunas*' : '❌ *Belum Lunas*';
+          const periode = formatPeriodeBulan(t.jatuh_tempo, t.keterangan);
+          const tglJatuhTempo = formatTanggalIndo(t.jatuh_tempo);
+
+          totalTagihan += nominalNum;
+          if (isLunas) {
+            totalLunas += nominalNum;
+          } else {
+            totalBelumLunas += nominalNum;
+            countBelum++;
+          }
+
+          payText += `📌 *${kategori}* (Bulan: *${periode}*)\n`;
+          payText += `   • Nominal: Rp${nominalStr}\n`;
+          payText += `   • Jatuh Tempo: ${tglJatuhTempo}\n`;
+          payText += `   • Status: ${statusIcon}\n\n`;
         });
+
+        payText += `📊 *Ringkasan Keuangan:*\n`;
+        if (totalBelumLunas > 0) {
+          payText += `• Belum Dibayar: *Rp${totalBelumLunas.toLocaleString('id-ID')}* (${countBelum} tagihan)\n`;
+        } else {
+          payText += `• Status: *Alhamdulillah, Seluruh Tagihan Lunas* 🎉\n`;
+        }
+        payText += `• Sudah Lunas: *Rp${totalLunas.toLocaleString('id-ID')}*\n`;
         payText += getClosing();
         return payText;
+      }
+
+      case 'cekTagihan': {
+        if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
+          return `${getGreeting()}\n\nAlhamdulillah! 🌟 Nanda *${santriName}* tidak memiliki tagihan aktif saat ini. Seluruh kewajiban telah diselesaikan.${getClosing()}`;
+        }
+        const bills = Array.isArray(dbResult) ? dbResult : [dbResult];
+        const unpaidBills = bills.filter((t: any) => String(t.status).toLowerCase() !== 'lunas');
+
+        if (unpaidBills.length === 0) {
+          return `${getGreeting()}\n\nAlhamdulillah! 🌟 Seluruh tagihan untuk nanda *${santriName}* sudah *Lunas*. Tidak ada tagihan yang harus dibayar saat ini. Jazakumullah khairan. 🤲${getClosing()}`;
+        }
+
+        let tagText = `${getGreeting()}\n\nBerikut rincian *tagihan aktif / belum lunas* nanda *${santriName}*:\n\n`;
+        let totalUnpaid = 0;
+
+        unpaidBills.forEach((t: any, idx: number) => {
+          const kategori = t.kategori_pembayaran?.nama || t.kategori || 'Tagihan';
+          const nominalNum = Number(t.jumlah || t.nominal || 0);
+          const nominalStr = nominalNum.toLocaleString('id-ID');
+          const periode = formatPeriodeBulan(t.jatuh_tempo, t.keterangan);
+          const tglJatuhTempo = formatTanggalIndo(t.jatuh_tempo);
+          totalUnpaid += nominalNum;
+
+          tagText += `${idx + 1}. *${kategori}* (Bulan: *${periode}*)\n`;
+          tagText += `   • Jumlah: *Rp${nominalStr}*\n`;
+          tagText += `   • Jatuh Tempo: ${tglJatuhTempo}\n\n`;
+        });
+
+        tagText += `💰 *Total Yang Harus Dibayar: Rp${totalUnpaid.toLocaleString('id-ID')}*\n`;
+        tagText += `\nPembayaran dapat dilakukan melalui kantor pondok atau transfer resmi nggih. Jazakumullah khairan. 🤲`;
+        return tagText;
+      }
 
       case 'cekHafalan':
-      case 'get_hafalan':
-        if (!dbResult || dbResult.length === 0) {
+      case 'get_hafalan': {
+        if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
           return `${getGreeting()}\n\nBelum ada catatan setoran hafalan nanda *${santriName}* yang terdata nggih.${getClosing()}`;
         }
-        let hafText = `📖 *Catatan Hafalan Terbaru*\nNanda *${santriName}*:\n\n`;
-        (Array.isArray(dbResult) ? dbResult : [dbResult]).slice(0, 5).forEach((h: any) => {
-          const tanggal = h.tanggal ? new Date(h.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
-          hafText += `📅 ${tanggal}\n  Juz *${h.juz}* | Surah *${h.surah}* (Ayat ${h.ayat_mulai}-${h.ayat_selesai})\n  Status: *${h.status || 'Lancar'}*\n\n`;
-        });
-        hafText += `Masya Allah, semoga hafalannya berkah dan lancar. 🌙`;
+        const records = Array.isArray(dbResult) ? dbResult : [dbResult];
+        const latest = records[0];
+        const latestDate = formatTanggalIndo(latest.tanggal);
+        const aM = latest.ayat_mulai || latest.ayat_awal || 1;
+        const aS = latest.ayat_selesai || latest.ayat_akhir || '';
+        const ayatStr = aS ? `(Ayat ${aM}-${aS})` : `(Ayat ${aM})`;
+
+        let hafText = `${getGreeting()}\n\nBerikut perkembangan *hafalan Al-Qur'an* nanda *${santriName}*:\n\n`;
+        hafText += `🌟 *Setoran Terakhir:*\n`;
+        hafText += `📅 Tanggal: *${latestDate}*\n`;
+        hafText += `📖 Juz: *${latest.juz || '-'}* | Surah: *${latest.surah || '-'}* ${ayatStr}\n`;
+        hafText += `📋 Status: *${latest.status || 'Lancar'}*\n\n`;
+
+        if (records.length > 1) {
+          hafText += `📜 *Riwayat Setoran Sebelumnya:*\n`;
+          records.slice(1, 4).forEach((h: any) => {
+            const tgl = formatTanggalIndo(h.tanggal);
+            const subAM = h.ayat_mulai || h.ayat_awal || 1;
+            const subAS = h.ayat_selesai || h.ayat_akhir || '';
+            const subAStr = subAS ? `ayat ${subAM}-${subAS}` : `ayat ${subAM}`;
+            hafText += `• ${tgl}: Juz ${h.juz}, Surah ${h.surah} (${subAStr}) → *${h.status || 'Lancar'}*\n`;
+          });
+          hafText += `\n`;
+        }
+
+        hafText += `Masya Allah, semoga nanda selalu dimudahkan dalam menjaga dan menambah hafalannya. Amin. 🌙`;
         return hafText;
+      }
 
       case 'cekNilai':
-      case 'get_nilai':
-        if (!dbResult || dbResult.length === 0) {
+      case 'get_nilai': {
+        if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
           return `${getGreeting()}\n\nNilai akademis nanda *${santriName}* belum terinput ke sistem.${getClosing()}`;
         }
-        let nilText = `📊 *Nilai Akademis*\nNanda *${santriName}*:\n\n`;
-        (Array.isArray(dbResult) ? dbResult : [dbResult]).forEach((n: any) => {
-          const mapel = n.mapel?.nama || 'Mata Pelajaran';
-          nilText += `📚 *${mapel}* (Sem. ${n.semester || 1})\n  Tugas: ${n.nilai_tugas ?? '-'} | UTS: ${n.nilai_uts ?? '-'} | UAS: ${n.nilai_uas ?? '-'}\n  *Nilai Akhir: ${n.nilai_akhir ?? '-'}*\n\n`;
+        const records = Array.isArray(dbResult) ? dbResult : [dbResult];
+        let nilText = `${getGreeting()}\n\nBerikut rekap *nilai akademis* nanda *${santriName}*:\n\n`;
+
+        records.forEach((n: any) => {
+          const mapel = n.mapel?.nama || n.nama_mapel || 'Mata Pelajaran';
+          const sem = n.semester ? `Semester ${n.semester}` : '';
+          const ta = n.tahun_ajaran ? `TA ${n.tahun_ajaran}` : '';
+          const header = [mapel, sem, ta].filter(Boolean).join(' - ');
+
+          nilText += `📚 *${header}*\n`;
+          nilText += `  • Tugas: *${n.nilai_tugas ?? '-'}*\n`;
+          nilText += `  • UTS: *${n.nilai_uts ?? '-'}*\n`;
+          nilText += `  • UAS: *${n.nilai_uas ?? '-'}*\n`;
+          nilText += `  🎯 *Nilai Akhir: ${n.nilai_akhir ?? '-'}*\n\n`;
         });
-        nilText += `Semoga nilai ini menjadi motivasi nanda untuk terus berprestasi. 🌟`;
+
+        nilText += `Semoga hasil ini menjadi motivasi nanda untuk terus berprestasi. 🌟`;
         return nilText;
+      }
 
       case 'cekAbsensi':
-      case 'get_presence_today':
-        if (!dbResult) return `Data absensi nanda *${santriName}* belum tersedia saat ini.`;
-        if (Array.isArray(dbResult)) {
-          let absText = `📋 *Rekap Kehadiran*\nNanda *${santriName}*:\n\n`;
-          const total = dbResult.length;
-          const hadir = dbResult.filter((p: any) => String(p.status).toLowerCase() === 'hadir').length;
-          const sakit = dbResult.filter((p: any) => String(p.status).toLowerCase() === 'sakit').length;
-          const izin = dbResult.filter((p: any) => String(p.status).toLowerCase() === 'izin').length;
-          const alpha = dbResult.filter((p: any) => ['alfa', 'alpha'].includes(String(p.status).toLowerCase())).length;
-          absText += `✅ Hadir: *${hadir}* kali\n🏥 Sakit: *${sakit}* kali\n🏠 Izin: *${izin}* kali\n❌ Alpha: *${alpha}* kali\n*Total Sesi: ${total}*\n`;
-          return absText + getClosing();
+      case 'get_presence_today': {
+        if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
+          return `${getGreeting()}\n\nData absensi/kehadiran nanda *${santriName}* belum tersedia di sistem.${getClosing()}`;
         }
-        return `📊 *Rekap Kehadiran*\n\n` +
-          `✅ Hadir: *${dbResult.hadir || 0}*\n` +
-          `🏥 Sakit: *${dbResult.sakit || 0}*\n` +
-          `🏠 Izin: *${dbResult.izin || 0}*\n` +
-          `❌ Alfa: *${dbResult.alpha || 0}*\n`;
+        const records = Array.isArray(dbResult) ? dbResult : [dbResult];
+        const total = records.length;
+        const hadir = records.filter((p: any) => String(p.status).toLowerCase() === 'hadir').length;
+        const sakit = records.filter((p: any) => String(p.status).toLowerCase() === 'sakit').length;
+        const izin = records.filter((p: any) => String(p.status).toLowerCase() === 'izin').length;
+        const alpha = records.filter((p: any) => ['alfa', 'alpha'].includes(String(p.status).toLowerCase())).length;
+
+        // Cek catatan hari ini (WIB / UTC+7)
+        const todayStr = new Date(Date.now() + 7 * 3600 * 1000).toISOString().split('T')[0];
+        const todayRec = records.find((p: any) => p.tanggal && String(p.tanggal).startsWith(todayStr));
+
+        let absText = `${getGreeting()}\n\nBerikut rekap *kehadiran / absensi* nanda *${santriName}*:\n\n`;
+
+        if (todayRec) {
+          const statusToday = String(todayRec.status).toUpperCase();
+          const iconToday = statusToday === 'HADIR' ? '✅' : statusToday === 'SAKIT' ? '🏥' : statusToday === 'IZIN' ? '🏠' : '❌';
+          absText += `📌 *Kehadiran Hari Ini*: ${iconToday} *${statusToday}*\n\n`;
+        } else {
+          absText += `📌 *Kehadiran Hari Ini*: Belum ada sesi absensi tercatat hari ini.\n\n`;
+        }
+
+        absText += `📊 *Ringkasan Kehadiran:*\n`;
+        absText += `• ✅ Hadir: *${hadir}* kali\n`;
+        absText += `• 🏥 Sakit: *${sakit}* kali\n`;
+        absText += `• 🏠 Izin: *${izin}* kali\n`;
+        absText += `• ❌ Alpha: *${alpha}* kali\n`;
+        absText += `• Total Sesi: *${total}* hari\n\n`;
+
+        absText += `📋 *3 Catatan Terakhir:*\n`;
+        records.slice(0, 3).forEach((p: any) => {
+          const tgl = formatTanggalIndo(p.tanggal);
+          const st = String(p.status).toLowerCase();
+          const ic = st === 'hadir' ? '✅' : st === 'sakit' ? '🏥' : st === 'izin' ? '🏠' : '❌';
+          const ket = p.keterangan ? ` (${p.keterangan})` : '';
+          absText += `- ${tgl}: ${ic} *${p.status}*${ket}\n`;
+        });
+
+        absText += getClosing();
+        return absText;
+      }
+
+      case 'cekSantri': {
+        if (!dbResult) {
+          return `${getGreeting()}\n\nData profil nanda *${santriName}* tidak ditemukan.${getClosing()}`;
+        }
+        const s = dbResult;
+        let sText = `${getGreeting()}\n\nBerikut informasi profil santri:\n\n`;
+        sText += `👤 Nama: *${s.nama}*\n`;
+        sText += `🆔 NIS: *${s.nis || '-'}*\n`;
+        sText += `🏫 Status: *${s.status || 'Aktif'}*\n`;
+        if (s.kelas?.nama) sText += `📚 Kelas: *${s.kelas.nama}*\n`;
+        sText += getClosing();
+        return sText;
+      }
 
       case 'cekPrestasi':
         if (!dbResult || dbResult.length === 0) {
