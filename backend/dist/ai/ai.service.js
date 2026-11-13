@@ -20,7 +20,7 @@ let AiService = AiService_1 = class AiService {
         this.genAI = null;
         this.geminiParserModel = null;
         this.geminiResponseModel = null;
-        const geminiKey = process.env.GEMINI_API_KEY || 'AIzaSyADWtSmMkfPKwcEnkUMEB0iNEPRbNcpCV4';
+        const geminiKey = process.env.GEMINI_API_KEY || '';
         if (geminiKey) {
             try {
                 this.genAI = new generative_ai_1.GoogleGenerativeAI(geminiKey);
