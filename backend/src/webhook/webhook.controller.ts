@@ -191,11 +191,27 @@ export class WebhookController {
   // =====================================================================
   // GET & POST /webhook & / — Main entry point (mendukung GET & POST sesuai syarat Fonnte)
   // =====================================================================
-  @Get('webhook')
   @Post('webhook')
-  @Get('')
+  async handleWebhookPost(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  @Get('webhook')
+  async handleWebhookGet(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
   @Post('')
-  async handleWebhook(@Req() req: Request, @Res() res: Response) {
+  async handleRootPost(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  @Get('')
+  async handleRootGet(@Req() req: Request, @Res() res: Response) {
+    return this.handleWebhook(req, res);
+  }
+
+  private async handleWebhook(req: Request, res: Response) {
     const startTime = Date.now();
     let sender = '';
     let message = '';

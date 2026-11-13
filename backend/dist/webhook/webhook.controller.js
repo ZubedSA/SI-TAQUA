@@ -150,6 +150,18 @@ let WebhookController = WebhookController_1 = class WebhookController {
             return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
         }
     }
+    async handleWebhookPost(req, res) {
+        return this.handleWebhook(req, res);
+    }
+    async handleWebhookGet(req, res) {
+        return this.handleWebhook(req, res);
+    }
+    async handleRootPost(req, res) {
+        return this.handleWebhook(req, res);
+    }
+    async handleRootGet(req, res) {
+        return this.handleWebhook(req, res);
+    }
     async handleWebhook(req, res) {
         const startTime = Date.now();
         let sender = '';
@@ -598,16 +610,37 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "getDebugDb", null);
 __decorate([
-    (0, common_1.Get)('webhook'),
     (0, common_1.Post)('webhook'),
-    (0, common_1.Get)(''),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handleWebhookPost", null);
+__decorate([
+    (0, common_1.Get)('webhook'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handleWebhookGet", null);
+__decorate([
     (0, common_1.Post)(''),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
-], WebhookController.prototype, "handleWebhook", null);
+], WebhookController.prototype, "handleRootPost", null);
+__decorate([
+    (0, common_1.Get)(''),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], WebhookController.prototype, "handleRootGet", null);
 exports.WebhookController = WebhookController = WebhookController_1 = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [supabase_service_1.SupabaseService,

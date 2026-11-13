@@ -20,6 +20,10 @@ export declare class WebhookController {
     private replyToUser;
     getDebugLogs(res: Response): Promise<Response<any, Record<string, any>>>;
     getDebugDb(res: Response): Promise<Response<any, Record<string, any>>>;
-    handleWebhook(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handleWebhookPost(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handleWebhookGet(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handleRootPost(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    handleRootGet(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+    private handleWebhook;
     private executeAction;
 }
