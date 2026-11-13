@@ -52,6 +52,24 @@ export declare class SupabaseService {
     getWhoHasNotDepositedToday(): Promise<{
         id: any;
         nama: any;
+        nis: any;
+        kelas: {
+            nama: any;
+        }[];
+    }[]>;
+    getSantriByStatusPresensiToday(statusFilter: string): Promise<{
+        id: any;
+        tanggal: any;
+        status: any;
+        keterangan: any;
+        santri: {
+            id: any;
+            nama: any;
+            nis: any;
+            kelas: {
+                nama: any;
+            }[];
+        }[];
     }[]>;
     getTotalPemasukanBulanIni(): Promise<{
         pembayaran_santri: number;
@@ -81,7 +99,9 @@ export declare class SupabaseService {
     }[]>;
     getTop10Hafalan(): Promise<{
         nama: string;
+        kelas: string;
         maxJuz: number;
+        totalSetoran: number;
     }[]>;
     getGuruBelumAbsen(): Promise<{
         id: any;
@@ -136,6 +156,7 @@ export declare class SupabaseService {
         tagihan?: undefined;
     }>;
     ensureSampleData(): Promise<void>;
+    getGuruByPhone(phone: string): Promise<any | null>;
     isGuru(phone: string): Promise<boolean>;
     hasAccessToSantri(phone: string, santriId: string): Promise<boolean>;
     logAiInteraction(userPrompt: string, intent: string, functionName: string, parameters: any, query: string, queryResult: any, finalReply: string, responseTimeMs: number, errorMsg?: string): Promise<void>;

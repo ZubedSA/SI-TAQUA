@@ -232,6 +232,14 @@ export class WebhookController {
         return res.status(HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
       }
 
+      // Deteksi identitas Guru / Ustadz
+      const guru = await this.supabaseService.getGuruByPhone(sender);
+      const isGuru = !!guru;
+      const guruNama = guru?.nama || '';
+      if (isGuru) {
+        this.logger.log(`Sender ${sender} teridentifikasi sebagai Guru/Ustadz: ${guruNama}`);
+      }
+
       // 2. Abaikan jika pengirim adalah device itu sendiri DAN pesan tersebut adalah pesan yang dikirim oleh bot (anti-loop)
       if (device && (this.isSamePhone(sender, device) || (member && this.isSamePhone(member, device)))) {
         if (this.isBotSentMessage(message)) {
@@ -257,7 +265,9 @@ export class WebhookController {
       }
 
       if (!message || message.trim() === '') {
-        const replyText = "Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.";
+        const replyText = isGuru
+          ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruNama || ''}! 🧑‍🏫 Silakan tanyakan data perkembangan santri atau rekapitulasi operasional pondok.`
+          : `Halo! 👋 Saya adalah *Asisten AI SI-TAQUA*. Silakan kirim pertanyaan Anda tentang hafalan, pembayaran, nilai, atau kehadiran santri.`;
         await this.supabaseService.logAiInteraction(message, 'chitchat', 'chitchat', {}, 'Empty Message', null, replyText, Date.now() - startTime);
         return this.replyToUser(res, sender, replyText, messageId);
       }
@@ -345,9 +355,8 @@ export class WebhookController {
         'tambah_pelanggaran', 'tambah_prestasi', 'tambah_catatan_guru'];
 
       if (writeIntents.includes(parsed.intent)) {
-        const isGuru = await this.supabaseService.isGuru(sender);
         if (!isGuru) {
-          const replyText = 'Maaf, Anda tidak memiliki hak akses untuk mengubah data tersebut.';
+          const replyText = 'Afwan, fitur pencatatan dan input data (hafalan, absensi, nilai, pelanggaran) hanya dapat dilakukan oleh Ustadz/Ustadzah yang terdaftar di sistem SI-TAQUA. 🙏';
           await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Write Access Denied', null, replyText, Date.now() - startTime, 'Access Denied');
           return this.replyToUser(res, sender, replyText, messageId);
         }
@@ -355,7 +364,7 @@ export class WebhookController {
         const santriName = parsed.parameters?.santri_name;
 
         if (!santriName) {
-          const replyText = `Format pesan kurang lengkap. Mohon sebutkan *nama santri* dengan jelas ya.\n\nContoh: "Tambah pembayaran SPP Ahmad Rp300.000"`;
+          const replyText = `Format pesan kurang lengkap. Mohon sebutkan *nama santri* dengan jelas ya.\n\nContoh: "Tambah hafalan Ahmad juz 30 surah An-Naba 1-20"`;
           await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Missing Santri Name', null, replyText, Date.now() - startTime, 'Missing Santri Name');
           return this.replyToUser(res, sender, replyText, messageId);
         }
@@ -391,7 +400,7 @@ export class WebhookController {
           timestamp: Date.now()
         };
 
-        let confirmText = `📝 Saya mendengar permintaan berikut:\n\n`;
+        let confirmText = `📝 *Ustadz/Ustadzah ${guruNama || ''}*, mohon konfirmasi data pencatatan berikut:\n\n`;
         if (parsed.parameters.resolved_name)  confirmText += `👤 Santri: *${parsed.parameters.resolved_name}*\n`;
         if (parsed.parameters.nominal)        confirmText += `💰 Nominal: *Rp${Number(parsed.parameters.nominal).toLocaleString('id-ID')}*\n`;
         if (parsed.parameters.kategori)       confirmText += `📁 Kategori: *${parsed.parameters.kategori}*\n`;
@@ -408,6 +417,68 @@ export class WebhookController {
 
         await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Pending Confirm Created', null, confirmText, Date.now() - startTime);
         return this.replyToUser(res, sender, confirmText, messageId);
+      }
+
+      // ----------------------------------------------------------------
+      // COLLECTIVE GURU QUERIES — rekap operasional pesantren
+      // ----------------------------------------------------------------
+      const collectiveGuruIntents = [
+        'cekBelumSetor', 'cekSantriSakit', 'cekSantriIzin',
+        'cekRankingHafalan', 'cekRekapTunggakan', 'cekSantriAktif'
+      ];
+
+      if (collectiveGuruIntents.includes(parsed.intent)) {
+        if (!isGuru) {
+          const replyText = 'Maaf, data rekapitulasi operasional pondok ini hanya dapat diakses oleh Ustadz/Ustadzah yang terdaftar di sistem SI-TAQUA. 🙏';
+          await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Collective Access Denied', null, replyText, Date.now() - startTime, 'Access Denied');
+          return this.replyToUser(res, sender, replyText, messageId);
+        }
+
+        try {
+          switch (parsed.intent) {
+            case 'cekBelumSetor':
+              executedQuery = 'getWhoHasNotDepositedToday()';
+              dbResult = await this.supabaseService.getWhoHasNotDepositedToday();
+              break;
+            case 'cekSantriSakit':
+              executedQuery = 'getSantriByStatusPresensiToday(sakit)';
+              dbResult = await this.supabaseService.getSantriByStatusPresensiToday('sakit');
+              break;
+            case 'cekSantriIzin':
+              executedQuery = 'getSantriByStatusPresensiToday(izin)';
+              dbResult = await this.supabaseService.getSantriByStatusPresensiToday('izin');
+              break;
+            case 'cekRankingHafalan':
+              executedQuery = 'getTop10Hafalan()';
+              dbResult = await this.supabaseService.getTop10Hafalan();
+              break;
+            case 'cekRekapTunggakan':
+              executedQuery = 'getTunggakanTerbesar()';
+              dbResult = await this.supabaseService.getTunggakanTerbesar();
+              break;
+            case 'cekSantriAktif':
+              executedQuery = 'getActiveSantriCount()';
+              dbResult = await this.supabaseService.getActiveSantriCount();
+              break;
+          }
+        } catch (dbError) {
+          this.logger.error(`Database query gagal untuk intent kolektif ${parsed.intent}:`, dbError);
+          dbResult = { error: 'Terjadi gangguan saat mengambil data dari database. Coba lagi sebentar ya.' };
+        }
+
+        const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
+        await this.supabaseService.logAiInteraction(
+          message,
+          parsed.intent,
+          parsed.intent,
+          parsed.parameters,
+          executedQuery,
+          dbResult,
+          reply,
+          Date.now() - startTime,
+          dbResult?.error || ''
+        );
+        return this.replyToUser(res, sender, reply, messageId);
       }
 
       // ----------------------------------------------------------------
@@ -509,7 +580,9 @@ export class WebhookController {
             return this.replyToUser(res, sender, replyText, messageId);
           }
         } else {
-          const replyText = `Maaf, data santri tidak ditemukan di sistem. Mohon sebutkan nama santri dengan jelas ya. 😊`;
+          const replyText = isGuru
+            ? `Afwan Ustadz/Ustadzah, mohon sebutkan nama santri yang ingin dilihat datanya ya. Contoh: "Hafalan Wildan" atau "Kehadiran Ahmad". 😊`
+            : `Maaf, data santri tidak ditemukan di sistem. Mohon sebutkan nama santri dengan jelas ya. 😊`;
           await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'No Target Resolved', null, replyText, Date.now() - startTime, 'No Target Resolved');
           return this.replyToUser(res, sender, replyText, messageId);
         }
@@ -561,8 +634,18 @@ export class WebhookController {
 
       let reply: string;
       if (parsed.intent === 'chitchat') {
-        // FIX #3: Pesan statis aman — JANGAN PERNAH pakai teks bebas Gemini untuk chitchat
-        reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
+        if (isGuru) {
+          reply = `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruNama ? guruNama + ' ' : ''}! 🧑‍🏫
+
+Saya adalah *Asisten AI SI-TAQUA*, siap membantu aktivitas pengajaran dan pemantauan santri:
+📖 *Cek Santri:* "Hafalan [nama]", "Kehadiran [nama]", "Nilai [nama]"
+📋 *Rekapitulasi:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan", "Total santri aktif"
+✍️ *Input Cepat:* "Input hafalan Ahmad juz 30 surah An-Naba 1-20 lancar", "Input absensi Ahmad sakit"
+
+Silakan ketik kebutuhan antum! 🤲`;
+        } else {
+          // FIX #3: Pesan statis aman — JANGAN PERNAH pakai teks bebas Gemini untuk chitchat
+          reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
 
 Saya bisa membantu Anda dengan:
 📖 Cek hafalan santri
@@ -572,8 +655,9 @@ Saya bisa membantu Anda dengan:
 💳 Rincian tagihan
 
 Silakan tanyakan kebutuhan Anda! 🤲`;
+        }
       } else {
-        reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);
+        reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
       }
 
       await this.supabaseService.logAiInteraction(

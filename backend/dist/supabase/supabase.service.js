@@ -175,10 +175,10 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         return data;
     }
     async getWhoHasNotDepositedToday() {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().split('T')[0];
         const { data: allSantri, error: err1 } = await this.supabase
             .from('santri')
-            .select('id, nama')
+            .select('id, nama, nis, kelas(nama)')
             .eq('status', 'Aktif');
         if (err1)
             throw err1;
@@ -188,8 +188,21 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             .eq('tanggal', today);
         if (err2)
             throw err2;
-        const depositedIds = new Set(depositedToday.map(h => h.santri_id));
-        return allSantri.filter(s => !depositedIds.has(s.id));
+        const depositedIds = new Set((depositedToday || []).map(h => h.santri_id));
+        return (allSantri || []).filter(s => !depositedIds.has(s.id));
+    }
+    async getSantriByStatusPresensiToday(statusFilter) {
+        const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().split('T')[0];
+        const { data, error } = await this.supabase
+            .from('presensi')
+            .select('id, tanggal, status, keterangan, santri(id, nama, nis, kelas(nama))')
+            .eq('tanggal', today)
+            .ilike('status', `%${statusFilter}%`);
+        if (error) {
+            this.logger.error(`Error getSantriByStatusPresensiToday(${statusFilter}):`, error);
+            throw error;
+        }
+        return data || [];
     }
     async getTotalPemasukanBulanIni() {
         const now = new Date();
@@ -299,23 +312,28 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
     async getTop10Hafalan() {
         const { data, error } = await this.supabase
             .from('hafalan')
-            .select('santri_id, juz, status, santri(nama)')
-            .eq('status', 'Mutqin');
+            .select('santri_id, juz, surah, status, santri(nama, kelas(nama))')
+            .order('juz', { ascending: false });
         if (error)
             throw error;
         const countMap = {};
-        data.forEach(h => {
+        (data || []).forEach(h => {
             const id = h.santri_id;
             const santriData = h.santri;
-            const nama = (Array.isArray(santriData) ? santriData[0]?.nama : santriData?.nama) || 'Unknown';
+            const nama = (Array.isArray(santriData) ? santriData[0]?.nama : santriData?.nama) || 'Santri';
+            const kelasData = Array.isArray(santriData) ? santriData[0]?.kelas : santriData?.kelas;
+            const kelas = (Array.isArray(kelasData) ? kelasData[0]?.nama : kelasData?.nama) || '-';
             if (!countMap[id]) {
-                countMap[id] = { nama, maxJuz: 0 };
+                countMap[id] = { nama, kelas, maxJuz: 0, totalSetoran: 0 };
             }
+            countMap[id].totalSetoran++;
             if (h.juz > countMap[id].maxJuz) {
                 countMap[id].maxJuz = h.juz;
             }
         });
-        return Object.values(countMap).sort((a, b) => b.maxJuz - a.maxJuz).slice(0, 10);
+        return Object.values(countMap)
+            .sort((a, b) => b.maxJuz - a.maxJuz || b.totalSetoran - a.totalSetoran)
+            .slice(0, 10);
     }
     async getGuruBelumAbsen() {
         const today = new Date().toISOString().split('T')[0];
@@ -695,23 +713,28 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             this.logger.error('Error saat memastikan data sample:', err);
         }
     }
-    async isGuru(phone) {
+    async getGuruByPhone(phone) {
         const cleanPhone = phone.replace(/\D/g, '');
         if (!cleanPhone)
-            return false;
+            return null;
         const suffix = cleanPhone.slice(-9);
         const { data, error } = await this.supabase
             .from('guru')
-            .select('id, no_telp')
+            .select('id, nama, nip, no_telp, status')
             .eq('status', 'Aktif');
         if (error || !data)
-            return false;
-        return data.some(g => {
+            return null;
+        const found = data.find(g => {
             if (!g.no_telp)
                 return false;
             const cleanGuruPhone = g.no_telp.replace(/\D/g, '');
             return cleanGuruPhone.endsWith(suffix);
         });
+        return found || null;
+    }
+    async isGuru(phone) {
+        const guru = await this.getGuruByPhone(phone);
+        return !!guru;
     }
     async hasAccessToSantri(phone, santriId) {
         const isGuru = await this.isGuru(phone);

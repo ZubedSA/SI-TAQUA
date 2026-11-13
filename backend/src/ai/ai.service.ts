@@ -110,6 +110,54 @@ export class AiService {
                 }
               },
               {
+                name: 'cekBelumSetor',
+                description: 'Mengecek daftar santri yang belum menyetorkan hafalan Al-Qur\'an hari ini',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {}
+                }
+              },
+              {
+                name: 'cekSantriSakit',
+                description: 'Mengecek daftar santri yang tercatat sakit hari ini',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {}
+                }
+              },
+              {
+                name: 'cekSantriIzin',
+                description: 'Mengecek daftar santri yang sedang izin keluar atau pulang dari pondok hari ini',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {}
+                }
+              },
+              {
+                name: 'cekRankingHafalan',
+                description: 'Mengecek peringkat atau ranking capaian tahfidz/hafalan santri terbanyak',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {}
+                }
+              },
+              {
+                name: 'cekRekapTunggakan',
+                description: 'Mengecek daftar santri dengan tunggakan pembayaran atau SPP terbesar',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {}
+                }
+              },
+              {
+                name: 'cekSantriAktif',
+                description: 'Mengecek total jumlah santri yang berstatus aktif di pondok',
+                parameters: {
+                  type: SchemaType.OBJECT,
+                  properties: {}
+                }
+              },
+              {
                 name: 'tambahPembayaran',
                 description: 'Input atau catat transaksi pembayaran baru untuk santri',
                 parameters: {
@@ -265,10 +313,16 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     let name = raw.trim();
 
     // Hapus awalan sebutan atau kata kerja/tanya yang tidak sengaja tertangkap
-    name = name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas\s+nama|nama|si|tentang|data|info|cek|lihat|tampilkan|status|rekap)\s+/gi, '').trim();
+    name = name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas\s+nama|nama|si|tentang|data|info|cek|lihat|tampilkan|status|rekap|input|tambah|catat)\s+/gi, '').trim();
 
     // Hapus kata kunci kategori yang mungkin nempel di depan
     name = name.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|absensi|kehadiran|presensi)\s+/gi, '').trim();
+
+    // Potong jika diikuti kata kunci parameter hafalan/absensi/nilai/keuangan
+    const cutoffMatch = name.match(/^(.*?)(?:\s+(?:juz|surah|surat|ayat|sakit|izin|hadir|alfa|alpha|lancar|kurang|nilai|rp|sebesar))\b/i);
+    if (cutoffMatch && cutoffMatch[1]) {
+      name = cutoffMatch[1].trim();
+    }
 
     // Hapus stopwords di bagian akhir (trailing time/question markers)
     const trailingStopwords = [
@@ -385,15 +439,15 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     }
 
     // 4. Extract Juz, Surah, Ayat
-    const juzMatch = text.match(/(?:juz|juz ke[-\s]?)(\d+)/);
+    const juzMatch = text.match(/(?:juz\s*ke[-\s]*|juz\s*)(\d+)/i);
     if (juzMatch) {
       result.parameters.juz = parseInt(juzMatch[1], 10);
     }
-    const surahMatch = text.match(/(?:surat|surah)\s*([a-zA-Z\-]+)/);
+    const surahMatch = text.match(/(?:surat|surah)\s*([a-zA-Z\-]+)/i);
     if (surahMatch) {
       result.parameters.surah = surahMatch[1].charAt(0).toUpperCase() + surahMatch[1].slice(1);
     }
-    const ayatMatch = text.match(/(?:ayat)\s*(\d+)(?:\s*(?:sampai|-)\s*(\d+))?/);
+    const ayatMatch = text.match(/(?:ayat\s*|ayat ke[-\s]*)(\d+)(?:\s*(?:sampai|-)\s*(\d+))?/i);
     if (ayatMatch) {
       result.parameters.ayat_awal = parseInt(ayatMatch[1], 10);
       if (ayatMatch[2]) {
@@ -416,7 +470,32 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
       result.parameters.nilai = parseFloat(nilaiMatch[1].replace(',', '.'));
     }
 
-    // 7. Detect Intent dengan pemisahan yang jelas
+    // Ekstraksi status hafalan / absensi jika ada
+    if (text.includes('lancar') || text.includes('mutqin')) {
+      result.parameters.status = 'Lancar';
+    } else if (text.includes('kurang') || text.includes('ulang')) {
+      result.parameters.status = 'Kurang Lancar';
+    } else if (text.includes('proses') || text.includes('ziyadah')) {
+      result.parameters.status = 'Proses';
+    } else if (text.includes('sakit')) {
+      result.parameters.status = 'sakit';
+    } else if (text.includes('izin')) {
+      result.parameters.status = 'izin';
+    } else if (text.includes('alfa') || text.includes('alpha') || text.includes('bolos')) {
+      result.parameters.status = 'alfa';
+    } else if (text.includes('hadir') || text.includes('masuk')) {
+      result.parameters.status = 'hadir';
+    }
+
+    // 7. Detect Intent Kolektif (Rekap Pondok untuk Ustadz/Ustadzah)
+    const isBelumSetor = /(belum\s+setor|tidak\s+setor|siapa\s+yang\s+belum\s+setor|santri\s+belum\s+setor)/i.test(text);
+    const isSantriSakit = /(santri\s+sakit|siapa\s+(?:yang|saja)\s+sakit|yang\s+sakit\s+hari\s+ini|rekap\s+sakit)/i.test(text);
+    const isSantriIzin = /(santri\s+izin|siapa\s+(?:yang|saja)\s+izin|yang\s+izin\s+hari\s+ini|rekap\s+izin|izin\s+keluar|izin\s+pulang)/i.test(text);
+    const isRankingHafalan = /(ranking\s+hafalan|peringkat\s+hafalan|top\s+hafalan|hafalan\s+terbanyak|ranking\s+tahfidz|tahfidz\s+terbanyak)/i.test(text);
+    const isRekapTunggakan = /(rekap\s+tunggakan|tunggakan.*terbesar|santri\s+belum\s+bayar|rekap\s+belum\s+lunas|daftar\s+tunggakan|rekap.*spp|tunggakan.*spp)/i.test(text);
+    const isSantriAktif = /(total\s+santri\s+aktif|jumlah\s+santri\s+aktif|berapa\s+santri\s+aktif|total\s+santri)/i.test(text);
+
+    // Intent Personal Santri
     const isTagihan = /\b(tagihan|tunggakan|belum\s+lunas|harus\s+dibayar|kewajiban|tunggak)\b/i.test(text);
     const isPembayaran = /\b(bayar|lunas|pembayaran|spp|transaksi|kwitansi|bukti\s+bayar|sudah\s+bayar|uang\s+makan|uang\s+gedung)\b/i.test(text);
     const isHafalan = /\b(hafalan|setor|setoran|surah|surat|juz|muroja|muraja|tahfidz|ziyadah)\b/i.test(text);
@@ -426,7 +505,19 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     const isPrestasi = /\b(prestasi|juara|lomba|pujian|penghargaan)\b/i.test(text);
     const isSantri = /\b(profil|biodata|data\s+santri|info\s+santri|tentang\s+santri|kelas|halaqoh)\b/i.test(text);
 
-    if (isTagihan) {
+    if (isBelumSetor) {
+      result.intent = 'cekBelumSetor';
+    } else if (isSantriSakit) {
+      result.intent = 'cekSantriSakit';
+    } else if (isSantriIzin) {
+      result.intent = 'cekSantriIzin';
+    } else if (isRankingHafalan) {
+      result.intent = 'cekRankingHafalan';
+    } else if (isRekapTunggakan) {
+      result.intent = 'cekRekapTunggakan';
+    } else if (isSantriAktif) {
+      result.intent = 'cekSantriAktif';
+    } else if (isTagihan) {
       result.intent = 'cekTagihan';
     } else if (isPembayaran) {
       if (result.parameters.nominal && santriName && (text.includes('input') || text.includes('tambah') || text.includes('bayar') || text.includes('catat'))) {
@@ -443,7 +534,7 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
         result.intent = 'cekAbsensi';
       }
     } else if (isHafalan) {
-      if ((text.includes('setor') || text.includes('input') || text.includes('tambah') || text.includes('catat')) && result.parameters.surah && result.parameters.juz) {
+      if ((text.includes('setor') || text.includes('input') || text.includes('tambah') || text.includes('catat')) && (result.parameters.surah || result.parameters.juz)) {
         result.intent = 'tambahHafalan';
       } else {
         result.intent = 'cekHafalan';
@@ -512,7 +603,9 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
     userPrompt: string,
     intent: string,
     dbResult: any,
-    sender: string
+    sender: string,
+    isGuru: boolean = false,
+    guruName: string = ''
   ): Promise<string> {
     const ctx = this.getContext(sender);
     const santriName = ctx.lastSantriName || '';
@@ -525,8 +618,12 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
       dataContext = `\nError dari database: ${dbResult.error}`;
     }
 
-    // FIX #2: systemInstruction sudah di getGenerativeModel(), cukup kirim content saja
+    const rolePrompt = isGuru
+      ? `Pengguna adalah Ustadz/Ustadzah (Guru Pondok) bernama: ${guruName || 'Ustadz/Ustadzah'}. Gunakan sapaan hormat Islami "Ustadz/Ustadzah", bukan "Ayah/Bunda".`
+      : `Pengguna adalah Wali Santri. Gunakan sapaan hangat "Ayah/Bunda".`;
+
     const promptText = `Pesan user: "${userPrompt}"
+${rolePrompt}
 Nama santri konteks: ${santriName || 'tidak ada'}
 Fungsi dijalankan: ${intent}
 Panduan menyusun jawaban:
@@ -540,6 +637,8 @@ Panduan menyusun jawaban:
    - Sebutkan setoran terakhir (surah, juz, ayat, dan tanggal) serta riwayat sebelumnya.
 4. Jika tentang nilai:
    - Sebutkan mata pelajaran, nilai tugas, UTS, UAS, dan nilai akhir.
+5. Jika rekap kolektif (belum setor, santri sakit, ranking):
+   - Sajikan dalam bentuk daftar nomor urut yang rapi dan ringkas.
 ${dataContext}`;
 
     const response = await this.geminiResponseModel.generateContent(promptText);
@@ -549,22 +648,40 @@ ${dataContext}`;
   // =====================================================================
   // LOCAL: Generate response (fallback, diperbaiki & dilengkapi)
   // =====================================================================
-  private generateResponseLocal(userPrompt: string, intent: string, dbResult: any, sender: string): string {
+  private generateResponseLocal(
+    userPrompt: string,
+    intent: string,
+    dbResult: any,
+    sender: string,
+    isGuru: boolean = false,
+    guruName: string = ''
+  ): string {
     const context = this.getContext(sender);
     const santriName = context.lastSantriName || 'nanda';
 
-    const greetings = [
-      "Assalamu'alaikum Wr. Wb. 😊",
-      'Halo, salam sejahtera Ayah/Bunda. 🌟',
-      'Nggih Ayah/Bunda, siap membantu. 🤲',
-    ];
+    const greetings = isGuru
+      ? [
+          guruName ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName}! 🧑‍🏫` : `Ahlan wa Sahlan, Ustadz/Ustadzah! 🧑‍🏫`,
+          guruName ? `Assalamu'alaikum Ustadz/Ustadzah ${guruName}. Siap membantu antum. 🤲` : `Assalamu'alaikum Ustadz/Ustadzah. Siap membantu antum. 🤲`,
+        ]
+      : [
+          "Assalamu'alaikum Wr. Wb. 😊",
+          'Halo, salam sejahtera Ayah/Bunda. 🌟',
+          'Nggih Ayah/Bunda, siap membantu. 🤲',
+        ];
     const getGreeting = () => greetings[Math.floor(Math.random() * greetings.length)];
 
-    const closings = [
-      '\n\nSemoga nanda selalu istiqomah dalam menuntut ilmu. Amin. 🤲',
-      '\n\nAda lagi yang bisa saya bantu?',
-      '\n\nDemikian informasinya nggih, Ayah/Bunda. Jazakumullah khairan.',
-    ];
+    const closings = isGuru
+      ? [
+          '\n\nSemoga Allah senantiasa memberkahi perjuangan dakwah dan pengajaran antum. Jazakumullah khairan. 🤲',
+          '\n\nAda lagi data atau rekap santri yang perlu dicek, Ustadz/Ustadzah?',
+          '\n\nDemikian informasinya nggih, Ustadz/Ustadzah. Barokallahu fiikum.',
+        ]
+      : [
+          '\n\nSemoga nanda selalu istiqomah dalam menuntut ilmu. Amin. 🤲',
+          '\n\nAda lagi yang bisa saya bantu?',
+          '\n\nDemikian informasinya nggih, Ayah/Bunda. Jazakumullah khairan.',
+        ];
     const getClosing = () => closings[Math.floor(Math.random() * closings.length)];
 
     const bulanIndo = [
@@ -823,28 +940,74 @@ ${dataContext}`;
         });
         return izinSantriText + getClosing();
 
-      case 'get_tidak_setor_today':
-        if (!dbResult || dbResult.length === 0) {
-          return `Alhamdulillah! 🌟 Hari ini *seluruh santri aktif* sudah menyelesaikan setoran hafalannya. Luar biasa!`;
+      case 'cekBelumSetor':
+      case 'get_tidak_setor_today': {
+        if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
+          return `${getGreeting()}\n\nAlhamdulillah! 🌟 Hari ini *seluruh santri aktif* sudah menyelesaikan setoran hafalannya. Luar biasa! 🎉${getClosing()}`;
         }
-        let noSetorText = `📋 *Santri Belum Setor Hafalan Hari Ini*\nTotal: *${dbResult.length} santri*\n\n`;
-        dbResult.forEach((s: any, idx: number) => {
-          noSetorText += `${idx + 1}. *${s.nama}*\n`;
+        const students = Array.isArray(dbResult) ? dbResult : [dbResult];
+        let noSetorText = `${getGreeting()}\n\n📋 *Daftar Santri Belum Setor Hafalan Hari Ini:*\nTotal: *${students.length} santri*\n\n`;
+        students.slice(0, 15).forEach((s: any, idx: number) => {
+          const kelasData = s.kelas as any;
+          const kls = (Array.isArray(kelasData) ? kelasData[0]?.nama : kelasData?.nama) || '';
+          const klsStr = kls ? ` (${kls})` : '';
+          noSetorText += `${idx + 1}. *${s.nama}*${klsStr}\n`;
         });
-        noSetorText += `\nMohon dipantau dan dimotivasi nggih. Jazakumullah khairan. 🙏`;
+        if (students.length > 15) {
+          noSetorText += `...dan ${students.length - 15} santri lainnya.\n`;
+        }
+        noSetorText += `\nMohon dipantau dan dimotivasi nggih, Ustadz/Ustadzah. Jazakumullah khairan. 🙏`;
         return noSetorText;
+      }
 
-      case 'get_top_10_hafalan':
-        if (!dbResult || dbResult.length === 0) {
-          return `Belum ada data hafalan yang cukup untuk menampilkan ranking.`;
+      case 'cekSantriSakit': {
+        const records = Array.isArray(dbResult) ? dbResult : [];
+        if (records.length === 0) {
+          return `${getGreeting()}\n\nAlhamdulillah! 🌟 Hari ini tidak ada santri yang tercatat sakit. Seluruh santri dalam keadaan sehat wal afiat. 🤲${getClosing()}`;
         }
-        let topText = `🏆 *Top Santri Hafalan Terbanyak*\nPTQ Al-Usymuni Batuan:\n\n`;
-        dbResult.slice(0, 10).forEach((item: any, idx: number) => {
-          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-          topText += `${medal} *${item.nama}* — Juz *${item.maxJuz}*\n`;
+        let text = `${getGreeting()}\n\n🏥 *Daftar Santri Sakit Hari Ini:*\nTotal: *${records.length} santri*\n\n`;
+        records.forEach((r: any, idx: number) => {
+          const s = r.santri || {};
+          const kls = s.kelas?.nama ? ` (${s.kelas.nama})` : '';
+          const ket = r.keterangan ? ` - Ket: ${r.keterangan}` : '';
+          text += `${idx + 1}. *${s.nama || 'Santri'}*${kls}${ket}\n`;
         });
-        topText += `\nMasya Allah, semoga terus istiqomah dan berkah hafalannya. 🌙`;
+        text += `\nSyafahumullah, semoga lekas sembuh dan bisa kembali beraktivitas di pondok. 🤲`;
+        return text;
+      }
+
+      case 'cekSantriIzin': {
+        const records = Array.isArray(dbResult) ? dbResult : [];
+        if (records.length === 0) {
+          return `${getGreeting()}\n\nAlhamdulillah! 🌟 Hari ini tidak ada santri yang tercatat izin keluar/pulang. Seluruh santri berada di pondok. 🤲${getClosing()}`;
+        }
+        let text = `${getGreeting()}\n\n🏠 *Daftar Santri Izin Hari Ini:*\nTotal: *${records.length} santri*\n\n`;
+        records.forEach((r: any, idx: number) => {
+          const s = r.santri || {};
+          const kls = s.kelas?.nama ? ` (${s.kelas.nama})` : '';
+          const ket = r.keterangan ? ` - Keperluan: ${r.keterangan}` : '';
+          text += `${idx + 1}. *${s.nama || 'Santri'}*${kls}${ket}\n`;
+        });
+        text += getClosing();
+        return text;
+      }
+
+      case 'cekRankingHafalan':
+      case 'get_top_10_hafalan': {
+        const ranking = Array.isArray(dbResult) ? dbResult : [];
+        if (ranking.length === 0) {
+          return `${getGreeting()}\n\nBelum ada data hafalan yang cukup untuk menampilkan ranking capaian tahfidz.${getClosing()}`;
+        }
+        let topText = `${getGreeting()}\n\n🏆 *Top Ranking Prestasi Tahfidz Santri:*\n\n`;
+        const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+        ranking.forEach((r: any, idx: number) => {
+          const m = medals[idx] || `${idx + 1}.`;
+          const kls = r.kelas && r.kelas !== '-' ? ` (${r.kelas})` : '';
+          topText += `${m} *${r.nama}*${kls}\n   • Capaian: *Juz ${r.maxJuz || '-'}* (${r.totalSetoran || 0} kali setoran)\n`;
+        });
+        topText += `\nMasya Allah, semoga barokah dan memotivasi santri lainnya. 🌟`;
         return topText;
+      }
 
       case 'get_pemasukan_bulan':
         if (!dbResult) return `Data keuangan tidak tersedia saat ini.`;
@@ -896,15 +1059,19 @@ ${dataContext}`;
         sumText += getClosing();
         return sumText;
 
-      case 'get_tunggakan_terbesar':
-        if (!dbResult || dbResult.length === 0) {
-          return `Alhamdulillah! Tidak ada santri yang memiliki tunggakan pembayaran. 🎉`;
+      case 'cekRekapTunggakan':
+      case 'get_tunggakan_terbesar': {
+        const items = Array.isArray(dbResult) ? dbResult : [];
+        if (items.length === 0) {
+          return `${getGreeting()}\n\nAlhamdulillah! Tidak ada santri yang memiliki tunggakan pembayaran. 🎉${getClosing()}`;
         }
-        let tunggakanText = `💳 *Santri dengan Tunggakan Terbesar*\n\n`;
-        dbResult.slice(0, 10).forEach((item: any, idx: number) => {
+        let tunggakanText = `${getGreeting()}\n\n💳 *Rekap Santri dengan Tunggakan Terbesar:*\n\n`;
+        items.slice(0, 10).forEach((item: any, idx: number) => {
           tunggakanText += `${idx + 1}. *${item.nama}*: Rp${Number(item.total).toLocaleString('id-ID')}\n`;
         });
+        tunggakanText += getClosing();
         return tunggakanText;
+      }
 
       case 'get_pemasukan_perbandingan':
         if (!dbResult) return `Data perbandingan tidak tersedia.`;
@@ -924,29 +1091,41 @@ ${dataContext}`;
         });
         return guruText;
 
-      case 'get_jumlah_santri_aktif':
-        return `👥 Total santri *Aktif* di PTQ Al-Usymuni Batuan saat ini: *${dbResult.jumlah_santri_aktif}* santri.`;
+      case 'cekSantriAktif':
+      case 'get_jumlah_santri_aktif': {
+        const total = typeof dbResult === 'number' ? dbResult : (dbResult?.jumlah_santri_aktif || dbResult?.total || 0);
+        return `${getGreeting()}\n\n👥 Total santri *Aktif* di PTQ Al-Usymuni Batuan saat ini: *${total}* santri.${getClosing()}`;
+      }
 
       default:
-        return `Halo, Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya bisa membantu Anda dengan:\n📖 Cek hafalan santri\n💰 Status pembayaran SPP\n📊 Nilai akademis\n✅ Data kehadiran\n💳 Laporan keuangan\n\nSilakan tanyakan kebutuhan Anda!`;
+        return isGuru
+          ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu aktivitas pengajaran dan pemantauan santri:\n📖 *Cek Perkembangan Santri:* "Hafalan Wildan", "Kehadiran Wildan", "Nilai Wildan"\n📋 *Rekapitulasi Santri:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan"\n✍️ *Input Cepat:* "Input hafalan Wildan juz 30 surah An-Naba 1-20 lancar", "Input absensi Wildan sakit"\n\nSilakan ketik kebutuhan antum! 🤲`
+          : `Halo, Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya bisa membantu Anda dengan:\n📖 Cek hafalan santri\n💰 Status pembayaran SPP\n📊 Nilai akademis\n✅ Data kehadiran\n💳 Rincian tagihan\n\nSilakan tanyakan kebutuhan Anda! 🤲`;
     }
   }
 
   // =====================================================================
   // PUBLIC: Generate response (coba Gemini dulu, fallback local)
   // =====================================================================
-  async generateResponse(userPrompt: string, intent: string, dbResult: any, sender: string): Promise<string> {
+  async generateResponse(
+    userPrompt: string,
+    intent: string,
+    dbResult: any,
+    sender: string,
+    isGuru: boolean = false,
+    guruName: string = ''
+  ): Promise<string> {
     let reply = '';
 
     if (this.geminiResponseModel && intent !== 'konfirmasi_ya' && intent !== 'konfirmasi_tidak') {
       try {
-        reply = await this.formatResponseWithGemini(userPrompt, intent, dbResult, sender);
+        reply = await this.formatResponseWithGemini(userPrompt, intent, dbResult, sender, isGuru, guruName);
       } catch (e) {
         this.logger.warn(`[Gemini] Gagal generate response, fallback ke local: ${e.message}`);
-        reply = this.generateResponseLocal(userPrompt, intent, dbResult, sender);
+        reply = this.generateResponseLocal(userPrompt, intent, dbResult, sender, isGuru, guruName);
       }
     } else {
-      reply = this.generateResponseLocal(userPrompt, intent, dbResult, sender);
+      reply = this.generateResponseLocal(userPrompt, intent, dbResult, sender, isGuru, guruName);
     }
 
     // Simpan ke history

@@ -14,5 +14,5 @@ export declare class AiService {
     parseIntent(userPrompt: string, sender: string): Promise<any>;
     private formatResponseWithGemini;
     private generateResponseLocal;
-    generateResponse(userPrompt: string, intent: string, dbResult: any, sender: string): Promise<string>;
+    generateResponse(userPrompt: string, intent: string, dbResult: any, sender: string, isGuru?: boolean, guruName?: string): Promise<string>;
 }
