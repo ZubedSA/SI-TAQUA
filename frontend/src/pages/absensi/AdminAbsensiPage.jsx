@@ -31,7 +31,8 @@ import {
     Sparkles,
     ChevronRight,
     Palmtree,
-    CalendarX
+    CalendarX,
+    MessageSquare
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -44,6 +45,7 @@ import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import ResponsiveTable from '../../components/ui/ResponsiveTable'
+import BroadcastJadwalGuruModal from '../../components/absensi/BroadcastJadwalGuruModal'
 import { QRCodeSVG } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -123,6 +125,7 @@ const AdminAbsensiPage = () => {
         deskripsi: ''
     })
     const [isSavingHoliday, setIsSavingHoliday] = useState(false)
+    const [showBroadcastGuruModal, setShowBroadcastGuruModal] = useState(false)
 
     const hasAccess = isAdmin() || isAdminAbsensi()
     const [presensiStaf, setPresensiStaf] = useState([])
@@ -566,9 +569,9 @@ const AdminAbsensiPage = () => {
         const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes, profilesRes] = await Promise.all([
             supabase.from('jadwal_pelajaran').select('*'),
             supabase.from('halaqoh').select('id, nama, musyrif_id'),
-            supabase.from('guru').select('id, nama, email, user_id, status, created_at'),
+            supabase.from('guru').select('id, nama, email, user_id, status, created_at, no_telp'),
             supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
-            supabase.from('user_profiles').select('user_id, nama, email, guru_id')
+            supabase.from('user_profiles').select('user_id, nama, email, guru_id, no_hp')
         ])
         
         const rawJadwal = jadwalRes.data || []
@@ -614,47 +617,52 @@ const AdminAbsensiPage = () => {
             const targetHalaqohId = j.halaqoh_id || j.referensi_id
 
             if (isHalaqoh && targetHalaqohId) {
-                const musyrifGids = halaqohToMusyrifs[targetHalaqohId] || []
-                
-                if (musyrifGids.length > 0) {
-                    musyrifGids.forEach(gid => {
-                        const guruData = guruMap[gid]
-                        if (guruData && guruData.status === 'Aktif') {
+                // PRIORITAS 1: Cek apakah jadwal_pelajaran memiliki guru_id spesifik yang aktif
+                const directScheduleGuruId = resolveToGuruId(j.guru_id)
+                if (directScheduleGuruId && guruMap[directScheduleGuruId]?.status === 'Aktif') {
+                    fixedJadwal.push({
+                        ...j,
+                        guru_id: directScheduleGuruId,
+                        tipe: 'HALAQOH',
+                        referensi_id: targetHalaqohId
+                    })
+                } else {
+                    // Fallback jika guru_id di jadwal tidak diisi: gunakan musyrif dari halaqoh
+                    const musyrifGids = halaqohToMusyrifs[targetHalaqohId] || []
+                    if (musyrifGids.length > 0) {
+                        musyrifGids.forEach(gid => {
+                            const guruData = guruMap[gid]
+                            if (guruData && guruData.status === 'Aktif') {
+                                fixedJadwal.push({
+                                    ...j,
+                                    guru_id: gid,
+                                    tipe: 'HALAQOH',
+                                    referensi_id: targetHalaqohId
+                                })
+                            }
+                        })
+                    } else {
+                        const h = halaqohMap[targetHalaqohId]
+                        const directMusyrifId = resolveToGuruId(h?.musyrif_id) || h?.musyrif_id
+                        if (directMusyrifId && guruMap[directMusyrifId]?.status === 'Aktif') {
                             fixedJadwal.push({
                                 ...j,
-                                guru_id: gid,
+                                guru_id: directMusyrifId,
+                                tipe: 'HALAQOH',
+                                referensi_id: targetHalaqohId
+                            })
+                        } else {
+                            fixedJadwal.push({
+                                ...j,
+                                guru_id: null,
                                 tipe: 'HALAQOH',
                                 referensi_id: targetHalaqohId
                             })
                         }
-                    })
-                } else {
-                    const h = halaqohMap[targetHalaqohId]
-                    const directMusyrifId = resolveToGuruId(h?.musyrif_id) || h?.musyrif_id
-                    if (directMusyrifId && guruMap[directMusyrifId]?.status === 'Aktif') {
-                        fixedJadwal.push({
-                            ...j,
-                            guru_id: directMusyrifId,
-                            tipe: 'HALAQOH',
-                            referensi_id: targetHalaqohId
-                        })
-                    } else if (j.guru_id && guruMap[j.guru_id]?.status === 'Aktif') {
-                        fixedJadwal.push({
-                            ...j,
-                            tipe: 'HALAQOH',
-                            referensi_id: targetHalaqohId
-                        })
-                    } else {
-                        fixedJadwal.push({
-                            ...j,
-                            guru_id: null,
-                            tipe: 'HALAQOH',
-                            referensi_id: targetHalaqohId
-                        })
                     }
                 }
             } else {
-                let resolvedGuruId = j.guru_id;
+                let resolvedGuruId = resolveToGuruId(j.guru_id) || j.guru_id;
                 if (resolvedGuruId) {
                     const guruData = guruMap[resolvedGuruId]
                     if (guruData && guruData.status !== 'Aktif') {
@@ -674,8 +682,24 @@ const AdminAbsensiPage = () => {
     }
 
     const fetchGuru = async () => {
-        const { data } = await supabase.from('guru').select('id, nama, email, created_at').order('nama')
-        setGuruList(data || [])
+        try {
+            const [guruRes, profilesRes] = await Promise.all([
+                supabase.from('guru').select('id, nama, email, created_at, no_telp, status, user_id').order('nama'),
+                supabase.from('user_profiles').select('user_id, guru_id, no_hp, email')
+            ])
+            const pList = profilesRes.data || []
+            const enhanced = (guruRes.data || []).map(g => {
+                let phone = g.no_telp || ''
+                if (!phone) {
+                    const prof = pList.find(p => p.guru_id === g.id || (g.user_id && p.user_id === g.user_id) || (g.email && p.email?.toLowerCase() === g.email.toLowerCase()))
+                    if (prof?.no_hp) phone = prof.no_hp
+                }
+                return { ...g, no_telp: phone }
+            })
+            setGuruList(enhanced)
+        } catch (err) {
+            console.error('Error fetching guru list:', err)
+        }
     }
 
     const fetchPendingPermits = async () => {
@@ -1360,6 +1384,8 @@ const AdminAbsensiPage = () => {
                 jam_ke: j.jam_ke,
                 jam_mulai: j.jam_mulai,
                 jam_selesai: j.jam_selesai,
+                mapel_id: j.mapel_id,
+                mapel: (mapelList || []).find(m => m.id === j.mapel_id) || null,
                 status,
                 keterangan: statusKeterangan
             }
@@ -1493,6 +1519,18 @@ const AdminAbsensiPage = () => {
                             >
                                 <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
                                 <span className="hidden sm:inline">Segarkan Data</span>
+                            </Button>
+                        )}
+                        {isStaf && (
+                            <Button 
+                                variant="primary" 
+                                size="sm" 
+                                onClick={() => setShowBroadcastGuruModal(true)} 
+                                className="rounded-xl flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
+                            >
+                                <MessageSquare size={16} /> 
+                                <span className="hidden sm:inline">Kirim Pengingat WA Guru</span>
+                                <span className="sm:hidden">WA Guru</span>
                             </Button>
                         )}
                         {isLaporan && (
@@ -3771,6 +3809,17 @@ const AdminAbsensiPage = () => {
                         </div>,
                         document.body
                     )}
+
+            {/* Modal Broadcast WhatsApp Jadwal Guru */}
+            <BroadcastJadwalGuruModal
+                isOpen={showBroadcastGuruModal}
+                onClose={() => setShowBroadcastGuruModal(false)}
+                filterDate={filterDate}
+                dailyStaffAttendance={dailyStaffAttendance}
+                kelasList={kelasList}
+                halaqohList={halaqohList}
+                mapelList={mapelList}
+            />
         </div>
     )
 }

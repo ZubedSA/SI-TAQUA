@@ -33,10 +33,10 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekPembayaran',
                                     description: 'Mengecek status tagihan atau pembayaran SPP/uang makan/asrama santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja (tanpa kata tanya/kata kerja)' },
-                                            bulan: { type: generative_ai_1.SchemaType.STRING, description: 'Bulan tagihan (misal: Juli atau bulan ini)' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja (tanpa kata tanya/kata kerja)' },
+                                            bulan: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Bulan tagihan (misal: Juli atau bulan ini)' }
                                         }
                                     }
                                 },
@@ -44,9 +44,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekHafalan',
                                     description: 'Mengecek progress atau riwayat setoran hafalan santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -54,9 +54,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekNilai',
                                     description: 'Mengecek nilai akademis atau pelajaran santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -64,9 +64,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekAbsensi',
                                     description: 'Mengecek rekap kehadiran atau absensi santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -74,9 +74,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekSantri',
                                     description: 'Mengecek detail profil atau informasi pribadi santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -84,9 +84,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekTagihan',
                                     description: 'Mengecek rincian tagihan aktif santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -94,9 +94,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekPrestasi',
                                     description: 'Mengecek prestasi akademis atau pujian santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -104,9 +104,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'cekPerizinan',
                                     description: 'Mengecek status izin keluar/pulang santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' }
                                         }
                                     }
                                 },
@@ -114,11 +114,11 @@ let AiService = AiService_1 = class AiService {
                                     name: 'tambahPembayaran',
                                     description: 'Input atau catat transaksi pembayaran baru untuk santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' },
-                                            nominal: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nominal uang pembayaran' },
-                                            kategori: { type: generative_ai_1.SchemaType.STRING, description: 'Kategori pembayaran (SPP Bulanan, Uang Makan, Uang Asrama)' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' },
+                                            nominal: { type: generative_ai_1.FunctionDeclarationSchemaType.NUMBER, description: 'Nominal uang pembayaran' },
+                                            kategori: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Kategori pembayaran (SPP Bulanan, Uang Makan, Uang Asrama)' }
                                         },
                                         required: ['santri_name', 'nominal']
                                     }
@@ -127,13 +127,13 @@ let AiService = AiService_1 = class AiService {
                                     name: 'tambahHafalan',
                                     description: 'Input setoran hafalan baru santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' },
-                                            juz: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nomor juz (1-30)' },
-                                            surah: { type: generative_ai_1.SchemaType.STRING, description: 'Nama surah' },
-                                            ayat_awal: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nomor ayat mulai' },
-                                            ayat_akhir: { type: generative_ai_1.SchemaType.NUMBER, description: 'Nomor ayat selesai (opsional)' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' },
+                                            juz: { type: generative_ai_1.FunctionDeclarationSchemaType.NUMBER, description: 'Nomor juz (1-30)' },
+                                            surah: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama surah' },
+                                            ayat_awal: { type: generative_ai_1.FunctionDeclarationSchemaType.NUMBER, description: 'Nomor ayat mulai' },
+                                            ayat_akhir: { type: generative_ai_1.FunctionDeclarationSchemaType.NUMBER, description: 'Nomor ayat selesai (opsional)' }
                                         },
                                         required: ['santri_name', 'juz', 'surah', 'ayat_awal']
                                     }
@@ -142,10 +142,10 @@ let AiService = AiService_1 = class AiService {
                                     name: 'tambahAbsensi',
                                     description: 'Input absensi kehadiran santri',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            santri_name: { type: generative_ai_1.SchemaType.STRING, description: 'Nama santri saja' },
-                                            status: { type: generative_ai_1.SchemaType.STRING, description: 'Status (hadir, sakit, izin, alpha)' }
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri saja' },
+                                            status: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Status (hadir, sakit, izin, alpha)' }
                                         },
                                         required: ['santri_name', 'status']
                                     }
@@ -154,9 +154,9 @@ let AiService = AiService_1 = class AiService {
                                     name: 'chitchat',
                                     description: 'Percakapan umum, salam pembuka, sapaan, terima kasih, chitchat, pertanyaan di luar konteks pondok',
                                     parameters: {
-                                        type: generative_ai_1.SchemaType.OBJECT,
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {
-                                            pesan: { type: generative_ai_1.SchemaType.STRING, description: 'Pesan balasan ramah' }
+                                            pesan: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Pesan balasan ramah' }
                                         }
                                     }
                                 }

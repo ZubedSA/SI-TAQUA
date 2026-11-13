@@ -3,12 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { SupabaseService } from './supabase/supabase.service';
 import { AiService } from './ai/ai.service';
 import { WebhookController } from './webhook/webhook.controller';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    SchedulerModule,
   ],
   controllers: [WebhookController],
   providers: [SupabaseService, AiService],

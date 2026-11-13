@@ -17,6 +17,10 @@ export class SupabaseService {
     });
   }
 
+  getClient(): SupabaseClient {
+    return this.supabase;
+  }
+
   // Find student by fuzzy name matching (multi-word support)
   async findSantriByName(name: string) {
     let queryBuilder = this.supabase
@@ -754,9 +758,9 @@ export class SupabaseService {
         // 1. Pastikan kategori pembayaran ada
         const { data: existingCats } = await this.supabase
           .from('kategori_pembayaran')
-          .select('id, nama');
+          .select('id, nama, nominal_default');
 
-        let categories = existingCats;
+        let categories: any[] | null = existingCats;
         if (!categories || categories.length === 0) {
           const { data: newCats } = await this.supabase
             .from('kategori_pembayaran')

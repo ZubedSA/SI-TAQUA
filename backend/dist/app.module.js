@@ -12,6 +12,7 @@ const config_1 = require("@nestjs/config");
 const supabase_service_1 = require("./supabase/supabase.service");
 const ai_service_1 = require("./ai/ai.service");
 const webhook_controller_1 = require("./webhook/webhook.controller");
+const scheduler_module_1 = require("./scheduler/scheduler.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -21,6 +22,7 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
             }),
+            scheduler_module_1.SchedulerModule,
         ],
         controllers: [webhook_controller_1.WebhookController],
         providers: [supabase_service_1.SupabaseService, ai_service_1.AiService],

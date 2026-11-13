@@ -1,7 +1,9 @@
+import { SupabaseClient } from '@supabase/supabase-js';
 export declare class SupabaseService {
     private readonly logger;
     private supabase;
     constructor();
+    getClient(): SupabaseClient;
     findSantriByName(name: string): Promise<{
         id: any;
         nama: any;

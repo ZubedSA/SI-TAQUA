@@ -16,5 +16,11 @@
         "Access-Control-Allow-Headers": "Content-Type, Authorization"
       }
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/scheduler/remind-guru",
+      "schedule": "0 23 * * *"
+    }
   ]
 }

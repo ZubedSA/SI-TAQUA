@@ -25,6 +25,9 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             }
         });
     }
+    getClient() {
+        return this.supabase;
+    }
     async findSantriByName(name) {
         let queryBuilder = this.supabase
             .from('santri')
@@ -635,7 +638,7 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
                 this.logger.log('Database kosong. Menginisialisasi data sample untuk demo...');
                 const { data: existingCats } = await this.supabase
                     .from('kategori_pembayaran')
-                    .select('id, nama');
+                    .select('id, nama, nominal_default');
                 let categories = existingCats;
                 if (!categories || categories.length === 0) {
                     const { data: newCats } = await this.supabase

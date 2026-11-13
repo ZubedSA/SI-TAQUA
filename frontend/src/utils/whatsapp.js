@@ -1,12 +1,7 @@
 /**
- * GLOBAL WHATSAPP FORMATTER STANDARD
- * ==================================
+ * GLOBAL WHATSAPP FORMATTER STANDARD - SI-TAQUA
+ * ==============================================
  * Mengatur format pesan WhatsApp agar konsisten di seluruh aplikasi.
- * 
- * ATURAN:
- * 1. Gunakan formatMessage() untuk membuat pesan.
- * 2. JANGAN membuat string manual di komponen.
- * 3. Data berbentuk array of objects { label, value } atau string simple.
  */
 
 /**
@@ -14,16 +9,16 @@
  */
 export const formatPhoneNumber = (phone) => {
     if (!phone) return ''
-    let cleaned = phone.replace(/\D/g, '')
+    let cleaned = String(phone).replace(/\D/g, '')
     if (cleaned.startsWith('0')) cleaned = '62' + cleaned.substring(1)
     if (!cleaned.startsWith('62')) cleaned = '62' + cleaned
     return cleaned
 }
 
 /**
- * Membuka WhatsApp dengan pesan yang sudah diformat
+ * Membuka WhatsApp Web / App dengan pesan yang sudah diformat
  * @param {string} phone - Nomor tujuan
- * @param {string} message - Pesan (gunakan hasil dari createMessage)
+ * @param {string} message - Pesan
  */
 export const sendWhatsApp = (phone, message) => {
     const formattedPhone = formatPhoneNumber(phone)
@@ -34,65 +29,38 @@ export const sendWhatsApp = (phone, message) => {
 
 /**
  * BUILDER PESAN STANDAR
- * Menggabungkan bagian-bagian pesan dengan format yang baku.
- * 
- * @param {Object} options
- * @param {string} options.greeting - Pembuka (Default: Assalamu'alaikum Wr. Wb.)
- * @param {string} options.intro - Kalimat pengantar utama
- * @param {Array<{label: string, value: string}|string>} options.data - Data yang akan ditampilkan
- * @param {string} options.closing - Kalimat penutup (Default: Terima kasih.)
- * @param {string} options.signature - Tanda tangan (Default: PTQA Batuan)
  */
 export const createMessage = ({
     greeting = "Assalamu'alaikum Wr. Wb.",
     intro = "",
     data = [],
     closing = "Terima kasih, Jazakumullah Khairan.",
-    signature = "PTQ Al-Usymuni Batuan"
+    signature = "PTQA BATUAN"
 }) => {
-    // 1. Header Section
-    let content = `*${intro.toUpperCase()}*\n\n` // Judul/Intro tebal
-    content += `${greeting}\n\n`
-
-    // 2. Body / Intro Text
-    if (intro && intro.length > 50) { // Jika intro panjang, taruh di paragraf sendiri
-        // Skip karena sudah dijadikan judul di atas, 
-        // tapi jika deskriptif (bukan judul), bisa ditambahkan disini.
-        // Untuk kesederhanaan, kita anggap intro adalah Judul Utama.
-    }
-
-    // Revisi Strategi Layout:
-    // Header: Greeting
-    // Title/Context: Intro
-    // Data List
-    // Footer
-
-    // Reset content builder
     const sections = []
 
     // A. Salam Pembuka
-    sections.push(greeting)
+    if (greeting) sections.push(greeting)
 
     // B. Intro / Context
-    if (intro) {
-        sections.push(intro)
-    }
+    if (intro) sections.push(intro)
 
     // C. Data List
     if (data && data.length > 0) {
         const dataRows = data.map(item => {
             if (!item) return null
             if (typeof item === 'string') {
-                return `• ${item}` // Simple list item
+                return item.startsWith('•') || item.startsWith('-') || item.startsWith('*') ? item : `• ${item}`
             }
             if (item.label && item.value) {
-                // Format: Label : Value (Label tebal)
                 return `*${item.label}:* ${item.value}`
             }
             return ''
         }).filter(Boolean)
 
-        sections.push(dataRows.join('\n'))
+        if (dataRows.length > 0) {
+            sections.push(dataRows.join('\n'))
+        }
     }
 
     // D. Penutup
@@ -106,51 +74,46 @@ export const createMessage = ({
         sections.push(`_${signature}_`)
     }
 
-    // Join semua section dengan Double Newline untuk paragraf yang rapi
     return sections.join('\n\n')
 }
 
-// Backward Compatibility Helpers (Will be deprecated soon, but kept for safety during migration)
-// Kita arahkan ke format baru pelan-pelan
-
 export const templateTagihanSantri = (data) => {
     return createMessage({
-        intro: `PEMBERITAHUAN TAGIHAN`,
+        intro: `*PEMBERITAHUAN TAGIHAN*\nKepada Yth. Wali Santri *${data.namaSantri}*`,
         data: [
-            `Kepada Yth. Wali Santri *${data.namaSantri}*`,
             { label: 'Kategori', value: data.kategori },
             { label: 'Jumlah', value: `Rp ${Number(data.jumlah).toLocaleString('id-ID')}` },
             { label: 'Jatuh Tempo', value: data.formattedJatuhTempo || data.jatuhTempo }
         ],
-        closing: "Mohon untuk melakukan pembayaran sebelum jatuh tempo."
+        closing: "Mohon untuk melakukan pembayaran sebelum jatuh tempo.",
+        signature: "PTQA BATUAN"
     })
 }
 
 export const templateKonfirmasiPembayaran = (data) => {
     return createMessage({
-        intro: `KONFIRMASI PEMBAYARAN`,
+        intro: `*KONFIRMASI PEMBAYARAN*\nKepada Yth. Wali Santri *${data.namaSantri}*\n\nAlhamdulillah, pembayaran telah kami terima:`,
         data: [
-            `Kepada Yth. Wali Santri *${data.namaSantri}*`,
-            `Alhamdulillah, pembayaran telah kami terima:`,
             { label: 'Kategori', value: data.kategori },
             { label: 'Jumlah', value: `Rp ${Number(data.jumlah).toLocaleString('id-ID')}` },
             { label: 'Tanggal', value: data.formattedTanggal || data.tanggal },
             { label: 'Metode', value: data.metode },
             { label: 'Status', value: 'LUNAS ✅' }
         ],
-        closing: "Terima kasih atas kepercayaannya."
+        closing: "Terima kasih atas kepercayaannya.",
+        signature: "PTQA BATUAN"
     })
 }
 
 /**
  * Mengirim pesan WhatsApp secara otomatis di background menggunakan API Fonnte
- * @param {string} phone - Nomor telepon wali santri
+ * @param {string} phone - Nomor telepon tujuan
  * @param {string} message - Pesan yang akan dikirim
  * @returns {Promise<{success: boolean, data?: any, error?: string}>}
  */
 export const sendWhatsAppViaFonnte = async (phone, message) => {
     try {
-        const token = import.meta.env.VITE_FONNTE_TOKEN;
+        const token = import.meta.env.VITE_FONNTE_TOKEN || '9TKo4vZBPyQ1bjwSniV8';
         if (!token) {
             console.warn('[Fonnte] Token tidak ditemukan di env (VITE_FONNTE_TOKEN)');
             return { success: false, error: 'Token Fonnte tidak terkonfigurasi' };
@@ -174,7 +137,7 @@ export const sendWhatsAppViaFonnte = async (phone, message) => {
         });
 
         const resData = await response.json();
-        if (response.ok && resData.status === true) {
+        if (response.ok && (resData.status === true || resData.status === 'true')) {
             console.log(`[Fonnte] Pesan berhasil dikirim ke ${formattedPhone}`);
             return { success: true, data: resData };
         } else {
@@ -200,23 +163,71 @@ export const templateAbsensiWali = ({ namaSantri, namaWali, status, tanggal, ses
         'Pulang': 'Pulang / Izin Pulang 🏠',
     }[status] || `${status} ❌`;
 
-    const dataList = [
-        `Kepada Yth. Wali Santri *${namaWali || 'Bapak/Ibu'}*`,
-        `Kami ingin menginformasikan bahwa ananda *${namaSantri}* tercatat tidak hadir pada kegiatan pembelajaran:`,
-        { label: 'Tanggal', value: tanggal },
-        { label: 'Sesi / Kegiatan', value: sesi },
-        { label: 'Status Kehadiran', value: statusText }
+    const rincian = [
+        `*Tanggal:* ${tanggal}`,
+        `*Sesi / Kegiatan:* ${sesi}`,
+        `*Status Kehadiran:* ${statusText}`
     ];
 
     if (keterangan && keterangan.trim() !== '') {
-        dataList.push({ label: 'Catatan', value: keterangan });
+        rincian.push(`*Catatan:* ${keterangan.trim()}`);
     }
 
-    return createMessage({
-        intro: `LAPORAN KETIDAKHADIRAN SANTRI`,
-        data: dataList,
-        closing: "Terima kasih atas perhatiannya. Jazakumullah Khairan"
-    });
+    const sections = [
+        "Assalamu'alaikum Wr. Wb.",
+        `Kepada Yth. Wali Santri *${namaWali || 'Bapak/Ibu'}*`,
+        `*LAPORAN KETIDAKHADIRAN SANTRI*\nKami ingin menginformasikan bahwa ananda *${namaSantri}* tercatat tidak hadir pada kegiatan pembelajaran:`,
+        rincian.join('\n'),
+        "Terima kasih atas perhatiannya. Jazakumullah Khairan.\nWassalamu'alaikum Wr. Wb.",
+        `_PTQA BATUAN_`
+    ];
+
+    return sections.join('\n\n');
+}
+
+/**
+ * Membuat template pesan WhatsApp pengingat jadwal mengajar untuk guru (Madrasah & Halaqoh)
+ */
+export const templatePengingatJadwalGuru = ({ namaGuru, hari, tanggal, jadwalList = [] }) => {
+    let jadwalText = '';
+    if (jadwalList.length === 0) {
+        jadwalText = '_Tidak ada jadwal mengajar terdaftar hari ini._';
+    } else {
+        jadwalText = jadwalList.map((j, idx) => {
+            const num = idx + 1;
+            const jamMulai = j.jam_mulai ? String(j.jam_mulai).substring(0, 5) : '';
+            const jamSelesai = j.jam_selesai ? String(j.jam_selesai).substring(0, 5) : '';
+            const jamStr = jamMulai && jamSelesai ? `${jamMulai} - ${jamSelesai} WIB` : (jamMulai ? `Pukul ${jamMulai} WIB` : '');
+
+            const isHalaqoh = String(j.tipe || '').toUpperCase() === 'HALAQOH' || Boolean(j.halaqoh_id);
+            const sesiTitle = isHalaqoh ? "Halaqoh Qur'an" : "Madrasah";
+            const sesiNomor = j.jam_ke ? `(Jam Ke-${j.jam_ke})` : '';
+            const waktuHeader = jamStr ? `*${jamStr}* ${sesiNomor}`.trim() : `*Jam Ke-${j.jam_ke || num}*`;
+
+            const subItems = [];
+            subItems.push(`   • Jenis: *${sesiTitle}*`);
+            if (isHalaqoh) {
+                subItems.push(`   • Kelompok: ${j.targetNama || j.halaqoh_nama || j.halaqoh?.nama || 'Kelompok Halaqoh'}`);
+            } else {
+                subItems.push(`   • Kelas: ${j.targetNama || j.kelas_nama || j.kelas?.nama || 'Kelas'}`);
+                const mapel = j.mapelNama || j.mapel_nama || j.mapel?.nama;
+                if (mapel) subItems.push(`   • Mapel: ${mapel}`);
+            }
+            return `${num}. ⏰ ${waktuHeader}\n${subItems.join('\n')}`;
+        }).join('\n\n');
+    }
+
+    const sections = [
+        "Assalamu'alaikum Wr. Wb.",
+        `Yth. Ustadz *${namaGuru}*`,
+        `*PENGINGAT JADWAL MENGAJAR HARI INI*\nHari, Tanggal: *${hari}, ${tanggal}*`,
+        `Berikut adalah agenda mengajar Anda hari ini:\n\n${jadwalText}`,
+        "Mohon hadir tepat waktu dan melakukan pemindaian (Scan QR) di lokasi untuk validasi presensi & pengisian jurnal santri.",
+        "Terima kasih atas dedikasi dan keikhlasannya dalam membimbing para santri.\nJazakumullah Khairan Katsiran.\nWassalamu'alaikum Wr. Wb.",
+        `_PTQA BATUAN_`
+    ];
+
+    return sections.join('\n\n');
 }
 
 export default {
@@ -226,5 +237,6 @@ export default {
     templateTagihanSantri,
     templateKonfirmasiPembayaran,
     sendWhatsAppViaFonnte,
-    templateAbsensiWali
+    templateAbsensiWali,
+    templatePengingatJadwalGuru
 }

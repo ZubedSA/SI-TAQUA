@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI, FunctionDeclarationSchemaType as SchemaType } from '@google/generative-ai';
 
 interface ChatContext {
   lastIntent: string;
