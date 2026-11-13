@@ -352,7 +352,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
                         const matches = await this.supabaseService.findSantriByWaliPhone(sender);
                         const resolution = this.handleSantriMatches(matches, 'Anak Anda');
                         if (resolution.clarification) {
-                            const clarText = resolution.clarification.replace('dengan nama "Anak Anda"', 'yang terhubung dengan nomor Anda');
+                            const clarText = resolution.clarification.replace(/dengan nama\s*\*?"Anak Anda"\*?/gi, 'yang terhubung dengan nomor WhatsApp Anda');
                             await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Clarification Wali Ganda', null, clarText, Date.now() - startTime);
                             return this.replyToUser(res, sender, clarText, messageId);
                         }
@@ -363,6 +363,9 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     }
                 }
                 if (targetSantri) {
+                    if (targetSantri.nama) {
+                        this.aiService.setContext(sender, parsed.intent, targetSantri.nama);
+                    }
                     const hasAccess = await this.supabaseService.hasAccessToSantri(sender, targetSantri.id);
                     if (!hasAccess) {
                         const replyText = 'Maaf, Anda tidak memiliki hak akses untuk melihat data tersebut.';
@@ -420,26 +423,8 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 dbResult = { error: 'Terjadi gangguan saat mengambil data dari database. Coba lagi sebentar ya.' };
             }
             let reply;
-            const cleanName = targetSantri?.nama || parsed.parameters?.santri_name || 'santri';
-            if (parsed.intent !== 'chitchat' && (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0))) {
-                let type = 'data';
-                if (parsed.intent === 'cekPembayaran' || parsed.intent === 'cekTagihan')
-                    type = 'pembayaran';
-                if (parsed.intent === 'cekHafalan')
-                    type = 'hafalan';
-                if (parsed.intent === 'cekNilai')
-                    type = 'nilai';
-                if (parsed.intent === 'cekAbsensi')
-                    type = 'kehadiran';
-                if (parsed.intent === 'cekPerizinan')
-                    type = 'perizinan';
-                if (parsed.intent === 'cekPrestasi')
-                    type = 'prestasi';
-                reply = `Maaf, data ${type} ${cleanName} tidak ditemukan.`;
-            }
-            else {
-                if (parsed.intent === 'chitchat') {
-                    reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
+            if (parsed.intent === 'chitchat') {
+                reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
 
 Saya bisa membantu Anda dengan:
 📖 Cek hafalan santri
@@ -449,10 +434,9 @@ Saya bisa membantu Anda dengan:
 💳 Rincian tagihan
 
 Silakan tanyakan kebutuhan Anda! 🤲`;
-                }
-                else {
-                    reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);
-                }
+            }
+            else {
+                reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender);
             }
             await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, executedQuery, dbResult, reply, Date.now() - startTime, dbResult?.error || '');
             return this.replyToUser(res, sender, reply, messageId);

@@ -259,20 +259,28 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
             return result;
         }
         let santriName = '';
-        const nameMatchWithKeyword = userPrompt.match(/(?:santri|nama|untuk|milik|atas\s+nama|spp|perkembangan|jadwal|hafalan|nilai|absen|tagihan)\s+([A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+)*)/i);
+        const nameMatchWithKeyword = userPrompt.match(/(?:santri|nama|untuk|milik|atas\s+nama|spp|pembayaran|biaya|perkembangan|jadwal|hafalan|nilai|absen|tagihan)\s+([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*)*)/i);
         if (nameMatchWithKeyword && nameMatchWithKeyword[1]) {
-            santriName = nameMatchWithKeyword[1]
-                .split(' ')
-                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                .join(' ');
-        }
-        if (!santriName) {
-            const nameAfterVerb = userPrompt.match(/(?:cek|lihat|tampilkan|info|data|rekap)\s+(?:hafalan|nilai|tagihan|pembayaran|absen|spp|perkembangan)\s+([A-Za-z][a-z]+(?:\s+[A-Za-z][a-z]+)*)/i);
-            if (nameAfterVerb && nameAfterVerb[1]) {
-                santriName = nameAfterVerb[1]
+            let candidate = nameMatchWithKeyword[1].trim();
+            candidate = candidate.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|kehadiran)\s+/i, '').trim();
+            if (candidate) {
+                santriName = candidate
                     .split(' ')
                     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                     .join(' ');
+            }
+        }
+        if (!santriName) {
+            const nameAfterVerb = userPrompt.match(/(?:cek|lihat|tampilkan|info|data|rekap|status)\s+(?:hafalan\s+|nilai\s+|tagihan\s+|pembayaran\s+|biaya\s+|absen\s+|spp\s+|perkembangan\s+){1,3}([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*)*)/i);
+            if (nameAfterVerb && nameAfterVerb[1]) {
+                let candidate = nameAfterVerb[1].trim();
+                candidate = candidate.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|kehadiran)\s+/i, '').trim();
+                if (candidate) {
+                    santriName = candidate
+                        .split(' ')
+                        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        .join(' ');
+                }
             }
         }
         if (!santriName && (text.includes('dia') || text.includes('kalau') || text.includes('gimana') ||
@@ -375,18 +383,24 @@ Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
         if (this.geminiParserModel) {
             try {
                 const result = await this.parseIntentWithGemini(userPrompt, sender);
-                const santriName = result.parameters?.santri_name || '';
-                this.setContext(sender, result.intent, santriName);
-                this.logger.log(`[Gemini] Intent: ${result.intent}, Santri: ${santriName}`);
-                return result;
+                if (result && result.intent && result.intent !== 'chitchat') {
+                    const santriName = result.parameters?.santri_name || '';
+                    this.setContext(sender, result.intent, santriName);
+                    this.logger.log(`[Gemini] Intent: ${result.intent}, Santri: ${santriName}`);
+                    return result;
+                }
             }
             catch (e) {
                 this.logger.warn(`[Gemini] Gagal parse intent, fallback ke local NLP: ${e.message}`);
             }
         }
-        const result = this.parseIntentLocal(userPrompt, sender);
-        this.logger.log(`[Local NLP] Intent: ${result.intent}, Params: ${JSON.stringify(result.parameters)}`);
-        return result;
+        const localResult = this.parseIntentLocal(userPrompt, sender);
+        if (localResult && localResult.intent !== 'chitchat') {
+            this.logger.log(`[Local NLP Override] Intent: ${localResult.intent}, Params: ${JSON.stringify(localResult.parameters)}`);
+            return localResult;
+        }
+        this.logger.log(`[Local NLP] Intent: ${localResult.intent}, Params: ${JSON.stringify(localResult.parameters)}`);
+        return localResult;
     }
     async formatResponseWithGemini(userPrompt, intent, dbResult, sender) {
         const ctx = this.getContext(sender);
@@ -424,41 +438,82 @@ ${dataContext}`;
             return `⚠️ *Afwan Ayah/Bunda,* terjadi kendala: ${dbResult.error}`;
         }
         switch (intent) {
+            case 'cekPembayaran':
+            case 'cekTagihan':
             case 'check_pembayaran':
                 if (!dbResult || dbResult.length === 0) {
                     return `${getGreeting()}\n\nUntuk data tagihan nanda *${santriName}*, belum ada tagihan aktif yang terdata nggih.${getClosing()}`;
                 }
                 let payText = `${getGreeting()}\n\nBerikut laporan status pembayaran nanda *${santriName}*:\n\n`;
-                dbResult.forEach((t) => {
-                    const kategori = t.kategori_pembayaran?.nama || 'Tagihan';
-                    const nominal = Number(t.jumlah).toLocaleString('id-ID');
+                (Array.isArray(dbResult) ? dbResult : [dbResult]).forEach((t) => {
+                    const kategori = t.kategori_pembayaran?.nama || t.kategori || 'Tagihan';
+                    const nominal = Number(t.jumlah || t.nominal || 0).toLocaleString('id-ID');
                     const status = t.status === 'Lunas' ? '✅ *Lunas*' : '❌ *Belum Lunas*';
                     payText += `- *${kategori}*: Rp${nominal} → ${status}\n`;
                 });
                 payText += getClosing();
                 return payText;
+            case 'cekHafalan':
             case 'get_hafalan':
                 if (!dbResult || dbResult.length === 0) {
                     return `${getGreeting()}\n\nBelum ada catatan setoran hafalan nanda *${santriName}* yang terdata nggih.${getClosing()}`;
                 }
                 let hafText = `📖 *Catatan Hafalan Terbaru*\nNanda *${santriName}*:\n\n`;
-                dbResult.slice(0, 5).forEach((h) => {
-                    const tanggal = new Date(h.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-                    hafText += `📅 ${tanggal}\n  Juz *${h.juz}* | Surah *${h.surah}* (Ayat ${h.ayat_mulai}-${h.ayat_selesai})\n  Status: *${h.status}*\n\n`;
+                (Array.isArray(dbResult) ? dbResult : [dbResult]).slice(0, 5).forEach((h) => {
+                    const tanggal = h.tanggal ? new Date(h.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+                    hafText += `📅 ${tanggal}\n  Juz *${h.juz}* | Surah *${h.surah}* (Ayat ${h.ayat_mulai}-${h.ayat_selesai})\n  Status: *${h.status || 'Lancar'}*\n\n`;
                 });
                 hafText += `Masya Allah, semoga hafalannya berkah dan lancar. 🌙`;
                 return hafText;
+            case 'cekNilai':
             case 'get_nilai':
                 if (!dbResult || dbResult.length === 0) {
                     return `${getGreeting()}\n\nNilai akademis nanda *${santriName}* belum terinput ke sistem.${getClosing()}`;
                 }
                 let nilText = `📊 *Nilai Akademis*\nNanda *${santriName}*:\n\n`;
-                dbResult.forEach((n) => {
+                (Array.isArray(dbResult) ? dbResult : [dbResult]).forEach((n) => {
                     const mapel = n.mapel?.nama || 'Mata Pelajaran';
-                    nilText += `📚 *${mapel}* (Sem. ${n.semester})\n  Tugas: ${n.nilai_tugas ?? '-'} | UTS: ${n.nilai_uts ?? '-'} | UAS: ${n.nilai_uas ?? '-'}\n  *Nilai Akhir: ${n.nilai_akhir ?? '-'}*\n\n`;
+                    nilText += `📚 *${mapel}* (Sem. ${n.semester || 1})\n  Tugas: ${n.nilai_tugas ?? '-'} | UTS: ${n.nilai_uts ?? '-'} | UAS: ${n.nilai_uas ?? '-'}\n  *Nilai Akhir: ${n.nilai_akhir ?? '-'}*\n\n`;
                 });
                 nilText += `Semoga nilai ini menjadi motivasi nanda untuk terus berprestasi. 🌟`;
                 return nilText;
+            case 'cekAbsensi':
+            case 'get_presence_today':
+                if (!dbResult)
+                    return `Data absensi nanda *${santriName}* belum tersedia saat ini.`;
+                if (Array.isArray(dbResult)) {
+                    let absText = `📋 *Rekap Kehadiran*\nNanda *${santriName}*:\n\n`;
+                    const total = dbResult.length;
+                    const hadir = dbResult.filter((p) => String(p.status).toLowerCase() === 'hadir').length;
+                    const sakit = dbResult.filter((p) => String(p.status).toLowerCase() === 'sakit').length;
+                    const izin = dbResult.filter((p) => String(p.status).toLowerCase() === 'izin').length;
+                    const alpha = dbResult.filter((p) => ['alfa', 'alpha'].includes(String(p.status).toLowerCase())).length;
+                    absText += `✅ Hadir: *${hadir}* kali\n🏥 Sakit: *${sakit}* kali\n🏠 Izin: *${izin}* kali\n❌ Alpha: *${alpha}* kali\n*Total Sesi: ${total}*\n`;
+                    return absText + getClosing();
+                }
+                return `📊 *Rekap Kehadiran*\n\n` +
+                    `✅ Hadir: *${dbResult.hadir || 0}*\n` +
+                    `🏥 Sakit: *${dbResult.sakit || 0}*\n` +
+                    `🏠 Izin: *${dbResult.izin || 0}*\n` +
+                    `❌ Alfa: *${dbResult.alpha || 0}*\n`;
+            case 'cekPrestasi':
+                if (!dbResult || dbResult.length === 0) {
+                    return `${getGreeting()}\n\nBelum ada catatan prestasi yang terdata untuk nanda *${santriName}*.${getClosing()}`;
+                }
+                let presText = `🏆 *Catatan Prestasi*\nNanda *${santriName}*:\n\n`;
+                (Array.isArray(dbResult) ? dbResult : [dbResult]).forEach((p, idx) => {
+                    presText += `${idx + 1}. *${p.nama_prestasi || p.judul || 'Prestasi'}* (${p.tingkat || 'Pondok'})\n`;
+                });
+                return presText + getClosing();
+            case 'cekPerizinan':
+                if (!dbResult || dbResult.length === 0) {
+                    return `${getGreeting()}\n\nTidak ada riwayat perizinan aktif untuk nanda *${santriName}*.${getClosing()}`;
+                }
+                let izinSantriText = `📝 *Riwayat Perizinan*\nNanda *${santriName}*:\n\n`;
+                (Array.isArray(dbResult) ? dbResult : [dbResult]).slice(0, 5).forEach((iz, idx) => {
+                    izinSantriText += `${idx + 1}. *${iz.keperluan || iz.alasan || 'Izin'}* (${iz.status || 'Selesai'})\n`;
+                });
+                return izinSantriText + getClosing();
             case 'get_tidak_setor_today':
                 if (!dbResult || dbResult.length === 0) {
                     return `Alhamdulillah! 🌟 Hari ini *seluruh santri aktif* sudah menyelesaikan setoran hafalannya. Luar biasa!`;

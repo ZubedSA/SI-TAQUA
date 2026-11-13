@@ -6,7 +6,7 @@ export declare class AiService {
     private geminiResponseModel;
     constructor();
     private getContext;
-    private setContext;
+    setContext(sender: string, intent: string, santriName: string): void;
     private addToHistory;
     private parseIntentWithGemini;
     private parseIntentLocal;
