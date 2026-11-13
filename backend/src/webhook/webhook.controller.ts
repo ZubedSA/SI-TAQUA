@@ -189,9 +189,12 @@ export class WebhookController {
   }
 
   // =====================================================================
-  // POST /webhook — Main entry point
+  // GET & POST /webhook & / — Main entry point (mendukung GET & POST sesuai syarat Fonnte)
   // =====================================================================
+  @Get('webhook')
   @Post('webhook')
+  @Get('')
+  @Post('')
   async handleWebhook(@Req() req: Request, @Res() res: Response) {
     const startTime = Date.now();
     let sender = '';
@@ -210,6 +213,11 @@ export class WebhookController {
       const body = req.body || {};
       const query = req.query || {};
 
+      // 0. Respon cepat untuk ping verifikasi Fonnte (GET/POST kosong)
+      if (Object.keys(body).length === 0 && Object.keys(query).length === 0) {
+        return res.status(HttpStatus.OK).json({ status: 'ok', service: 'SI-TAQUA Webhook Active' });
+      }
+
       // Catat payload masuk untuk didebug
       await this.supabaseService.logWebhookPayload(body, query);
 
@@ -227,9 +235,14 @@ export class WebhookController {
 
       this.logger.log(`Webhook: Sender="${sender}", Device="${device}", Member="${member}", MessageId="${messageId}", Message="${message}"`);
 
+      // Jika pesan adalah ping tanpa sender, respon OK agar verifikasi URL Fonnte sukses
+      if (!sender && !message) {
+        return res.status(HttpStatus.OK).json({ status: 'ok', service: 'SI-TAQUA Webhook Active' });
+      }
+
       if (!sender) {
         this.logger.warn('Sender tidak ditemukan di request.');
-        return res.status(HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
+        return res.status(HttpStatus.OK).json({ status: 'ignored_missing_sender' });
       }
 
       // Deteksi identitas Guru / Ustadz

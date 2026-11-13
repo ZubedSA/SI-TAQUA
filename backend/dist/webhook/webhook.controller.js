@@ -164,6 +164,9 @@ let WebhookController = WebhookController_1 = class WebhookController {
             this.cleanupExpiredSentMessages();
             const body = req.body || {};
             const query = req.query || {};
+            if (Object.keys(body).length === 0 && Object.keys(query).length === 0) {
+                return res.status(common_1.HttpStatus.OK).json({ status: 'ok', service: 'SI-TAQUA Webhook Active' });
+            }
             await this.supabaseService.logWebhookPayload(body, query);
             if (body.status || body.state || body.stateid) {
                 this.logger.log(`Mengabaikan status update webhook: ID=${body.id || 'N/A'}, Status=${body.status || body.state}`);
@@ -175,9 +178,12 @@ let WebhookController = WebhookController_1 = class WebhookController {
             const member = body.member || query.member || '';
             messageId = body.id || body.inboxid || query.id || query.inboxid || '';
             this.logger.log(`Webhook: Sender="${sender}", Device="${device}", Member="${member}", MessageId="${messageId}", Message="${message}"`);
+            if (!sender && !message) {
+                return res.status(common_1.HttpStatus.OK).json({ status: 'ok', service: 'SI-TAQUA Webhook Active' });
+            }
             if (!sender) {
                 this.logger.warn('Sender tidak ditemukan di request.');
-                return res.status(common_1.HttpStatus.BAD_REQUEST).json({ error: 'Missing sender' });
+                return res.status(common_1.HttpStatus.OK).json({ status: 'ignored_missing_sender' });
             }
             const guru = await this.supabaseService.getGuruByPhone(sender);
             const isGuru = !!guru;
@@ -592,7 +598,10 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WebhookController.prototype, "getDebugDb", null);
 __decorate([
+    (0, common_1.Get)('webhook'),
     (0, common_1.Post)('webhook'),
+    (0, common_1.Get)(''),
+    (0, common_1.Post)(''),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
