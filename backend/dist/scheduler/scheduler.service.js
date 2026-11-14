@@ -268,10 +268,17 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         if (!phone)
             return '';
         let cleaned = phone.replace(/\D/g, '');
+        if (!cleaned)
+            return '';
         if (cleaned.startsWith('0'))
             cleaned = '62' + cleaned.substring(1);
-        if (!cleaned.startsWith('62'))
+        else if (cleaned.startsWith('8'))
             cleaned = '62' + cleaned;
+        else if (!cleaned.startsWith('62') && !cleaned.startsWith('60') && !cleaned.startsWith('65') && cleaned.length >= 9) {
+            cleaned = '62' + cleaned;
+        }
+        if (cleaned.length < 9)
+            return '';
         return cleaned;
     }
     async sendFonnte(target, message) {
@@ -280,7 +287,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
             return { success: false, error: 'Token Fonnte tidak terpasang di environment' };
         }
         const formattedTarget = this.formatPhoneNumber(target);
-        if (!formattedTarget || formattedTarget.length < 10) {
+        if (!formattedTarget || formattedTarget.length < 9) {
             return { success: false, error: 'Nomor telepon tidak valid' };
         }
         const formData = new URLSearchParams();
@@ -295,7 +302,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: formData.toString(),
-                signal: AbortSignal.timeout(10000),
+                signal: AbortSignal.timeout(6000),
             });
             const resData = await response.json();
             if (response.ok && (resData.status === true || resData.status === 'true')) {
@@ -336,6 +343,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         let successCount = 0;
         let failedCount = 0;
         let noPhoneCount = 0;
+        const eligibleTeachers = [];
         for (const group of guruGroups) {
             if (!group.noTelp) {
                 this.logger.warn(`[Scheduler] Ustadz ${group.namaGuru} tidak memiliki nomor telepon terdaftar.`);
@@ -346,32 +354,58 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                     status: 'SKIPPED_NO_PHONE',
                     message: 'Nomor telepon belum diisi di data guru'
                 });
-                continue;
-            }
-            const msg = this.formatReminderMessage(group.namaGuru, dayName, formattedDate, group.jadwal);
-            const sendResult = await this.sendFonnte(group.noTelp, msg);
-            if (sendResult.success) {
-                successCount++;
-                results.push({
-                    guruId: group.guruId,
-                    nama: group.namaGuru,
-                    phone: group.noTelp,
-                    status: 'SUCCESS'
-                });
             }
             else {
-                failedCount++;
-                results.push({
-                    guruId: group.guruId,
-                    nama: group.namaGuru,
-                    phone: group.noTelp,
-                    status: 'FAILED',
-                    error: sendResult.error
-                });
+                eligibleTeachers.push(group);
             }
-            await new Promise(resolve => setTimeout(resolve, 600));
+        }
+        const batchSize = 2;
+        for (let i = 0; i < eligibleTeachers.length; i += batchSize) {
+            const batch = eligibleTeachers.slice(i, i + batchSize);
+            await Promise.all(batch.map(async (group) => {
+                const msg = this.formatReminderMessage(group.namaGuru, dayName, formattedDate, group.jadwal);
+                let sendResult = await this.sendFonnte(group.noTelp, msg);
+                if (!sendResult.success && sendResult.error && (sendResult.error.toLowerCase().includes('busy') ||
+                    sendResult.error.toLowerCase().includes('rate'))) {
+                    await new Promise(r => setTimeout(r, 1200));
+                    sendResult = await this.sendFonnte(group.noTelp, msg);
+                }
+                if (sendResult.success) {
+                    successCount++;
+                    results.push({
+                        guruId: group.guruId,
+                        nama: group.namaGuru,
+                        phone: group.noTelp,
+                        status: 'SUCCESS'
+                    });
+                }
+                else {
+                    failedCount++;
+                    results.push({
+                        guruId: group.guruId,
+                        nama: group.namaGuru,
+                        phone: group.noTelp,
+                        status: 'FAILED',
+                        error: sendResult.error
+                    });
+                }
+            }));
+            if (i + batchSize < eligibleTeachers.length) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
         }
         this.logger.log(`[Scheduler] Selesai: ${successCount} berhasil, ${failedCount} gagal, ${noPhoneCount} tanpa nomor HP.`);
+        try {
+            const supabase = this.supabaseService.getClient();
+            await supabase.from('audit_log').insert({
+                aksi: 'BROADCAST_JADWAL_GURU',
+                tabel: 'jadwal_pelajaran',
+                keterangan: `Pengingat jadwal guru jam 06:00 WIB (${dayName}, ${dateStr}): ${successCount} berhasil, ${failedCount} gagal, ${noPhoneCount} tanpa nomor dari ${guruGroups.length} guru.`
+            });
+        }
+        catch (logErr) {
+            this.logger.warn(`[Scheduler] Gagal catat audit_log: ${logErr.message}`);
+        }
         return {
             success: true,
             skipped: false,

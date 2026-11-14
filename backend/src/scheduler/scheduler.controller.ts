@@ -2,7 +2,7 @@ import { Controller, Get, Post, Query, Res, HttpStatus, Logger, Req } from '@nes
 import { Response, Request } from 'express';
 import { SchedulerService } from './scheduler.service';
 
-@Controller('api/scheduler')
+@Controller('')
 export class SchedulerController {
   private readonly logger = new Logger(SchedulerController.name);
 
@@ -11,9 +11,9 @@ export class SchedulerController {
   /**
    * Endpoint Cron / Manual Trigger untuk mengirim pengingat jadwal guru hari ini
    * Dipanggil otomatis oleh Vercel Cron setiap jam 06:00 WIB (23:00 UTC)
-   * Juga bisa dipanggil manual oleh Admin dari dashboard frontend
+   * Mendukung path alias: /api/scheduler/remind-guru, /scheduler/remind-guru, /remind-guru
    */
-  @Get('remind-guru')
+  @Get(['api/scheduler/remind-guru', 'scheduler/remind-guru', 'remind-guru'])
   async handleRemindGuruGet(@Query('date') date: string, @Res() res: Response) {
     this.logger.log(`[SchedulerController] GET remind-guru triggered${date ? ` (date: ${date})` : ''}`);
     try {
@@ -32,7 +32,7 @@ export class SchedulerController {
     }
   }
 
-  @Post('remind-guru')
+  @Post(['api/scheduler/remind-guru', 'scheduler/remind-guru', 'remind-guru'])
   async handleRemindGuruPost(@Query('date') date: string, @Res() res: Response) {
     return this.handleRemindGuruGet(date, res);
   }
@@ -40,7 +40,7 @@ export class SchedulerController {
   /**
    * Endpoint Preview: Melihat daftar guru & jadwal hari ini beserta format pesan WA tanpa mengirim ke Fonnte
    */
-  @Get('preview-today')
+  @Get(['api/scheduler/preview-today', 'scheduler/preview-today', 'preview-today'])
   async handlePreviewToday(@Query('date') date: string, @Res() res: Response) {
     try {
       const scheduleData = await this.schedulerService.getTodayTeacherSchedules(date);

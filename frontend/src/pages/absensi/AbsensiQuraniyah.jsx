@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { useHalaqoh } from '../../hooks/useAkademik'
 import { sendPushNotification } from '../../utils/pushNotification'
-import { sendWhatsAppViaFonnte, templateAbsensiWali } from '../../utils/whatsapp'
+import { sendBulkAbsensiWhatsApp } from '../../utils/whatsapp'
 
 const STATUS_OPTIONS = [
     { value: 'Hadir', label: 'Hadir', color: 'bg-green-50 text-green-700 border-green-200' },
@@ -170,29 +170,32 @@ const AbsensiQuraniyah = () => {
 
             // === WhatsApp Notification via Fonnte (Absent Students) ===
             try {
-                const absentSantri = santriList.filter(s => {
-                    const st = attendanceMap[s.id]?.status || 'Hadir'
-                    return st !== 'Hadir'
-                })
+                const absentSantri = santriList
+                    .filter(s => {
+                        const st = attendanceMap[s.id]?.status || 'Hadir'
+                        return st !== 'Hadir'
+                    })
+                    .map(s => ({
+                        ...s,
+                        status: attendanceMap[s.id]?.status,
+                        keterangan: attendanceMap[s.id]?.keterangan
+                    }))
                 
                 if (absentSantri.length > 0) {
                     const halaqohNama = halaqohList.find(h => h.id === selectedHalaqohId)?.nama || 'Halaqoh'
                     const formattedDateStr = new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                     
-                    for (const santri of absentSantri) {
-                        if (santri.no_telp_wali) {
-                            const msg = templateAbsensiWali({
-                                namaSantri: santri.nama,
-                                namaWali: santri.nama_wali,
-                                status: attendanceMap[santri.id].status,
-                                tanggal: formattedDateStr,
-                                sesi: `Qur'aniyah (${halaqohNama} - Jam ${selectedJam})`,
-                                keterangan: attendanceMap[santri.id].keterangan
-                            })
-                            sendWhatsAppViaFonnte(santri.no_telp_wali, msg).catch(err => {
-                                console.error('Gagal kirim WA Fonnte:', err)
-                            })
-                        }
+                    const waRes = await sendBulkAbsensiWhatsApp(absentSantri, {
+                        sesi: `Qur'aniyah (${halaqohNama} - Jam ${selectedJam})`,
+                        tanggal: formattedDateStr
+                    })
+
+                    if (waRes.sent === waRes.total) {
+                        showToast.success(`Presensi tersimpan! Notifikasi WA terkirim ke seluruh (${waRes.sent}) wali santri.`)
+                    } else if (waRes.sent > 0) {
+                        showToast.success(`Presensi tersimpan. Notifikasi WA terkirim ke ${waRes.sent}/${waRes.total} wali${waRes.skipped > 0 ? ` (${waRes.skipped} santri belum ada no. WA)` : ''}.`)
+                    } else if (waRes.skipped > 0) {
+                        showToast.warning(`Presensi tersimpan, namun ${waRes.skipped} santri tidak memiliki nomor WhatsApp wali.`)
                     }
                 }
             } catch (waErr) {

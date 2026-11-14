@@ -74,7 +74,7 @@ let SchedulerController = SchedulerController_1 = class SchedulerController {
 };
 exports.SchedulerController = SchedulerController;
 __decorate([
-    (0, common_1.Get)('remind-guru'),
+    (0, common_1.Get)(['api/scheduler/remind-guru', 'scheduler/remind-guru', 'remind-guru']),
     __param(0, (0, common_1.Query)('date')),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
@@ -82,7 +82,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SchedulerController.prototype, "handleRemindGuruGet", null);
 __decorate([
-    (0, common_1.Post)('remind-guru'),
+    (0, common_1.Post)(['api/scheduler/remind-guru', 'scheduler/remind-guru', 'remind-guru']),
     __param(0, (0, common_1.Query)('date')),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
@@ -90,7 +90,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SchedulerController.prototype, "handleRemindGuruPost", null);
 __decorate([
-    (0, common_1.Get)('preview-today'),
+    (0, common_1.Get)(['api/scheduler/preview-today', 'scheduler/preview-today', 'preview-today']),
     __param(0, (0, common_1.Query)('date')),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
@@ -98,7 +98,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SchedulerController.prototype, "handlePreviewToday", null);
 exports.SchedulerController = SchedulerController = SchedulerController_1 = __decorate([
-    (0, common_1.Controller)('api/scheduler'),
+    (0, common_1.Controller)(''),
     __metadata("design:paramtypes", [scheduler_service_1.SchedulerService])
 ], SchedulerController);
 //# sourceMappingURL=scheduler.controller.js.map

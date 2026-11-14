@@ -5,13 +5,28 @@
  */
 
 /**
- * Format nomor telepon ke format internasional Indonesia (62xxx)
+ * Format nomor telepon ke format internasional Indonesia (62xxx) atau kode negara lainnya
  */
 export const formatPhoneNumber = (phone) => {
     if (!phone) return ''
     let cleaned = String(phone).replace(/\D/g, '')
-    if (cleaned.startsWith('0')) cleaned = '62' + cleaned.substring(1)
-    if (!cleaned.startsWith('62')) cleaned = '62' + cleaned
+    if (!cleaned) return ''
+
+    // Jika diawali 0, ubah ke 62 (contoh: 0812 -> 62812)
+    if (cleaned.startsWith('0')) {
+        cleaned = '62' + cleaned.substring(1)
+    }
+    // Jika diawali 8 (misal: 812xxxx), tambahkan 62 di depan
+    else if (cleaned.startsWith('8')) {
+        cleaned = '62' + cleaned
+    }
+    // Jika nomor belum memiliki kode negara (tidak diawali 62, 60, 65, dll) dan panjangnya minimal 9 digit
+    else if (!cleaned.startsWith('62') && !cleaned.startsWith('60') && !cleaned.startsWith('65') && cleaned.length >= 9) {
+        cleaned = '62' + cleaned
+    }
+
+    // Nomor telepon valid minimal 9 digit
+    if (cleaned.length < 9) return ''
     return cleaned
 }
 
@@ -124,6 +139,9 @@ export const sendWhatsAppViaFonnte = async (phone, message) => {
             return { success: false, error: 'Nomor telepon tidak valid' };
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s safety timeout
+
         const response = await fetch('https://api.fonnte.com/send', {
             method: 'POST',
             headers: {
@@ -133,8 +151,10 @@ export const sendWhatsAppViaFonnte = async (phone, message) => {
             body: JSON.stringify({
                 target: formattedPhone,
                 message: message
-            })
+            }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         const resData = await response.json();
         if (response.ok && (resData.status === true || resData.status === 'true')) {
@@ -148,6 +168,84 @@ export const sendWhatsAppViaFonnte = async (phone, message) => {
         console.error('[Fonnte] Error sending message:', err.message);
         return { success: false, error: err.message };
     }
+}
+
+/**
+ * Mengirim notifikasi WhatsApp laporan ketidakhadiran santri secara sequential
+ * dengan jeda aman anti-rate-limit (800ms) agar SELURUH pesan terkirim lengkap tanpa ada yang drop.
+ * @param {Array} absentList - Array santri tidak hadir: [{ id, nama, nama_wali, no_telp_wali, status, keterangan }]
+ * @param {Object} options - { sesi: string, tanggal: string, onProgress?: Function }
+ * @returns {Promise<{ total: number, sent: number, failed: number, skipped: number, errors: Array }>}
+ */
+export const sendBulkAbsensiWhatsApp = async (absentList = [], options = {}) => {
+    const { sesi = 'Madrosah', tanggal = '', onProgress } = options;
+    const results = {
+        total: absentList.length,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        errors: []
+    };
+
+    if (!absentList || absentList.length === 0) {
+        return results;
+    }
+
+    console.log(`[WA Bulk Absensi] Memulai pengiriman laporan untuk ${absentList.length} santri tidak hadir...`);
+
+    for (let i = 0; i < absentList.length; i++) {
+        const item = absentList[i];
+        if (onProgress) {
+            onProgress({ current: i + 1, total: absentList.length, nama: item.nama });
+        }
+
+        const phone = formatPhoneNumber(item.no_telp_wali);
+        if (!phone) {
+            console.warn(`[WA Bulk Absensi] Santri "${item.nama}" dilewati: Nomor telepon wali kosong / tidak valid.`);
+            results.skipped++;
+            results.errors.push({ nama: item.nama, reason: 'Nomor WhatsApp wali tidak tersedia / tidak valid' });
+            continue;
+        }
+
+        const msg = templateAbsensiWali({
+            namaSantri: item.nama,
+            namaWali: item.nama_wali,
+            status: item.status,
+            tanggal: tanggal,
+            sesi: sesi,
+            keterangan: item.keterangan || ''
+        });
+
+        let sendRes = await sendWhatsAppViaFonnte(phone, msg);
+
+        // Jika gateway Fonnte melaporkan busy atau rate-limit, tunggu 1.5 detik lalu coba sekali lagi
+        if (!sendRes.success && (
+            sendRes.error?.toLowerCase().includes('busy') ||
+            sendRes.error?.toLowerCase().includes('rate') ||
+            sendRes.error?.toLowerCase().includes('wait')
+        )) {
+            console.warn(`[WA Bulk Absensi] Gateway sibuk untuk "${item.nama}". Mencoba ulang dalam 1.5 detik...`);
+            await new Promise(r => setTimeout(r, 1500));
+            sendRes = await sendWhatsAppViaFonnte(phone, msg);
+        }
+
+        if (sendRes.success) {
+            results.sent++;
+            console.log(`[WA Bulk Absensi] (${results.sent}/${absentList.length}) Terkirim ke wali santri "${item.nama}" (${phone})`);
+        } else {
+            results.failed++;
+            results.errors.push({ nama: item.nama, phone: phone, reason: sendRes.error });
+            console.error(`[WA Bulk Absensi] Gagal mengirim ke wali santri "${item.nama}" (${phone}): ${sendRes.error}`);
+        }
+
+        // Jeda aman anti-rate-limit 800ms antar pengiriman nomor berikutnya
+        if (i < absentList.length - 1) {
+            await new Promise(r => setTimeout(r, 800));
+        }
+    }
+
+    console.log(`[WA Bulk Absensi] Selesai: ${results.sent} terkirim, ${results.failed} gagal, ${results.skipped} dilewati (tanpa no HP).`);
+    return results;
 }
 
 /**
@@ -237,6 +335,7 @@ export default {
     templateTagihanSantri,
     templateKonfirmasiPembayaran,
     sendWhatsAppViaFonnte,
+    sendBulkAbsensiWhatsApp,
     templateAbsensiWali,
     templatePengingatJadwalGuru
 }
