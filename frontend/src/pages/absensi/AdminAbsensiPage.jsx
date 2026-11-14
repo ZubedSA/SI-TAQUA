@@ -263,11 +263,11 @@ const AdminAbsensiPage = () => {
     }
 
     const getCategoryLabel = () => {
-        if (filterType === 'Madrosah') {
+        if (filterType === 'Madrosah' || filterKelasId) {
             const kName = filterKelasId ? kelasList.find(k => k.id === filterKelasId)?.nama : 'Semua Kelas'
             return `Madrosah (${kName || 'Kelas'})`
         }
-        if (filterType === 'Quraniyah') {
+        if (filterType === 'Quraniyah' || filterHalaqohId) {
             const hName = filterHalaqohId ? halaqohList.find(h => h.id === filterHalaqohId)?.nama : 'Semua Halaqoh'
             return `Qur'aniyah (${hName || 'Halaqoh'})`
         }
@@ -966,7 +966,7 @@ const AdminAbsensiPage = () => {
                 `)
 
             if (isRange) {
-                presensiPromise = presensiPromise.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate)
+                presensiPromise = presensiPromise.gte('tanggal', filterStartDate).lte('tanggal', filterEndDate).limit(10000)
             } else {
                 presensiPromise = presensiPromise.eq('tanggal', filterDate)
             }
@@ -1014,6 +1014,13 @@ const AdminAbsensiPage = () => {
     const filteredPresensi = React.useMemo(() => {
         return presensiData.filter(p => {
             const isQuraniyah = (p.keterangan || '').toLowerCase().includes('[quraniyah]')
+
+            // Isolasi Kelas dan Halaqoh:
+            // Jika filterKelasId aktif (Madrosah), jangan sertakan log Qur'aniyah
+            if (filterKelasId && !filterHalaqohId && isQuraniyah) return false
+            // Jika filterHalaqohId aktif (Qur'aniyah), jangan sertakan log Madrosah
+            if (filterHalaqohId && !filterKelasId && !isQuraniyah) return false
+
             const matchesType = 
                 filterType === 'Semua' || 
                 (filterType === 'Madrosah' && !isQuraniyah) || 
@@ -1022,13 +1029,13 @@ const AdminAbsensiPage = () => {
             if (!matchesType) return false
 
             if (filterKelasId) {
-                const sKelasId = p.santri?.kelas_id || p.santri?.kelas?.id
-                if (sKelasId !== filterKelasId) return false
+                const sKelasId = String(p.santri?.kelas_id || p.santri?.kelas?.id || '')
+                if (sKelasId !== String(filterKelasId)) return false
             }
 
             if (filterHalaqohId) {
-                const sHalaqohId = p.santri?.halaqoh_id || p.santri?.halaqoh?.id
-                if (sHalaqohId !== filterHalaqohId) return false
+                const sHalaqohId = String(p.santri?.halaqoh_id || p.santri?.halaqoh?.id || '')
+                if (sHalaqohId !== String(filterHalaqohId)) return false
             }
 
             const searchLower = searchTerm.toLowerCase()
@@ -1039,19 +1046,23 @@ const AdminAbsensiPage = () => {
         })
     }, [presensiData, filterType, filterKelasId, filterHalaqohId, searchTerm])
 
-    // 2. Laporan Santri: baca dari perilaku_semester, fallback ke auto presensi semester penuh
-    // PERSIS SAMA dengan logika InputPerilakuPage — menggunakan getResolvedAttendance
+    // 2. Laporan Santri Periode: dihitung langsung dari log harian presensi (presensiData) sesuai rentang tanggal yang dipilih
     const aggregatedSantri = React.useMemo(() => {
         const activeSantri = santriList
-
         const santriIds = activeSantri.map(s => s.id)
-        // Auto counts dari presensi SEMESTER PENUH — sama persis dengan InputPerilakuPage
-        const autoCounts = calculateAutoPresensi(semesterPresensiData, santriIds)
+
+        // Hitung presensi harian langsung dari presensiData (sesuai filter rentang tanggal)
+        const autoCounts = calculateAutoPresensi(presensiData, santriIds)
+
+        const currentSemObj = semesterList.find(s => String(s.id) === String(selectedSemesterId))
+        const isFullSemesterSelected = Boolean(
+            selectedSemesterId && 
+            currentSemObj && 
+            filterStartDate === currentSemObj.tanggal_mulai &&
+            (filterEndDate === currentSemObj.tanggal_selesai || filterEndDate >= currentSemObj.tanggal_selesai)
+        )
 
         const result = []
-        const currentSemObj = semesterList.find(s => String(s.id) === String(selectedSemesterId))
-            || semesterList.find(s => s.is_active)
-            || semesterList[0]
 
         activeSantri.forEach(s => {
             // Filter nama/NIS
@@ -1060,32 +1071,73 @@ const AdminAbsensiPage = () => {
                 return
             }
 
-            // Filter Kelas
+            // Filter Kelas (hanya santri dari kelas ini)
             if (filterKelasId) {
                 const sKelasId = String(s.kelas_id || s.kelas?.id || '')
                 if (sKelasId !== String(filterKelasId)) return
             }
 
-            // Filter Halaqoh
+            // Filter Halaqoh (hanya santri dari halaqoh ini)
             if (filterHalaqohId) {
                 const sHalaqohId = String(s.halaqoh_id || s.halaqoh?.id || '')
                 if (sHalaqohId !== String(filterHalaqohId)) return
             }
 
-            // Cari row perilaku_semester (sama dengan Input Perilaku)
-            const pSaved = perilakuSemesterData.find(x =>
-                String(x.santri_id) === String(s.id) &&
-                (!currentSemObj?.id || String(x.semester_id) === String(currentSemObj.id))
-            )
+            const autoObj = autoCounts[s.id] || { 
+                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 }, 
+                quraniyah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 } 
+            }
 
-            // Auto counts dari presensi semester penuh — fallback jika perilaku_semester null
-            const autoObj = autoCounts[s.id] || { madrosah: {}, quraniyah: {} }
+            // Jika preset semester penuh dipilih dan ada nilai tersimpan di perilaku_semester, gunakan tanpa saling silang (madrosah vs halaqoh terpisah murni)
+            const pSaved = isFullSemesterSelected ? perilakuSemesterData.find(x =>
+                String(x.santri_id) === String(s.id) && String(x.semester_id) === String(currentSemObj.id)
+            ) : null
 
-            // getResolvedAttendance menangani null dengan benar — sama dengan InputPerilakuPage
-            const resolved = getResolvedAttendance(pSaved, autoObj)
+            const resolvedMadrosah = {
+                hadir: autoObj.madrosah.hadir,
+                terlambat: autoObj.madrosah.terlambat,
+                sakit: (pSaved?.sakit_kelas !== undefined && pSaved?.sakit_kelas !== null && pSaved?.sakit_kelas !== '' && pSaved?.sakit_kelas !== '-')
+                    ? Number(pSaved.sakit_kelas)
+                    : autoObj.madrosah.sakit,
+                izin: (pSaved?.izin_kelas !== undefined && pSaved?.izin_kelas !== null && pSaved?.izin_kelas !== '' && pSaved?.izin_kelas !== '-')
+                    ? Number(pSaved.izin_kelas)
+                    : autoObj.madrosah.izin,
+                alpha: (pSaved?.alpha_kelas !== undefined && pSaved?.alpha_kelas !== null && pSaved?.alpha_kelas !== '' && pSaved?.alpha_kelas !== '-')
+                    ? Number(pSaved.alpha_kelas)
+                    : autoObj.madrosah.alpha,
+                pulang: (pSaved?.pulang_kelas !== undefined && pSaved?.pulang_kelas !== null && pSaved?.pulang_kelas !== '' && pSaved?.pulang_kelas !== '-')
+                    ? Number(pSaved.pulang_kelas)
+                    : autoObj.madrosah.pulang
+            }
+
+            const resolvedQuraniyah = {
+                hadir: autoObj.quraniyah.hadir,
+                terlambat: autoObj.quraniyah.terlambat,
+                sakit: (pSaved?.sakit !== undefined && pSaved?.sakit !== null && pSaved?.sakit !== '' && pSaved?.sakit !== '-')
+                    ? Number(pSaved.sakit)
+                    : autoObj.quraniyah.sakit,
+                izin: (pSaved?.izin !== undefined && pSaved?.izin !== null && pSaved?.izin !== '' && pSaved?.izin !== '-')
+                    ? Number(pSaved.izin)
+                    : autoObj.quraniyah.izin,
+                alpha: (pSaved?.alpha !== undefined && pSaved?.alpha !== null && pSaved?.alpha !== '' && pSaved?.alpha !== '-')
+                    ? Number(pSaved.alpha)
+                    : autoObj.quraniyah.alpha,
+                pulang: (pSaved?.pulang !== undefined && pSaved?.pulang !== null && pSaved?.pulang !== '' && pSaved?.pulang !== '-')
+                    ? Number(pSaved.pulang)
+                    : autoObj.quraniyah.pulang
+            }
+
+            // Tentukan baris yang ditampilkan secara terisolasi tanpa saling tumpang tindih
+            const showMadrosah = (filterType === 'Madrosah') || 
+                (Boolean(filterKelasId) && !filterHalaqohId) || 
+                (filterType === 'Semua' && !filterHalaqohId)
+
+            const showQuraniyah = (filterType === 'Quraniyah') || 
+                (Boolean(filterHalaqohId) && !filterKelasId) || 
+                (filterType === 'Semua' && !filterKelasId)
 
             // A. Madrosah (Kelas)
-            if (filterType === 'Semua' || filterType === 'Madrosah') {
+            if (showMadrosah) {
                 result.push({
                     id: s.id,
                     key: `${s.id}_madrosah`,
@@ -1094,17 +1146,17 @@ const AdminAbsensiPage = () => {
                     isQuraniyah: false,
                     grup: s.kelas?.nama || 'Kelas',
                     kategoriLabel: "Madrosah (Kelas)",
-                    Hadir: resolved.madrosah.hadir,
-                    Terlambat: resolved.madrosah.terlambat,
-                    Sakit: resolved.madrosah.sakit,
-                    Izin: resolved.madrosah.izin,
-                    Alpha: resolved.madrosah.alpha,
-                    Pulang: resolved.madrosah.pulang
+                    Hadir: resolvedMadrosah.hadir,
+                    Terlambat: resolvedMadrosah.terlambat,
+                    Sakit: resolvedMadrosah.sakit,
+                    Izin: resolvedMadrosah.izin,
+                    Alpha: resolvedMadrosah.alpha,
+                    Pulang: resolvedMadrosah.pulang
                 })
             }
 
             // B. Quraniyah (Halaqoh)
-            if (filterType === 'Semua' || filterType === 'Quraniyah') {
+            if (showQuraniyah) {
                 result.push({
                     id: s.id,
                     key: `${s.id}_quraniyah`,
@@ -1113,18 +1165,18 @@ const AdminAbsensiPage = () => {
                     isQuraniyah: true,
                     grup: s.halaqoh?.nama || 'Halaqoh',
                     kategoriLabel: "Qur'aniyah (Halaqoh)",
-                    Hadir: resolved.quraniyah.hadir,
-                    Terlambat: resolved.quraniyah.terlambat,
-                    Sakit: resolved.quraniyah.sakit,
-                    Izin: resolved.quraniyah.izin,
-                    Alpha: resolved.quraniyah.alpha,
-                    Pulang: resolved.quraniyah.pulang
+                    Hadir: resolvedQuraniyah.hadir,
+                    Terlambat: resolvedQuraniyah.terlambat,
+                    Sakit: resolvedQuraniyah.sakit,
+                    Izin: resolvedQuraniyah.izin,
+                    Alpha: resolvedQuraniyah.alpha,
+                    Pulang: resolvedQuraniyah.pulang
                 })
             }
         })
 
         return result
-    }, [santriList, semesterPresensiData, perilakuSemesterData, filterType, filterKelasId, filterHalaqohId, searchTerm, selectedSemesterId, semesterList])
+    }, [santriList, presensiData, perilakuSemesterData, filterType, filterKelasId, filterHalaqohId, searchTerm, selectedSemesterId, semesterList, filterStartDate, filterEndDate])
 
     // Logika Agregasi untuk Laporan Staf (Cross-Check dengan Jadwal dan Izin)
     const aggregatedStaf = React.useMemo(() => {
@@ -2803,11 +2855,14 @@ const AdminAbsensiPage = () => {
                                         ref={startDateRef}
                                         type="date" 
                                         value={filterStartDate} 
-                                        onChange={(e) => setFilterStartDate(e.target.value)} 
+                                        onChange={(e) => {
+                                            setFilterStartDate(e.target.value)
+                                            setSelectedSemesterId('')
+                                        }} 
                                         onClick={(e) => {
-                                            e.stopPropagation()
-                                            if (e.target.showPicker) e.target.showPicker()
-                                        }}
+                                             e.stopPropagation()
+                                             if (e.target.showPicker) e.target.showPicker()
+                                         }}
                                         className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer" 
                                     />
                                 </div>
@@ -2827,20 +2882,23 @@ const AdminAbsensiPage = () => {
                                         ref={endDateRef}
                                         type="date" 
                                         value={filterEndDate} 
-                                        onChange={(e) => setFilterEndDate(e.target.value)} 
+                                        onChange={(e) => {
+                                            setFilterEndDate(e.target.value)
+                                            setSelectedSemesterId('')
+                                        }} 
                                         onClick={(e) => {
-                                            e.stopPropagation()
-                                            if (e.target.showPicker) e.target.showPicker()
-                                        }}
+                                             e.stopPropagation()
+                                             if (e.target.showPicker) e.target.showPicker()
+                                         }}
                                         className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer" 
                                     />
                                 </div>
                             </div>
                         {laporanSubTab === 'santri' && (
-                            <div className="flex items-start gap-3 p-4 bg-blue-50/80 border border-blue-100 rounded-2xl text-xs text-blue-700 font-bold">
-                                <span className="text-blue-400 mt-0.5 shrink-0">ℹ️</span>
+                            <div className="flex items-start gap-3 p-4 bg-emerald-50/80 border border-emerald-100 rounded-2xl text-xs text-emerald-800 font-bold">
+                                <span className="text-emerald-500 mt-0.5 shrink-0">ℹ️</span>
                                 <span>
-                                    Rekap ketidakhadiran santri (Sakit / Izin / Alpha / Pulang) diambil dari data yang telah disimpan oleh Guru &amp; Musyrif sesuai <b>semester yang dipilih</b> — identik dengan data di halaman <b>Input Perilaku &amp; Catatan</b>.
+                                    Rekap kehadiran santri dihitung otomatis dari log harian presensi sesuai rentang tanggal, kategori, dan kelas/halaqoh yang dipilih secara terisolasi.
                                 </span>
                             </div>
                         )}
@@ -2886,7 +2944,10 @@ const AdminAbsensiPage = () => {
                                     <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Filter Kelas</label>
                                     <select 
                                         value={filterKelasId}
-                                        onChange={(e) => setFilterKelasId(e.target.value)}
+                                        onChange={(e) => {
+                                            setFilterKelasId(e.target.value)
+                                            if (e.target.value) setFilterHalaqohId('')
+                                        }}
                                         className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
                                     >
                                         <option value="">Semua Kelas</option>
@@ -2902,7 +2963,10 @@ const AdminAbsensiPage = () => {
                                     <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1">Filter Halaqoh</label>
                                     <select 
                                         value={filterHalaqohId}
-                                        onChange={(e) => setFilterHalaqohId(e.target.value)}
+                                        onChange={(e) => {
+                                            setFilterHalaqohId(e.target.value)
+                                            if (e.target.value) setFilterKelasId('')
+                                        }}
                                         className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-xs bg-blue-50/40 text-blue-900 appearance-none cursor-pointer"
                                     >
                                         <option value="">Semua Halaqoh</option>
@@ -3421,7 +3485,13 @@ const AdminAbsensiPage = () => {
                         <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6 md:p-8">
                             <div className="space-y-3">
                                 {presensiData
-                                    .filter(p => p.santri_id === selectedSantriId)
+                                    .filter(p => {
+                                        if (p.santri_id !== selectedSantriId) return false
+                                        const isQur = (p.keterangan || '').toLowerCase().includes('[quraniyah]')
+                                        if ((filterType === 'Madrosah' || (filterKelasId && !filterHalaqohId)) && isQur) return false
+                                        if ((filterType === 'Quraniyah' || (filterHalaqohId && !filterKelasId)) && !isQur) return false
+                                        return true
+                                    })
                                     .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal) || b.jam_ke - a.jam_ke)
                                     .map((p, idx) => (
                                         <div key={idx} className="bg-white p-6 rounded-3xl border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm hover:border-emerald-200 transition-all">
