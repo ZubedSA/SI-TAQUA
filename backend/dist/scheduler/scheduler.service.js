@@ -398,9 +398,10 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
         try {
             const supabase = this.supabaseService.getClient();
             await supabase.from('audit_log').insert({
-                aksi: 'BROADCAST_JADWAL_GURU',
-                tabel: 'jadwal_pelajaran',
-                keterangan: `Pengingat jadwal guru jam 06:00 WIB (${dayName}, ${dateStr}): ${successCount} berhasil, ${failedCount} gagal, ${noPhoneCount} tanpa nomor dari ${guruGroups.length} guru.`
+                action: 'BROADCAST_JADWAL_GURU',
+                table_name: 'jadwal_pelajaran',
+                user_email: 'scheduler@sitaqua.local',
+                description: `Pengingat jadwal guru jam 06:00 WIB (${dayName}, ${dateStr}): ${successCount} berhasil, ${failedCount} gagal, ${noPhoneCount} tanpa nomor dari ${guruGroups.length} guru.`
             });
         }
         catch (logErr) {
