@@ -535,40 +535,40 @@ export class WebhookController {
       // ----------------------------------------------------------------
       if (parsed.intent === 'cekJadwal') {
         const rawHari = parsed.parameters?.hari || '';
+        const combinedMsg = `${rawHari} ${message}`.toLowerCase();
+        const now = new Date(Date.now() + 7 * 3600 * 1000);
+        const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const todayDayName = days[now.getUTCDay()];
+
         let targetDay: string | undefined = undefined;
 
-        if (rawHari || message) {
-          const combinedMsg = `${rawHari} ${message}`.toLowerCase();
-          if (combinedMsg.includes('hari ini')) {
-            const now = new Date(Date.now() + 7 * 3600 * 1000);
-            const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            targetDay = days[now.getUTCDay()];
-          } else if (combinedMsg.includes('besok')) {
-            const tmrw = new Date(Date.now() + 7 * 3600 * 1000 + 24 * 3600 * 1000);
-            const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            targetDay = days[tmrw.getUTCDay()];
-          } else if (combinedMsg.includes('minggu') || combinedMsg.includes('ahad')) {
-            targetDay = 'Ahad';
-          } else if (combinedMsg.includes('senin')) {
-            targetDay = 'Senin';
-          } else if (combinedMsg.includes('selasa')) {
-            targetDay = 'Selasa';
-          } else if (combinedMsg.includes('rabu')) {
-            targetDay = 'Rabu';
-          } else if (combinedMsg.includes('kamis')) {
-            targetDay = 'Kamis';
-          } else if (combinedMsg.includes('jumat') || combinedMsg.includes("jum'at")) {
-            targetDay = 'Jumat';
-          } else if (combinedMsg.includes('sabtu')) {
-            targetDay = 'Sabtu';
-          }
-        }
-
-        // Jika default user bertanya tanpa spesifik hari ("jadwal saya", "kapan jadwal mengajar saya")
-        if (!targetDay && !message.toLowerCase().includes('semua')) {
-          const now = new Date(Date.now() + 7 * 3600 * 1000);
-          const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-          targetDay = days[now.getUTCDay()];
+        // Cek apakah pertanyaan secara eksplisit menanyakan hari tertentu
+        if (combinedMsg.includes('hari ini') || combinedMsg.includes('sekarang')) {
+          targetDay = todayDayName;
+        } else if (combinedMsg.includes('besok')) {
+          const tmrw = new Date(Date.now() + 7 * 3600 * 1000 + 24 * 3600 * 1000);
+          targetDay = days[tmrw.getUTCDay()];
+        } else if (combinedMsg.includes('lusa')) {
+          const lusa = new Date(Date.now() + 7 * 3600 * 1000 + 48 * 3600 * 1000);
+          targetDay = days[lusa.getUTCDay()];
+        } else if (combinedMsg.includes('senin')) {
+          targetDay = 'Senin';
+        } else if (combinedMsg.includes('selasa')) {
+          targetDay = 'Selasa';
+        } else if (combinedMsg.includes('rabu')) {
+          targetDay = 'Rabu';
+        } else if (combinedMsg.includes('kamis')) {
+          targetDay = 'Kamis';
+        } else if (combinedMsg.includes('jumat') || combinedMsg.includes("jum'at")) {
+          targetDay = 'Jumat';
+        } else if (combinedMsg.includes('sabtu')) {
+          targetDay = 'Sabtu';
+        } else if (combinedMsg.includes('minggu') || combinedMsg.includes('ahad')) {
+          targetDay = 'Ahad';
+        } else {
+          // Pertanyaan terbuka ("kapan saya mengajar", "kapan jam mengajar saya", "jadwal mengajar saya"):
+          // targetDay dibiarkan undefined agar mengambil seluruh agenda jadwal mengajar mingguan!
+          targetDay = undefined;
         }
 
         try {
@@ -578,7 +578,7 @@ export class WebhookController {
           if (isGuru && (!candidateSantriName || candidateSantriName.toLowerCase().includes('saya') || message.toLowerCase().includes('mengajar') || message.toLowerCase().includes('ngajar'))) {
             const currentGuru = await this.supabaseService.getGuruByPhone(sender);
             if (currentGuru) {
-              executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+              executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Mingguan'})`;
               dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
             } else {
               dbResult = { error: 'Nomor WhatsApp antum belum terhubung dengan data profil Guru/Ustadz aktif di SI-TAQUA.' };
@@ -602,18 +602,22 @@ export class WebhookController {
             }
 
             if (targetSantri) {
-              executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Semua'})`;
+              executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Mingguan'})`;
               dbResult = await this.supabaseService.getJadwalSantri(targetSantri.id, targetDay);
             } else if (isGuru) {
               // Fallback untuk guru jika nama santri tidak cocok, kembalikan jadwal guru sendiri
               const currentGuru = await this.supabaseService.getGuruByPhone(sender);
               if (currentGuru) {
-                executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+                executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Mingguan'})`;
                 dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
               }
             } else {
               dbResult = { error: 'Mohon sebutkan nama ananda santri yang ingin dilihat jadwalnya nggih Ayah/Bunda.' };
             }
+          }
+
+          if (dbResult && typeof dbResult === 'object' && !dbResult.error) {
+            dbResult.currentDayName = todayDayName;
           }
         } catch (jErr) {
           this.logger.error('Error saat memproses query jadwal:', jErr);

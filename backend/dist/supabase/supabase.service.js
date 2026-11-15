@@ -16,8 +16,8 @@ const supabase_js_1 = require("@supabase/supabase-js");
 let SupabaseService = SupabaseService_1 = class SupabaseService {
     constructor() {
         this.logger = new common_1.Logger(SupabaseService_1.name);
-        const url = process.env.SUPABASE_URL || 'https://lzxxtdmkuziawsmzwgim.supabase.co';
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6eHh0ZG1rdXppYXdzbXp3Z2ltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2ODI4ODYsImV4cCI6MjA4MDI1ODg4Nn0.moAK0_2g211--5sWkN19UIipwzP_oFaLStpI-DkXe5I';
+        const url = process.env.SUPABASE_URL || 'https://cbevhwhmhptdadwvoozt.supabase.co';
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXZod2htaHB0ZGFkd3Zvb3p0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5NDMxMTM5NSwiZXhwIjoyMTA5ODg3Mzk1fQ.WNR5ZqpCZk3WAFI9YJJlbrXfHIxYxsMwtCDczpuaoBM';
         this.supabase = (0, supabase_js_1.createClient)(url, key, {
             auth: {
                 persistSession: false,
@@ -861,16 +861,21 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
                     });
                 }
             });
+            const dayOrder = {
+                'Senin': 1, 'Selasa': 2, 'Rabu': 3, 'Kamis': 4, 'Jumat': 5, "Jum'at": 5, 'Sabtu': 6, 'Ahad': 7, 'Minggu': 7
+            };
             matchingSchedules.sort((a, b) => {
-                if (a.hari !== b.hari)
-                    return 0;
+                const orderA = dayOrder[a.hari] || 99;
+                const orderB = dayOrder[b.hari] || 99;
+                if (orderA !== orderB)
+                    return orderA - orderB;
                 if (a.jam_mulai && b.jam_mulai)
                     return a.jam_mulai.localeCompare(b.jam_mulai);
                 return Number(a.jam_ke || 0) - Number(b.jam_ke || 0);
             });
             return {
                 guruNama: guruData?.nama || 'Ustadz',
-                dayName: dayName || 'Semua Hari',
+                dayName: dayName || 'Semua Hari (Mingguan)',
                 schedules: matchingSchedules
             };
         }

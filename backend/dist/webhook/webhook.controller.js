@@ -402,52 +402,52 @@ let WebhookController = WebhookController_1 = class WebhookController {
             }
             if (parsed.intent === 'cekJadwal') {
                 const rawHari = parsed.parameters?.hari || '';
+                const combinedMsg = `${rawHari} ${message}`.toLowerCase();
+                const now = new Date(Date.now() + 7 * 3600 * 1000);
+                const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                const todayDayName = days[now.getUTCDay()];
                 let targetDay = undefined;
-                if (rawHari || message) {
-                    const combinedMsg = `${rawHari} ${message}`.toLowerCase();
-                    if (combinedMsg.includes('hari ini')) {
-                        const now = new Date(Date.now() + 7 * 3600 * 1000);
-                        const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-                        targetDay = days[now.getUTCDay()];
-                    }
-                    else if (combinedMsg.includes('besok')) {
-                        const tmrw = new Date(Date.now() + 7 * 3600 * 1000 + 24 * 3600 * 1000);
-                        const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-                        targetDay = days[tmrw.getUTCDay()];
-                    }
-                    else if (combinedMsg.includes('minggu') || combinedMsg.includes('ahad')) {
-                        targetDay = 'Ahad';
-                    }
-                    else if (combinedMsg.includes('senin')) {
-                        targetDay = 'Senin';
-                    }
-                    else if (combinedMsg.includes('selasa')) {
-                        targetDay = 'Selasa';
-                    }
-                    else if (combinedMsg.includes('rabu')) {
-                        targetDay = 'Rabu';
-                    }
-                    else if (combinedMsg.includes('kamis')) {
-                        targetDay = 'Kamis';
-                    }
-                    else if (combinedMsg.includes('jumat') || combinedMsg.includes("jum'at")) {
-                        targetDay = 'Jumat';
-                    }
-                    else if (combinedMsg.includes('sabtu')) {
-                        targetDay = 'Sabtu';
-                    }
+                if (combinedMsg.includes('hari ini') || combinedMsg.includes('sekarang')) {
+                    targetDay = todayDayName;
                 }
-                if (!targetDay && !message.toLowerCase().includes('semua')) {
-                    const now = new Date(Date.now() + 7 * 3600 * 1000);
-                    const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-                    targetDay = days[now.getUTCDay()];
+                else if (combinedMsg.includes('besok')) {
+                    const tmrw = new Date(Date.now() + 7 * 3600 * 1000 + 24 * 3600 * 1000);
+                    targetDay = days[tmrw.getUTCDay()];
+                }
+                else if (combinedMsg.includes('lusa')) {
+                    const lusa = new Date(Date.now() + 7 * 3600 * 1000 + 48 * 3600 * 1000);
+                    targetDay = days[lusa.getUTCDay()];
+                }
+                else if (combinedMsg.includes('senin')) {
+                    targetDay = 'Senin';
+                }
+                else if (combinedMsg.includes('selasa')) {
+                    targetDay = 'Selasa';
+                }
+                else if (combinedMsg.includes('rabu')) {
+                    targetDay = 'Rabu';
+                }
+                else if (combinedMsg.includes('kamis')) {
+                    targetDay = 'Kamis';
+                }
+                else if (combinedMsg.includes('jumat') || combinedMsg.includes("jum'at")) {
+                    targetDay = 'Jumat';
+                }
+                else if (combinedMsg.includes('sabtu')) {
+                    targetDay = 'Sabtu';
+                }
+                else if (combinedMsg.includes('minggu') || combinedMsg.includes('ahad')) {
+                    targetDay = 'Ahad';
+                }
+                else {
+                    targetDay = undefined;
                 }
                 try {
                     const candidateSantriName = (parsed.parameters?.santri_name || '').trim();
                     if (isGuru && (!candidateSantriName || candidateSantriName.toLowerCase().includes('saya') || message.toLowerCase().includes('mengajar') || message.toLowerCase().includes('ngajar'))) {
                         const currentGuru = await this.supabaseService.getGuruByPhone(sender);
                         if (currentGuru) {
-                            executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+                            executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Mingguan'})`;
                             dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
                         }
                         else {
@@ -472,19 +472,22 @@ let WebhookController = WebhookController_1 = class WebhookController {
                             targetSantri = resSantri.target;
                         }
                         if (targetSantri) {
-                            executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Semua'})`;
+                            executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Mingguan'})`;
                             dbResult = await this.supabaseService.getJadwalSantri(targetSantri.id, targetDay);
                         }
                         else if (isGuru) {
                             const currentGuru = await this.supabaseService.getGuruByPhone(sender);
                             if (currentGuru) {
-                                executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+                                executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Mingguan'})`;
                                 dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
                             }
                         }
                         else {
                             dbResult = { error: 'Mohon sebutkan nama ananda santri yang ingin dilihat jadwalnya nggih Ayah/Bunda.' };
                         }
+                    }
+                    if (dbResult && typeof dbResult === 'object' && !dbResult.error) {
+                        dbResult.currentDayName = todayDayName;
                     }
                 }
                 catch (jErr) {

@@ -685,9 +685,20 @@ Panduan menyusun jawaban:
    - Jika bertanya kabar atau menyapa, tanyakan dengan ramah apa yang bisa dibantu mengenai ananda santri atau kegiatan pondok.
    - JANGAN memaksakan daftar menu panjang berbaris-baris kecuali pengguna secara spesifik meminta daftar menu/panduan penggunaan.
 7. Jika tentang jadwal (cekJadwal):
-   - Tampilkan jadwal mengajar guru atau jadwal pelajaran/halaqoh santri secara kronologis dan rapi.
-   - Cantumkan jam mulai-selesai (WIB), nama mata pelajaran / halaqoh tahfidz, dan kelas/kelompok tujuan.
-   - Jika libur atau tidak ada jadwal, sampaikan dengan ucapan Alhamdulillah dan doakan rehat/aktivitas yang berkah.
+   - Pahami maksud dan pertanyaan pengguna secara cerdas, kontekstual, peka, dan solutif (bukan template kaku).
+   - Perhatikan konteks hari ini dari field currentDayName pada data (misal: hari ini Ahad):
+     * Jika pertanyaan terbuka ("kapan saya mengajar?", "kapan jam mengajar saya?", "jadwal mengajar saya", "kapan saya ada kelas?"):
+       - Jika hari ini (misal Ahad) tidak ada jadwal mengajar, jelaskan dengan santun bahwa hari ini libur/tidak ada jadwal mengajar, selamat beristirahat.
+       - Tunjukkan secara jelas kapan jadwal mengajar terdekat berikutnya (contoh: "Agenda mengajar terdekat antum adalah besok hari Senin, pukul...").
+       - Sajikan rincian hari dan jam mengajar lainnya selama sepekan secara rapi dan terstruktur (dikelompokkan per hari).
+     * Jika pertanyaan spesifik hari ini ("jadwal hari ini", "ada ngajar hari ini?"):
+       - Fokuskan jawaban untuk hari ini. Jika hari ini kosong, beritahukan bahwa hari ini tidak ada jadwal dan sebutkan jadwal terdekat di hari berikutnya.
+     * Jika pertanyaan spesifik hari lain ("jadwal besok", "jadwal senin"):
+       - Fokuskan jawaban pada hari yang ditanyakan.
+   - Cantumkan jam mulai - selesai (WIB), nama mata pelajaran / halaqoh tahfidz, dan kelas atau kelompok target.
+   - Jika guru belum memiliki alokasi jadwal di database (schedules kosong):
+     - Jelaskan secara ramah bahwa jadwal mengajar antum belum teralokasi di sistem untuk semester ini dan sarankan konfirmasi ke bagian kurikulum/akademik.
+   - Tutup dengan doa keberkahan atas dedikasi dakwah dan pengajaran antum.
 8. Jika tentang kalender akademik / libur (cekKalender):
    - Tampilkan daftar agenda dan hari libur mendatang dengan tanggal yang jelas, rapi, dan mudah dibaca.
 9. Jika tentang info pondok (cekInfoPondok):
@@ -959,18 +970,69 @@ ${dataContext}`;
                 const isGuruSchedule = !!dbResult.guruNama;
                 const targetName = dbResult.guruNama || dbResult.santriNama || (guruName ? `Ustadz ${guruName}` : 'Santri');
                 const schedules = dbResult.schedules || [];
-                const day = dbResult.dayName || 'Hari Ini';
+                const isWeekly = !dbResult.dayName || dbResult.dayName === 'Semua Hari (Mingguan)' || dbResult.dayName === 'Semua Hari';
+                const currentDay = dbResult.currentDayName || 'Ahad';
                 if (schedules.length === 0) {
                     if (isGuru) {
-                        return `${getGreeting()}\n\nAlhamdulillah Ustadz/Ustadzah *${targetName}*, tidak ada agenda jadwal mengajar pada *${day}*.\n\nSelamat beristirahat atau beraktivitas lainnya nggih. Barokallahu fiikum. 🤲`;
+                        return isWeekly
+                            ? `${getGreeting()}\n\nAfwan Ustadz/Ustadzah *${targetName}*, saat ini belum ada alokasi jadwal mengajar aktif yang terdaftar di sistem atas nama antum.\n\nSilakan konfirmasi ke bagian kurikulum/akademik pondok nggih. Barokallahu fiikum. 🤲`
+                            : `${getGreeting()}\n\nAlhamdulillah Ustadz/Ustadzah *${targetName}*, tidak ada agenda jadwal mengajar pada *${dbResult.dayName}*.\n\nSelamat beristirahat atau beraktivitas lainnya nggih. Barokallahu fiikum. 🤲`;
                     }
                     else {
-                        return `${getGreeting()}\n\nAlhamdulillah, tidak ada jadwal pelajaran atau halaqoh untuk nanda *${targetName}* pada *${day}*.${getClosing()}`;
+                        return `${getGreeting()}\n\nAlhamdulillah, tidak ada jadwal pelajaran atau halaqoh untuk nanda *${targetName}* pada *${dbResult.dayName || 'hari ini'}*.${getClosing()}`;
                     }
                 }
+                if (isWeekly) {
+                    const todaySchedules = schedules.filter((s) => s.hari === currentDay);
+                    let jadwalText = isGuru
+                        ? `${getGreeting()}\n\n`
+                        : `${getGreeting()}\n\nBerikut jadwal nanda *${targetName}*:\n\n`;
+                    if (isGuru) {
+                        if (todaySchedules.length === 0) {
+                            jadwalText += `Untuk hari ini (*${currentDay}*), antum tidak ada agenda jadwal mengajar. Selamat beristirahat nggih. 🤲\n\n`;
+                        }
+                        else {
+                            jadwalText += `📌 *Agenda Mengajar Hari Ini (${currentDay}):*\n`;
+                            todaySchedules.forEach((s, idx) => {
+                                const time = s.jam_mulai && s.jam_selesai
+                                    ? `${s.jam_mulai.slice(0, 5)} - ${s.jam_selesai.slice(0, 5)} WIB`
+                                    : `Jam ke-${s.jam_ke || idx + 1}`;
+                                const tipeIcon = s.tipe === 'HALAQOH' ? '📖' : '📚';
+                                jadwalText += `  ${idx + 1}. ⏰ *${time}* | ${tipeIcon} *${s.mapelNama || 'Pelajaran'}* (${s.targetNama || 'Kelas'})\n`;
+                            });
+                            jadwalText += `\n`;
+                        }
+                        jadwalText += `📋 *Rincian Jadwal Mengajar Antum Selama Sepekan:*\n\n`;
+                    }
+                    const byDay = {};
+                    schedules.forEach((s) => {
+                        const h = s.hari || 'Lainnya';
+                        if (!byDay[h])
+                            byDay[h] = [];
+                        byDay[h].push(s);
+                    });
+                    for (const [namaHari, list] of Object.entries(byDay)) {
+                        jadwalText += `🗓️ *Hari ${namaHari}:*\n`;
+                        list.forEach((s, idx) => {
+                            const time = s.jam_mulai && s.jam_selesai
+                                ? `${s.jam_mulai.slice(0, 5)} - ${s.jam_selesai.slice(0, 5)} WIB`
+                                : `Jam ke-${s.jam_ke || idx + 1}`;
+                            const tipeIcon = s.tipe === 'HALAQOH' ? '📖' : '📚';
+                            const target = s.targetNama || s.kelasNama || '';
+                            const mapel = s.mapelNama || 'Pelajaran';
+                            const guruStr = !isGuru && s.guruNama ? ` (Pengampu: *${s.guruNama}*)` : '';
+                            jadwalText += `  ${idx + 1}. ⏰ *${time}* | ${tipeIcon} *${mapel}* - ${target}${guruStr}\n`;
+                        });
+                        jadwalText += `\n`;
+                    }
+                    jadwalText += isGuru
+                        ? `Semoga Allah Ta'ala melimpahkan kelancaran, kesabaran, dan keberkahan dalam mendidik para santri. Jazakumullah khairan. 🤲`
+                        : `Semoga nanda selalu istiqamah dan bersemangat dalam menuntut ilmu. Amin. 🤲`;
+                    return jadwalText;
+                }
                 let jadwalText = isGuru
-                    ? `${getGreeting()}\n\n📅 *Jadwal Mengajar Ustadz/Ustadzah ${targetName}*\n📌 Hari: *${day}*\n\n`
-                    : `${getGreeting()}\n\n📅 *Jadwal Pelajaran & Halaqoh Nanda ${targetName}*\n📌 Hari: *${day}*\n\n`;
+                    ? `${getGreeting()}\n\n📅 *Jadwal Mengajar Ustadz/Ustadzah ${targetName}*\n📌 Hari: *${dbResult.dayName}*\n\n`
+                    : `${getGreeting()}\n\n📅 *Jadwal Pelajaran & Halaqoh Nanda ${targetName}*\n📌 Hari: *${dbResult.dayName}*\n\n`;
                 schedules.forEach((s, idx) => {
                     const time = s.jam_mulai && s.jam_selesai
                         ? `${s.jam_mulai.slice(0, 5)} - ${s.jam_selesai.slice(0, 5)} WIB`
