@@ -477,7 +477,7 @@ export class WebhookController {
       ];
 
       if (collectiveGuruIntents.includes(parsed.intent)) {
-        if (!isGuru) {
+        if (!isGuru && parsed.intent !== 'cekSantriAktif') {
           const replyText = 'Maaf, data rekapitulasi operasional pondok ini hanya dapat diakses oleh Ustadz/Ustadzah yang terdaftar di sistem SI-TAQUA. 🙏';
           await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Collective Access Denied', null, replyText, Date.now() - startTime, 'Access Denied');
           return this.replyToUser(res, sender, replyText, messageId);
@@ -506,8 +506,8 @@ export class WebhookController {
               dbResult = await this.supabaseService.getTunggakanTerbesar();
               break;
             case 'cekSantriAktif':
-              executedQuery = 'getActiveSantriCount()';
-              dbResult = await this.supabaseService.getActiveSantriCount();
+              executedQuery = `getSantriStatistics(${JSON.stringify(parsed.parameters)})`;
+              dbResult = await this.supabaseService.getSantriStatistics(parsed.parameters);
               break;
           }
         } catch (dbError) {
@@ -728,6 +728,23 @@ export class WebhookController {
                 return this.replyToUser(res, sender, resolution.clarification, messageId);
               }
               if (!resolution.target) {
+                // Safeguard: Periksa apakah candidateName sebenarnya adalah query kelas / halaqoh atau pertanyaan statistik
+                const isClassOrHalaqoh = /^(?:kelas|kls|halaqoh|kelompok)\b/i.test(candidateName) ||
+                  message.toLowerCase().includes('jumlah') || message.toLowerCase().includes('berapa');
+                if (isClassOrHalaqoh) {
+                  const redirectParams: any = {};
+                  if (candidateName.toLowerCase().includes('halaqoh') || candidateName.toLowerCase().includes('kelompok')) {
+                    redirectParams.halaqoh = candidateName;
+                  } else {
+                    redirectParams.kelas = candidateName;
+                  }
+                  executedQuery = `getSantriStatistics(${JSON.stringify(redirectParams)})`;
+                  dbResult = await this.supabaseService.getSantriStatistics(redirectParams);
+                  const reply = await this.aiService.generateResponse(message, 'cekSantriAktif', dbResult, sender, isGuru, guruNama);
+                  await this.supabaseService.logAiInteraction(message, 'cekSantriAktif', 'cekSantriAktif', redirectParams, executedQuery, dbResult, reply, Date.now() - startTime);
+                  return this.replyToUser(res, sender, reply, messageId);
+                }
+
                 const replyText = `Maaf, data santri dengan nama *"${candidateName}"* tidak ditemukan di sistem. Pastikan nama sudah benar ya.`;
                 await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Santri Not Found', null, replyText, Date.now() - startTime, 'Santri Not Found');
                 return this.replyToUser(res, sender, replyText, messageId);

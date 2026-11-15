@@ -31,7 +31,12 @@ let AiService = AiService_1 = class AiService {
             'pondok', 'pesantren', 'info', 'informasi', 'rekening', 'alamat', 'lokasi',
             'kunjungan', 'sambangan', 'jenguk', 'besuk', 'paket', 'kiriman', 'admin', 'bantuan', 'menu', 'cs', 'help',
             'jam', 'jam berapa', 'kapan', 'pukul', 'hari', 'tanggal', 'bulan', 'tahun', 'wali santri', 'keluarga',
-            'apa', 'siapa', 'dimana', 'bagaimana', 'gimana', 'kenapa', 'mengapa', 'berapa'
+            'apa', 'siapa', 'dimana', 'bagaimana', 'gimana', 'kenapa', 'mengapa', 'berapa',
+            'kelas', 'kelas 1', 'kelas 2', 'kelas 3', 'kelas 4', 'kelas 5', 'kelas 6',
+            'kelas 7', 'kelas 8', 'kelas 9', 'kelas 10', 'kelas 11', 'kelas 12',
+            'kelas i', 'kelas ii', 'kelas iii', 'kelas iv', 'kelas v', 'kelas vi', 'kelas vii', 'kelas viii', 'kelas ix',
+            'halaqoh', 'kelompok', 'kamar', 'asrama', 'angkatan', 'tingkat',
+            'semua', 'total', 'jumlah', 'banyak', 'banyaknya', 'seluruh', 'daftar'
         ]);
         const geminiKey = process.env.GEMINI_API_KEY || '';
         if (geminiKey) {
@@ -39,7 +44,7 @@ let AiService = AiService_1 = class AiService {
                 this.genAI = new generative_ai_1.GoogleGenerativeAI(geminiKey);
                 this.geminiParserModel = this.genAI.getGenerativeModel({
                     model: 'gemini-1.5-flash',
-                    systemInstruction: 'Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA. Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya. Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi chitchat. Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang aslinya saja, JANGAN sertakan kata sebutan awalan seperti "santri", "siswa", "anak", "atas nama", atau "ananda".',
+                    systemInstruction: 'Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA. Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya. Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi chitchat. Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang aslinya saja, JANGAN sertakan kata sebutan awalan seperti "santri", "siswa", "anak", "atas nama", atau "ananda". PENTING: JANGAN PERNAH mengisi santri_name dengan nama kelas (contoh: "Kelas 2", "Kelas 1", "VII"), halaqoh, atau kata agregat. Jika pengguna menanyakan jumlah, total, atau daftar santri di suatu kelas/halaqoh/seluruh pondok (contoh: "Berapa jumlah santri kelas 2", "santri kelas 1 ada berapa", "total santri aktif"), WAJIB panggil fungsi cekSantriAktif dengan parameter kelas atau halaqoh.',
                     tools: [{
                             functionDeclarations: [
                                 {
@@ -166,10 +171,14 @@ let AiService = AiService_1 = class AiService {
                                 },
                                 {
                                     name: 'cekSantriAktif',
-                                    description: 'Mengecek total jumlah santri yang berstatus aktif di pondok',
+                                    description: 'Mengecek total, jumlah, atau statistik santri aktif di pondok pesantren, baik secara keseluruhan, per tingkatan kelas (contoh: "berapa jumlah santri kelas 2", "santri kelas 1 ada berapa", "total murid kelas 3"), maupun per halaqoh',
                                     parameters: {
                                         type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
-                                        properties: {}
+                                        properties: {
+                                            kelas: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama atau nomor kelas jika menanyakan jumlah/daftar santri kelas tertentu (misal: "Kelas 2", "Kelas 1", "VII A", "2")' },
+                                            halaqoh: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama kelompok halaqoh jika menanyakan santri halaqoh tertentu' },
+                                            detail: { type: generative_ai_1.FunctionDeclarationSchemaType.BOOLEAN, description: 'True jika user menanyakan siapa saja santrinya (daftar nama)' }
+                                        }
                                     }
                                 },
                                 {
@@ -374,6 +383,9 @@ Karakter & Etika Komunikasi:
         if (!lower || this.NON_SANTRI_STOPWORDS.has(lower)) {
             return '';
         }
+        if (/^(?:kelas|kls|halaqoh|kelompok|kamar|asrama|angkatan|tingkat)\b/i.test(lower)) {
+            return '';
+        }
         if (lower.includes('mengajar') || lower.includes('jadwal') || lower === 'saya' || lower === 'anak saya' || lower === 'putra saya') {
             return '';
         }
@@ -502,7 +514,16 @@ Karakter & Etika Komunikasi:
         const isSantriIzin = /(santri\s+izin|siapa\s+(?:yang|saja)\s+izin|yang\s+izin\s+hari\s+ini|rekap\s+izin|izin\s+keluar|izin\s+pulang)/i.test(text);
         const isRankingHafalan = /(ranking\s+hafalan|peringkat\s+hafalan|top\s+hafalan|hafalan\s+terbanyak|ranking\s+tahfidz|tahfidz\s+terbanyak)/i.test(text);
         const isRekapTunggakan = /(rekap\s+tunggakan|tunggakan.*terbesar|santri\s+belum\s+bayar|rekap\s+belum\s+lunas|daftar\s+tunggakan|rekap.*spp|tunggakan.*spp)/i.test(text);
-        const isSantriAktif = /(total\s+santri\s+aktif|jumlah\s+santri\s+aktif|berapa\s+santri\s+aktif|total\s+santri)/i.test(text);
+        const isStatistikSantri = /(?:berapa|jumlah|total|banyak(?:nya)?|daftar|siapa\s+(?:saja\s+)?)\s*(?:jumlah\s+)?(?:seluruh\s+)?(?:anak|santri|siswa)/i.test(text) ||
+            /(?:santri|siswa|anak)(?:\s+(?:di|pada|untuk)?\s*(?:kelas|halaqoh)\s+[a-zA-Z0-9\s\-]+)?\s+(?:ada\s+berapa|berapa|ada\s+berapa\s+orang|siapa\s+saja)/i.test(text) ||
+            /(?:total|jumlah|banyaknya)\s+(?:santri|anak|siswa)/i.test(text) ||
+            /(?:berapa\s+(?:jumlah\s+)?santri)/i.test(text) ||
+            /(?:siapa\s+(?:saja\s+)?santri)/i.test(text);
+        const isSantriAktif = isStatistikSantri || /(total\s+santri\s+aktif|jumlah\s+santri\s+aktif|berapa\s+santri\s+aktif|total\s+santri)/i.test(text);
+        const kelasRegex = /\b(?:di\s+|pada\s+)?(?:kelas|kls)\s+([0-9a-zA-Z\s\-]+?)(?:\s+(?:ada|berapa|dan|siapa|saja|orang)|$)/i;
+        const kelasMatch = text.match(kelasRegex);
+        const halaqohRegex = /\b(?:di\s+|pada\s+)?(?:halaqoh|kelompok)\s+([0-9a-zA-Z\s\-]+?)(?:\s+(?:ada|berapa|dan|siapa|saja|orang)|$)/i;
+        const halaqohMatch = text.match(halaqohRegex);
         const isTagihan = /\b(tagihan|tunggakan|belum\s+lunas|harus\s+dibayar|kewajiban|tunggak)\b/i.test(text);
         const isPembayaran = /\b(bayar|lunas|pembayaran|spp|transaksi|kwitansi|bukti\s+bayar|sudah\s+bayar|uang\s+makan|uang\s+gedung)\b/i.test(text);
         const isHafalan = /\b(hafalan|setor|setoran|surah|surat|juz|muroja|muraja|tahfidz|ziyadah)\b/i.test(text);
@@ -510,7 +531,7 @@ Karakter & Etika Komunikasi:
         const isAbsensi = /\b(hadir|kehadiran|presensi|absen|absensi|masuk|bolos|alfa|alpha|sakit|masuk\s+gak|hadir\s+gak|tidak\s+masuk)\b/i.test(text);
         const isPerizinan = /\b(izin\s+pulang|izin\s+keluar|perizinan|surat\s+izin)\b/i.test(text);
         const isPrestasi = /\b(prestasi|juara|lomba|pujian|penghargaan)\b/i.test(text);
-        const isSantri = /\b(profil|biodata|data\s+santri|info\s+santri|tentang\s+santri|kelas|halaqoh)\b/i.test(text);
+        const isSantri = /\b(profil|biodata|data\s+santri|info\s+santri|tentang\s+santri)\b/i.test(text);
         if (isInfoPondok) {
             result.intent = 'cekInfoPondok';
             if (text.includes('sambang') || text.includes('kunjung') || text.includes('besuk') || text.includes('jenguk')) {
@@ -543,7 +564,7 @@ Karakter & Etika Komunikasi:
                     }
                 }
             }
-            if (text.includes('saya') || text.includes('mengajar') || text.includes('guru') || text.includes('ustadz')) {
+            if (text.includes('saya') || text.includes('mengajar') || text.includes('guru') || text.includes('ustadz') || (santriName && /^(?:hari\s+)?(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|ahad|minggu)$/i.test(santriName))) {
                 delete result.parameters.santri_name;
             }
         }
@@ -564,6 +585,16 @@ Karakter & Etika Komunikasi:
         }
         else if (isSantriAktif) {
             result.intent = 'cekSantriAktif';
+            if (kelasMatch && kelasMatch[1]) {
+                result.parameters.kelas = kelasMatch[1].trim();
+            }
+            if (halaqohMatch && halaqohMatch[1]) {
+                result.parameters.halaqoh = halaqohMatch[1].trim();
+            }
+            if (text.includes('siapa') || text.includes('daftar') || text.includes('nama')) {
+                result.parameters.detail = true;
+            }
+            delete result.parameters.santri_name;
         }
         else if (isTagihan) {
             result.intent = 'cekTagihan';
@@ -705,6 +736,11 @@ Panduan menyusun jawaban:
    - Sampaikan info sambangan (Ahad 08.00-17.00 WIB), alamat di Batuan Sumenep, rekening resmi SPP di Bank BSI 7188899912 a.n. Pesantren Tahfidz Al-Qur'an Al-Usymuni, dan aturan paket santri secara akurat.
 10. Jika tentang perizinan (cekPerizinan):
    - Tampilkan riwayat izin santri atau guru dengan status dan tanggal yang jelas disertai doa kebaikan.
+11. Jika tentang statistik / jumlah santri (cekSantriAktif):
+   - Pahami apakah pengguna menanyakan jumlah santri secara keseluruhan pondok, atau per kelas tertentu (contoh: "Kelas 2"), atau per kelompok halaqoh.
+   - Jika query tentang kelas tertentu (contoh: "Berapa jumlah santri kelas 2"): sebutkan nama kelasnya dan total jumlah santrinya secara lugas dan ramah (contoh: "Jumlah santri aktif di Kelas 2 adalah sebanyak *X santri*"). Jika ada daftar nama dan pengguna memintanya ("siapa saja", "daftar santri"), cantumkan nama-nama santrinya dengan nomor urut yang rapi.
+   - Jika query global seluruh pondok: sebutkan total santri aktif di PTQ Al-Usymuni dan sertakan rincian santri per kelas yang ada di data.
+   - Tutup dengan doa keberkahan atas tholabul 'ilmi para santri di pesantren.
 ${dataContext}`;
         const response = await this.geminiResponseModel.generateContent(promptText);
         return response.response.text().trim();
@@ -1270,6 +1306,42 @@ ${dataContext}`;
                 return guruText;
             case 'cekSantriAktif':
             case 'get_jumlah_santri_aktif': {
+                if (dbResult && typeof dbResult === 'object') {
+                    if (dbResult.type === 'KELAS') {
+                        const kName = (dbResult.matchedKelas && dbResult.matchedKelas.length > 0)
+                            ? dbResult.matchedKelas.join(', ')
+                            : (dbResult.query || 'Kelas');
+                        let resp = `${getGreeting()}\n\n📊 *Data Santri - ${kName}*\n` +
+                            `Jumlah santri aktif: *${dbResult.total} santri*.\n`;
+                        if (dbResult.santriNames && dbResult.santriNames.length > 0) {
+                            resp += `\n*Daftar Santri:*\n` +
+                                dbResult.santriNames.map((n, i) => `${i + 1}. ${n}`).join('\n');
+                        }
+                        resp += `\n\nSemoga para santri senantiasa istiqamah, berakhlak mulia, dan dimudahkan dalam menuntut ilmu. Aamiin ya Rabbal 'Alamin. 🤲${getClosing()}`;
+                        return resp;
+                    }
+                    if (dbResult.type === 'HALAQOH') {
+                        const hName = (dbResult.matchedHalaqoh && dbResult.matchedHalaqoh.length > 0)
+                            ? dbResult.matchedHalaqoh.join(', ')
+                            : (dbResult.query || 'Halaqoh');
+                        let resp = `${getGreeting()}\n\n📖 *Data Santri - ${hName}*\n` +
+                            `Jumlah santri aktif: *${dbResult.total} santri*.\n`;
+                        if (dbResult.santriNames && dbResult.santriNames.length > 0) {
+                            resp += `\n*Daftar Santri:*\n` +
+                                dbResult.santriNames.map((n, i) => `${i + 1}. ${n}`).join('\n');
+                        }
+                        resp += `\n\nSemoga santri istiqamah dan lancar dalam ziyadah maupun muroja'ah Al-Qur'an. Barokallahu fiikum. 🤲${getClosing()}`;
+                        return resp;
+                    }
+                    if (dbResult.type === 'GLOBAL' && dbResult.breakdown && dbResult.breakdown.length > 0) {
+                        let resp = `${getGreeting()}\n\n👥 *Statistik Santri Aktif PTQ Al-Usymuni Batuan*\n` +
+                            `Total santri aktif saat ini: *${dbResult.total} santri*.\n\n` +
+                            `*Rincian Per Kelas:*\n` +
+                            dbResult.breakdown.map((b) => `• ${b.kelas}: *${b.count} santri*`).join('\n') +
+                            `\n\nAlhamdulillah, semoga para santri senantiasa dalam lindungan dan keberkahan Allah Ta'ala. Aamiin. 🤲${getClosing()}`;
+                        return resp;
+                    }
+                }
                 const total = typeof dbResult === 'number' ? dbResult : (dbResult?.jumlah_santri_aktif || dbResult?.total || 0);
                 return `${getGreeting()}\n\n👥 Total santri *Aktif* di PTQ Al-Usymuni Batuan saat ini: *${total}* santri.${getClosing()}`;
             }

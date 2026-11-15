@@ -22,6 +22,55 @@ export declare class SupabaseService {
         status: any;
     }[]>;
     getActiveSantriCount(): Promise<number>;
+    getSantriStatistics(filter?: {
+        kelas?: string;
+        halaqoh?: string;
+        status?: string;
+        detail?: boolean;
+    }): Promise<{
+        type: string;
+        query: string;
+        matchedKelas: any[];
+        total: number;
+        santriNames: any[];
+        allKelasAvailable: any[];
+        matchedHalaqoh?: undefined;
+        allHalaqohAvailable?: undefined;
+        breakdown?: undefined;
+    } | {
+        type: string;
+        query: string;
+        matchedHalaqoh: any[];
+        total: number;
+        santriNames: any[];
+        allHalaqohAvailable: any[];
+        matchedKelas?: undefined;
+        allKelasAvailable?: undefined;
+        breakdown?: undefined;
+    } | {
+        type: string;
+        total: number;
+        breakdown: {
+            kelas: any;
+            count: number;
+        }[];
+        allKelasAvailable: any[];
+        query?: undefined;
+        matchedKelas?: undefined;
+        santriNames?: undefined;
+        matchedHalaqoh?: undefined;
+        allHalaqohAvailable?: undefined;
+    } | {
+        type: string;
+        total: number;
+        breakdown: any[];
+        query?: undefined;
+        matchedKelas?: undefined;
+        santriNames?: undefined;
+        allKelasAvailable?: undefined;
+        matchedHalaqoh?: undefined;
+        allHalaqohAvailable?: undefined;
+    }>;
     checkPembayaran(santriId: string, month?: string): Promise<{
         id: any;
         jumlah: any;

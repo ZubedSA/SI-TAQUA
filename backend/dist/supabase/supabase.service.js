@@ -67,6 +67,91 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
             throw error;
         return count;
     }
+    async getSantriStatistics(filter) {
+        try {
+            const statusFilter = filter?.status || 'Aktif';
+            const [kelasListRes, halaqohListRes, santriListRes] = await Promise.all([
+                this.supabase.from('kelas').select('id, nama'),
+                this.supabase.from('halaqoh').select('id, nama'),
+                this.supabase.from('santri').select('id, nama, nis, status, kelas_id, halaqoh_id').eq('status', statusFilter)
+            ]);
+            const kelasList = kelasListRes.data || [];
+            const halaqohList = halaqohListRes.data || [];
+            const santriList = santriListRes.data || [];
+            const matchKelas = (kNama, search) => {
+                if (!kNama || !search)
+                    return false;
+                const kClean = kNama.toLowerCase().trim();
+                const sClean = search.toLowerCase().trim();
+                if (kClean === sClean)
+                    return true;
+                if (kClean.includes(sClean) || sClean.includes(kClean))
+                    return true;
+                const numSearch = sClean.replace(/[^0-9]/g, '');
+                const numKelas = kClean.replace(/[^0-9]/g, '');
+                if (numSearch && numKelas && numSearch === numKelas)
+                    return true;
+                const romanMap = {
+                    '1': 'i', '2': 'ii', '3': 'iii', '4': 'iv', '5': 'v', '6': 'vi', '7': 'vii', '8': 'viii', '9': 'ix'
+                };
+                if (numSearch && romanMap[numSearch]) {
+                    const roman = romanMap[numSearch];
+                    const regex = new RegExp(`\\b${roman}\\b`, 'i');
+                    if (regex.test(kClean))
+                        return true;
+                }
+                return false;
+            };
+            if (filter?.kelas) {
+                const rawSearch = filter.kelas.trim();
+                const matchedKelas = kelasList.filter(k => matchKelas(k.nama, rawSearch));
+                const matchedIds = matchedKelas.map(k => k.id);
+                const filteredSantri = santriList.filter(s => matchedIds.includes(s.kelas_id));
+                return {
+                    type: 'KELAS',
+                    query: rawSearch,
+                    matchedKelas: matchedKelas.map(k => k.nama),
+                    total: filteredSantri.length,
+                    santriNames: filteredSantri.map(s => s.nama),
+                    allKelasAvailable: kelasList.map(k => k.nama)
+                };
+            }
+            if (filter?.halaqoh) {
+                const rawSearch = filter.halaqoh.trim().toLowerCase();
+                const matchedHalaqoh = halaqohList.filter(h => h.nama.toLowerCase().includes(rawSearch) || rawSearch.includes(h.nama.toLowerCase()));
+                const matchedIds = matchedHalaqoh.map(h => h.id);
+                const filteredSantri = santriList.filter(s => matchedIds.includes(s.halaqoh_id));
+                return {
+                    type: 'HALAQOH',
+                    query: filter.halaqoh,
+                    matchedHalaqoh: matchedHalaqoh.map(h => h.nama),
+                    total: filteredSantri.length,
+                    santriNames: filteredSantri.map(s => s.nama),
+                    allHalaqohAvailable: halaqohList.map(h => h.nama)
+                };
+            }
+            const breakdown = kelasList.map(k => {
+                const count = santriList.filter(s => s.kelas_id === k.id).length;
+                return { kelas: k.nama, count };
+            });
+            return {
+                type: 'GLOBAL',
+                total: santriList.length,
+                breakdown,
+                allKelasAvailable: kelasList.map(k => k.nama)
+            };
+        }
+        catch (err) {
+            this.logger.error(`Error getSantriStatistics: ${err.message || err}`);
+            try {
+                const count = await this.getActiveSantriCount();
+                return { type: 'GLOBAL', total: count, breakdown: [] };
+            }
+            catch {
+                return { type: 'GLOBAL', total: 0, breakdown: [] };
+            }
+        }
+    }
     async checkPembayaran(santriId, month = '') {
         await this.ensureSampleData();
         let query = this.supabase
