@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Body, Res, HttpStatus, Logger, Req } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { SupabaseService } from '../supabase/supabase.service';
-import { AiService } from '../ai/ai.service';
+import { AiService, CallerContext } from '../ai/ai.service';
 
 interface PendingAction {
   intent: string;
@@ -289,6 +289,26 @@ export class WebhookController {
         this.logger.log(`Sender ${sender} teridentifikasi sebagai Guru/Ustadz: ${guruNama}`);
       }
 
+      // Deteksi identitas Wali Santri (dual-lookup: santri.no_telp_wali & user_profiles.no_hp)
+      let waliSantri: any[] = [];
+      try {
+        waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
+      } catch (e) {
+        this.logger.warn('Gagal ambil data santri berdasarkan nomor wali:', e);
+      }
+      const isWali = waliSantri.length > 0;
+      if (isWali) {
+        this.logger.log(`Sender ${sender} teridentifikasi sebagai Wali Santri dari: ${waliSantri.map((s: any) => s.nama).join(', ')}`);
+      }
+
+      // Bangun konteks penelepon untuk pemahaman semantik AI (baik untuk Guru maupun Wali Santri)
+      const callerContext: CallerContext = {
+        isGuru,
+        guruNama,
+        isWali,
+        children: waliSantri.map((s: any) => ({ id: s.id, nama: s.nama, nis: s.nis })),
+      };
+
       // 2. Abaikan jika pengirim adalah device itu sendiri DAN pesan tersebut adalah pesan yang dikirim oleh bot (anti-loop)
       if (device && (this.isSamePhone(sender, device) || (member && this.isSamePhone(member, device)))) {
         if (this.isBotSentMessage(message)) {
@@ -383,10 +403,14 @@ export class WebhookController {
       // PARSE INTENT dengan AI (Function Calling)
       // ----------------------------------------------------------------
       try {
-        parsed = await this.aiService.parseIntent(message, sender);
+        parsed = await this.aiService.parseIntent(message, sender, callerContext);
         // Sanitasi tambahan lapis kedua
         if (parsed.parameters && typeof parsed.parameters.santri_name === 'string') {
           parsed.parameters.santri_name = parsed.parameters.santri_name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
+          const invalidTokens = ['data', 'cek', 'info', 'lihat', 'tampilkan', 'kehadiran', 'kehadirannya', 'hafalan', 'hafalannya', 'nilai', 'nilainya', 'tagihan', 'tagihannya', 'anak saya', 'putra saya', 'putri saya'];
+          if (invalidTokens.includes(parsed.parameters.santri_name.toLowerCase())) {
+            parsed.parameters.santri_name = waliSantri.length === 1 ? waliSantri[0].nama : '';
+          }
         }
       } catch (parseError) {
         this.logger.error('AI intent parsing gagal, fallback chitchat:', parseError);
@@ -606,14 +630,8 @@ export class WebhookController {
           } else {
             // Kasus 2: Wali santri atau Ustadz menanyakan jadwal santri
             let targetSantri: any = null;
-            let waliSantri: any[] = [];
-            try {
-              waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
-            } catch (e) {
-              this.logger.warn('Gagal ambil data wali santri untuk jadwal:', e);
-            }
 
-            if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak'))) {
+            if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak') || candidateSantriName.toLowerCase().includes('putra') || candidateSantriName.toLowerCase().includes('putri'))) {
               targetSantri = waliSantri[0];
             } else if (candidateSantriName) {
               const matches = await this.supabaseService.findSantriByName(candidateSantriName);
@@ -685,31 +703,35 @@ export class WebhookController {
       const specSantriIntents = ['cekPembayaran', 'cekTagihan', 'cekHafalan', 'cekNilai', 'cekAbsensi', 'cekSantri', 'cekPrestasi', 'cekPerizinan'];
 
       if (specSantriIntents.includes(parsed.intent)) {
-        // Ambil data santri yang terhubung dengan nomor WhatsApp sender (jika terdaftar sebagai wali)
-        let waliSantri: any[] = [];
-        try {
-          waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
-        } catch (e) {
-          this.logger.warn('Gagal ambil data santri berdasarkan nomor wali:', e);
-        }
-
         let candidateName = (parsed.parameters?.santri_name || '').trim();
 
-        // Cek jika nomor WhatsApp wali memiliki anak dan pesan mengandung nama/potongan nama anaknya
-        // (contoh: user cukup ketik "wildan", langsung kenali Ahmad Wildan Ramdlani tanpa klarifikasi!)
+        // Bersihkan candidateName jika tidak sengaja menangkap kata perintah atau rujukan keluarga
+        const genericStopwords = [
+          'cek', 'data', 'info', 'lihat', 'tampilkan', 'status', 'rekap', 'laporan', 'riwayat',
+          'kehadiran', 'kehadirannya', 'hafalan', 'hafalannya', 'nilai', 'nilainya', 'tagihan', 'tagihannya',
+          'spp', 'absen', 'absennya', 'anak', 'anak saya', 'anak kami', 'putra', 'putra saya', 'putri', 'putri saya',
+          'ananda', 'ananda saya', 'buah hati', 'nya'
+        ];
+        if (candidateName && genericStopwords.includes(candidateName.toLowerCase())) {
+          candidateName = '';
+        }
+
+        // Cek jika nomor WhatsApp wali memiliki anak terdaftar di sistem
         if (waliSantri.length > 0) {
           const cleanMsg = message.toLowerCase();
+
+          // 1. Cek apakah ada nama anak yang cocok dengan candidateName atau bagian namanya ada di pesan
           for (const s of waliSantri) {
             const parts = s.nama.toLowerCase().split(/\s+/);
             const matchedPart = parts.find((p: string) => p.length >= 3 && cleanMsg.includes(p));
-            if (matchedPart) {
+            if (matchedPart || (candidateName && (s.nama.toLowerCase().includes(candidateName.toLowerCase()) || candidateName.toLowerCase().includes(s.nama.toLowerCase())))) {
               candidateName = s.nama;
               targetSantri = s;
               break;
             }
           }
 
-          // Cek jika user membalas dengan angka indeks anak (contoh: "1" atau "2")
+          // 2. Cek jika user membalas dengan angka indeks anak (contoh: "1" atau "2")
           if (!targetSantri && /^[1-9]$/.test(message.trim())) {
             const idx = parseInt(message.trim(), 10) - 1;
             if (idx >= 0 && idx < waliSantri.length) {
@@ -717,13 +739,22 @@ export class WebhookController {
             }
           }
 
-          // Jika wali menyebut kata "anak", "putra", "putri", "ananda" atau hanya ada 1 anak dan nama kosong
-          if (!targetSantri && (
-            candidateName === '' ||
-            cleanMsg.includes('anak') || cleanMsg.includes('putra') || cleanMsg.includes('putri') || cleanMsg.includes('ananda')
-          )) {
+          // 3. Jika wali menyebut kata "anak", "putra", "putri", "ananda", "-nya" atau hanya ada 1 anak dan nama kosong
+          const isFamilyOrPronoun = cleanMsg.includes('anak') || cleanMsg.includes('putra') || cleanMsg.includes('putri') ||
+            cleanMsg.includes('ananda') || cleanMsg.includes('buah hati') || cleanMsg.includes('nya') || cleanMsg.includes('kehadirannya') ||
+            cleanMsg.includes('hafalannya') || cleanMsg.includes('nilainya') || cleanMsg.includes('tagihannya');
+
+          if (!targetSantri && (candidateName === '' || isFamilyOrPronoun)) {
             if (waliSantri.length === 1) {
               targetSantri = waliSantri[0];
+            } else if (waliSantri.length > 1 && !candidateName) {
+              // Jika wali punya lebih dari 1 anak dan belum sebut nama
+              const resolution = this.handleSantriMatches(waliSantri, 'Anak Anda');
+              if (resolution.clarification) {
+                const clarText = resolution.clarification.replace(/dengan nama\s*\*?"Anak Anda"\*?/gi, 'yang terhubung dengan nomor WhatsApp Anda');
+                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Clarification Wali Ganda', null, clarText, Date.now() - startTime);
+                return this.replyToUser(res, sender, clarText, messageId);
+              }
             }
           }
         }
@@ -805,7 +836,7 @@ export class WebhookController {
         } else {
           const replyText = isGuru
             ? `Afwan Ustadz/Ustadzah, mohon sebutkan nama santri yang ingin dilihat datanya ya. Contoh: "Hafalan Wildan" atau "Kehadiran Ahmad". 😊`
-            : `Maaf, data santri tidak ditemukan di sistem. Mohon sebutkan nama santri dengan jelas ya. 😊`;
+            : `Afwan Ayah/Bunda, nomor WhatsApp ini belum terhubung langsung dengan data santri di sistem, atau nama ananda belum disebutkan.\n\nSilakan sebutkan nama lengkap atau nama panggilan ananda (contoh: "Cek kehadiran Ahmad") agar dapat kami bantu carikan datanya nggih. 🙏`;
           await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'No Target Resolved', null, replyText, Date.now() - startTime, 'No Target Resolved');
           return this.replyToUser(res, sender, replyText, messageId);
         }

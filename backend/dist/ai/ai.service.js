@@ -36,7 +36,10 @@ let AiService = AiService_1 = class AiService {
             'kelas 7', 'kelas 8', 'kelas 9', 'kelas 10', 'kelas 11', 'kelas 12',
             'kelas i', 'kelas ii', 'kelas iii', 'kelas iv', 'kelas v', 'kelas vi', 'kelas vii', 'kelas viii', 'kelas ix',
             'halaqoh', 'kelompok', 'kamar', 'asrama', 'angkatan', 'tingkat',
-            'semua', 'total', 'jumlah', 'banyak', 'banyaknya', 'seluruh', 'daftar'
+            'semua', 'total', 'jumlah', 'banyak', 'banyaknya', 'seluruh', 'daftar',
+            'cek', 'data', 'info', 'lihat', 'tampilkan', 'status', 'rekap', 'perkembangan', 'laporan', 'riwayat',
+            'kehadirannya', 'hafalannya', 'nilainya', 'tagihannya', 'absennya',
+            'anak saya', 'putra saya', 'putri saya', 'ananda saya', 'anak kami', 'buah hati'
         ]);
         const geminiKey = process.env.GEMINI_API_KEY || '';
         if (geminiKey) {
@@ -337,14 +340,21 @@ Karakter & Etika Komunikasi:
             ctx.history = ctx.history.slice(-20);
         }
     }
-    async parseIntentWithGemini(userPrompt, sender) {
+    async parseIntentWithGemini(userPrompt, sender, callerContext) {
         const ctx = this.getContext(sender);
         if (!this.geminiParserModel) {
             throw new Error('Gemini Parser Model not initialized');
         }
         let enrichedPrompt = userPrompt;
-        if (ctx.lastSantriName) {
-            enrichedPrompt = `[Konteks: nama santri terakhir = "${ctx.lastSantriName}"] ${userPrompt}`;
+        if (callerContext?.isGuru) {
+            enrichedPrompt = `[Profil Pengirim: Ustadz/Ustadzah "${callerContext.guruNama || 'Guru'}" - Jika bertanya jadwal/mengajar/kelas tanpa menyebut nama santri lain, maksudnya adalah jadwal mengajarnya sendiri]\n${enrichedPrompt}`;
+        }
+        else if (callerContext?.children && callerContext.children.length > 0) {
+            const childNames = callerContext.children.map(c => `"${c.nama}"`).join(', ');
+            enrichedPrompt = `[Profil Pengirim: Wali Santri dari ananda: ${childNames} - Jika pesan merujuk ke kata "anak saya", "putra saya", "putri saya", "ananda", atau "-nya" (contoh: "kehadirannya", "hafalannya"), petakan santri_name langsung ke ananda tersebut (${callerContext.children[0].nama})]\n${enrichedPrompt}`;
+        }
+        else if (ctx.lastSantriName) {
+            enrichedPrompt = `[Konteks: nama santri terakhir = "${ctx.lastSantriName}"]\n${enrichedPrompt}`;
         }
         const response = await this.geminiParserModel.generateContent(enrichedPrompt);
         const calls = response.response.functionCalls();
@@ -373,8 +383,12 @@ Karakter & Etika Komunikasi:
         if (!raw)
             return '';
         let name = raw.trim();
-        name = name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas\s+nama|nama|si|tentang|data|info|cek|lihat|tampilkan|status|rekap|input|tambah|catat)\s+/gi, '').trim();
-        name = name.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|absensi|kehadiran|presensi)\s+/gi, '').trim();
+        let prevName = '';
+        while (prevName !== name) {
+            prevName = name;
+            name = name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas\s+nama|nama|si|tentang|data|info|cek|lihat|tampilkan|status|rekap|input|tambah|catat)\s+/gi, '').trim();
+            name = name.replace(/^(spp|tagihan|pembayaran|biaya|hafalan|nilai|absen|absensi|kehadiran|presensi)\s+/gi, '').trim();
+        }
         const cutoffMatch = name.match(/^(.*?)(?:\s+(?:juz|surah|surat|ayat|sakit|izin|hadir|alfa|alpha|lancar|kurang|nilai|rp|sebesar))\b/i);
         if (cutoffMatch && cutoffMatch[1]) {
             name = cutoffMatch[1].trim();
@@ -399,6 +413,12 @@ Karakter & Etika Komunikasi:
         if (/^(?:kelas|kls|halaqoh|kelompok|kamar|asrama|angkatan|tingkat)\b/i.test(lower)) {
             return '';
         }
+        if (/^(?:cek|data|info|lihat|tampilkan|status|rekap|perkembangan|laporan|riwayat|kehadiran|hafalan|nilai|tagihan|spp|anak|putra|putri|ananda)$/i.test(lower)) {
+            return '';
+        }
+        if (/^(?:kehadiran|hafalan|nilai|tagihan|pembayaran|spp|absen|absensi)nya$/i.test(lower)) {
+            return '';
+        }
         if (lower.includes('mengajar') || lower.includes('jadwal') || lower === 'saya' || lower === 'anak saya' || lower === 'putra saya') {
             return '';
         }
@@ -407,7 +427,7 @@ Karakter & Etika Komunikasi:
             .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
             .join(' ');
     }
-    parseIntentLocal(userPrompt, sender) {
+    parseIntentLocal(userPrompt, sender, callerContext) {
         const text = userPrompt.toLowerCase().trim();
         const context = this.getContext(sender);
         const result = {
@@ -422,7 +442,7 @@ Karakter & Etika Komunikasi:
             result.intent = 'konfirmasi_tidak';
             return result;
         }
-        const hasDataKeyword = /\b(jadwal|mengajar|ngajar|hafalan|setoran|tahfidz|ziyadah|muroja|surah|surat|juz|ayat|nilai|rapor|raport|ujian|ulangan|uts|uas|absen|absensi|kehadiran|presensi|izin|sakit|alfa|bayar|pembayaran|tagihan|tunggakan|spp|nominal|biaya|kalender|libur|sambang|sambangan|rekening|jumlah\s+santri|total\s+santri|santri\s+aktif|kelas\s+\d+|peringkat|ranking|pelanggaran)\b/i.test(text);
+        const hasDataKeyword = /\b(jadwal|mengajar|ngajar|hafalan(?:nya)?|setoran(?:nya)?|tahfidz|ziyadah|muroja|surah|surat|juz|ayat|nilai(?:nya)?|rapor|raport|ujian|ulangan|uts|uas|absen(?:nya)?|absensi(?:nya)?|kehadiran(?:nya)?|presensi(?:nya)?|izin(?:nya)?|sakit|alfa|bayar|pembayaran(?:nya)?|tagihan(?:nya)?|tunggakan(?:nya)?|spp(?:-?nya)?|nominal|biaya(?:nya)?|kalender|libur|sambang|sambangan|rekening|jumlah\s+santri|total\s+santri|santri\s+aktif|kelas\s+\d+|peringkat|ranking|pelanggaran)\b/i.test(text);
         const isChitChatStrict = /^(halo|hai|hei|hey|tes|test|ping|p)$/i.test(text) ||
             /\b(assalamu|assalam|salam|waalaikum|walaikum)\b/i.test(text) ||
             /\b(terima\s*kasih|makasih|matur\s*nuwun|jazak|syukron|thanks|thank\s*you)\b/i.test(text) ||
@@ -449,7 +469,17 @@ Karakter & Etika Komunikasi:
         if (!santriName) {
             const nameAtStart = userPrompt.match(/^([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,3})\s+(?:apakah|sudah|belum|hadir|masuk|absen|absensi|kehadiran|presensi|hafalan|setoran|nilai|spp|tagihan|pembayaran|biaya|gimana|bagaimana|hari\s+ini|bulan\s+ini)/i);
             if (nameAtStart && nameAtStart[1]) {
-                santriName = this.cleanSantriName(nameAtStart[1]);
+                const candidateFirst = nameAtStart[1].trim();
+                if (!/^(?:cek|lihat|tampilkan|info|data|status|rekap|laporan)\b/i.test(candidateFirst)) {
+                    santriName = this.cleanSantriName(candidateFirst);
+                }
+            }
+        }
+        if (!santriName && callerContext?.children && callerContext.children.length > 0) {
+            if (text.includes('anak') || text.includes('putra') || text.includes('putri') || text.includes('ananda') || text.includes('buah hati') ||
+                text.includes('kehadiran') || text.includes('hafalan') || text.includes('nilai') || text.includes('tagihan') || text.includes('spp') ||
+                text.includes('absen') || text.includes('jadwal')) {
+                santriName = callerContext.children[0].nama;
             }
         }
         if (!santriName && !hasDataKeyword) {
@@ -558,11 +588,11 @@ Karakter & Etika Komunikasi:
         const kelasMatch = text.match(kelasRegex);
         const halaqohRegex = /\b(?:di\s+|pada\s+)?(?:halaqoh|kelompok)\s+([0-9a-zA-Z\s\-]+?)(?:\s+(?:ada|berapa|dan|siapa|saja|orang)|$)/i;
         const halaqohMatch = text.match(halaqohRegex);
-        const isTagihan = /\b(tagihan|tunggakan|belum\s+lunas|harus\s+dibayar|kewajiban|tunggak)\b/i.test(text);
-        const isPembayaran = /\b(bayar|lunas|pembayaran|spp|transaksi|kwitansi|bukti\s+bayar|sudah\s+bayar|uang\s+makan|uang\s+gedung)\b/i.test(text);
-        const isHafalan = /\b(hafalan|setor|setoran|surah|surat|juz|muroja|muraja|tahfidz|ziyadah)\b/i.test(text);
-        const isNilai = /\b(nilai|rapor|raport|ulangan|ujian|uts|uas|tugas|pelajaran|akademis|akademik|skor|mapel)\b/i.test(text);
-        const isAbsensi = /\b(hadir|kehadiran|presensi|absen|absensi|masuk|bolos|alfa|alpha|sakit|masuk\s+gak|hadir\s+gak|tidak\s+masuk)\b/i.test(text);
+        const isTagihan = /\b(tagihan(?:nya)?|tunggakan(?:nya)?|belum\s+lunas|harus\s+dibayar|kewajiban|tunggak)\b/i.test(text);
+        const isPembayaran = /\b(bayar|lunas|pembayaran(?:nya)?|spp(?:-?nya)?|transaksi|kwitansi|bukti\s+bayar|sudah\s+bayar|uang\s+makan|uang\s+gedung)\b/i.test(text);
+        const isHafalan = /\b(hafalan(?:nya)?|setor|setoran(?:nya)?|surah|surat|juz|muroja|muraja|tahfidz|ziyadah)\b/i.test(text);
+        const isNilai = /\b(nilai(?:nya)?|rapor|raport|ulangan|ujian|uts|uas|tugas|pelajaran|akademis|akademik|skor|mapel)\b/i.test(text);
+        const isAbsensi = /\b(hadir|kehadiran(?:nya)?|presensi(?:nya)?|absen(?:nya)?|absensi(?:nya)?|masuk|bolos|alfa|alpha|sakit|masuk\s+gak|hadir\s+gak|tidak\s+masuk)\b/i.test(text);
         const isPerizinan = /\b(izin\s+pulang|izin\s+keluar|perizinan|surat\s+izin)\b/i.test(text);
         const isPrestasi = /\b(prestasi|juara|lomba|pujian|penghargaan)\b/i.test(text);
         const isSantri = /\b(profil|biodata|data\s+santri|info\s+santri|tentang\s+santri)\b/i.test(text);
@@ -688,11 +718,11 @@ Karakter & Etika Komunikasi:
         this.setContext(sender, result.intent, santriName);
         return result;
     }
-    async parseIntent(userPrompt, sender) {
+    async parseIntent(userPrompt, sender, callerContext) {
         this.addToHistory(sender, 'user', userPrompt);
         if (this.geminiParserModel) {
             try {
-                const result = await this.parseIntentWithGemini(userPrompt, sender);
+                const result = await this.parseIntentWithGemini(userPrompt, sender, callerContext);
                 if (result && result.intent && result.intent !== 'chitchat') {
                     const santriName = result.parameters?.santri_name || '';
                     this.setContext(sender, result.intent, santriName);
@@ -704,7 +734,7 @@ Karakter & Etika Komunikasi:
                 this.logger.warn(`[Gemini] Gagal parse intent, fallback ke local NLP: ${e.message}`);
             }
         }
-        const localResult = this.parseIntentLocal(userPrompt, sender);
+        const localResult = this.parseIntentLocal(userPrompt, sender, callerContext);
         if (localResult && localResult.intent !== 'chitchat') {
             this.logger.log(`[Local NLP Override] Intent: ${localResult.intent}, Params: ${JSON.stringify(localResult.parameters)}`);
             return localResult;

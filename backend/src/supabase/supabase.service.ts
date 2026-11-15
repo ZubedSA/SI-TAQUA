@@ -810,46 +810,62 @@ export class SupabaseService {
       .limit(10);
   }
 
-  // Find santri by wali phone number
+  // Find santri by wali phone number (checks both santri.no_telp_wali AND santri.wali_id -> user_profiles.no_hp)
   async findSantriByWaliPhone(phone: string) {
     const cleanPhone = phone.replace(/\D/g, '');
-    if (!cleanPhone) return [];
+    if (!cleanPhone || cleanPhone.length < 8) return [];
 
     const suffix = cleanPhone.slice(-9);
 
-    let { data, error } = await this.supabase
-      .from('santri')
-      .select('id, nama, nis, status, no_telp_wali')
-      .eq('status', 'Aktif');
+    // 1. Ambil data santri aktif lengkap dengan wali_id dan no_telp_wali,
+    // serta user_profiles untuk relasi akun portal wali
+    const [santriRes, profilesRes] = await Promise.all([
+      this.supabase
+        .from('santri')
+        .select('id, nama, nis, status, no_telp_wali, wali_id')
+        .eq('status', 'Aktif'),
+      this.supabase
+        .from('user_profiles')
+        .select('user_id, no_hp, nama, role')
+    ]);
 
-    if (error) {
-      this.logger.error(`Error finding santri by wali phone: ${error.message}`);
-      return [];
-    }
+    const santriData = santriRes.data || [];
+    const profilesData = profilesRes.data || [];
 
-    let matches = data.filter(s => {
-      if (!s.no_telp_wali) return false;
-      const cleanWaliPhone = s.no_telp_wali.replace(/\D/g, '');
-      return cleanWaliPhone.endsWith(suffix);
+    // Cari user_id dari user_profiles yang memiliki nomor telepon cocok dengan suffix
+    const matchedProfileUserIds = profilesData
+      .filter(p => {
+        if (!p.no_hp) return false;
+        const cleanNoHp = p.no_hp.replace(/\D/g, '');
+        return cleanNoHp.endsWith(suffix) || cleanNoHp === cleanPhone;
+      })
+      .map(p => p.user_id);
+
+    // Filter santri: baik yang cocok di santri.no_telp_wali ATAU santri.wali_id
+    const matchedSantriMap = new Map<string, any>();
+
+    santriData.forEach(s => {
+      let isMatch = false;
+
+      // Jalur 1: Cocok langsung di santri.no_telp_wali
+      if (s.no_telp_wali) {
+        const cleanWaliPhone = s.no_telp_wali.replace(/\D/g, '');
+        if (cleanWaliPhone.endsWith(suffix) || cleanWaliPhone === cleanPhone) {
+          isMatch = true;
+        }
+      }
+
+      // Jalur 2: Cocok via akun portal wali (santri.wali_id -> user_profiles.user_id)
+      if (!isMatch && s.wali_id && matchedProfileUserIds.includes(s.wali_id)) {
+        isMatch = true;
+      }
+
+      if (isMatch) {
+        matchedSantriMap.set(s.id, s);
+      }
     });
 
-    // Fallback: Jika belum ada nomor wali yang terhubung ke santri manapun, hubungkan nomor ini ke santri pertama untuk kemudahan demo
-    if (matches.length === 0 && data.length > 0) {
-      this.logger.log(`Demo Mode: Menghubungkan nomor telepon ${phone} ke santri pertama (${data[0].nama})`);
-      const { error: updateErr } = await this.supabase
-        .from('santri')
-        .update({ no_telp_wali: phone })
-        .eq('id', data[0].id);
-      
-      if (!updateErr) {
-        data[0].no_telp_wali = phone;
-        matches = [data[0]];
-      } else {
-        this.logger.error(`Gagal menghubungkan nomor wali secara otomatis: ${updateErr.message}`);
-      }
-    }
-
-    return matches;
+    return Array.from(matchedSantriMap.values());
   }
 
   // Get debug database content

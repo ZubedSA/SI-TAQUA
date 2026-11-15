@@ -215,6 +215,23 @@ let WebhookController = WebhookController_1 = class WebhookController {
             if (isGuru) {
                 this.logger.log(`Sender ${sender} teridentifikasi sebagai Guru/Ustadz: ${guruNama}`);
             }
+            let waliSantri = [];
+            try {
+                waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
+            }
+            catch (e) {
+                this.logger.warn('Gagal ambil data santri berdasarkan nomor wali:', e);
+            }
+            const isWali = waliSantri.length > 0;
+            if (isWali) {
+                this.logger.log(`Sender ${sender} teridentifikasi sebagai Wali Santri dari: ${waliSantri.map((s) => s.nama).join(', ')}`);
+            }
+            const callerContext = {
+                isGuru,
+                guruNama,
+                isWali,
+                children: waliSantri.map((s) => ({ id: s.id, nama: s.nama, nis: s.nis })),
+            };
             if (device && (this.isSamePhone(sender, device) || (member && this.isSamePhone(member, device)))) {
                 if (this.isBotSentMessage(message)) {
                     this.logger.log(`Mengabaikan pesan keluar dari device sendiri (${device}) untuk menghindari loop.`);
@@ -274,9 +291,13 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 delete this.pendingActions[sender];
             }
             try {
-                parsed = await this.aiService.parseIntent(message, sender);
+                parsed = await this.aiService.parseIntent(message, sender, callerContext);
                 if (parsed.parameters && typeof parsed.parameters.santri_name === 'string') {
                     parsed.parameters.santri_name = parsed.parameters.santri_name.replace(/^(santri|siswa|anak|ananda|saudara|adek|kakak|atas nama)\s+/i, '').trim();
+                    const invalidTokens = ['data', 'cek', 'info', 'lihat', 'tampilkan', 'kehadiran', 'kehadirannya', 'hafalan', 'hafalannya', 'nilai', 'nilainya', 'tagihan', 'tagihannya', 'anak saya', 'putra saya', 'putri saya'];
+                    if (invalidTokens.includes(parsed.parameters.santri_name.toLowerCase())) {
+                        parsed.parameters.santri_name = waliSantri.length === 1 ? waliSantri[0].nama : '';
+                    }
                 }
             }
             catch (parseError) {
@@ -463,14 +484,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     }
                     else {
                         let targetSantri = null;
-                        let waliSantri = [];
-                        try {
-                            waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
-                        }
-                        catch (e) {
-                            this.logger.warn('Gagal ambil data wali santri untuk jadwal:', e);
-                        }
-                        if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak'))) {
+                        if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak') || candidateSantriName.toLowerCase().includes('putra') || candidateSantriName.toLowerCase().includes('putri'))) {
                             targetSantri = waliSantri[0];
                         }
                         else if (candidateSantriName) {
@@ -529,20 +543,22 @@ let WebhookController = WebhookController_1 = class WebhookController {
             let targetSantri = null;
             const specSantriIntents = ['cekPembayaran', 'cekTagihan', 'cekHafalan', 'cekNilai', 'cekAbsensi', 'cekSantri', 'cekPrestasi', 'cekPerizinan'];
             if (specSantriIntents.includes(parsed.intent)) {
-                let waliSantri = [];
-                try {
-                    waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
-                }
-                catch (e) {
-                    this.logger.warn('Gagal ambil data santri berdasarkan nomor wali:', e);
-                }
                 let candidateName = (parsed.parameters?.santri_name || '').trim();
+                const genericStopwords = [
+                    'cek', 'data', 'info', 'lihat', 'tampilkan', 'status', 'rekap', 'laporan', 'riwayat',
+                    'kehadiran', 'kehadirannya', 'hafalan', 'hafalannya', 'nilai', 'nilainya', 'tagihan', 'tagihannya',
+                    'spp', 'absen', 'absennya', 'anak', 'anak saya', 'anak kami', 'putra', 'putra saya', 'putri', 'putri saya',
+                    'ananda', 'ananda saya', 'buah hati', 'nya'
+                ];
+                if (candidateName && genericStopwords.includes(candidateName.toLowerCase())) {
+                    candidateName = '';
+                }
                 if (waliSantri.length > 0) {
                     const cleanMsg = message.toLowerCase();
                     for (const s of waliSantri) {
                         const parts = s.nama.toLowerCase().split(/\s+/);
                         const matchedPart = parts.find((p) => p.length >= 3 && cleanMsg.includes(p));
-                        if (matchedPart) {
+                        if (matchedPart || (candidateName && (s.nama.toLowerCase().includes(candidateName.toLowerCase()) || candidateName.toLowerCase().includes(s.nama.toLowerCase())))) {
                             candidateName = s.nama;
                             targetSantri = s;
                             break;
@@ -554,10 +570,20 @@ let WebhookController = WebhookController_1 = class WebhookController {
                             targetSantri = waliSantri[idx];
                         }
                     }
-                    if (!targetSantri && (candidateName === '' ||
-                        cleanMsg.includes('anak') || cleanMsg.includes('putra') || cleanMsg.includes('putri') || cleanMsg.includes('ananda'))) {
+                    const isFamilyOrPronoun = cleanMsg.includes('anak') || cleanMsg.includes('putra') || cleanMsg.includes('putri') ||
+                        cleanMsg.includes('ananda') || cleanMsg.includes('buah hati') || cleanMsg.includes('nya') || cleanMsg.includes('kehadirannya') ||
+                        cleanMsg.includes('hafalannya') || cleanMsg.includes('nilainya') || cleanMsg.includes('tagihannya');
+                    if (!targetSantri && (candidateName === '' || isFamilyOrPronoun)) {
                         if (waliSantri.length === 1) {
                             targetSantri = waliSantri[0];
+                        }
+                        else if (waliSantri.length > 1 && !candidateName) {
+                            const resolution = this.handleSantriMatches(waliSantri, 'Anak Anda');
+                            if (resolution.clarification) {
+                                const clarText = resolution.clarification.replace(/dengan nama\s*\*?"Anak Anda"\*?/gi, 'yang terhubung dengan nomor WhatsApp Anda');
+                                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'Clarification Wali Ganda', null, clarText, Date.now() - startTime);
+                                return this.replyToUser(res, sender, clarText, messageId);
+                            }
                         }
                     }
                 }
@@ -631,7 +657,7 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 else {
                     const replyText = isGuru
                         ? `Afwan Ustadz/Ustadzah, mohon sebutkan nama santri yang ingin dilihat datanya ya. Contoh: "Hafalan Wildan" atau "Kehadiran Ahmad". 😊`
-                        : `Maaf, data santri tidak ditemukan di sistem. Mohon sebutkan nama santri dengan jelas ya. 😊`;
+                        : `Afwan Ayah/Bunda, nomor WhatsApp ini belum terhubung langsung dengan data santri di sistem, atau nama ananda belum disebutkan.\n\nSilakan sebutkan nama lengkap atau nama panggilan ananda (contoh: "Cek kehadiran Ahmad") agar dapat kami bantu carikan datanya nggih. 🙏`;
                     await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, 'No Target Resolved', null, replyText, Date.now() - startTime, 'No Target Resolved');
                     return this.replyToUser(res, sender, replyText, messageId);
                 }

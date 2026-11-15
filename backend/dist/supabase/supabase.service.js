@@ -689,38 +689,45 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
     }
     async findSantriByWaliPhone(phone) {
         const cleanPhone = phone.replace(/\D/g, '');
-        if (!cleanPhone)
+        if (!cleanPhone || cleanPhone.length < 8)
             return [];
         const suffix = cleanPhone.slice(-9);
-        let { data, error } = await this.supabase
-            .from('santri')
-            .select('id, nama, nis, status, no_telp_wali')
-            .eq('status', 'Aktif');
-        if (error) {
-            this.logger.error(`Error finding santri by wali phone: ${error.message}`);
-            return [];
-        }
-        let matches = data.filter(s => {
-            if (!s.no_telp_wali)
-                return false;
-            const cleanWaliPhone = s.no_telp_wali.replace(/\D/g, '');
-            return cleanWaliPhone.endsWith(suffix);
-        });
-        if (matches.length === 0 && data.length > 0) {
-            this.logger.log(`Demo Mode: Menghubungkan nomor telepon ${phone} ke santri pertama (${data[0].nama})`);
-            const { error: updateErr } = await this.supabase
+        const [santriRes, profilesRes] = await Promise.all([
+            this.supabase
                 .from('santri')
-                .update({ no_telp_wali: phone })
-                .eq('id', data[0].id);
-            if (!updateErr) {
-                data[0].no_telp_wali = phone;
-                matches = [data[0]];
+                .select('id, nama, nis, status, no_telp_wali, wali_id')
+                .eq('status', 'Aktif'),
+            this.supabase
+                .from('user_profiles')
+                .select('user_id, no_hp, nama, role')
+        ]);
+        const santriData = santriRes.data || [];
+        const profilesData = profilesRes.data || [];
+        const matchedProfileUserIds = profilesData
+            .filter(p => {
+            if (!p.no_hp)
+                return false;
+            const cleanNoHp = p.no_hp.replace(/\D/g, '');
+            return cleanNoHp.endsWith(suffix) || cleanNoHp === cleanPhone;
+        })
+            .map(p => p.user_id);
+        const matchedSantriMap = new Map();
+        santriData.forEach(s => {
+            let isMatch = false;
+            if (s.no_telp_wali) {
+                const cleanWaliPhone = s.no_telp_wali.replace(/\D/g, '');
+                if (cleanWaliPhone.endsWith(suffix) || cleanWaliPhone === cleanPhone) {
+                    isMatch = true;
+                }
             }
-            else {
-                this.logger.error(`Gagal menghubungkan nomor wali secara otomatis: ${updateErr.message}`);
+            if (!isMatch && s.wali_id && matchedProfileUserIds.includes(s.wali_id)) {
+                isMatch = true;
             }
-        }
-        return matches;
+            if (isMatch) {
+                matchedSantriMap.set(s.id, s);
+            }
+        });
+        return Array.from(matchedSantriMap.values());
     }
     async getDebugDbData() {
         try {
