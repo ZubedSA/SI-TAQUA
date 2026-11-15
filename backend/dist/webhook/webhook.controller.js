@@ -400,6 +400,116 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, executedQuery, dbResult, reply, Date.now() - startTime, dbResult?.error || '');
                 return this.replyToUser(res, sender, reply, messageId);
             }
+            if (parsed.intent === 'cekJadwal') {
+                const rawHari = parsed.parameters?.hari || '';
+                let targetDay = undefined;
+                if (rawHari || message) {
+                    const combinedMsg = `${rawHari} ${message}`.toLowerCase();
+                    if (combinedMsg.includes('hari ini')) {
+                        const now = new Date(Date.now() + 7 * 3600 * 1000);
+                        const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                        targetDay = days[now.getUTCDay()];
+                    }
+                    else if (combinedMsg.includes('besok')) {
+                        const tmrw = new Date(Date.now() + 7 * 3600 * 1000 + 24 * 3600 * 1000);
+                        const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                        targetDay = days[tmrw.getUTCDay()];
+                    }
+                    else if (combinedMsg.includes('minggu') || combinedMsg.includes('ahad')) {
+                        targetDay = 'Ahad';
+                    }
+                    else if (combinedMsg.includes('senin')) {
+                        targetDay = 'Senin';
+                    }
+                    else if (combinedMsg.includes('selasa')) {
+                        targetDay = 'Selasa';
+                    }
+                    else if (combinedMsg.includes('rabu')) {
+                        targetDay = 'Rabu';
+                    }
+                    else if (combinedMsg.includes('kamis')) {
+                        targetDay = 'Kamis';
+                    }
+                    else if (combinedMsg.includes('jumat') || combinedMsg.includes("jum'at")) {
+                        targetDay = 'Jumat';
+                    }
+                    else if (combinedMsg.includes('sabtu')) {
+                        targetDay = 'Sabtu';
+                    }
+                }
+                if (!targetDay && !message.toLowerCase().includes('semua')) {
+                    const now = new Date(Date.now() + 7 * 3600 * 1000);
+                    const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    targetDay = days[now.getUTCDay()];
+                }
+                const candidateSantriName = (parsed.parameters?.santri_name || '').trim();
+                if (isGuru && (!candidateSantriName || candidateSantriName.toLowerCase().includes('saya') || message.toLowerCase().includes('mengajar'))) {
+                    const currentGuru = await this.supabaseService.getGuruByPhone(sender);
+                    if (currentGuru) {
+                        executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+                        dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
+                    }
+                    else {
+                        dbResult = { error: 'Nomor WhatsApp antum belum terhubung dengan data profil Guru/Ustadz aktif di SI-TAQUA.' };
+                    }
+                }
+                else {
+                    let targetSantri = null;
+                    let waliSantri = [];
+                    try {
+                        waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
+                    }
+                    catch (e) {
+                        this.logger.warn('Gagal ambil data wali santri untuk jadwal:', e);
+                    }
+                    if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak'))) {
+                        targetSantri = waliSantri[0];
+                    }
+                    else if (candidateSantriName) {
+                        const matches = await this.supabaseService.findSantriByName(candidateSantriName);
+                        const resSantri = this.handleSantriMatches(matches, candidateSantriName);
+                        targetSantri = resSantri.target;
+                    }
+                    if (targetSantri) {
+                        executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Semua'})`;
+                        dbResult = await this.supabaseService.getJadwalSantri(targetSantri.id, targetDay);
+                    }
+                    else if (isGuru) {
+                        const currentGuru = await this.supabaseService.getGuruByPhone(sender);
+                        if (currentGuru) {
+                            executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+                            dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
+                        }
+                    }
+                    else {
+                        dbResult = { error: 'Mohon sebutkan nama ananda santri yang ingin dilihat jadwalnya nggih Ayah/Bunda.' };
+                    }
+                }
+                const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
+                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, executedQuery, dbResult, reply, Date.now() - startTime);
+                return this.replyToUser(res, sender, reply, messageId);
+            }
+            if (parsed.intent === 'cekKalender') {
+                executedQuery = 'getKalenderAkademik()';
+                try {
+                    dbResult = await this.supabaseService.getKalenderAkademik();
+                }
+                catch (calErr) {
+                    this.logger.error('Gagal mengambil kalender akademik:', calErr);
+                    dbResult = [];
+                }
+                const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
+                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, executedQuery, dbResult, reply, Date.now() - startTime);
+                return this.replyToUser(res, sender, reply, messageId);
+            }
+            if (parsed.intent === 'cekInfoPondok') {
+                const topik = parsed.parameters?.topik || message;
+                executedQuery = `getInfoPondok(${topik})`;
+                dbResult = this.supabaseService.getInfoPondok(topik);
+                const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
+                await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, executedQuery, dbResult, reply, Date.now() - startTime);
+                return this.replyToUser(res, sender, reply, messageId);
+            }
             let targetSantri = null;
             const specSantriIntents = ['cekPembayaran', 'cekTagihan', 'cekHafalan', 'cekNilai', 'cekAbsensi', 'cekSantri', 'cekPrestasi', 'cekPerizinan'];
             if (specSantriIntents.includes(parsed.intent)) {
@@ -426,6 +536,12 @@ let WebhookController = WebhookController_1 = class WebhookController {
                         const idx = parseInt(message.trim(), 10) - 1;
                         if (idx >= 0 && idx < waliSantri.length) {
                             targetSantri = waliSantri[idx];
+                        }
+                    }
+                    if (!targetSantri && (candidateName === '' ||
+                        cleanMsg.includes('anak') || cleanMsg.includes('putra') || cleanMsg.includes('putri') || cleanMsg.includes('ananda'))) {
+                        if (waliSantri.length === 1) {
+                            targetSantri = waliSantri[0];
                         }
                     }
                 }
@@ -508,9 +624,8 @@ let WebhookController = WebhookController_1 = class WebhookController {
                         dbResult = await this.supabaseService.getPresensi(targetSantri.id);
                         break;
                     case 'cekPerizinan':
-                        executedQuery = `getPresensi(${targetSantri.id}) filtered by status = 'izin'`;
-                        const allPres = await this.supabaseService.getPresensi(targetSantri.id);
-                        dbResult = allPres ? allPres.filter((p) => p.status === 'izin') : [];
+                        executedQuery = `getPerizinanSantri(${targetSantri.id})`;
+                        dbResult = await this.supabaseService.getPerizinanSantri(targetSantri.id);
                         break;
                     case 'cekSantri':
                         executedQuery = `getSantriDetails(${targetSantri.id})`;

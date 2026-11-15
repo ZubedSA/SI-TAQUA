@@ -20,6 +20,19 @@ let AiService = AiService_1 = class AiService {
         this.genAI = null;
         this.geminiParserModel = null;
         this.geminiResponseModel = null;
+        this.NON_SANTRI_STOPWORDS = new Set([
+            'saya', 'kami', 'kita', 'dia', 'mereka', 'anda', 'kamu', 'antum', 'ana', 'ente',
+            'mengajar', 'mengajar saya', 'jadwal', 'jadwal saya', 'jadwal mengajar', 'kapan jadwal', 'jadwal pelajaran',
+            'anak', 'anak saya', 'anak kami', 'putra', 'putra saya', 'putri', 'putri saya', 'ananda',
+            'ustadz', 'ustadzah', 'guru', 'pengajar', 'musyrif', 'musyrifah', 'wali', 'wali santri', 'santri',
+            'hari ini', 'besok', 'kemarin', 'lusa', 'nanti', 'sekarang', 'saat ini',
+            'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'jum\'at', 'sabtu', 'ahad', 'minggu',
+            'libur', 'kapan libur', 'kalender', 'akademik', 'ujian', 'kegiatan', 'agenda',
+            'pondok', 'pesantren', 'info', 'informasi', 'rekening', 'alamat', 'lokasi',
+            'kunjungan', 'sambangan', 'jenguk', 'besuk', 'paket', 'kiriman', 'admin', 'bantuan', 'menu', 'cs', 'help',
+            'jam', 'jam berapa', 'kapan', 'pukul', 'hari', 'tanggal', 'bulan', 'tahun', 'wali santri', 'keluarga',
+            'apa', 'siapa', 'dimana', 'bagaimana', 'gimana', 'kenapa', 'mengapa', 'berapa'
+        ]);
         const geminiKey = process.env.GEMINI_API_KEY || '';
         if (geminiKey) {
             try {
@@ -157,6 +170,38 @@ let AiService = AiService_1 = class AiService {
                                     parameters: {
                                         type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
                                         properties: {}
+                                    }
+                                },
+                                {
+                                    name: 'cekJadwal',
+                                    description: 'Mengecek jadwal mengajar ustadz/guru atau jadwal pelajaran/halaqoh santri (contoh: "kapan jadwal mengajar saya", "jadwal mengajar hari ini", "jadwal hari senin", "jadwal pelajaran")',
+                                    parameters: {
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
+                                        properties: {
+                                            hari: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama hari spesifik (Senin, Selasa, Rabu, Kamis, Jumat, Sabtu, Ahad/Minggu, hari ini, besok)' },
+                                            santri_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama santri jika wali menanyakan jadwal pelajaran ananda santri' },
+                                            guru_name: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama guru jika menanyakan jadwal guru lain' }
+                                        }
+                                    }
+                                },
+                                {
+                                    name: 'cekKalender',
+                                    description: 'Mengecek kalender akademik pondok pesantren, tanggal hari libur, jadwal ujian, atau agenda kegiatan pondok',
+                                    parameters: {
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
+                                        properties: {
+                                            bulan: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Nama bulan atau periode waktu agenda' }
+                                        }
+                                    }
+                                },
+                                {
+                                    name: 'cekInfoPondok',
+                                    description: 'Mengecek info umum resmi pondok: jadwal sambangan/kunjungan wali santri, rekening resmi pembayaran SPP, alamat/lokasi pesantren, aturan kirim paket/barang santri',
+                                    parameters: {
+                                        type: generative_ai_1.FunctionDeclarationSchemaType.OBJECT,
+                                        properties: {
+                                            topik: { type: generative_ai_1.FunctionDeclarationSchemaType.STRING, description: 'Topik informasi yang dicari: sambangan, rekening, alamat, paket, atau umum' }
+                                        }
                                     }
                                 },
                                 {
@@ -325,8 +370,13 @@ Karakter & Etika Komunikasi:
         for (const sw of trailingStopwords) {
             name = name.replace(new RegExp(`\\s+${sw}$`, 'i'), '').trim();
         }
-        if (!name)
+        const lower = name.toLowerCase().trim();
+        if (!lower || this.NON_SANTRI_STOPWORDS.has(lower)) {
             return '';
+        }
+        if (lower.includes('mengajar') || lower.includes('jadwal') || lower === 'saya' || lower === 'anak saya' || lower === 'putra saya') {
+            return '';
+        }
         return name
             .split(/\s+/)
             .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
@@ -348,7 +398,7 @@ Karakter & Etika Komunikasi:
             return result;
         }
         let santriName = '';
-        const nameMatchWithKeyword = userPrompt.match(/(?:santri|nama|untuk|milik|atas\s+nama|spp|pembayaran|biaya|tagihan|tunggakan|perkembangan|jadwal|hafalan|setoran|nilai|rapor|absen|absensi|kehadiran|presensi|prestasi|izin|perizinan|tentang|profil|data\s+kehadiran|data\s+hafalan|data\s+nilai|data\s+tagihan|status\s+spp|status\s+kehadiran|cek\s+kehadiran|cek\s+hafalan|cek\s+nilai|cek\s+tagihan|cek\s+pembayaran)\s+([A-Za-z0-9\s]+)/i);
+        const nameMatchWithKeyword = userPrompt.match(/(?:santri|nama|untuk|milik|atas\s+nama|spp|pembayaran|biaya|tagihan|tunggakan|perkembangan|hafalan|setoran|nilai|rapor|absen|absensi|kehadiran|presensi|prestasi|izin|perizinan|tentang|profil|data\s+kehadiran|data\s+hafalan|data\s+nilai|data\s+tagihan|status\s+spp|status\s+kehadiran|cek\s+kehadiran|cek\s+hafalan|cek\s+nilai|cek\s+tagihan|cek\s+pembayaran)\s+([A-Za-z0-9\s]+)/i);
         if (nameMatchWithKeyword && nameMatchWithKeyword[1]) {
             santriName = this.cleanSantriName(nameMatchWithKeyword[1]);
         }
@@ -440,6 +490,13 @@ Karakter & Etika Komunikasi:
         else if (text.includes('hadir') || text.includes('masuk')) {
             result.parameters.status = 'hadir';
         }
+        const hariMatch = text.match(/\b(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|ahad|minggu|hari\s+ini|besok)\b/i);
+        if (hariMatch) {
+            result.parameters.hari = hariMatch[1];
+        }
+        const isJadwal = /\b(jadwal|mengajar|ngajar|kapan.*ngajar|kapan.*mengajar|jadwal.*saya|jadwal.*pelajaran|jadwal.*halaqoh)\b/i.test(text);
+        const isKalender = /\b(kalender|akademik|libur|kapan\s+libur|hari\s+libur|agenda|kegiatan\s+pondok)\b/i.test(text);
+        const isInfoPondok = /\b(sambang|sambangan|kunjung|kunjungan|besuk|jenguk|alamat\s+pondok|lokasi\s+pondok|rekening|transfer|no\s+rek|nomor\s+rekening|kirim\s+paket|aturan\s+paket|titip\s+barang|kontak\s+pondok|cs\s+pondok)\b/i.test(text);
         const isBelumSetor = /(belum\s+setor|tidak\s+setor|siapa\s+yang\s+belum\s+setor|santri\s+belum\s+setor)/i.test(text);
         const isSantriSakit = /(santri\s+sakit|siapa\s+(?:yang|saja)\s+sakit|yang\s+sakit\s+hari\s+ini|rekap\s+sakit)/i.test(text);
         const isSantriIzin = /(santri\s+izin|siapa\s+(?:yang|saja)\s+izin|yang\s+izin\s+hari\s+ini|rekap\s+izin|izin\s+keluar|izin\s+pulang)/i.test(text);
@@ -454,7 +511,43 @@ Karakter & Etika Komunikasi:
         const isPerizinan = /\b(izin\s+pulang|izin\s+keluar|perizinan|surat\s+izin)\b/i.test(text);
         const isPrestasi = /\b(prestasi|juara|lomba|pujian|penghargaan)\b/i.test(text);
         const isSantri = /\b(profil|biodata|data\s+santri|info\s+santri|tentang\s+santri|kelas|halaqoh)\b/i.test(text);
-        if (isBelumSetor) {
+        if (isInfoPondok) {
+            result.intent = 'cekInfoPondok';
+            if (text.includes('sambang') || text.includes('kunjung') || text.includes('besuk') || text.includes('jenguk')) {
+                result.parameters.topik = 'sambangan';
+            }
+            else if (text.includes('rekening') || text.includes('transfer') || text.includes('no rek') || text.includes('nomor rekening')) {
+                result.parameters.topik = 'rekening';
+            }
+            else if (text.includes('alamat') || text.includes('lokasi')) {
+                result.parameters.topik = 'alamat';
+            }
+            else if (text.includes('paket') || text.includes('kirim') || text.includes('titip')) {
+                result.parameters.topik = 'paket';
+            }
+            delete result.parameters.santri_name;
+        }
+        else if (isKalender) {
+            result.intent = 'cekKalender';
+            delete result.parameters.santri_name;
+        }
+        else if (isJadwal) {
+            result.intent = 'cekJadwal';
+            if (!santriName) {
+                const santriJadwalMatch = userPrompt.match(/jadwal\s+(?:pelajaran\s+|halaqoh\s+)?(?:santri\s+|ananda\s+|anak\s+)?([A-Za-z0-9\s]+)/i);
+                if (santriJadwalMatch && santriJadwalMatch[1]) {
+                    const cleaned = this.cleanSantriName(santriJadwalMatch[1]);
+                    if (cleaned) {
+                        santriName = cleaned;
+                        result.parameters.santri_name = cleaned;
+                    }
+                }
+            }
+            if (text.includes('saya') || text.includes('mengajar') || text.includes('guru') || text.includes('ustadz')) {
+                delete result.parameters.santri_name;
+            }
+        }
+        else if (isBelumSetor) {
             result.intent = 'cekBelumSetor';
         }
         else if (isSantriSakit) {
@@ -591,6 +684,16 @@ Panduan menyusun jawaban:
    - Balas salam dan doa dengan doa yang setara atau lebih baik.
    - Jika bertanya kabar atau menyapa, tanyakan dengan ramah apa yang bisa dibantu mengenai ananda santri atau kegiatan pondok.
    - JANGAN memaksakan daftar menu panjang berbaris-baris kecuali pengguna secara spesifik meminta daftar menu/panduan penggunaan.
+7. Jika tentang jadwal (cekJadwal):
+   - Tampilkan jadwal mengajar guru atau jadwal pelajaran/halaqoh santri secara kronologis dan rapi.
+   - Cantumkan jam mulai-selesai (WIB), nama mata pelajaran / halaqoh tahfidz, dan kelas/kelompok tujuan.
+   - Jika libur atau tidak ada jadwal, sampaikan dengan ucapan Alhamdulillah dan doakan rehat/aktivitas yang berkah.
+8. Jika tentang kalender akademik / libur (cekKalender):
+   - Tampilkan daftar agenda dan hari libur mendatang dengan tanggal yang jelas, rapi, dan mudah dibaca.
+9. Jika tentang info pondok (cekInfoPondok):
+   - Sampaikan info sambangan (Ahad 08.00-17.00 WIB), alamat di Batuan Sumenep, rekening resmi SPP di Bank BSI 7188899912 a.n. Pesantren Tahfidz Al-Qur'an Al-Usymuni, dan aturan paket santri secara akurat.
+10. Jika tentang perizinan (cekPerizinan):
+   - Tampilkan riwayat izin santri atau guru dengan status dan tanggal yang jelas disertai doa kebaikan.
 ${dataContext}`;
         const response = await this.geminiResponseModel.generateContent(promptText);
         return response.response.text().trim();
@@ -849,15 +952,114 @@ ${dataContext}`;
                     presText += `${idx + 1}. *${p.nama_prestasi || p.judul || 'Prestasi'}* (${p.tingkat || 'Pondok'})\n`;
                 });
                 return presText + getClosing();
-            case 'cekPerizinan':
-                if (!dbResult || dbResult.length === 0) {
-                    return `${getGreeting()}\n\nTidak ada riwayat perizinan aktif untuk nanda *${santriName}*.${getClosing()}`;
+            case 'cekJadwal': {
+                if (!dbResult) {
+                    return `${getGreeting()}\n\nData jadwal tidak ditemukan.${getClosing()}`;
                 }
-                let izinSantriText = `📝 *Riwayat Perizinan*\nNanda *${santriName}*:\n\n`;
-                (Array.isArray(dbResult) ? dbResult : [dbResult]).slice(0, 5).forEach((iz, idx) => {
-                    izinSantriText += `${idx + 1}. *${iz.keperluan || iz.alasan || 'Izin'}* (${iz.status || 'Selesai'})\n`;
+                const isGuruSchedule = !!dbResult.guruNama;
+                const targetName = dbResult.guruNama || dbResult.santriNama || (guruName ? `Ustadz ${guruName}` : 'Santri');
+                const schedules = dbResult.schedules || [];
+                const day = dbResult.dayName || 'Hari Ini';
+                if (schedules.length === 0) {
+                    if (isGuru) {
+                        return `${getGreeting()}\n\nAlhamdulillah Ustadz/Ustadzah *${targetName}*, tidak ada agenda jadwal mengajar pada *${day}*.\n\nSelamat beristirahat atau beraktivitas lainnya nggih. Barokallahu fiikum. 🤲`;
+                    }
+                    else {
+                        return `${getGreeting()}\n\nAlhamdulillah, tidak ada jadwal pelajaran atau halaqoh untuk nanda *${targetName}* pada *${day}*.${getClosing()}`;
+                    }
+                }
+                let jadwalText = isGuru
+                    ? `${getGreeting()}\n\n📅 *Jadwal Mengajar Ustadz/Ustadzah ${targetName}*\n📌 Hari: *${day}*\n\n`
+                    : `${getGreeting()}\n\n📅 *Jadwal Pelajaran & Halaqoh Nanda ${targetName}*\n📌 Hari: *${day}*\n\n`;
+                schedules.forEach((s, idx) => {
+                    const time = s.jam_mulai && s.jam_selesai
+                        ? `${s.jam_mulai.slice(0, 5)} - ${s.jam_selesai.slice(0, 5)} WIB`
+                        : `Jam ke-${s.jam_ke || idx + 1}`;
+                    const tipeIcon = s.tipe === 'HALAQOH' ? '📖' : '📚';
+                    const target = s.targetNama || s.kelasNama || '';
+                    const mapel = s.mapelNama || 'Pelajaran';
+                    const guruStr = !isGuru && s.guruNama ? ` (Pengampu: *${s.guruNama}*)` : '';
+                    jadwalText += `${idx + 1}. ⏰ *${time}*\n`;
+                    jadwalText += `   ${tipeIcon} *${mapel}* - ${target}${guruStr}\n\n`;
                 });
-                return izinSantriText + getClosing();
+                jadwalText += isGuru
+                    ? `Semoga Allah Ta'ala melimpahkan kelancaran, kesabaran, dan keberkahan dalam mendidik para santri. Jazakumullah khairan. 🤲`
+                    : `Semoga nanda selalu istiqamah dan bersemangat dalam menuntut ilmu. Amin. 🤲`;
+                return jadwalText;
+            }
+            case 'cekKalender': {
+                const events = Array.isArray(dbResult) ? dbResult : [];
+                if (events.length === 0) {
+                    return `${getGreeting()}\n\nAlhamdulillah, belum ada agenda kalender akademik atau jadwal libur pondok khusus dalam waktu dekat ini.${getClosing()}`;
+                }
+                let calText = `${getGreeting()}\n\n📅 *Agenda Kalender Akademik & Libur Pondok PTQA:*\n\n`;
+                events.forEach((ev, idx) => {
+                    const tglMulai = formatTanggalIndo(ev.tanggal_mulai);
+                    const tglSelesai = ev.tanggal_selesai && ev.tanggal_selesai !== ev.tanggal_mulai
+                        ? ` s/d ${formatTanggalIndo(ev.tanggal_selesai)}`
+                        : '';
+                    const jenisIcon = String(ev.jenis).toLowerCase().includes('libur') ? '🏖️' : '📌';
+                    const cakupan = ev.cakupan && ev.cakupan !== 'Semua' ? ` [${ev.cakupan}]` : '';
+                    calText += `${idx + 1}. ${jenisIcon} *${ev.judul}*${cakupan}\n`;
+                    calText += `   🗓️ ${tglMulai}${tglSelesai}\n`;
+                    if (ev.deskripsi)
+                        calText += `   📝 ${ev.deskripsi}\n`;
+                    calText += `\n`;
+                });
+                calText += `Semoga seluruh agenda kegiatan santri dan pondok senantiasa diridhoi oleh Allah SWT. 🤲`;
+                return calText;
+            }
+            case 'cekInfoPondok': {
+                const info = dbResult || {};
+                if (info.topik === 'sambangan') {
+                    const d = info.data || {};
+                    return `${getGreeting()}\n\n🕌 *Informasi Sambangan / Kunjungan Wali Santri*\n*${info.namaPondok}*:\n\n` +
+                        `📅 *Waktu*: ${d.hari || 'Setiap Hari Ahad'}\n` +
+                        `⏰ *Jam*: *${d.jam || '08.00 - 17.00 WIB'}*\n` +
+                        `📋 *Ketentuan*: ${d.aturan || 'Melapor ke pos keamanan/pengurus dan berbusana muslim/muslimah rapi & sopan.'}\n\n` +
+                        `Ditunggu kehadirannya Ayah/Bunda untuk melepas rindu dengan ananda tercinta. Semoga sehat selalu! 🤲`;
+                }
+                if (info.topik === 'rekening') {
+                    const r = info.data || {};
+                    return `${getGreeting()}\n\n💳 *Nomor Rekening Resmi Pembayaran SPP / Infaq*\n*${info.namaPondok}*:\n\n` +
+                        `🏦 Bank: *${r.bank || 'Bank Syariah Indonesia (BSI)'}*\n` +
+                        `🔢 No. Rekening: *${r.nomor || '7188899912'}*\n` +
+                        `👤 Atas Nama: *${r.atasNama || "Pesantren Tahfidz Al-Qur'an Al-Usymuni"}*\n\n` +
+                        `📌 *Konfirmasi Pembayaran*:\nSetelah transfer, silakan kirim foto bukti transfer ke nomor WhatsApp ini atau bendahara pondok nggih. Jazakumullah khairan katsiran. 🤲`;
+                }
+                if (info.topik === 'alamat') {
+                    return `${getGreeting()}\n\n📍 *Alamat & Lokasi Pesantren*:\n\n` +
+                        `*${info.namaPondok}*\n` +
+                        `📌 ${info.alamat || 'Kompleks Pondok Pesantren Al-Usymuni, Desa Batuan, Kec. Batuan, Kab. Sumenep, Madura, Jawa Timur 69451'}\n\n` +
+                        `Lokasi mudah dijangkau dan berada di lingkungan Pondok Pesantren Al-Usymuni Batuan Sumenep. 🚗🛵`;
+                }
+                if (info.topik === 'paket') {
+                    const p = info.data || {};
+                    return `${getGreeting()}\n\n📦 *Aturan Pengiriman Paket / Titipan Santri*:\n\n` +
+                        `📌 ${p.aturan || 'Paket barang atau makanan dapat dititipkan melalui Pos Keamanan / Pengurus Putra atau Putri.'}\n\n` +
+                        `⚠️ *Catatan*: Mohon cantumkan *Nama Lengkap Santri* dan *Kelas/Kamar* pada paket agar memudahkan pengurus menyalurkan kepada ananda. Jazakumullah khairan. 🤲`;
+                }
+                return `${getGreeting()}\n\n🕌 *Pusat Informasi ${info.info?.namaPondok || "Pesantren Tahfidz Al-Qur'an Al-Usymuni"}*:\n\n` +
+                    `📍 *Alamat*: Desa Batuan, Sumenep, Madura\n` +
+                    `🗓️ *Sambangan*: Hari Ahad (08.00 - 17.00 WIB)\n` +
+                    `💳 *Rekening SPP*: BSI 7188899912 a.n. Pesantren Tahfidz Al-Qur'an Al-Usymuni\n` +
+                    `📦 *Paket Santri*: Dititipkan di pos pengurus pondok\n\n` +
+                    `Silakan tanyakan hal yang ingin Ayah/Bunda atau Ustadz/Ustadzah ketahui nggih. 🤲`;
+            }
+            case 'cekPerizinan':
+                if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
+                    return `${getGreeting()}\n\nAlhamdulillah, tidak ada riwayat izin atau sakit yang aktif saat ini.${getClosing()}`;
+                }
+                const izinList = Array.isArray(dbResult) ? dbResult : [dbResult];
+                let riwayatIzinText = `${getGreeting()}\n\n📝 *Riwayat Perizinan & Kehadiran:*\n\n`;
+                izinList.slice(0, 5).forEach((iz, idx) => {
+                    const tgl = formatTanggalIndo(iz.tanggal || iz.tanggal_mulai);
+                    const st = iz.status || 'Izin';
+                    const ket = iz.keterangan || iz.keperluan || iz.jenis_izin || '-';
+                    riwayatIzinText += `${idx + 1}. *${tgl}* - Status: *${st}*\n   • Keperluan/Ket: ${ket}\n\n`;
+                });
+                riwayatIzinText += `Semoga Allah senantiasa menjaga keselamatan dan kesehatan santri di manapun berada. 🤲`;
+                return riwayatIzinText;
             case 'cekBelumSetor':
             case 'get_tidak_setor_today': {
                 if (!dbResult || (Array.isArray(dbResult) && dbResult.length === 0)) {
@@ -1033,17 +1235,17 @@ ${dataContext}`;
                 }
                 if (/bisa\s*apa|menu|bantuan|fitur|cara\s*pakai|panduan|tolong/i.test(text)) {
                     return isGuru
-                        ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu aktivitas pengajaran dan pemantauan santri:\n📖 *Cek Santri:* "Hafalan [nama]", "Kehadiran [nama]", "Nilai [nama]"\n📋 *Rekapitulasi:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan", "Total santri aktif"\n✍️ *Input Cepat:* "Input hafalan [nama] juz 30 surah An-Naba 1-20 lancar", "Input absensi [nama] sakit"\n\nSilakan ketik kebutuhan antum! 🤲`
-                        : `Assalamu'alaikum, Ayah/Bunda! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya siap membantu Ayah/Bunda memantau ananda di pondok:\n📖 *Hafalan:* ketik "Hafalan [nama ananda]"\n💰 *SPP & Pembayaran:* ketik "SPP [nama ananda]"\n📊 *Nilai Rapor:* ketik "Nilai [nama ananda]"\n✅ *Kehadiran:* ketik "Kehadiran [nama ananda]"\n💳 *Tagihan:* ketik "Tagihan [nama ananda]"\n\nSilakan tanyakan nama ananda atau hal yang ingin dipantau ya! 🤲`;
+                        ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu seluruh aktivitas pengajaran dan manajemen santri antum:\n\n📅 *Jadwal Mengajar:* "Kapan jadwal mengajar saya?", "Jadwal hari ini", "Jadwal besok"\n📖 *Data Santri:* "Hafalan [nama]", "Kehadiran [nama]", "Nilai [nama]", "Profil [nama]"\n📋 *Rekap Operasional:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Santri yang izin hari ini", "Ranking hafalan", "Total santri aktif"\n🗓️ *Kalender & Libur:* "Kalender akademik", "Kapan libur pondok?"\n🕌 *Info Pondok:* "Jadwal sambangan", "Rekening pondok", "Alamat pondok"\n✍️ *Input Cepat:* "Input hafalan [nama] juz 30 surah An-Naba 1-20 lancar", "Input absensi [nama] sakit"\n\nSilakan ketik pertanyaan atau perintah antum! 🤲`
+                        : `Assalamu'alaikum, Ayah/Bunda! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya siap membantu Ayah/Bunda memantau ananda di PTQA Batuan:\n\n📖 *Hafalan:* ketik "Hafalan [nama ananda]"\n💰 *SPP & Pembayaran:* ketik "SPP [nama ananda]"\n💳 *Rincian Tagihan:* ketik "Tagihan [nama ananda]"\n✅ *Kehadiran & Sakit:* ketik "Kehadiran [nama ananda]"\n📊 *Nilai Rapor:* ketik "Nilai [nama ananda]"\n📅 *Jadwal Pelajaran:* ketik "Jadwal [nama ananda]"\n🗓️ *Hari Libur:* ketik "Kapan libur pondok?"\n🕌 *Info Sambangan/Kunjungan:* ketik "Jadwal sambangan"\n💳 *Rekening Transfer:* ketik "Nomor rekening SPP"\n📍 *Alamat Pondok:* ketik "Alamat pondok"\n\nSilakan tanyakan apa saja seputar ananda dan pondok nggih! 🤲`;
                 }
                 return isGuru
-                    ? `Nggih Ustadz/Ustadzah. 🧑‍🏫 Ada data mengajar, presensi santri, atau rekap setoran yang bisa saya bantu carikan saat ini? Silakan ketik kebutuhan antum nggih.`
-                    : `Nggih Ayah/Bunda. 😊 Senang bisa menemani Ayah/Bunda. Apakah ada informasi tentang ananda (seperti hafalan, kehadiran, atau SPP) yang ingin dicek hari ini?`;
+                    ? `Nggih Ustadz/Ustadzah. 🧑‍🏫 Ada data jadwal mengajar, presensi santri, atau rekap setoran yang bisa saya bantu carikan saat ini? Silakan ketik kebutuhan antum nggih.`
+                    : `Nggih Ayah/Bunda. 😊 Senang bisa menemani Ayah/Bunda. Apakah ada informasi tentang ananda (seperti hafalan, kehadiran, SPP, atau jadwal sambangan) yang ingin dicek hari ini?`;
             }
             default:
                 return isGuru
-                    ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu aktivitas pengajaran dan pemantauan santri:\n📖 *Cek Perkembangan Santri:* "Hafalan Wildan", "Kehadiran Wildan", "Nilai Wildan"\n📋 *Rekapitulasi Santri:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan"\n✍️ *Input Cepat:* "Input hafalan Wildan juz 30 surah An-Naba 1-20 lancar", "Input absensi Wildan sakit"\n\nSilakan ketik kebutuhan antum! 🤲`
-                    : `Halo, Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya bisa membantu Anda dengan:\n📖 Cek hafalan santri\n💰 Status pembayaran SPP\n📊 Nilai akademis\n✅ Data kehadiran\n💳 Rincian tagihan\n\nSilakan tanyakan kebutuhan Anda! 🤲`;
+                    ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu seluruh aktivitas pengajaran dan manajemen santri antum:\n\n📅 *Jadwal Mengajar:* "Kapan jadwal mengajar saya?", "Jadwal hari ini"\n📖 *Data Santri:* "Hafalan Wildan", "Kehadiran Wildan", "Nilai Wildan"\n📋 *Rekapitulasi:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan"\n🗓️ *Kalender:* "Kalender akademik", "Kapan libur pondok?"\n✍️ *Input Cepat:* "Input hafalan Wildan juz 30 surah An-Naba 1-20 lancar"\n\nSilakan ketik kebutuhan antum! 🤲`
+                    : `Halo, Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya bisa membantu Ayah/Bunda dengan:\n📖 Cek hafalan santri\n💰 Status pembayaran & tagihan SPP\n✅ Data kehadiran & perizinan santri\n📊 Nilai akademis santri\n📅 Jadwal pelajaran & kalender libur pondok\n🕌 Info sambangan wali santri & rekening pondok\n\nSilakan tanyakan kebutuhan Ayah/Bunda! 🤲`;
         }
     }
     async generateResponse(userPrompt, intent, dbResult, sender, isGuru = false, guruName = '') {

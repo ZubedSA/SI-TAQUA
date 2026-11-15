@@ -166,4 +166,93 @@ export declare class SupabaseService {
     logAiInteraction(userPrompt: string, intent: string, functionName: string, parameters: any, query: string, queryResult: any, finalReply: string, responseTimeMs: number, errorMsg?: string): Promise<void>;
     getPelanggaran(santriId: string): Promise<any[]>;
     getPrestasi(santriId: string): Promise<any[]>;
+    getJadwalGuru(guruId: string, dayName?: string): Promise<{
+        guruNama: any;
+        dayName: string;
+        schedules: any[];
+    }>;
+    getJadwalSantri(santriId: string, dayName?: string): Promise<{
+        santriNama: string;
+        schedules: any[];
+        kelasNama?: undefined;
+        halaqohNama?: undefined;
+        dayName?: undefined;
+    } | {
+        santriNama: any;
+        kelasNama: string;
+        halaqohNama: string;
+        dayName: string;
+        schedules: {
+            id: any;
+            hari: any;
+            tipe: any;
+            jam_ke: any;
+            jam_mulai: any;
+            jam_selesai: any;
+            mapelNama: string;
+            guruNama: string;
+        }[];
+    }>;
+    getKalenderAkademik(filterUpcoming?: boolean): Promise<any[]>;
+    getPerizinanSantri(santriId: string): Promise<{
+        id: any;
+        tanggal: any;
+        status: any;
+        keterangan: any;
+        created_at: any;
+    }[]>;
+    getPerizinanGuru(guruId: string): Promise<any[]>;
+    getInfoPondok(topik?: string): {
+        topik: string;
+        data: {
+            bank: string;
+            nomor: string;
+            atasNama: string;
+            konfirmasi: string;
+        };
+        namaPondok: string;
+        alamat?: undefined;
+        info?: undefined;
+    } | {
+        topik: string;
+        alamat: string;
+        namaPondok: string;
+        data?: undefined;
+        info?: undefined;
+    } | {
+        topik: string;
+        data: {
+            aturan: string;
+        };
+        namaPondok: string;
+        alamat?: undefined;
+        info?: undefined;
+    } | {
+        topik: string;
+        info: {
+            namaPondok: string;
+            alamat: string;
+            sambangan: {
+                hari: string;
+                jam: string;
+                aturan: string;
+            };
+            rekening: {
+                bank: string;
+                nomor: string;
+                atasNama: string;
+                konfirmasi: string;
+            };
+            kirimanPaket: {
+                aturan: string;
+            };
+            kegiatanHarian: {
+                madrasah: string;
+                halaqoh: string;
+            };
+        };
+        data?: undefined;
+        namaPondok?: undefined;
+        alamat?: undefined;
+    };
 }

@@ -956,4 +956,267 @@ export class SupabaseService {
     if (error) throw error;
     return data;
   }
+
+  // Get teaching schedule for a teacher (guru)
+  async getJadwalGuru(guruId: string, dayName?: string) {
+    try {
+      // 1. Ambil data guru untuk referensi user_id
+      const { data: guruData } = await this.supabase
+        .from('guru')
+        .select('id, nama, user_id')
+        .eq('id', guruId)
+        .maybeSingle();
+
+      const guruUserId = guruData?.user_id;
+
+      // 2. Ambil jadwal pelajaran madrasah & halaqoh
+      let madrasahQuery = this.supabase
+        .from('jadwal_pelajaran')
+        .select('id, hari, jam_ke, jam_mulai, jam_selesai, tipe, kelas_id, mapel_id, halaqoh_id, referensi_id, guru_id, kelas(nama), mata_pelajaran(nama)');
+
+      if (dayName) {
+        madrasahQuery = madrasahQuery.eq('hari', dayName);
+      }
+
+      const { data: rawJadwal, error: jadwalErr } = await madrasahQuery;
+      if (jadwalErr) throw jadwalErr;
+
+      // 3. Ambil halaqoh yang dimusyrifi oleh guru ini
+      const { data: myHalaqohDirect } = await this.supabase
+        .from('halaqoh')
+        .select('id, nama')
+        .eq('musyrif_id', guruId);
+
+      let halaqohIds = (myHalaqohDirect || []).map(h => h.id);
+
+      if (guruUserId) {
+        const { data: mhList } = await this.supabase
+          .from('musyrif_halaqoh')
+          .select('halaqoh_id')
+          .eq('user_id', guruUserId);
+        if (mhList && mhList.length > 0) {
+          mhList.forEach(m => {
+            if (!halaqohIds.includes(m.halaqoh_id)) halaqohIds.push(m.halaqoh_id);
+          });
+        }
+      }
+
+      const { data: allHalaqoh } = await this.supabase
+        .from('halaqoh')
+        .select('id, nama');
+      const halaqohMap = (allHalaqoh || []).reduce((acc, h) => ({ ...acc, [h.id]: h.nama }), {} as Record<string, string>);
+
+      const resolveRelName = (rel: any): string => {
+        if (!rel) return '';
+        if (Array.isArray(rel)) return rel[0]?.nama || '';
+        return rel.nama || '';
+      };
+
+      // Filter jadwal yang milik guru ini
+      const matchingSchedules: any[] = [];
+      ((rawJadwal as any[]) || []).forEach(j => {
+        const isMyDirect = j.guru_id === guruId;
+        const isMyHalaqoh = (j.tipe === 'HALAQOH' || j.halaqoh_id) && (
+          halaqohIds.includes(j.halaqoh_id) || halaqohIds.includes(j.referensi_id) || isMyDirect
+        );
+
+        if (isMyDirect || isMyHalaqoh) {
+          const targetNama = isMyHalaqoh
+            ? (halaqohMap[j.halaqoh_id || j.referensi_id] || 'Kelompok Halaqoh')
+            : (resolveRelName(j.kelas) || 'Kelas');
+          const mapelNama = isMyHalaqoh ? 'Halaqoh Tahfidz' : (resolveRelName(j.mata_pelajaran) || 'Pelajaran');
+
+          matchingSchedules.push({
+            id: j.id,
+            hari: j.hari,
+            tipe: isMyHalaqoh ? 'HALAQOH' : 'MADROSAH',
+            jam_ke: j.jam_ke || 1,
+            jam_mulai: j.jam_mulai,
+            jam_selesai: j.jam_selesai,
+            targetNama,
+            mapelNama
+          });
+        }
+      });
+
+      // Sort kronologis
+      matchingSchedules.sort((a, b) => {
+        if (a.hari !== b.hari) return 0;
+        if (a.jam_mulai && b.jam_mulai) return a.jam_mulai.localeCompare(b.jam_mulai);
+        return Number(a.jam_ke || 0) - Number(b.jam_ke || 0);
+      });
+
+      return {
+        guruNama: guruData?.nama || 'Ustadz',
+        dayName: dayName || 'Semua Hari',
+        schedules: matchingSchedules
+      };
+    } catch (err) {
+      this.logger.error(`Error getJadwalGuru (${guruId}):`, err);
+      throw err;
+    }
+  }
+
+  // Get student schedule (kelas & halaqoh)
+  async getJadwalSantri(santriId: string, dayName?: string) {
+    try {
+      const { data: santri, error: sErr } = await this.supabase
+        .from('santri')
+        .select('id, nama, kelas_id, halaqoh_id, kelas(nama), halaqoh(nama)')
+        .eq('id', santriId)
+        .maybeSingle();
+
+      if (sErr || !santri) return { santriNama: 'Santri', schedules: [] };
+
+      const santriData = santri as any;
+      let query = this.supabase
+        .from('jadwal_pelajaran')
+        .select('id, hari, jam_ke, jam_mulai, jam_selesai, tipe, kelas_id, mapel_id, halaqoh_id, mata_pelajaran(nama), guru(nama)')
+        .or(`kelas_id.eq.${santriData.kelas_id || '00000000-0000-0000-0000-000000000000'},halaqoh_id.eq.${santriData.halaqoh_id || '00000000-0000-0000-0000-000000000000'}`);
+
+      if (dayName) {
+        query = query.eq('hari', dayName);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const resolveRelName = (rel: any): string => {
+        if (!rel) return '';
+        if (Array.isArray(rel)) return rel[0]?.nama || '';
+        return rel.nama || '';
+      };
+
+      const formatted = ((data as any[]) || []).map(j => ({
+        id: j.id,
+        hari: j.hari,
+        tipe: j.tipe || (j.halaqoh_id ? 'HALAQOH' : 'MADROSAH'),
+        jam_ke: j.jam_ke || 1,
+        jam_mulai: j.jam_mulai,
+        jam_selesai: j.jam_selesai,
+        mapelNama: resolveRelName(j.mata_pelajaran) || (j.tipe === 'HALAQOH' ? 'Halaqoh Tahfidz' : 'Pelajaran'),
+        guruNama: resolveRelName(j.guru) || 'Ustadz Pengampu'
+      }));
+
+      formatted.sort((a, b) => {
+        if (a.hari !== b.hari) return 0;
+        if (a.jam_mulai && b.jam_mulai) return a.jam_mulai.localeCompare(b.jam_mulai);
+        return Number(a.jam_ke || 0) - Number(b.jam_ke || 0);
+      });
+
+      return {
+        santriNama: santriData.nama,
+        kelasNama: resolveRelName(santriData.kelas),
+        halaqohNama: resolveRelName(santriData.halaqoh),
+        dayName: dayName || 'Semua Hari',
+        schedules: formatted
+      };
+    } catch (err) {
+      this.logger.error(`Error getJadwalSantri (${santriId}):`, err);
+      throw err;
+    }
+  }
+
+  // Get kalender akademik events and holidays
+  async getKalenderAkademik(filterUpcoming: boolean = true) {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      let query = this.supabase
+        .from('kalender_akademik')
+        .select('*')
+        .order('tanggal_mulai', { ascending: true });
+
+      if (filterUpcoming) {
+        // Ambil agenda dari awal bulan ini ke depan
+        const firstDayOfMonth = today.slice(0, 7) + '-01';
+        query = query.gte('tanggal_selesai', firstDayOfMonth);
+      }
+
+      const { data, error } = await query.limit(10);
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      this.logger.warn('Gagal mengambil kalender akademik:', err);
+      return [];
+    }
+  }
+
+  // Get student leave / perizinan history
+  async getPerizinanSantri(santriId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('presensi')
+        .select('id, tanggal, status, keterangan, created_at')
+        .eq('santri_id', santriId)
+        .in('status', ['izin', 'Izin', 'sakit', 'Sakit'])
+        .order('tanggal', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      this.logger.error(`Error getPerizinanSantri (${santriId}):`, err);
+      return [];
+    }
+  }
+
+  // Get teacher leave / perizinan history
+  async getPerizinanGuru(guruId: string) {
+    try {
+      const { data, error } = await this.supabase
+        .from('izin_guru')
+        .select('*')
+        .eq('guru_id', guruId)
+        .order('tanggal_mulai', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      this.logger.warn(`Error getPerizinanGuru (${guruId}):`, err);
+      return [];
+    }
+  }
+
+  // Get pesantren knowledge & common info
+  getInfoPondok(topik?: string) {
+    const rawTopik = (topik || '').toLowerCase();
+    const info = {
+      namaPondok: "Pesantren Tahfidz Al-Qur'an Al-Usymuni (PTQA) Batuan",
+      alamat: "Kompleks Pondok Pesantren Al-Usymuni, Desa Batuan, Kec. Batuan, Kab. Sumenep, Madura, Jawa Timur 69451",
+      sambangan: {
+        hari: "Setiap Hari Ahad (Minggu)",
+        jam: "Pukul 08.00 - 17.00 WIB",
+        aturan: "Wali santri melapor ke pos keamanan/pengurus, berbusana muslim/muslimah rapi & sopan, dan menjaga kebersihan lingkungan pondok."
+      },
+      rekening: {
+        bank: "Bank Syariah Indonesia (BSI)",
+        nomor: "7188899912",
+        atasNama: "Pesantren Tahfidz Al-Qur'an Al-Usymuni",
+        konfirmasi: "Kirim bukti transfer ke WhatsApp CS SI-TAQUA ini atau bendahara pondok."
+      },
+      kirimanPaket: {
+        aturan: "Paket barang atau makanan dititipkan melalui Pos Keamanan / Pengurus Putra/Putri dengan mencantumkan Nama Lengkap Santri dan Kelas/Kamar."
+      },
+      kegiatanHarian: {
+        madrasah: "KBM Sekolah Pagi: 07.00 - 12.00 WIB",
+        halaqoh: "Tahfidz Al-Qur'an: Ba'da Subuh, Ba'da Ashar, dan Ba'da Maghrib/Isya"
+      }
+    };
+
+    if (rawTopik.includes('kunjung') || rawTopik.includes('sambang') || rawTopik.includes('besuk') || rawTopik.includes('jenguk')) {
+      return { topik: 'sambangan', data: info.sambangan, namaPondok: info.namaPondok };
+    }
+    if (rawTopik.includes('rekening') || rawTopik.includes('transfer') || rawTopik.includes('bayar') || rawTopik.includes('bank')) {
+      return { topik: 'rekening', data: info.rekening, namaPondok: info.namaPondok };
+    }
+    if (rawTopik.includes('alamat') || rawTopik.includes('lokasi') || rawTopik.includes('peta') || rawTopik.includes('tempat')) {
+      return { topik: 'alamat', alamat: info.alamat, namaPondok: info.namaPondok };
+    }
+    if (rawTopik.includes('paket') || rawTopik.includes('kirim') || rawTopik.includes('titip')) {
+      return { topik: 'paket', data: info.kirimanPaket, namaPondok: info.namaPondok };
+    }
+
+    return { topik: 'umum', info };
+  }
 }
