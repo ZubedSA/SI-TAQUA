@@ -214,14 +214,24 @@ let AiService = AiService_1 = class AiService {
                 });
                 this.geminiResponseModel = this.genAI.getGenerativeModel({
                     model: 'gemini-1.5-flash',
-                    systemInstruction: `Kamu adalah AI Assistant Sistem Manajemen Pondok.
-Tugasmu hanya menyusun jawaban berdasarkan data yang diberikan backend.
-Jangan pernah membuat data sendiri. Jangan pernah menebak. Jangan pernah mengarang.
-Jika backend tidak memberikan data maka katakan data tidak ditemukan.
-Semua jawaban harus berasal dari database.
-Gunakan bahasa yang sopan, Islami, dan ramah.
-Gunakan *bold* untuk penegasan. Jangan gunakan markdown lain seperti HTML/backticks.
-Jika data kosong atau error, sampaikan dengan jujur. Jangan berhalusinasi.`
+                    systemInstruction: `Kamu adalah Asisten AI WhatsApp Resmi untuk Pondok Pesantren Tahfidz Qur'an Al-Usymuni (PTQA) Batuan, Sumenep, Madura (Sistem SI-TAQUA).
+
+Karakter & Etika Komunikasi:
+1. Penuh adab Islami khas pesantren, hangat, ramah, santun, dan empatik (tidak kaku seperti robot).
+2. Pembedaan Lawan Bicara:
+   - Jika pengguna adalah Wali Santri: Sapa dengan hangat penuh rasa kekeluargaan menggunakan "Ayah/Bunda" atau "Bapak/Ibu", serta doakan keberkahan untuk ananda santri.
+   - Jika pengguna adalah Ustadz/Ustadzah (Guru Pondok): Sapa dengan rasa hormat dan takzim menggunakan "Ustadz/Ustadzah", serta doakan keistiqamahan dan pahala jariyah dalam membimbing santri.
+3. Kesopanan Percakapan (Chitchat & Sapaan):
+   - Jika ada yang mengucapkan salam ("Assalamu'alaikum"): Balas dengan salam lengkap yang ramah ("Wa'alaikumussalam Warahmatullahi Wabarakatuh...").
+   - Jika ada yang mengucapkan terima kasih ("Jazakallah", "Syukron", "Terima kasih"): Balas dengan hangat ("Wa jazakallahu khairan", "Sama-sama Ayah/Bunda...").
+   - Jika ada obrolan santai atau sapaan pembuka: Balas dengan luwes dan tawarkan bantuan secara wajar tanpa memaksakan menu kaku yang panjang.
+4. Sentuhan Empati & Doa:
+   - Jika santri tercatat sakit: Sertakan doa kesembuhan yang tulus ("Syafakallah / Syafakillah, semoga ananda lekas sehat kembali...").
+   - Jika santri berprestasi atau hafalannya bertambah lancar: Berikan apresiasi tulus ("Masya Allah Tabarakallah, semoga mutqin dan barokah...").
+   - Jika ada tagihan yang belum lunas: Sampaikan rinciannya secara jelas, transparan, dan bertutur kata santun tanpa membuat canggung.
+5. Integritas Data (Anti-Halusinasi):
+   - Jangan pernah mengarang data nominal uang, angka tagihan, nilai rapor, atau ayat hafalan. Semua data angka dan riwayat kegiatan santri HARUS bersumber murni dari data database yang disediakan oleh backend.
+   - Gunakan format *bold* untuk penegasan kata penting. Jangan gunakan format HTML atau backticks (\`\`\`).`
                 });
                 this.logger.log('AiService initialized: Gemini 1.5 Flash Parser & Response mode AKTIF.');
             }
@@ -565,15 +575,22 @@ Panduan menyusun jawaban:
 1. Jika tentang pembayaran/tagihan:
    - Sebutkan Bulan/Periode tagihan (ambil dari field jatuh_tempo atau keterangan, contoh: Juli 2026).
    - Sebutkan tanggal jatuh tempo, nominal, dan statusnya (Lunas/Belum Lunas).
-   - Jika intent cekTagihan: fokuskan pada tagihan yang BELUM LUNAS dan sebutkan total yang harus dibayar.
+   - Jika intent cekTagihan: fokuskan pada tagihan yang BELUM LUNAS dan sebutkan total yang harus dibayar dengan tutur bahasa yang santun dan menenangkan.
 2. Jika tentang kehadiran/absensi:
    - Jelaskan kehadiran hari ini (jika ada catatan hari ini) dan rangkum total hadir, sakit, izin, alfa.
+   - Jika ananda santri tercatat sakit, sertakan doa kesembuhan yang tulus ("Syafakallah / Syafakillah...").
 3. Jika tentang hafalan:
    - Sebutkan setoran terakhir (surah, juz, ayat, dan tanggal) serta riwayat sebelumnya.
+   - Berikan apresiasi dan doa keistiqamahan ("Masya Allah Tabarakallah, semoga berkah dan mutqin...").
 4. Jika tentang nilai:
-   - Sebutkan mata pelajaran, nilai tugas, UTS, UAS, dan nilai akhir.
+   - Sebutkan mata pelajaran, nilai tugas, UTS, UAS, dan nilai akhir secara terstruktur dan jelas.
 5. Jika rekap kolektif (belum setor, santri sakit, ranking):
    - Sajikan dalam bentuk daftar nomor urut yang rapi dan ringkas.
+6. Jika sapaan, salam, ucapan terima kasih, atau obrolan santai (chitchat):
+   - Jawablah secara hangat, luwes, bersahabat, dan beradab Islami.
+   - Balas salam dan doa dengan doa yang setara atau lebih baik.
+   - Jika bertanya kabar atau menyapa, tanyakan dengan ramah apa yang bisa dibantu mengenai ananda santri atau kegiatan pondok.
+   - JANGAN memaksakan daftar menu panjang berbaris-baris kecuali pengguna secara spesifik meminta daftar menu/panduan penggunaan.
 ${dataContext}`;
         const response = await this.geminiResponseModel.generateContent(promptText);
         return response.response.text().trim();
@@ -991,6 +1008,37 @@ ${dataContext}`;
             case 'get_jumlah_santri_aktif': {
                 const total = typeof dbResult === 'number' ? dbResult : (dbResult?.jumlah_santri_aktif || dbResult?.total || 0);
                 return `${getGreeting()}\n\n👥 Total santri *Aktif* di PTQ Al-Usymuni Batuan saat ini: *${total}* santri.${getClosing()}`;
+            }
+            case 'chitchat': {
+                const text = (userPrompt || '').toLowerCase().trim();
+                if (/assalamu|assalam|salam/i.test(text)) {
+                    return isGuru
+                        ? `Wa'alaikumussalam Warahmatullahi Wabarakatuh, Ustadz/Ustadzah ${guruName ? guruName + ' ' : ''}🧑‍🏫\n\nAhlan wa Sahlan! Alhamdulillah saya siap membantu antum. Apakah ada data jadwal mengajar, presensi santri, hafalan, atau rekap yang ingin dicek hari ini? 🤲`
+                        : `Wa'alaikumussalam Warahmatullahi Wabarakatuh, Ayah/Bunda. 😊\n\nAlhamdulillah, semoga Ayah/Bunda sekeluarga senantiasa dalam keadaan sehat dan penuh berkah. Ada yang bisa saya bantu terkait perkembangan ananda di pondok hari ini? 🤲`;
+                }
+                if (/terima\s*kasih|makasih|matur\s*nuwun|jazak|syukron|makasi|thanks/i.test(text)) {
+                    return isGuru
+                        ? `Wa jazakumullah khairan katsiran, Ustadz/Ustadzah. 🤲\nSemoga seluruh dedikasi dan keikhlasan antum dalam membimbing para santri bernilai amal jariyah dan pahala yang berlipat ganda. Aamiin ya Rabbal 'Alamin.`
+                        : `Sama-sama Ayah/Bunda! 😊 Senang sekali bisa membantu.\nSemoga ananda selalu diberikan kemudahan, keistiqamahan, dan keberkahan dalam menuntut ilmu dan menghafal Al-Qur'an di PTQ Al-Usymuni. Aamiin ya Rabbal 'Alamin. 🤲\n\nJika ada hal lain yang ingin dipantau, jangan sungkan ya.`;
+                }
+                if (/apa\s*kabar|kabarnya|gimana\s*kabarnya/i.test(text)) {
+                    return isGuru
+                        ? `Alhamdulillah, sistem SI-TAQUA berjalan lancar dan siap membantu antum. 🧑‍🏫 Semoga Ustadz/Ustadzah selalu diberikan kesehatan, kelapangan, dan kekuatan dalam mengajar santri. Ada data yang ingin dicek hari ini? 🤲`
+                        : `Alhamdulillah, kabar baik Ayah/Bunda. 😊 Semoga Ayah/Bunda sekeluarga juga senantiasa dinaungi kesehatan dan kebahagiaan oleh Allah SWT. Ada perkembangan ananda yang ingin dicek hari ini? 🤲`;
+                }
+                if (/^(halo|hai|hi|pagi|siang|sore|malam|selamat\s+pagi|selamat\s+siang|selamat\s+sore|selamat\s+malam)\b/i.test(text)) {
+                    return isGuru
+                        ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName ? guruName + ' ' : ''}! 🧑‍🏫\nSelamat datang di asisten virtual SI-TAQUA. Silakan beri tahu saya data santri atau agenda kelas yang ingin diakses hari ini.`
+                        : `Halo, salam hangat Ayah/Bunda! 😊\nSelamat datang di layanan informasi PTQ Al-Usymuni Batuan. Saya siap membantu memantau perkembangan hafalan, kehadiran, nilai, maupun administrasi SPP ananda. Silakan sebutkan nama ananda santri nggih.`;
+                }
+                if (/bisa\s*apa|menu|bantuan|fitur|cara\s*pakai|panduan|tolong/i.test(text)) {
+                    return isGuru
+                        ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu aktivitas pengajaran dan pemantauan santri:\n📖 *Cek Santri:* "Hafalan [nama]", "Kehadiran [nama]", "Nilai [nama]"\n📋 *Rekapitulasi:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan", "Total santri aktif"\n✍️ *Input Cepat:* "Input hafalan [nama] juz 30 surah An-Naba 1-20 lancar", "Input absensi [nama] sakit"\n\nSilakan ketik kebutuhan antum! 🤲`
+                        : `Assalamu'alaikum, Ayah/Bunda! 😊 Saya adalah *Asisten AI SI-TAQUA*.\n\nSaya siap membantu Ayah/Bunda memantau ananda di pondok:\n📖 *Hafalan:* ketik "Hafalan [nama ananda]"\n💰 *SPP & Pembayaran:* ketik "SPP [nama ananda]"\n📊 *Nilai Rapor:* ketik "Nilai [nama ananda]"\n✅ *Kehadiran:* ketik "Kehadiran [nama ananda]"\n💳 *Tagihan:* ketik "Tagihan [nama ananda]"\n\nSilakan tanyakan nama ananda atau hal yang ingin dipantau ya! 🤲`;
+                }
+                return isGuru
+                    ? `Nggih Ustadz/Ustadzah. 🧑‍🏫 Ada data mengajar, presensi santri, atau rekap setoran yang bisa saya bantu carikan saat ini? Silakan ketik kebutuhan antum nggih.`
+                    : `Nggih Ayah/Bunda. 😊 Senang bisa menemani Ayah/Bunda. Apakah ada informasi tentang ananda (seperti hafalan, kehadiran, atau SPP) yang ingin dicek hari ini?`;
             }
             default:
                 return isGuru

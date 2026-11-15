@@ -319,6 +319,20 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
     }
     async executeTeacherReminders(overrideDateStr) {
         this.logger.log(`[Scheduler] Memulai proses pengingat jadwal guru...`);
+        if (!overrideDateStr) {
+            const now = new Date();
+            const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false });
+            const [hStr, mStr] = timeFormatter.format(now).split(':');
+            const totalMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
+            if (totalMinutes < 360) {
+                this.logger.log(`[Scheduler] Belum pukul 06:00 WIB (${hStr}:${mStr} WIB). Skip.`);
+                return { success: true, skipped: true, message: `Belum pukul 06:00 WIB (sekarang ${hStr}:${mStr} WIB). Pengingat jadwal pagi dijadwalkan pukul 06:00 WIB.` };
+            }
+            if (totalMinutes > 420) {
+                this.logger.log(`[Scheduler] Sudah melewati batas maksimal pukul 07:00 WIB (${hStr}:${mStr} WIB). Skip.`);
+                return { success: true, skipped: true, message: `Sudah melewati batas maksimal pukul 07:00 WIB (sekarang ${hStr}:${mStr} WIB). Pengingat pagi tidak dikirim.` };
+            }
+        }
         const scheduleData = await this.getTodayTeacherSchedules(overrideDateStr);
         if (scheduleData.isHoliday) {
             return {

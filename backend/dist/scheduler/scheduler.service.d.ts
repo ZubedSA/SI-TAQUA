@@ -49,6 +49,17 @@ export declare class SchedulerService {
         success: boolean;
         skipped: boolean;
         message: string;
+        date?: undefined;
+        results?: undefined;
+        day?: undefined;
+        totalTeachers?: undefined;
+        successCount?: undefined;
+        failedCount?: undefined;
+        noPhoneCount?: undefined;
+    } | {
+        success: boolean;
+        skipped: boolean;
+        message: string;
         date: string;
         results: any[];
         day?: undefined;

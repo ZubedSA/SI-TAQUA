@@ -681,33 +681,14 @@ export class WebhookController {
         dbResult = { error: 'Terjadi gangguan saat mengambil data dari database. Coba lagi sebentar ya.' };
       }
 
-      let reply: string;
-      if (parsed.intent === 'chitchat') {
-        if (isGuru) {
-          reply = `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruNama ? guruNama + ' ' : ''}! 🧑‍🏫
-
-Saya adalah *Asisten AI SI-TAQUA*, siap membantu aktivitas pengajaran dan pemantauan santri:
-📖 *Cek Santri:* "Hafalan [nama]", "Kehadiran [nama]", "Nilai [nama]"
-📋 *Rekapitulasi:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Ranking hafalan", "Total santri aktif"
-✍️ *Input Cepat:* "Input hafalan Ahmad juz 30 surah An-Naba 1-20 lancar", "Input absensi Ahmad sakit"
-
-Silakan ketik kebutuhan antum! 🤲`;
-        } else {
-          // FIX #3: Pesan statis aman — JANGAN PERNAH pakai teks bebas Gemini untuk chitchat
-          reply = `Assalamu'alaikum! 😊 Saya adalah *Asisten AI SI-TAQUA*.
-
-Saya bisa membantu Anda dengan:
-📖 Cek hafalan santri
-💰 Status pembayaran SPP
-📊 Nilai akademis
-✅ Data kehadiran
-💳 Rincian tagihan
-
-Silakan tanyakan kebutuhan Anda! 🤲`;
-        }
-      } else {
-        reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
-      }
+      const reply = await this.aiService.generateResponse(
+        message,
+        parsed.intent,
+        dbResult,
+        sender,
+        isGuru,
+        guruNama
+      );
 
       await this.supabaseService.logAiInteraction(
         message,
