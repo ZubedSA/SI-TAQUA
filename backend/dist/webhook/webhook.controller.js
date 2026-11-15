@@ -284,6 +284,13 @@ let WebhookController = WebhookController_1 = class WebhookController {
                 parsed = { intent: 'chitchat', parameters: {} };
             }
             this.logger.log(`Intent/Function: ${parsed.intent} | Params: ${JSON.stringify(parsed.parameters)}`);
+            if (parsed.intent === 'chitchat') {
+                executedQuery = 'Conversational AI (Zero DB)';
+                dbResult = { status: 'chitchat' };
+                const reply = await this.aiService.generateResponse(message, 'chitchat', dbResult, sender, isGuru, guruNama);
+                await this.supabaseService.logAiInteraction(message, 'chitchat', 'chitchat', parsed.parameters || {}, executedQuery, dbResult, reply, Date.now() - startTime);
+                return this.replyToUser(res, sender, reply, messageId);
+            }
             const writeIntents = ['tambahPembayaran', 'tambahHafalan', 'tambahAbsensi', 'tambahNilai',
                 'tambahPelanggaran', 'tambahPrestasi', 'tambahCatatanGuru',
                 'tambah_pembayaran', 'tambah_hafalan', 'tambah_absensi', 'tambah_nilai',

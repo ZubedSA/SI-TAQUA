@@ -396,6 +396,26 @@ export class WebhookController {
       this.logger.log(`Intent/Function: ${parsed.intent} | Params: ${JSON.stringify(parsed.parameters)}`);
 
       // ----------------------------------------------------------------
+      // CHAT SANTAI / CONVERSATIONAL AI (ZERO DATABASE BYPASS)
+      // ----------------------------------------------------------------
+      if (parsed.intent === 'chitchat') {
+        executedQuery = 'Conversational AI (Zero DB)';
+        dbResult = { status: 'chitchat' };
+        const reply = await this.aiService.generateResponse(message, 'chitchat', dbResult, sender, isGuru, guruNama);
+        await this.supabaseService.logAiInteraction(
+          message,
+          'chitchat',
+          'chitchat',
+          parsed.parameters || {},
+          executedQuery,
+          dbResult,
+          reply,
+          Date.now() - startTime
+        );
+        return this.replyToUser(res, sender, reply, messageId);
+      }
+
+      // ----------------------------------------------------------------
       // WRITE ACTIONS — perlu konfirmasi dan hak akses guru
       // ----------------------------------------------------------------
       const writeIntents = ['tambahPembayaran', 'tambahHafalan', 'tambahAbsensi', 'tambahNilai',

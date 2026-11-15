@@ -23,7 +23,20 @@ export class AiService {
         // Parser model: systemInstruction HARUS di getGenerativeModel(), bukan di generateContent()
         this.geminiParserModel = this.genAI.getGenerativeModel({
           model: 'gemini-1.5-flash',
-          systemInstruction: 'Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA. Analisis pesan pengguna dan panggil salah satu fungsi (Function Calling/Tools) yang sesuai beserta parameternya. Jika pesan adalah sapaan ramah, salam, terima kasih, atau percakapan santai biasa, panggil fungsi chitchat. Jangan pernah mengarang data. Argumen santri_name hanya boleh diisi nama orang aslinya saja, JANGAN sertakan kata sebutan awalan seperti "santri", "siswa", "anak", "atas nama", atau "ananda". PENTING: JANGAN PERNAH mengisi santri_name dengan nama kelas (contoh: "Kelas 2", "Kelas 1", "VII"), halaqoh, atau kata agregat. Jika pengguna menanyakan jumlah, total, atau daftar santri di suatu kelas/halaqoh/seluruh pondok (contoh: "Berapa jumlah santri kelas 2", "santri kelas 1 ada berapa", "total santri aktif"), WAJIB panggil fungsi cekSantriAktif dengan parameter kelas atau halaqoh.',
+          systemInstruction: `Kamu adalah parser intent untuk AI Assistant Sistem Manajemen Pondok SI-TAQUA.
+Tugas utamamu adalah membedakan dengan tegas antara dua jenis pesan:
+
+1. CHAT SANTAI / KONSULTASI / SIKAP RAMAH (WAJIB panggil fungsi "chitchat"):
+   - Sapaan, salam ("Assalamu'alaikum"), ucapan terima kasih ("Jazakallah", "Syukron", "Matur nuwun"), atau permohonan doa.
+   - Menanyakan kabar ("Gimana kabarnya?", "Kabar pondok hari ini?", "Sehat selalu ustadz").
+   - Curhat wali santri atau ustadz, obrolan santai sehari-hari, pertanyaan umum (cuaca, suasana, kondisi santri secara umum).
+   - Permintaan tips, nasihat islami, motivasi belajar/hafalan (misal: "Tips agar anak rajin muraja'ah", "Adab santri", "Cara agar santri mutqin").
+   - Pertanyaan atau tanggapan yang TIDAK meminta data rekaman database spesifik aplikasi SI-TAQUA.
+
+2. PERMINTAAN DATA APLIKASI (panggil fungsi data yang spesifik):
+   - Hanya panggil fungsi data jika pengguna meminta data faktual spesifik di sistem (cekTagihan, cekPembayaran, cekHafalan, cekNilai, cekAbsensi, cekSantri, cekJadwal, cekKalender, cekInfoPondok, cekSantriAktif, atau input data).
+   - Parameter santri_name HANYA boleh berisi nama orang asli (JANGAN diisi nama kelas seperti "Kelas 2", kelompok halaqoh, atau kata benda umum).
+   - Jika menanyakan jumlah/total/daftar santri di kelas atau halaqoh, panggil cekSantriAktif dengan parameter kelas/halaqoh.`,
           tools: [{
             functionDeclarations: [
               {
@@ -235,7 +248,7 @@ export class AiService {
               },
               {
                 name: 'chitchat',
-                description: 'Percakapan umum, salam pembuka, sapaan, terima kasih, chitchat, pertanyaan di luar konteks pondok',
+                description: 'Percakapan santai, salam pembuka, sapaan, ucapan terima kasih, curhat wali/ustadz, doa, diskusi ringan, tips/nasihat belajar santri, atau pertanyaan umum di luar konteks database pondok',
                 parameters: {
                   type: SchemaType.OBJECT,
                   properties: {
@@ -449,7 +462,27 @@ Karakter & Etika Komunikasi:
       return result;
     }
 
-    // 2. Extract Santri Name — ekstraksi nama dengan regex yang lebih cerdas dan fleksibel
+    // 2. Cek apakah pesan mengandung indikasi permintaan DATA APLIKASI
+    const hasDataKeyword = /\b(jadwal|mengajar|ngajar|hafalan|setoran|tahfidz|ziyadah|muroja|surah|surat|juz|ayat|nilai|rapor|raport|ujian|ulangan|uts|uas|absen|absensi|kehadiran|presensi|izin|sakit|alfa|bayar|pembayaran|tagihan|tunggakan|spp|nominal|biaya|kalender|libur|sambang|sambangan|rekening|jumlah\s+santri|total\s+santri|santri\s+aktif|kelas\s+\d+|peringkat|ranking|pelanggaran)\b/i.test(text);
+
+    // Deteksi Percakapan Santai / Salam / Curhat / Konsultasi / Doa (Mode Chit-Chat Murni)
+    const isChitChatStrict =
+      /^(halo|hai|hei|hey|tes|test|ping|p)$/i.test(text) ||
+      /\b(assalamu|assalam|salam|waalaikum|walaikum)\b/i.test(text) ||
+      /\b(terima\s*kasih|makasih|matur\s*nuwun|jazak|syukron|thanks|thank\s*you)\b/i.test(text) ||
+      /\b(apa\s*kabar|kabarnya|gimana\s*kabarnya|bagaimana\s*kabarnya|sehat|sehat\s*selalu)\b/i.test(text) ||
+      /\b(tips|nasihat|adab|motivasi|semangat|curhat|konsultasi|bimbingan|saran|masukan)\b/i.test(text) ||
+      /\b(doakan|minta\s*doa|mohon\s*doa|barakallah|barokallah|masya\s*allah|insya\s*allah|subhanallah)\b/i.test(text) ||
+      /\b(mau\s*tanya|boleh\s*tanya|bisa\s*tanya|mau\s*nanya|boleh\s*nanya|bisa\s*nanya|permisi|afwan)\b/i.test(text) ||
+      /\b(cuaca|hujan|panas|mendung|dingin|kondisi\s*pondok|suasana\s*pondok|kabar\s*pondok)\b/i.test(text);
+
+    // JIKA pesan adalah obrolan santai murni tanpa meminta data aplikasi, LANGSUNG jadikan chitchat!
+    if (isChitChatStrict && !hasDataKeyword) {
+      result.intent = 'chitchat';
+      return result;
+    }
+
+    // 3. Extract Santri Name — ekstraksi nama dengan regex yang lebih cerdas dan fleksibel
     let santriName = '';
 
     // Pola 1: Konteks kata kunci diikuti nama santri (JANGAN sertakan 'jadwal')
@@ -481,19 +514,29 @@ Karakter & Etika Komunikasi:
       }
     }
 
-    // Pola 4: Standalone name / jawaban singkat (1-4 kata, tanpa sapaan chitchat)
-    // Contoh: "wildan", "ahmad wildan", "wildan ramdlani", "si wildan"
-    if (!santriName) {
-      const isGreeting = /^(halo|hai|assalamu|assalamualaikum|salam|pagi|siang|sore|malam|terima\s+kasih|makasih|bantuan|menu|help|info)$/i.test(text);
-      if (!isGreeting) {
-        const words = text.split(/\s+/).filter(Boolean);
-        if (words.length >= 1 && words.length <= 4) {
-          const isAlphaOnly = words.every(w => /^[a-z0-9]+$/i.test(w));
-          if (isAlphaOnly) {
-            const cleaned = this.cleanSantriName(userPrompt);
-            if (cleaned && cleaned.length >= 2) {
-              santriName = cleaned;
-            }
+    // Pola 4: Standalone name / jawaban singkat (1-4 kata, khusus nama santri asli)
+    // Contoh: "wildan", "ahmad wildan", "faisal"
+    if (!santriName && !hasDataKeyword) {
+      const CONVERSATIONAL_WORDS = new Set([
+        'ada', 'apa', 'bagaimana', 'gimana', 'siapa', 'kenapa', 'mengapa', 'mana', 'dimana',
+        'mau', 'bisa', 'boleh', 'minta', 'tolong', 'terima', 'kasih', 'sehat', 'kabar', 'kabarnya',
+        'cuaca', 'panas', 'hujan', 'tips', 'doakan', 'doa', 'nanya', 'tanya', 'santai', 'sibuk',
+        'lagi', 'sedang', 'sudah', 'belum', 'sekarang', 'nanti', 'kemarin', 'besok', 'hari',
+        'malam', 'pagi', 'siang', 'sore', 'nggih', 'ya', 'dong', 'kah', 'oke', 'sip', 'amin',
+        'aamiin', 'alhamdulillah', 'bismillah', 'insyaallah', 'masyaallah', 'syukron', 'afwan',
+        'halo', 'hai', 'salam', 'assalamu', 'assalamualaikum', 'waalaikumsalam', 'baik', 'jelek',
+        'dingin', 'sejuk', 'ramai', 'sepi', 'banget', 'sekali', 'saja', 'dong', 'deh', 'pun'
+      ]);
+
+      const words = text.split(/\s+/).filter(Boolean);
+      const hasChatWord = words.some(w => CONVERSATIONAL_WORDS.has(w));
+
+      if (!hasChatWord && words.length >= 1 && words.length <= 4) {
+        const isAlphaOnly = words.every(w => /^[a-z0-9]+$/i.test(w));
+        if (isAlphaOnly) {
+          const cleaned = this.cleanSantriName(userPrompt);
+          if (cleaned && cleaned.length >= 2) {
+            santriName = cleaned;
           }
         }
       }
@@ -788,11 +831,13 @@ Panduan menyusun jawaban:
    - Sebutkan mata pelajaran, nilai tugas, UTS, UAS, dan nilai akhir secara terstruktur dan jelas.
 5. Jika rekap kolektif (belum setor, santri sakit, ranking):
    - Sajikan dalam bentuk daftar nomor urut yang rapi dan ringkas.
-6. Jika sapaan, salam, ucapan terima kasih, atau obrolan santai (chitchat):
-   - Jawablah secara hangat, luwes, bersahabat, dan beradab Islami.
-   - Balas salam dan doa dengan doa yang setara atau lebih baik.
-   - Jika bertanya kabar atau menyapa, tanyakan dengan ramah apa yang bisa dibantu mengenai ananda santri atau kegiatan pondok.
-   - JANGAN memaksakan daftar menu panjang berbaris-baris kecuali pengguna secara spesifik meminta daftar menu/panduan penggunaan.
+6. Jika percakapan santai, konsultasi, sapaan, ucapan terima kasih, curhat, nasihat, atau doa (chitchat):
+   - Jawablah secara manusiawi, luwes, bijak, hangat, dan beradab Islami khas kultur pondok pesantren PTQ Al-Usymuni Batuan.
+   - Balas salam lengkap ("Wa'alaikumussalam Warahmatullahi Wabarakatuh...") dan doakan kebaikan yang berlimpah.
+   - Jika pengguna curhat atau meminta tips/nasihat (misal: tips muraja'ah santri, motivasi tholabul ilmi, adab menghafal Al-Qur'an, doa keistiqamahan): berikan motivasi dan tips bijak yang menyejukkan hati dan penuh hikmah.
+   - Jika pengguna bertanya santai (kabar, cuaca, suasana pondok): jawablah dengan ramah dan wajar layaknya ustadz/pengurus pondok yang bersahabat.
+   - Tunjukkan empati mendalam layaknya pengurus/ustadz pondok yang mengayomi.
+   - JANGAN mencari-cari nama santri di database dan JANGAN memaksakan menu fitur yang panjang kecuali jika pengguna memang bertanya fitur yang tersedia.
 7. Jika tentang jadwal (cekJadwal):
    - Pahami maksud dan pertanyaan pengguna secara cerdas, kontekstual, peka, dan solutif (bukan template kaku).
    - Perhatikan konteks hari ini dari field currentDayName pada data (misal: hari ini Ahad):
@@ -1510,14 +1555,42 @@ ${dataContext}`;
             : `Alhamdulillah, kabar baik Ayah/Bunda. 😊 Semoga Ayah/Bunda sekeluarga juga senantiasa dinaungi kesehatan dan kebahagiaan oleh Allah SWT. Ada perkembangan ananda yang ingin dicek hari ini? 🤲`;
         }
 
-        // 4. Sapaan Ramah (Halo, Hai, Selamat Pagi/Siang/Sore/Malam)
+        // 4. Izin Bertanya ("Mau tanya", "Boleh nanya")
+        if (/mau\s*tanya|boleh\s*tanya|bisa\s*tanya|mau\s*nanya|boleh\s*nanya|bisa\s*nanya|permisi/i.test(text)) {
+          return isGuru
+            ? `Tentu, tafadhdhal Ustadz/Ustadzah! 🧑‍🏫 Silakan sampaikan apa yang ingin antum tanyakan atau cek di SI-TAQUA, saya siap membantu.`
+            : `Nggih mangga Ayah/Bunda, tentu sangat boleh! 😊 Silakan tanyakan apa saja yang ingin diketahui seputar ananda atau pondok, saya siap membantu dengan senang hati.`;
+        }
+
+        // 5. Tips, Nasihat, Adab, Muraja'ah & Motivasi Belajar/Hafalan
+        if (/tips|nasihat|adab|motivasi|muraja|semangat|curhat|konsultasi|bimbingan/i.test(text)) {
+          return isGuru
+            ? `Masya Allah, Ustadz/Ustadzah ${guruName || ''}. 🤲\n\nDalam membimbing para santri penghafal Al-Qur'an, kunci utamanya adalah keikhlasan, kesabaran, dan istiqamah dalam muraja'ah berkala. Rasulullah SAW mengingatkan bahwa Al-Qur'an lebih cepat lepas daripada unta dari ikatannya jika tidak dijaga.\n\nSemoga Allah Ta'ala senantiasa melimpahkan kelapangan dada dan pahala jariyah yang mengalir tanpa henti untuk antum sekeluarga. Aamiin ya Rabbal 'Alamin. 🤲`
+            : `Masya Allah, Ayah/Bunda. 😊\n\nKunci keberhasilan ananda dalam menghafal Al-Qur'an di pondok adalah doa tulus orang tua di setiap sepertiga malam, ridho orang tua, dan suasana hati yang tenang. Motivasi ananda dengan penuh cinta dan hindari membanding-bandingkan capaian hafalan.\n\nSemoga ananda tumbuh menjadi ahlul Qur'an yang mutqin, berakhlak mulia, dan menghadiahkan mahkota kemuliaan bagi Ayah/Bunda di akhirat kelak. Aamiin ya Rabbal 'Alamin. 🤲`;
+        }
+
+        // 6. Permohonan Doa & Doa Kebaikan
+        if (/doakan|mohon\s*doa|minta\s*doa|barakallah|barokallah|sehat\s*selalu/i.test(text)) {
+          return isGuru
+            ? `Aamiin Aamiin ya Rabbal 'Alamin. 🤲\nJazakumullah khairan katsiran atas doa dan dedikasinya, Ustadz/Ustadzah. Semoga antum dan keluarga senantiasa berada dalam lindungan, kesehatan, dan keberkahan Allah SWT.`
+            : `Aamiin Aamiin ya Rabbal 'Alamin. 🤲\nJazakumullah khairan Ayah/Bunda atas doa dan kepercayaannya kepada PTQ Al-Usymuni Batuan. Semoga Ayah/Bunda sekeluarga senantiasa dilimpahkan kesehatan, rizki yang berkah, dan kemudahan dalam segala urusan.`;
+        }
+
+        // 7. Cuaca / Suasana / Keadaan Pondok
+        if (/cuaca|hujan|panas|suasana|kondisi|kabar\s*pondok/i.test(text)) {
+          return isGuru
+            ? `Alhamdulillah, suasana di pesantren PTQ Al-Usymuni Batuan senantiasa hidup dengan lantunan ayat-ayat suci Al-Qur'an para santri. 🕌 Semoga aktivitas mengajar dan berdakwah antum hari ini berjalan lancar penuh berkah. 🤲`
+            : `Alhamdulillah, suasana di pondok pesantren PTQA Batuan terpantau kondusif, damai, dan para santri beraktivitas dengan penuh semangat menuntut ilmu dan menghafal Al-Qur'an. 🕌 Semoga ananda selalu betah dan istiqamah nggih Ayah/Bunda. 🤲`;
+        }
+
+        // 8. Sapaan Ramah (Halo, Hai, Selamat Pagi/Siang/Sore/Malam)
         if (/^(halo|hai|hi|pagi|siang|sore|malam|selamat\s+pagi|selamat\s+siang|selamat\s+sore|selamat\s+malam)\b/i.test(text)) {
           return isGuru
             ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName ? guruName + ' ' : ''}! 🧑‍🏫\nSelamat datang di asisten virtual SI-TAQUA. Silakan beri tahu saya data santri atau agenda kelas yang ingin diakses hari ini.`
             : `Halo, salam hangat Ayah/Bunda! 😊\nSelamat datang di layanan informasi PTQ Al-Usymuni Batuan. Saya siap membantu memantau perkembangan hafalan, kehadiran, nilai, maupun administrasi SPP ananda. Silakan sebutkan nama ananda santri nggih.`;
         }
 
-        // 5. Permintaan Bantuan / Menu / Panduan Penggunaan
+        // 9. Permintaan Bantuan / Menu / Panduan Penggunaan
         if (/bisa\s*apa|menu|bantuan|fitur|cara\s*pakai|panduan|tolong/i.test(text)) {
           return isGuru
             ? `Ahlan wa Sahlan, Ustadz/Ustadzah ${guruName || ''}! 🧑‍🏫\n\nSaya adalah *Asisten AI SI-TAQUA*, siap membantu seluruh aktivitas pengajaran dan manajemen santri antum:\n\n📅 *Jadwal Mengajar:* "Kapan jadwal mengajar saya?", "Jadwal hari ini", "Jadwal besok"\n📖 *Data Santri:* "Hafalan [nama]", "Kehadiran [nama]", "Nilai [nama]", "Profil [nama]"\n📋 *Rekap Operasional:* "Siapa yang belum setor hari ini?", "Santri yang sakit hari ini", "Santri yang izin hari ini", "Ranking hafalan", "Total santri aktif"\n🗓️ *Kalender & Libur:* "Kalender akademik", "Kapan libur pondok?"\n🕌 *Info Pondok:* "Jadwal sambangan", "Rekening pondok", "Alamat pondok"\n✍️ *Input Cepat:* "Input hafalan [nama] juz 30 surah An-Naba 1-20 lancar", "Input absensi [nama] sakit"\n\nSilakan ketik pertanyaan atau perintah antum! 🤲`
