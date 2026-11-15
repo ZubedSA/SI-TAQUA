@@ -442,48 +442,54 @@ let WebhookController = WebhookController_1 = class WebhookController {
                     const days = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
                     targetDay = days[now.getUTCDay()];
                 }
-                const candidateSantriName = (parsed.parameters?.santri_name || '').trim();
-                if (isGuru && (!candidateSantriName || candidateSantriName.toLowerCase().includes('saya') || message.toLowerCase().includes('mengajar'))) {
-                    const currentGuru = await this.supabaseService.getGuruByPhone(sender);
-                    if (currentGuru) {
-                        executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
-                        dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
-                    }
-                    else {
-                        dbResult = { error: 'Nomor WhatsApp antum belum terhubung dengan data profil Guru/Ustadz aktif di SI-TAQUA.' };
-                    }
-                }
-                else {
-                    let targetSantri = null;
-                    let waliSantri = [];
-                    try {
-                        waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
-                    }
-                    catch (e) {
-                        this.logger.warn('Gagal ambil data wali santri untuk jadwal:', e);
-                    }
-                    if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak'))) {
-                        targetSantri = waliSantri[0];
-                    }
-                    else if (candidateSantriName) {
-                        const matches = await this.supabaseService.findSantriByName(candidateSantriName);
-                        const resSantri = this.handleSantriMatches(matches, candidateSantriName);
-                        targetSantri = resSantri.target;
-                    }
-                    if (targetSantri) {
-                        executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Semua'})`;
-                        dbResult = await this.supabaseService.getJadwalSantri(targetSantri.id, targetDay);
-                    }
-                    else if (isGuru) {
+                try {
+                    const candidateSantriName = (parsed.parameters?.santri_name || '').trim();
+                    if (isGuru && (!candidateSantriName || candidateSantriName.toLowerCase().includes('saya') || message.toLowerCase().includes('mengajar') || message.toLowerCase().includes('ngajar'))) {
                         const currentGuru = await this.supabaseService.getGuruByPhone(sender);
                         if (currentGuru) {
                             executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
                             dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
                         }
+                        else {
+                            dbResult = { error: 'Nomor WhatsApp antum belum terhubung dengan data profil Guru/Ustadz aktif di SI-TAQUA.' };
+                        }
                     }
                     else {
-                        dbResult = { error: 'Mohon sebutkan nama ananda santri yang ingin dilihat jadwalnya nggih Ayah/Bunda.' };
+                        let targetSantri = null;
+                        let waliSantri = [];
+                        try {
+                            waliSantri = (await this.supabaseService.findSantriByWaliPhone(sender)) || [];
+                        }
+                        catch (e) {
+                            this.logger.warn('Gagal ambil data wali santri untuk jadwal:', e);
+                        }
+                        if (waliSantri.length === 1 && (!candidateSantriName || candidateSantriName.toLowerCase().includes('anak'))) {
+                            targetSantri = waliSantri[0];
+                        }
+                        else if (candidateSantriName) {
+                            const matches = await this.supabaseService.findSantriByName(candidateSantriName);
+                            const resSantri = this.handleSantriMatches(matches, candidateSantriName);
+                            targetSantri = resSantri.target;
+                        }
+                        if (targetSantri) {
+                            executedQuery = `getJadwalSantri(${targetSantri.id}, ${targetDay || 'Semua'})`;
+                            dbResult = await this.supabaseService.getJadwalSantri(targetSantri.id, targetDay);
+                        }
+                        else if (isGuru) {
+                            const currentGuru = await this.supabaseService.getGuruByPhone(sender);
+                            if (currentGuru) {
+                                executedQuery = `getJadwalGuru(${currentGuru.id}, ${targetDay || 'Semua'})`;
+                                dbResult = await this.supabaseService.getJadwalGuru(currentGuru.id, targetDay);
+                            }
+                        }
+                        else {
+                            dbResult = { error: 'Mohon sebutkan nama ananda santri yang ingin dilihat jadwalnya nggih Ayah/Bunda.' };
+                        }
                     }
+                }
+                catch (jErr) {
+                    this.logger.error('Error saat memproses query jadwal:', jErr);
+                    dbResult = { error: 'Afwan, sistem sedang memutakhirkan basis data jadwal. Silakan tanyakan kembali sesaat lagi nggih.' };
                 }
                 const reply = await this.aiService.generateResponse(message, parsed.intent, dbResult, sender, isGuru, guruNama);
                 await this.supabaseService.logAiInteraction(message, parsed.intent, parsed.intent, parsed.parameters, executedQuery, dbResult, reply, Date.now() - startTime);

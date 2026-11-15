@@ -179,8 +179,8 @@ export declare class SupabaseService {
         dayName?: undefined;
     } | {
         santriNama: any;
-        kelasNama: string;
-        halaqohNama: string;
+        kelasNama: any;
+        halaqohNama: any;
         dayName: string;
         schedules: {
             id: any;
@@ -189,9 +189,15 @@ export declare class SupabaseService {
             jam_ke: any;
             jam_mulai: any;
             jam_selesai: any;
-            mapelNama: string;
-            guruNama: string;
+            mapelNama: any;
+            guruNama: any;
         }[];
+    } | {
+        santriNama: string;
+        dayName: string;
+        schedules: any[];
+        kelasNama?: undefined;
+        halaqohNama?: undefined;
     }>;
     getKalenderAkademik(filterUpcoming?: boolean): Promise<any[]>;
     getPerizinanSantri(santriId: string): Promise<{

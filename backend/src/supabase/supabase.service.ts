@@ -960,7 +960,7 @@ export class SupabaseService {
   // Get teaching schedule for a teacher (guru)
   async getJadwalGuru(guruId: string, dayName?: string) {
     try {
-      // 1. Ambil data guru untuk referensi user_id
+      // 1. Ambil data guru
       const { data: guruData } = await this.supabase
         .from('guru')
         .select('id, nama, user_id')
@@ -969,62 +969,52 @@ export class SupabaseService {
 
       const guruUserId = guruData?.user_id;
 
-      // 2. Ambil jadwal pelajaran madrasah & halaqoh
-      let madrasahQuery = this.supabase
-        .from('jadwal_pelajaran')
-        .select('id, hari, jam_ke, jam_mulai, jam_selesai, tipe, kelas_id, mapel_id, halaqoh_id, referensi_id, guru_id, kelas(nama), mata_pelajaran(nama)');
-
+      // 2. Fetch jadwal_pelajaran dan relasi secara terpisah dan aman (anti-schema mismatch)
+      let jadwalQuery = this.supabase.from('jadwal_pelajaran').select('*');
       if (dayName) {
-        madrasahQuery = madrasahQuery.eq('hari', dayName);
+        jadwalQuery = jadwalQuery.eq('hari', dayName);
       }
 
-      const { data: rawJadwal, error: jadwalErr } = await madrasahQuery;
-      if (jadwalErr) throw jadwalErr;
+      const [jadwalRes, kelasRes, mapelRes, halaqohRes, mhRes] = await Promise.all([
+        jadwalQuery,
+        this.supabase.from('kelas').select('id, nama'),
+        this.supabase.from('mapel').select('id, nama'),
+        this.supabase.from('halaqoh').select('id, nama, musyrif_id'),
+        this.supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id')
+      ]);
 
-      // 3. Ambil halaqoh yang dimusyrifi oleh guru ini
-      const { data: myHalaqohDirect } = await this.supabase
-        .from('halaqoh')
-        .select('id, nama')
-        .eq('musyrif_id', guruId);
+      const rawJadwal = (jadwalRes.data as any[]) || [];
+      const kelasMap = (kelasRes.data || []).reduce((acc: any, k: any) => ({ ...acc, [k.id]: k.nama }), {});
+      const mapelMap = (mapelRes.data || []).reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.nama }), {});
+      const halaqohList = halaqohRes.data || [];
+      const halaqohMap = halaqohList.reduce((acc: any, h: any) => ({ ...acc, [h.id]: h.nama }), {});
 
-      let halaqohIds = (myHalaqohDirect || []).map(h => h.id);
-
+      // Himpun ID halaqoh yang dibimbing guru ini
+      const myHalaqohIds = new Set<string>();
+      halaqohList.forEach(h => {
+        if (h.musyrif_id === guruId) myHalaqohIds.add(h.id);
+      });
       if (guruUserId) {
-        const { data: mhList } = await this.supabase
-          .from('musyrif_halaqoh')
-          .select('halaqoh_id')
-          .eq('user_id', guruUserId);
-        if (mhList && mhList.length > 0) {
-          mhList.forEach(m => {
-            if (!halaqohIds.includes(m.halaqoh_id)) halaqohIds.push(m.halaqoh_id);
-          });
-        }
+        (mhRes.data || []).forEach(mh => {
+          if (mh.user_id === guruUserId) myHalaqohIds.add(mh.halaqoh_id);
+        });
       }
 
-      const { data: allHalaqoh } = await this.supabase
-        .from('halaqoh')
-        .select('id, nama');
-      const halaqohMap = (allHalaqoh || []).reduce((acc, h) => ({ ...acc, [h.id]: h.nama }), {} as Record<string, string>);
-
-      const resolveRelName = (rel: any): string => {
-        if (!rel) return '';
-        if (Array.isArray(rel)) return rel[0]?.nama || '';
-        return rel.nama || '';
-      };
-
-      // Filter jadwal yang milik guru ini
+      // Filter jadwal yang bersangkutan
       const matchingSchedules: any[] = [];
-      ((rawJadwal as any[]) || []).forEach(j => {
+      rawJadwal.forEach(j => {
         const isMyDirect = j.guru_id === guruId;
         const isMyHalaqoh = (j.tipe === 'HALAQOH' || j.halaqoh_id) && (
-          halaqohIds.includes(j.halaqoh_id) || halaqohIds.includes(j.referensi_id) || isMyDirect
+          (j.halaqoh_id && myHalaqohIds.has(j.halaqoh_id)) || isMyDirect
         );
 
         if (isMyDirect || isMyHalaqoh) {
           const targetNama = isMyHalaqoh
-            ? (halaqohMap[j.halaqoh_id || j.referensi_id] || 'Kelompok Halaqoh')
-            : (resolveRelName(j.kelas) || 'Kelas');
-          const mapelNama = isMyHalaqoh ? 'Halaqoh Tahfidz' : (resolveRelName(j.mata_pelajaran) || 'Pelajaran');
+            ? (halaqohMap[j.halaqoh_id] || 'Kelompok Halaqoh')
+            : (kelasMap[j.kelas_id] || 'Kelas');
+          const mapelNama = isMyHalaqoh
+            ? 'Halaqoh Tahfidz'
+            : (mapelMap[j.mapel_id] || 'Pelajaran');
 
           matchingSchedules.push({
             id: j.id,
@@ -1039,7 +1029,7 @@ export class SupabaseService {
         }
       });
 
-      // Sort kronologis
+      // Sort kronologis berdasarkan jam mulai atau jam_ke
       matchingSchedules.sort((a, b) => {
         if (a.hari !== b.hari) return 0;
         if (a.jam_mulai && b.jam_mulai) return a.jam_mulai.localeCompare(b.jam_mulai);
@@ -1053,7 +1043,11 @@ export class SupabaseService {
       };
     } catch (err) {
       this.logger.error(`Error getJadwalGuru (${guruId}):`, err);
-      throw err;
+      return {
+        guruNama: 'Ustadz',
+        dayName: dayName || 'Semua Hari',
+        schedules: []
+      };
     }
   }
 
@@ -1062,40 +1056,46 @@ export class SupabaseService {
     try {
       const { data: santri, error: sErr } = await this.supabase
         .from('santri')
-        .select('id, nama, kelas_id, halaqoh_id, kelas(nama), halaqoh(nama)')
+        .select('id, nama, kelas_id, halaqoh_id')
         .eq('id', santriId)
         .maybeSingle();
 
       if (sErr || !santri) return { santriNama: 'Santri', schedules: [] };
 
-      const santriData = santri as any;
-      let query = this.supabase
-        .from('jadwal_pelajaran')
-        .select('id, hari, jam_ke, jam_mulai, jam_selesai, tipe, kelas_id, mapel_id, halaqoh_id, mata_pelajaran(nama), guru(nama)')
-        .or(`kelas_id.eq.${santriData.kelas_id || '00000000-0000-0000-0000-000000000000'},halaqoh_id.eq.${santriData.halaqoh_id || '00000000-0000-0000-0000-000000000000'}`);
-
+      let jadwalQuery = this.supabase.from('jadwal_pelajaran').select('*');
       if (dayName) {
-        query = query.eq('hari', dayName);
+        jadwalQuery = jadwalQuery.eq('hari', dayName);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const [jadwalRes, mapelRes, guruRes, kelasRes, halaqohRes] = await Promise.all([
+        jadwalQuery,
+        this.supabase.from('mapel').select('id, nama'),
+        this.supabase.from('guru').select('id, nama'),
+        this.supabase.from('kelas').select('id, nama'),
+        this.supabase.from('halaqoh').select('id, nama')
+      ]);
 
-      const resolveRelName = (rel: any): string => {
-        if (!rel) return '';
-        if (Array.isArray(rel)) return rel[0]?.nama || '';
-        return rel.nama || '';
-      };
+      const rawJadwal = (jadwalRes.data as any[]) || [];
+      const mapelMap = (mapelRes.data || []).reduce((acc: any, m: any) => ({ ...acc, [m.id]: m.nama }), {});
+      const guruMap = (guruRes.data || []).reduce((acc: any, g: any) => ({ ...acc, [g.id]: g.nama }), {});
+      const kelasMap = (kelasRes.data || []).reduce((acc: any, k: any) => ({ ...acc, [k.id]: k.nama }), {});
+      const halaqohMap = (halaqohRes.data || []).reduce((acc: any, h: any) => ({ ...acc, [h.id]: h.nama }), {});
 
-      const formatted = ((data as any[]) || []).map(j => ({
+      const matching = rawJadwal.filter(j => {
+        const isKelas = santri.kelas_id && j.kelas_id === santri.kelas_id;
+        const isHalaqoh = santri.halaqoh_id && j.halaqoh_id === santri.halaqoh_id;
+        return isKelas || isHalaqoh;
+      });
+
+      const formatted = matching.map(j => ({
         id: j.id,
         hari: j.hari,
         tipe: j.tipe || (j.halaqoh_id ? 'HALAQOH' : 'MADROSAH'),
         jam_ke: j.jam_ke || 1,
         jam_mulai: j.jam_mulai,
         jam_selesai: j.jam_selesai,
-        mapelNama: resolveRelName(j.mata_pelajaran) || (j.tipe === 'HALAQOH' ? 'Halaqoh Tahfidz' : 'Pelajaran'),
-        guruNama: resolveRelName(j.guru) || 'Ustadz Pengampu'
+        mapelNama: mapelMap[j.mapel_id] || (j.tipe === 'HALAQOH' ? 'Halaqoh Tahfidz' : 'Pelajaran'),
+        guruNama: guruMap[j.guru_id] || 'Ustadz Pengampu'
       }));
 
       formatted.sort((a, b) => {
@@ -1105,15 +1105,19 @@ export class SupabaseService {
       });
 
       return {
-        santriNama: santriData.nama,
-        kelasNama: resolveRelName(santriData.kelas),
-        halaqohNama: resolveRelName(santriData.halaqoh),
+        santriNama: santri.nama,
+        kelasNama: kelasMap[santri.kelas_id],
+        halaqohNama: halaqohMap[santri.halaqoh_id],
         dayName: dayName || 'Semua Hari',
         schedules: formatted
       };
     } catch (err) {
       this.logger.error(`Error getJadwalSantri (${santriId}):`, err);
-      throw err;
+      return {
+        santriNama: 'Santri',
+        dayName: dayName || 'Semua Hari',
+        schedules: []
+      };
     }
   }
 
