@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext'
 import { Loader2 } from 'lucide-react'
 import Spinner from '../ui/Spinner'
 import { processAbsensiScan } from '../../utils/qrScanHelper'
+import { checkAndSendDailyGuruReminders } from '../../utils/dailyGuruReminder'
 
 const AbsensiLayout = () => {
     const location = useLocation()
@@ -20,6 +21,15 @@ const AbsensiLayout = () => {
     const [isScannerOpen, setIsScannerOpen] = useState(false)
     const [validating, setValidating] = useState(false)
     const [pageKey, setPageKey] = useState(0)
+
+    // Pengingat jadwal guru otomatis di pagi hari ketika staff/admin membuka portal absensi
+    useEffect(() => {
+        if (isAuthenticated && (isAdmin || isAdminAkademik || isAdminAbsensi)) {
+            checkAndSendDailyGuruReminders({ user, showToast }).catch(err => {
+                console.warn('[AbsensiLayout] Auto guru reminder check error:', err)
+            })
+        }
+    }, [isAuthenticated, isAdmin, isAdminAkademik, isAdminAbsensi, user])
 
     useEffect(() => {
         setPageKey(prev => prev + 1)

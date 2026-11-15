@@ -166,7 +166,7 @@ export const generateLaporanPDF = async (options) => {
         doc.text(`Dicetak pada: ${printDate}`, 14, footerY)
 
         // Center: System Name
-        doc.text('Sistem Akademik PTQA Batuan', pageWidth / 2, footerY, { align: 'center' })
+        doc.text('SI-TAQUA', pageWidth / 2, footerY, { align: 'center' })
 
         // Right: Page Number
         doc.text(`Hal ${i} dari ${totalPages}`, pageWidth - 14, footerY, { align: 'right' })
@@ -190,6 +190,9 @@ export const generateKwitansiPDF = async (data) => {
         jumlah,
         metode,
         kasir,
+        status = 'LUNAS',
+        sisaTagihan = null,
+        keterangan = null,
         printedAt = null,
         formattedTanggal = null
     } = data
@@ -318,32 +321,52 @@ export const generateKwitansiPDF = async (data) => {
     // Row 6: Metode
     drawRow('Metode Pembayaran', metode)
 
+    const isPartial = Boolean(
+        (status && (status.toUpperCase().includes('SEBAGIAN') || status.toUpperCase().includes('CICILAN'))) ||
+        (kategori && (kategori.toLowerCase().includes('cicilan') || kategori.toLowerCase().includes('sebagian')))
+    )
+
+    // Jika cicilan dan ada sisa tagihan, tampilkan baris Sisa Tagihan
+    if (isPartial && sisaTagihan !== null && sisaTagihan !== undefined && Number(sisaTagihan) > 0) {
+        drawRow('Sisa Tagihan Belum Lunas', `Rp ${Number(sisaTagihan).toLocaleString('id-ID')}`)
+    }
+
+    if (keterangan && !keterangan.toLowerCase().includes('lunas')) {
+        drawRow('Keterangan', keterangan)
+    }
+
     y = startY + (currentRow * rowHeight) + 10
 
     // Row 7: Jumlah (Highlighted)
-    // Manually putting it separate for better layout control
-    doc.setFillColor(5, 150, 105)
+    if (isPartial) {
+        doc.setFillColor(217, 119, 6) // Warm Amber / Orange untuk Pembayaran Sebagian / Cicilan
+    } else {
+        doc.setFillColor(5, 150, 105) // Emerald Green untuk Pelunasan
+    }
     doc.rect(14, y, contentWidth, 14, 'F')
     doc.setTextColor(255)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    doc.text('TOTAL JUMLAH', 20, y + 9)
+    doc.text(isPartial ? 'JUMLAH DIBAYAR (CICILAN)' : 'TOTAL JUMLAH', 20, y + 9)
     doc.setFontSize(12)
     doc.text(`Rp ${Number(jumlah).toLocaleString('id-ID')}`, pageWidth - 20, y + 9, { align: 'right' })
 
     y += 35
 
-    // ========== LUNAS BADGE - STAMP EFFECT ==========
-    doc.setDrawColor(5, 150, 105)
+    // ========== BADGE / STAMP EFFECT ==========
     doc.setLineWidth(2)
-    doc.setTextColor(5, 150, 105)
-    doc.setFontSize(24)
+    doc.setFontSize(22)
     doc.setFont('helvetica', 'bold')
 
-    // Rotate context for stamp
-    // jsPDF rotation is complex, keeping it simple horizontal for now
-    doc.text('LUNAS', pageWidth / 2, y - 10, { align: 'center' })
-    // doc.rect((pageWidth / 2) - 25, y - 19, 50, 14) // Box around LUNAS
+    if (isPartial) {
+        doc.setDrawColor(217, 119, 6)
+        doc.setTextColor(217, 119, 6)
+        doc.text('BAYAR SEBAGIAN / CICILAN', pageWidth / 2, y - 10, { align: 'center' })
+    } else {
+        doc.setDrawColor(5, 150, 105)
+        doc.setTextColor(5, 150, 105)
+        doc.text('LUNAS', pageWidth / 2, y - 10, { align: 'center' })
+    }
     doc.setLineWidth(0.5) // Reset
 
     y += 10

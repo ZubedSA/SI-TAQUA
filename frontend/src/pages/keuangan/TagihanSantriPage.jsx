@@ -120,6 +120,11 @@ const TagihanSantriPage = () => {
     const [saving, setSaving] = useState(false)
     const [isBulkMode, setIsBulkMode] = useState(true)
 
+    // Pengecualian Santri State
+    const [excludedSantriIds, setExcludedSantriIds] = useState([])
+    const [searchExclude, setSearchExclude] = useState('')
+    const [isExcludeOpen, setIsExcludeOpen] = useState(false)
+
     const [form, setForm] = useState({
         angkatan_id: '',
         santri_id: '',
@@ -129,11 +134,29 @@ const TagihanSantriPage = () => {
         keterangan: ''
     })
 
+    const targetSantris = useMemo(() => {
+        if (!form.angkatan_id) return []
+        return santriList.filter(s => s.angkatan_id === form.angkatan_id)
+    }, [santriList, form.angkatan_id])
+
+    const filteredTargetSantris = useMemo(() => {
+        if (!searchExclude) return targetSantris
+        const query = searchExclude.toLowerCase()
+        return targetSantris.filter(s =>
+            (s.nama || '').toLowerCase().includes(query) ||
+            (s.nis || '').toLowerCase().includes(query)
+        )
+    }, [targetSantris, searchExclude])
+
     const handleFormSubmit = (e) => {
         e.preventDefault()
         // Validation for bulk mode
         if (!editItem && !form.angkatan_id) {
             alert('Pilih angkatan terlebih dahulu')
+            return
+        }
+        if (!editItem && targetSantris.length > 0 && excludedSantriIds.length === targetSantris.length) {
+            showToast.warning('Semua santri pada angkatan ini telah dikecualikan. Tidak ada tagihan yang dapat dibuat.')
             return
         }
         setSaveModal({ isOpen: true })
@@ -170,7 +193,6 @@ const TagihanSantriPage = () => {
                 showToast.success('Tagihan berhasil diperbarui')
             } else {
                 // Bulk Insert by angkatan
-                const targetSantris = santriList.filter(s => s.angkatan_id === form.angkatan_id)
                 const angkatan = angkatanList.find(a => a.id === form.angkatan_id)
 
                 if (targetSantris.length === 0) {
@@ -178,8 +200,17 @@ const TagihanSantriPage = () => {
                     return
                 }
 
+                // Filter out excluded santri
+                const nonExcludedSantris = targetSantris.filter(s => !excludedSantriIds.includes(s.id))
+
+                if (nonExcludedSantris.length === 0) {
+                    showToast.warning('Semua santri pada angkatan ini telah dikecualikan')
+                    setSaveModal({ isOpen: false })
+                    return
+                }
+
                 // DUPLICATE PREVENTION: Check for existing tagihan with same kategori and period
-                const targetSantriIds = targetSantris.map(s => s.id)
+                const targetSantriIds = nonExcludedSantris.map(s => s.id)
                 const { data: existingTagihan, error: checkError } = await supabase
                     .from('tagihan_santri')
                     .select('santri_id')
@@ -192,15 +223,15 @@ const TagihanSantriPage = () => {
                 const existingSantriIds = new Set(existingTagihan?.map(t => t.santri_id) || [])
 
                 // Filter out santri that already have this tagihan
-                const santriToInsert = targetSantris.filter(s => !existingSantriIds.has(s.id))
+                const santriToInsert = nonExcludedSantris.filter(s => !existingSantriIds.has(s.id))
 
                 if (santriToInsert.length === 0) {
-                    showToast.warning(`Semua santri pada angkatan ini sudah memiliki tagihan ${kategori?.nama} untuk periode yang dipilih`)
+                    showToast.warning(`Semua santri yang ditagih pada angkatan ini sudah memiliki tagihan ${kategori?.nama} untuk periode yang dipilih`)
                     setSaveModal({ isOpen: false })
                     return
                 }
 
-                // Prepare bulk data (only for santri without existing tagihan)
+                // Prepare bulk data (only for santri without existing tagihan and not excluded)
                 const bulkData = santriToInsert.map(s => ({
                     ...basePayload,
                     santri_id: s.id
@@ -209,20 +240,31 @@ const TagihanSantriPage = () => {
                 const { error } = await supabase.from('tagihan_santri').insert(bulkData)
                 if (error) throw error
 
-                // Audit Log - CREATE (bulk)
+                // Audit Log - CREATE (bulk) with excluded names
+                const excludedNames = targetSantris
+                    .filter(s => excludedSantriIds.includes(s.id))
+                    .map(s => s.nama)
+
+                const logDesc = `Buat tagihan massal: ${santriToInsert.length} santri - ${kategori?.nama} - Rp ${Number(basePayload.jumlah).toLocaleString('id-ID')}` +
+                    (excludedNames.length > 0 ? ` (Dikecualikan ${excludedNames.length} santri: ${excludedNames.slice(0, 5).join(', ')}${excludedNames.length > 5 ? ' dkk.' : ''})` : '')
+
                 await logCreate(
                     'tagihan_santri',
                     `Bulk - ${angkatan?.nama}`,
-                    `Buat tagihan massal: ${santriToInsert.length} santri - ${kategori?.nama} - Rp ${Number(basePayload.jumlah).toLocaleString('id-ID')}`
+                    logDesc
                 )
 
                 // Show appropriate message
-                const skippedCount = targetSantris.length - santriToInsert.length
-                if (skippedCount > 0) {
-                    showToast.success(`Berhasil membuat tagihan untuk ${santriToInsert.length} santri (${skippedCount} santri dilewati karena sudah ada tagihan serupa)`)
-                } else {
-                    showToast.success(`Berhasil membuat tagihan untuk ${santriToInsert.length} santri`)
-                }
+                const skippedCount = nonExcludedSantris.length - santriToInsert.length
+                const excludedCount = excludedSantriIds.length
+
+                let successMsg = `Berhasil membuat tagihan untuk ${santriToInsert.length} santri`
+                const notes = []
+                if (excludedCount > 0) notes.push(`${excludedCount} santri dikecualikan`)
+                if (skippedCount > 0) notes.push(`${skippedCount} dilewati karena sudah ada tagihan serupa`)
+                if (notes.length > 0) successMsg += ` (${notes.join(', ')})`
+
+                showToast.success(successMsg)
             }
 
             setSaveModal({ isOpen: false })
@@ -272,6 +314,9 @@ const TagihanSantriPage = () => {
             jatuh_tempo_bulan: new Date().toISOString().slice(0, 7),
             keterangan: ''
         })
+        setExcludedSantriIds([])
+        setSearchExclude('')
+        setIsExcludeOpen(false)
         setEditItem(null)
         setIsBulkMode(true)
     }
@@ -286,6 +331,9 @@ const TagihanSantriPage = () => {
             jatuh_tempo_bulan: item.jatuh_tempo.slice(0, 7),
             keterangan: item.keterangan || ''
         })
+        setExcludedSantriIds([])
+        setSearchExclude('')
+        setIsExcludeOpen(false)
         setIsBulkMode(false)
         setShowModal(true)
     }
@@ -583,7 +631,11 @@ const TagihanSantriPage = () => {
                                             <select
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-white"
                                                 value={form.angkatan_id}
-                                                onChange={e => setForm({ ...form, angkatan_id: e.target.value })}
+                                                onChange={e => {
+                                                    setForm({ ...form, angkatan_id: e.target.value })
+                                                    setExcludedSantriIds([])
+                                                    setSearchExclude('')
+                                                }}
                                                 required
                                             >
                                                 <option value="">-- Pilih Angkatan --</option>
@@ -593,6 +645,128 @@ const TagihanSantriPage = () => {
                                             </select>
                                             {angkatanList.length === 0 && (
                                                 <p className="text-xs text-red-500">Belum ada data angkatan di santri</p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {!editItem && form.angkatan_id && (
+                                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-gray-50/50">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsExcludeOpen(!isExcludeOpen)}
+                                                className="w-full px-3.5 py-2.5 flex items-center justify-between text-left hover:bg-gray-100/70 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Users size={16} className="text-gray-500" />
+                                                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                                        Kecualikan Santri (Opsional)
+                                                    </span>
+                                                    {excludedSantriIds.length > 0 && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200">
+                                                            {excludedSantriIds.length} Dikecualikan
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1 text-xs text-gray-400">
+                                                    <span>{isExcludeOpen ? 'Tutup' : 'Pilih Santri'}</span>
+                                                    <ChevronDown size={14} className={`transform transition-transform duration-200 ${isExcludeOpen ? 'rotate-180' : ''}`} />
+                                                </div>
+                                            </button>
+
+                                            {isExcludeOpen && (
+                                                <div className="p-3.5 border-t border-gray-200 bg-white space-y-3">
+                                                    <p className="text-xs text-gray-500">
+                                                        Centang santri yang <strong className="text-gray-700">tidak perlu</strong> dibuatkan tagihan pada periode ini (misal: penerima beasiswa, yatim, anak pengurus):
+                                                    </p>
+
+                                                    <div className="relative">
+                                                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Cari nama atau NIS santri..."
+                                                            value={searchExclude}
+                                                            onChange={(e) => setSearchExclude(e.target.value)}
+                                                            className="w-full pl-9 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                                                        />
+                                                        {searchExclude && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSearchExclude('')}
+                                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="max-h-48 overflow-y-auto divide-y divide-gray-100 border border-gray-200 rounded-lg custom-scrollbar">
+                                                        {targetSantris.length === 0 ? (
+                                                            <div className="p-3 text-center text-xs text-gray-400 italic">
+                                                                Tidak ada santri pada angkatan ini
+                                                            </div>
+                                                        ) : filteredTargetSantris.length === 0 ? (
+                                                            <div className="p-3 text-center text-xs text-gray-400 italic">
+                                                                Santri tidak ditemukan dengan kata kunci "{searchExclude}"
+                                                            </div>
+                                                        ) : (
+                                                            filteredTargetSantris.map(santri => {
+                                                                const isExcluded = excludedSantriIds.includes(santri.id)
+                                                                return (
+                                                                    <label
+                                                                        key={santri.id}
+                                                                        className={`flex items-center justify-between p-2.5 hover:bg-gray-50 cursor-pointer text-xs transition-colors ${
+                                                                            isExcluded ? 'bg-amber-50/60' : ''
+                                                                        }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={isExcluded}
+                                                                                onChange={() => {
+                                                                                    if (isExcluded) {
+                                                                                        setExcludedSantriIds(excludedSantriIds.filter(id => id !== santri.id))
+                                                                                    } else {
+                                                                                        setExcludedSantriIds([...excludedSantriIds, santri.id])
+                                                                                    }
+                                                                                }}
+                                                                                className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                                                                            />
+                                                                            <div className="truncate">
+                                                                                <div className="font-semibold text-gray-800 truncate">{santri.nama}</div>
+                                                                                <div className="text-[10px] text-gray-400 font-medium">NIS: {santri.nis || '-'}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        {isExcluded && (
+                                                                            <span className="shrink-0 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                                                                                Bebas Tagihan
+                                                                            </span>
+                                                                        )}
+                                                                    </label>
+                                                                )
+                                                            })
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
+                                                        <span className="text-gray-500">
+                                                            {targetSantris.length} Total Santri di Angkatan
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {excludedSantriIds.length > 0 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setExcludedSantriIds([])}
+                                                                    className="text-red-500 hover:text-red-700 text-[11px] font-medium underline"
+                                                                >
+                                                                    Reset Pengecualian
+                                                                </button>
+                                                            )}
+                                                            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                                {targetSantris.length - excludedSantriIds.length} Akan Ditagih
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     )}
@@ -642,7 +816,11 @@ const TagihanSantriPage = () => {
                             <div className="modal-footer">
                                 <Button variant="secondary" onClick={() => setShowModal(false)} type="button">Batal</Button>
                                 <Button type="submit" loading={saving}>
-                                    {editItem ? 'Simpan' : 'Buat Tagihan Massal'}
+                                    {editItem 
+                                        ? 'Simpan' 
+                                        : form.angkatan_id 
+                                            ? `Buat Tagihan Massal (${targetSantris.length - excludedSantriIds.length} Santri)` 
+                                            : 'Buat Tagihan Massal'}
                                 </Button>
                             </div>
                         </form>
@@ -664,7 +842,11 @@ const TagihanSantriPage = () => {
                 onClose={() => setSaveModal({ isOpen: false })}
                 onConfirm={executeSave}
                 title={editItem ? "Simpan Perubahan" : "Konfirmasi Buat Tagihan"}
-                message={editItem ? 'Apakah Anda yakin ingin menyimpan perubahan tagihan ini?' : `Apakah Anda yakin ingin membuat tagihan massal untuk angkatan terpilih?`}
+                message={editItem 
+                    ? 'Apakah Anda yakin ingin menyimpan perubahan tagihan ini?' 
+                    : excludedSantriIds.length > 0
+                        ? `Apakah Anda yakin ingin membuat tagihan massal untuk ${targetSantris.length - excludedSantriIds.length} santri di ${angkatanList.find(a => a.id === form.angkatan_id)?.nama || 'angkatan terpilih'} (${excludedSantriIds.length} santri dikecualikan)?`
+                        : `Apakah Anda yakin ingin membuat tagihan massal untuk ${targetSantris.length} santri di ${angkatanList.find(a => a.id === form.angkatan_id)?.nama || 'angkatan terpilih'}?`}
                 confirmLabel={editItem ? "Simpan" : "Buat Tagihan"}
                 variant="success"
                 isLoading={saving}

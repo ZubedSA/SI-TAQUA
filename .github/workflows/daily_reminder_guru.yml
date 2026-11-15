@@ -1,0 +1,32 @@
+name: Pengingat Jadwal Guru Harian (06:00 WIB)
+
+on:
+  schedule:
+    # 23:00 UTC = 06:00 WIB (UTC+7) setiap hari
+    - cron: '0 23 * * *'
+  workflow_dispatch: # Memungkinkan trigger manual via tombol di tab Actions GitHub
+
+jobs:
+  remind-guru:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          cd frontend
+          npm install --no-audit --no-fund
+
+      - name: Execute Daily Reminder Script
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://cbevhwhmhptdadwvoozt.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXZod2htaHB0ZGFkd3Zvb3p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMTEzOTUsImV4cCI6MjEwOTg4NzM5NX0.r5UJjTtwyTGJ1UgBNf-tG1Ko8Mk2LS8ZAmi23tUBRpQ' }}
+          VITE_FONNTE_TOKEN: ${{ secrets.VITE_FONNTE_TOKEN || '9TKo4vZBPyQ1bjwSniV8' }}
+        run: |
+          node backend/scripts/cron-remind-guru.js

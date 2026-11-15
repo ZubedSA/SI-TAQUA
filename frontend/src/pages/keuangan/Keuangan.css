@@ -974,17 +974,18 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(71, 85, 105, 0.5);
+    background: rgba(15, 23, 42, 0.6);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 99999 !important;
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
-    padding: 20px;
+    padding: 24px 16px;
+    overflow-y: auto;
 }
 
 .modal-overlay.active {
@@ -997,16 +998,27 @@
     border-radius: 24px;
     width: 100%;
     max-width: 580px;
-    max-height: 90vh;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
     animation: modalSlideIn 0.3s ease;
+    margin: auto;
+}
+
+.modal form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 @keyframes modalSlideIn {
     from {
         opacity: 0;
-        transform: translateY(-30px) scale(0.95);
+        transform: translateY(-20px) scale(0.97);
     }
 
     to {
@@ -1019,13 +1031,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 22px 28px;
+    padding: 18px 24px;
     border-bottom: 1px solid var(--border-color);
     background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg-white) 100%);
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--text-dark);
     margin: 0;
@@ -1053,18 +1066,20 @@
 }
 
 .modal-body {
-    padding: 28px;
+    padding: 20px 24px;
     overflow-y: auto;
-    max-height: calc(90vh - 170px);
+    flex: 1;
+    min-height: 0;
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 14px;
-    padding: 18px 28px;
+    padding: 16px 24px;
     border-top: 1px solid var(--border-color);
     background: var(--bg-light);
+    flex-shrink: 0;
 }
 
 /* ========== TABS ========== */

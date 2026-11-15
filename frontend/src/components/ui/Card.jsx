@@ -7,8 +7,11 @@ export const Card = ({ children, className = '', variant = 'default', ...props }
         glass: 'bg-white/80 backdrop-blur-xl rounded-2xl sm:rounded-[2.5rem] border border-white/50 shadow-xl sm:shadow-2xl shadow-black/5'
     }
 
+    const hasOverflow = className.includes('overflow-') || className.includes('!overflow-');
+    const overflowClass = hasOverflow ? '' : 'overflow-hidden';
+
     return (
-        <div className={`${variants[variant] || variants.default} overflow-hidden ${className}`} {...props}>
+        <div className={`${variants[variant] || variants.default} ${overflowClass} ${className}`} {...props}>
             {children}
         </div>
     );

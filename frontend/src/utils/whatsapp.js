@@ -12,8 +12,17 @@ export const formatPhoneNumber = (phone) => {
     let cleaned = String(phone).replace(/\D/g, '')
     if (!cleaned) return ''
 
+    // Bersihkan awalan 00 (misal: 0062 -> 62)
+    if (cleaned.startsWith('00')) {
+        cleaned = cleaned.substring(2)
+    }
+
+    // Jika diawali 620, ubah ke 62 (contoh salah ketik: 620812 -> 62812)
+    if (cleaned.startsWith('620')) {
+        cleaned = '62' + cleaned.substring(3)
+    }
     // Jika diawali 0, ubah ke 62 (contoh: 0812 -> 62812)
-    if (cleaned.startsWith('0')) {
+    else if (cleaned.startsWith('0')) {
         cleaned = '62' + cleaned.substring(1)
     }
     // Jika diawali 8 (misal: 812xxxx), tambahkan 62 di depan
@@ -25,8 +34,8 @@ export const formatPhoneNumber = (phone) => {
         cleaned = '62' + cleaned
     }
 
-    // Nomor telepon valid minimal 9 digit
-    if (cleaned.length < 9) return ''
+    // Nomor telepon valid di Indonesia dan internasional berkisar 9 - 15 digit
+    if (cleaned.length < 9 || cleaned.length > 15) return ''
     return cleaned
 }
 
@@ -172,26 +181,27 @@ export const sendWhatsAppViaFonnte = async (phone, message) => {
 
 /**
  * Mengirim notifikasi WhatsApp laporan ketidakhadiran santri secara sequential
- * dengan jeda aman anti-rate-limit (800ms) agar SELURUH pesan terkirim lengkap tanpa ada yang drop.
+ * dengan jeda aman anti-rate-limit (1500ms) dan multi-stage retry agar SELURUH pesan terkirim lengkap tanpa ada yang drop.
  * @param {Array} absentList - Array santri tidak hadir: [{ id, nama, nama_wali, no_telp_wali, status, keterangan }]
- * @param {Object} options - { sesi: string, tanggal: string, onProgress?: Function }
- * @returns {Promise<{ total: number, sent: number, failed: number, skipped: number, errors: Array }>}
+ * @param {Object} options - { sesi: string, tanggal: string, jamKe?: number|string, onProgress?: Function }
+ * @returns {Promise<{ total: number, sent: number, failed: number, skipped: number, errors: Array, details: Array }>}
  */
 export const sendBulkAbsensiWhatsApp = async (absentList = [], options = {}) => {
-    const { sesi = 'Madrosah', tanggal = '', onProgress } = options;
+    const { sesi = 'Madrosah', tanggal = '', jamKe, onProgress } = options;
     const results = {
         total: absentList.length,
         sent: 0,
         failed: 0,
         skipped: 0,
-        errors: []
+        errors: [],
+        details: []
     };
 
     if (!absentList || absentList.length === 0) {
         return results;
     }
 
-    console.log(`[WA Bulk Absensi] Memulai pengiriman laporan untuk ${absentList.length} santri tidak hadir...`);
+    console.log(`[WA Bulk Absensi] Memulai pengiriman laporan untuk ${absentList.length} santri tidak hadir (Jeda aman: 1.5 detik)...`);
 
     for (let i = 0; i < absentList.length; i++) {
         const item = absentList[i];
@@ -199,11 +209,15 @@ export const sendBulkAbsensiWhatsApp = async (absentList = [], options = {}) => 
             onProgress({ current: i + 1, total: absentList.length, nama: item.nama });
         }
 
-        const phone = formatPhoneNumber(item.no_telp_wali);
+        // Cari nomor HP dari berbagai kemungkinan properti (fallback)
+        const rawPhone = item.no_telp_wali || item.wali_phone || item.no_hp || item.wali?.no_hp || '';
+        const phone = formatPhoneNumber(rawPhone);
+
         if (!phone) {
             console.warn(`[WA Bulk Absensi] Santri "${item.nama}" dilewati: Nomor telepon wali kosong / tidak valid.`);
             results.skipped++;
             results.errors.push({ nama: item.nama, reason: 'Nomor WhatsApp wali tidak tersedia / tidak valid' });
+            results.details.push({ nama: item.nama, phone: rawPhone || '-', status: 'SKIPPED', error: 'Nomor belum terdaftar' });
             continue;
         }
 
@@ -213,34 +227,40 @@ export const sendBulkAbsensiWhatsApp = async (absentList = [], options = {}) => 
             status: item.status,
             tanggal: tanggal,
             sesi: sesi,
+            jamKe: jamKe || item.jam_ke,
             keterangan: item.keterangan || ''
         });
 
         let sendRes = await sendWhatsAppViaFonnte(phone, msg);
 
-        // Jika gateway Fonnte melaporkan busy atau rate-limit, tunggu 1.5 detik lalu coba sekali lagi
-        if (!sendRes.success && (
-            sendRes.error?.toLowerCase().includes('busy') ||
-            sendRes.error?.toLowerCase().includes('rate') ||
-            sendRes.error?.toLowerCase().includes('wait')
-        )) {
-            console.warn(`[WA Bulk Absensi] Gateway sibuk untuk "${item.nama}". Mencoba ulang dalam 1.5 detik...`);
-            await new Promise(r => setTimeout(r, 1500));
+        // Jika gateway gagal (busy, rate-limit, atau network drop), coba ulang tahap 1 (jeda 2.0 detik)
+        if (!sendRes.success) {
+            console.warn(`[WA Bulk Absensi] Pengiriman ke "${item.nama}" gagal: ${sendRes.error}. Mencoba ulang (1/2) dalam 2 detik...`);
+            await new Promise(r => setTimeout(r, 2000));
             sendRes = await sendWhatsAppViaFonnte(phone, msg);
+            
+            // Coba ulang tahap 2 jika masih gagal
+            if (!sendRes.success) {
+                console.warn(`[WA Bulk Absensi] Mencoba ulang (2/2) ke "${item.nama}" dalam 2.5 detik...`);
+                await new Promise(r => setTimeout(r, 2500));
+                sendRes = await sendWhatsAppViaFonnte(phone, msg);
+            }
         }
 
         if (sendRes.success) {
             results.sent++;
+            results.details.push({ nama: item.nama, phone: phone, status: 'SUCCESS' });
             console.log(`[WA Bulk Absensi] (${results.sent}/${absentList.length}) Terkirim ke wali santri "${item.nama}" (${phone})`);
         } else {
             results.failed++;
             results.errors.push({ nama: item.nama, phone: phone, reason: sendRes.error });
+            results.details.push({ nama: item.nama, phone: phone, status: 'FAILED', error: sendRes.error });
             console.error(`[WA Bulk Absensi] Gagal mengirim ke wali santri "${item.nama}" (${phone}): ${sendRes.error}`);
         }
 
-        // Jeda aman anti-rate-limit 800ms antar pengiriman nomor berikutnya
+        // Jeda aman anti-rate-limit 1500ms antar pengiriman nomor berikutnya agar Fonnte tidak tersendat
         if (i < absentList.length - 1) {
-            await new Promise(r => setTimeout(r, 800));
+            await new Promise(r => setTimeout(r, 1500));
         }
     }
 
@@ -251,7 +271,7 @@ export const sendBulkAbsensiWhatsApp = async (absentList = [], options = {}) => 
 /**
  * Membuat template pesan WhatsApp laporan ketidakhadiran santri
  */
-export const templateAbsensiWali = ({ namaSantri, namaWali, status, tanggal, sesi, keterangan }) => {
+export const templateAbsensiWali = ({ namaSantri, namaWali, status, tanggal, sesi, jamKe, keterangan }) => {
     const statusText = {
         'Sakit': 'Sakit 🤒',
         'Izin': 'Izin 📝',
@@ -261,9 +281,15 @@ export const templateAbsensiWali = ({ namaSantri, namaWali, status, tanggal, ses
         'Pulang': 'Pulang / Izin Pulang 🏠',
     }[status] || `${status} ❌`;
 
+    // Pastikan Jam Ke ditampilkan secara jelas agar wali santri tahu persis di jam pelajaran mana anaknya tidak hadir
+    let sesiTitle = sesi || 'Kegiatan Pembelajaran';
+    if (jamKe && !sesiTitle.toLowerCase().includes('jam ke')) {
+        sesiTitle = `${sesiTitle} (Jam Ke-${jamKe})`;
+    }
+
     const rincian = [
         `*Tanggal:* ${tanggal}`,
-        `*Sesi / Kegiatan:* ${sesi}`,
+        `*Sesi / Kegiatan:* ${sesiTitle}`,
         `*Status Kehadiran:* ${statusText}`
     ];
 
@@ -276,7 +302,7 @@ export const templateAbsensiWali = ({ namaSantri, namaWali, status, tanggal, ses
         `Kepada Yth. Wali Santri *${namaWali || 'Bapak/Ibu'}*`,
         `*LAPORAN KETIDAKHADIRAN SANTRI*\nKami ingin menginformasikan bahwa ananda *${namaSantri}* tercatat tidak hadir pada kegiatan pembelajaran:`,
         rincian.join('\n'),
-        "Terima kasih atas perhatiannya. Jazakumullah Khairan.\nWassalamu'alaikum Wr. Wb.",
+        "Mohon konfirmasi atau koordinasi dengan pihak pengurus pondok jika terdapat kekeliruan.\nTerima kasih atas perhatiannya. Jazakumullah Khairan.\nWassalamu'alaikum Wr. Wb.",
         `_PTQA BATUAN_`
     ];
 

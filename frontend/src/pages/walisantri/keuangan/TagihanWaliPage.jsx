@@ -62,7 +62,7 @@ const TagihanWaliPage = () => {
 
         try {
             // Fetch tagihan belum lunas
-            const { data: belumLunas, error: errBelum } = await supabase
+            const { data: belumLunasRaw, error: errBelum } = await supabase
                 .from('tagihan_santri')
                 .select('*, kategori:kategori_id (nama)')
                 .eq('santri_id', santriId)
@@ -70,10 +70,37 @@ const TagihanWaliPage = () => {
                 .order('jatuh_tempo')
 
             if (errBelum) throw errBelum
-            setTagihanBelumLunas(belumLunas || [])
 
-            // Calculate total tunggakan
-            const total = (belumLunas || []).reduce((sum, t) => sum + parseFloat(t.jumlah), 0)
+            // Fetch riwayat pembayaran santri untuk kalkulasi cicilan yang sudah dibayar
+            const { data: bayarData } = await supabase
+                .from('pembayaran_santri')
+                .select('tagihan_id, jumlah')
+                .eq('santri_id', santriId)
+
+            const paymentMap = (bayarData || []).reduce((acc, p) => {
+                acc[p.tagihan_id] = (acc[p.tagihan_id] || 0) + Number(p.jumlah)
+                return acc
+            }, {})
+
+            const processedBelumLunas = (belumLunasRaw || []).map(t => {
+                const terbayar = paymentMap[t.id] || 0
+                const nominal = Number(t.jumlah)
+                const sisa = Math.max(0, nominal - terbayar)
+                const persen = nominal > 0 ? Math.min(100, Math.round((terbayar / nominal) * 100)) : 0
+                return {
+                    ...t,
+                    nominal_tagihan: nominal,
+                    terbayar,
+                    sisa,
+                    persen_terbayar: persen,
+                    isSebagian: t.status === 'Sebagian' || (terbayar > 0 && sisa > 0)
+                }
+            })
+
+            setTagihanBelumLunas(processedBelumLunas)
+
+            // Calculate total tunggakan dari sisa aktual
+            const total = processedBelumLunas.reduce((sum, t) => sum + t.sisa, 0)
             setTotalTunggakan(total)
 
             // Fetch tagihan lunas (limit 20)
@@ -278,13 +305,33 @@ const TagihanWaliPage = () => {
                                                         <span className="font-black text-slate-900 uppercase tracking-tight">{tagihan.kategori?.nama || 'Pembayaran'}</span>
                                                     </div>
                                                 </div>
-                                                {isOverdue(tagihan.jatuh_tempo) && (
-                                                    <Badge variant="danger" className="font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full">Jatuh Tempo</Badge>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    {tagihan.isSebagian && (
+                                                        <Badge variant="warning" className="font-black text-[10px] uppercase tracking-widest px-3 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                                                            Dicicil {tagihan.persen_terbayar}%
+                                                        </Badge>
+                                                    )}
+                                                    {isOverdue(tagihan.jatuh_tempo) && (
+                                                        <Badge variant="danger" className="font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full">Jatuh Tempo</Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4">
                                                 <div className="space-y-1">
-                                                    <p className="text-4xl font-black text-slate-900 tracking-tighter group-hover:text-indigo-600 transition-colors">{formatCurrency(tagihan.jumlah)}</p>
+                                                    {tagihan.isSebagian ? (
+                                                        <div>
+                                                            <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest block">Sisa Tagihan</span>
+                                                            <p className="text-4xl font-black text-amber-700 tracking-tighter transition-colors">{formatCurrency(tagihan.sisa)}</p>
+                                                            <div className="text-xs text-slate-500 font-medium mt-0.5">
+                                                                Total: {formatCurrency(tagihan.nominal_tagihan)} • Terbayar: {formatCurrency(tagihan.terbayar)}
+                                                            </div>
+                                                            <div className="w-full max-w-xs bg-slate-200 rounded-full h-2 mt-2 overflow-hidden">
+                                                                <div className="bg-amber-500 h-2 rounded-full transition-all duration-500" style={{ width: `${tagihan.persen_terbayar}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-4xl font-black text-slate-900 tracking-tighter group-hover:text-indigo-600 transition-colors">{formatCurrency(tagihan.jumlah)}</p>
+                                                    )}
                                                     <div className="flex flex-wrap gap-4 mt-2">
                                                         <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-widest">
                                                             <Calendar size={14} />

@@ -147,10 +147,24 @@ const BroadcastJadwalGuruModal = ({
             }
             setSendStatusMap({ ...newStatus })
 
-            // Jeda 600ms antar pengiriman agar aman dari rate-limit
+            // Jeda 1200ms antar pengiriman agar aman dari rate-limit Fonnte
             if (i < eligible.length - 1) {
-                await new Promise(r => setTimeout(r, 600))
+                await new Promise(r => setTimeout(r, 1200))
             }
+        }
+
+        // Catat ke audit_log agar tercatat di histori sistem
+        try {
+            const todayStr = filterDate || new Date().toISOString().split('T')[0]
+            await supabase.from('audit_log').insert({
+                action: 'BROADCAST_JADWAL_GURU',
+                table_name: 'jadwal_pelajaran',
+                user_email: 'admin@sitaqua.local',
+                description: `Pengingat jadwal guru manual (${dayName}, ${todayStr}): ${successCount} berhasil, ${failedCount} gagal dari ${eligible.length} guru terjadwal.`
+            })
+            sessionStorage.setItem(`sitaqua_guru_reminder_${todayStr}`, 'done')
+        } catch (auditErr) {
+            console.warn('Gagal mencatat audit log:', auditErr)
         }
 
         setSending(false)
@@ -230,7 +244,7 @@ const BroadcastJadwalGuruModal = ({
                 <div className="shrink-0 bg-blue-50/70 border-b border-blue-100 px-6 py-3 flex items-start gap-2.5 text-xs text-blue-900">
                     <Sparkles size={16} className="text-blue-600 shrink-0 mt-0.5" />
                     <div className="leading-relaxed">
-                        <b>Otomatisasi Cloud Aktif:</b> Pengingat jadwal ini juga dipicu secara otomatis oleh sistem serverless setiap hari pukul <b>06:00 WIB</b> ke WhatsApp seluruh ustadz yang memiliki jadwal mengajar hari itu.
+                        <b>Otomatisasi Pagi Aktif:</b> Pengingat jadwal ini dipicu secara otomatis setiap pagi pada pukul <b>06:00 WIB</b> (maksimal pukul <b>07:00 WIB</b>) ke WhatsApp seluruh ustadz yang memiliki jadwal mengajar hari itu.
                     </div>
                 </div>
 

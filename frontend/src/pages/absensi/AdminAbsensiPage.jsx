@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { 
-    Users, 
-    QrCode, 
-    Calendar, 
-    Filter, 
-    Download, 
-    Printer, 
-    Search, 
-    RefreshCw, 
-    BookOpen, 
-    CheckCircle2, 
-    XCircle, 
+import {
+    Users,
+    QrCode,
+    Calendar,
+    Filter,
+    Download,
+    Printer,
+    Search,
+    RefreshCw,
+    BookOpen,
+    CheckCircle2,
+    XCircle,
     AlertTriangle,
     Clock,
     UserCheck,
@@ -132,10 +132,10 @@ const AdminAbsensiPage = () => {
     const [izinGuruList, setIzinGuruList] = useState([])
     const [loading, setLoading] = useState(false)
     const [presensiData, setPresensiData] = useState([])
-    
+
     // Filters (Gunakan tanggal lokal agar tidak mundur 1 hari pada jam dini hari)
     const [filterDate, setFilterDate] = useState(getLocalDateStr(new Date()))
-    
+
     // Default to start of month for reports
     const getStartOfMonth = () => {
         const d = new Date()
@@ -274,29 +274,160 @@ const AdminAbsensiPage = () => {
         return 'Semua Kategori'
     }
 
-    const exportToPDF = () => {
+    const exportToPDF = async () => {
         const doc = new jsPDF({
             orientation: 'landscape',
             unit: 'mm',
             format: 'a4'
         });
 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
         const isStaf = laporanSubTab === 'staf';
-        const categoryTitle = getCategoryLabel();
-        const title = isStaf 
-            ? `Laporan Kehadiran Staf - ${categoryTitle} [${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}]`
-            : `Laporan Kehadiran Santri - ${categoryTitle} [${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}]`;
-        
-        doc.setFontSize(14);
-        doc.setTextColor(15, 23, 42); // Slate-900
-        doc.text(title, 14, 15);
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139); // Slate-500
-        const datePrinted = `Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
-        doc.text(datePrinted, 14, 21);
+        const primaryColor = isStaf ? [79, 70, 229] : [5, 150, 105]; // Indigo-600 or Emerald-600
+        const lightBgColor = isStaf ? [238, 242, 255] : [236, 253, 245]; // Indigo-50 or Emerald-50
 
-        let tableHeaders, tableRows, columnStyles;
+        // 1. Header with Logo (Kop Surat Resmi Pondok Pesantren)
+        let y = 10;
+        try {
+            const logoImg = new Image();
+            logoImg.src = '/logo-pondok.png';
+            await new Promise((resolve) => {
+                logoImg.onload = resolve;
+                logoImg.onerror = resolve;
+                setTimeout(resolve, 800);
+            });
+            if (logoImg.complete && logoImg.naturalWidth !== 0) {
+                doc.addImage(logoImg, 'PNG', 14, y, 20, 20);
+            }
+        } catch (e) {
+            console.warn('Logo loading warning:', e);
+        }
+
+        const textX = 38;
+        doc.setTextColor(71, 85, 105); // Slate-600
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('YAYASAN ABDULLAH DEWI HASANAH', textX, y + 4);
+
+        doc.setTextColor(15, 23, 42); // Slate-900
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PONDOK PESANTREN TAHFIZH QUR\'AN AL-USYMUNI BATUAN', textX, y + 10);
+
+        doc.setTextColor(100, 116, 139); // Slate-500
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Jl. Raya Lenteng Ds. Batuan Barat RT 002 RW 004, Kec. Batuan, Kab. Sumenep, Jawa Timur 69451', textX, y + 15);
+        doc.text('Website:ptqabatuan.id | Sistem Informasi Manajemen Presensi (SI-TAQUA)', textX, y + 19);
+
+        // Garis Pembatas Kop Surat
+        y += 22;
+        doc.setDrawColor(...primaryColor);
+        doc.setLineWidth(1);
+        doc.line(14, y, pageWidth - 14, y);
+        doc.setLineWidth(0.3);
+        doc.line(14, y + 1.2, pageWidth - 14, y + 1.2);
+
+        // 2. Judul & Subtitle Dokumen
+        y += 7;
+        const categoryTitle = getCategoryLabel();
+        const title = isStaf ? 'LAPORAN REKAPITULASI KEHADIRAN STAF PENGAJAR' : 'LAPORAN REKAPITULASI KEHADIRAN SANTRI';
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text(title, pageWidth / 2, y, { align: 'center' });
+
+        y += 5;
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(`Periode: ${formatDate(filterStartDate)} s/d ${formatDate(filterEndDate)}   |   Kategori: ${categoryTitle}`, pageWidth / 2, y, { align: 'center' });
+
+        y += 4;
+
+        // 3. Ringkasan Eksekutif (Dashboard KPI Box)
+        let recapBoxes = [];
+        let totalHadir = 0;
+        let totalIzin = 0;
+        let totalLibur = 0;
+        let totalAlpha = 0;
+        let totalTerlambat = 0;
+        let totalSakit = 0;
+        let totalPulang = 0;
+        let avgScore = 0;
+
+        if (isStaf) {
+            totalHadir = aggregatedStaf.reduce((acc, curr) => acc + (curr.Hadir || 0), 0);
+            totalIzin = aggregatedStaf.reduce((acc, curr) => acc + (curr.Izin || 0), 0);
+            totalLibur = aggregatedStaf.reduce((acc, curr) => acc + (curr.Libur || 0), 0);
+            totalAlpha = aggregatedStaf.reduce((acc, curr) => acc + (curr.Alpha || 0), 0);
+            const totalSemua = totalHadir + totalIzin + totalAlpha;
+            avgScore = totalSemua > 0 ? Math.round(((totalHadir + totalIzin) / totalSemua) * 100) : 0;
+
+            recapBoxes = [
+                { label: 'Total Staf', value: `${aggregatedStaf.length} Orang` },
+                { label: 'Total Hadir', value: totalHadir },
+                { label: 'Total Izin', value: totalIzin },
+                { label: 'Total Libur', value: totalLibur },
+                { label: 'Total Alpha', value: totalAlpha },
+                { label: 'Rata-rata Skor', value: `${avgScore}%` },
+            ];
+        } else {
+            totalHadir = aggregatedSantri.reduce((acc, curr) => acc + (curr.Hadir || 0), 0);
+            totalTerlambat = aggregatedSantri.reduce((acc, curr) => acc + (curr.Terlambat || 0), 0);
+            totalSakit = aggregatedSantri.reduce((acc, curr) => acc + (curr.Sakit || 0), 0);
+            totalIzin = aggregatedSantri.reduce((acc, curr) => acc + (curr.Izin || 0), 0);
+            totalAlpha = aggregatedSantri.reduce((acc, curr) => acc + (curr.Alpha || 0), 0);
+            totalPulang = aggregatedSantri.reduce((acc, curr) => acc + (curr.Pulang || 0), 0);
+            const totalRecords = filteredPresensi.length;
+            const hadirTelatCount = filteredPresensi.filter(p => ['hadir', 'terlambat', 'telat'].includes((p.status || '').toLowerCase())).length;
+            const persenPartisipasi = totalRecords > 0 ? Math.round((hadirTelatCount / totalRecords) * 100) : 0;
+
+            recapBoxes = [
+                { label: 'Total Santri', value: `${aggregatedSantri.length} Santri` },
+                { label: 'Hadir', value: totalHadir },
+                { label: 'Terlambat', value: totalTerlambat },
+                { label: 'Sakit', value: totalSakit },
+                { label: 'Izin', value: totalIzin },
+                { label: 'Alpha', value: totalAlpha },
+                { label: 'Pulang', value: totalPulang },
+                { label: 'Partisipasi', value: `${persenPartisipasi}%` },
+            ];
+        }
+
+        const boxY = y;
+        const boxHeight = 11;
+        const boxWidth = pageWidth - 28; // 269mm
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, boxY, boxWidth, boxHeight, 2, 2, 'FD');
+
+        const itemWidth = boxWidth / recapBoxes.length;
+        recapBoxes.forEach((item, idx) => {
+            const itemCenterX = 14 + (idx * itemWidth) + (itemWidth / 2);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text(item.label.toUpperCase(), itemCenterX, boxY + 4, { align: 'center' });
+
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 23, 42);
+            doc.text(String(item.value), itemCenterX, boxY + 9, { align: 'center' });
+
+            if (idx < recapBoxes.length - 1) {
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.2);
+                doc.line(14 + ((idx + 1) * itemWidth), boxY + 2, 14 + ((idx + 1) * itemWidth), boxY + boxHeight - 2);
+            }
+        });
+
+        y = boxY + boxHeight + 4;
+
+        // 4. Struktur Kolom & Data Tabel
+        let tableHeaders, tableRows, columnStyles, tableFoot;
 
         if (isStaf) {
             tableHeaders = [["No", "Nama Pengajar", "Email", "Hadir", "Izin", "Libur", "Alpha", "Score Kehadiran (%)"]];
@@ -315,14 +446,23 @@ const AdminAbsensiPage = () => {
                 ];
             });
             columnStyles = {
-                0: { cellWidth: 10, halign: 'center' },
-                1: { fontStyle: 'bold' },
-                3: { cellWidth: 14, halign: 'center' },
-                4: { cellWidth: 14, halign: 'center' },
-                5: { cellWidth: 14, halign: 'center' },
-                6: { cellWidth: 14, halign: 'center' },
-                7: { cellWidth: 32, halign: 'center' }
+                0: { cellWidth: 12, halign: 'center' },
+                1: { cellWidth: 70, halign: 'left', fontStyle: 'bold' },
+                2: { cellWidth: 63, halign: 'left' },
+                3: { cellWidth: 22, halign: 'center' },
+                4: { cellWidth: 22, halign: 'center' },
+                5: { cellWidth: 22, halign: 'center' },
+                6: { cellWidth: 22, halign: 'center' },
+                7: { cellWidth: 36, halign: 'center' }
             };
+            tableFoot = [[
+                { content: 'TOTAL / RATA-RATA', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: String(totalHadir), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalIzin), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalLibur), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalAlpha), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: `${avgScore}%`, styles: { halign: 'center', fontStyle: 'bold' } },
+            ]];
         } else {
             tableHeaders = [["No", "Nama Santri", "NIS", "Kategori", "Kelas / Halaqoh", "Hadir", "Terlambat", "Sakit", "Izin", "Alpha", "Pulang"]];
             tableRows = aggregatedSantri.map((item, index) => [
@@ -339,41 +479,116 @@ const AdminAbsensiPage = () => {
                 item.Pulang || 0
             ]);
             columnStyles = {
-                0: { cellWidth: 8, halign: 'center' },
-                1: { fontStyle: 'bold' },
-                3: { cellWidth: 22 },
-                4: { cellWidth: 22 },
-                5: { cellWidth: 12, halign: 'center' },
-                6: { cellWidth: 14, halign: 'center' },
-                7: { cellWidth: 12, halign: 'center' },
-                8: { cellWidth: 12, halign: 'center' },
-                9: { cellWidth: 12, halign: 'center' },
-                10: { cellWidth: 12, halign: 'center' }
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 64, halign: 'left', fontStyle: 'bold' },
+                2: { cellWidth: 22, halign: 'center' },
+                3: { cellWidth: 25, halign: 'center' },
+                4: { cellWidth: 32, halign: 'center' },
+                5: { cellWidth: 19, halign: 'center' },
+                6: { cellWidth: 21, halign: 'center' },
+                7: { cellWidth: 19, halign: 'center' },
+                8: { cellWidth: 19, halign: 'center' },
+                9: { cellWidth: 19, halign: 'center' },
+                10: { cellWidth: 19, halign: 'center' }
             };
+            tableFoot = [[
+                { content: 'TOTAL KESELURUHAN', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+                { content: String(totalHadir), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalTerlambat), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalSakit), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalIzin), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalAlpha), styles: { halign: 'center', fontStyle: 'bold' } },
+                { content: String(totalPulang), styles: { halign: 'center', fontStyle: 'bold' } },
+            ]];
         }
 
         autoTable(doc, {
             head: tableHeaders,
             body: tableRows,
-            startY: 26,
-            theme: 'striped',
+            foot: tableFoot,
+            startY: y,
+            theme: 'grid',
             headStyles: {
-                fillColor: isStaf ? [79, 70, 229] : [16, 185, 129], // Indigo 600 or Emerald 500
+                fillColor: primaryColor,
                 textColor: [255, 255, 255],
-                fontSize: 9,
+                fontSize: 8.5,
                 fontStyle: 'bold',
-                halign: 'left'
+                valign: 'middle',
+                cellPadding: 2.5
             },
             bodyStyles: {
                 fontSize: 8,
-                textColor: [51, 65, 85] // Slate-700
+                textColor: [30, 41, 59],
+                valign: 'middle',
+                cellPadding: 2.5
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            footStyles: {
+                fillColor: lightBgColor,
+                textColor: primaryColor,
+                fontSize: 8.5,
+                fontStyle: 'bold',
+                valign: 'middle',
+                cellPadding: 2.5
             },
             columnStyles: columnStyles,
             styles: {
                 overflow: 'linebreak',
-                cellPadding: 4
+                lineColor: [226, 232, 240],
+                lineWidth: 0.1
+            },
+            margin: { left: 14, right: 14, bottom: 20 },
+            didParseCell: (data) => {
+                if (data.section === 'head' || data.section === 'foot') {
+                    const colStyle = columnStyles[data.column.index];
+                    if (colStyle && colStyle.halign) {
+                        data.cell.styles.halign = colStyle.halign;
+                    }
+                }
             }
         });
+
+        // 5. Lembar Pengesahan / Tanda Tangan
+        let finalY = doc.lastAutoTable.finalY + 8;
+        if (finalY + 30 > pageHeight - 16) {
+            doc.addPage();
+            finalY = 20;
+        }
+
+        const signX = pageWidth - 60;
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(30, 41, 59);
+        const dateToday = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        doc.text(`Batuan, ${dateToday}`, signX, finalY, { align: 'center' });
+        doc.text('Koordinator Bagian Presensi,', signX, finalY + 4.5, { align: 'center' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('( ..................................................... )', signX, finalY + 22, { align: 'center' });
+
+        // 6. Running Footer & Page Numbering di Seluruh Halaman
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            const footerY = pageHeight - 7;
+
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.line(14, footerY - 3, pageWidth - 14, footerY - 3);
+
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(148, 163, 184);
+
+            const datePrinted = `Dicetak pada: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })} WIB`;
+            doc.text(datePrinted, 14, footerY);
+
+            doc.text('Sistem Informasi Manajemen Absensi (SI-TAQUA) - PTQA Batuan', pageWidth / 2, footerY, { align: 'center' });
+
+            doc.text(`Halaman ${i} dari ${totalPages}`, pageWidth - 14, footerY, { align: 'right' });
+        }
 
         doc.save(`Laporan_Kehadiran_${isStaf ? 'Staf' : 'Santri'}_${filterType}_${filterStartDate}_sd_${filterEndDate}.pdf`);
     };
@@ -449,10 +664,10 @@ const AdminAbsensiPage = () => {
     const exportToWord = () => {
         const isStaf = laporanSubTab === 'staf';
         const categoryTitle = getCategoryLabel();
-        const title = isStaf 
+        const title = isStaf
             ? `Laporan Kehadiran Staf - ${categoryTitle} Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`
             : `Laporan Kehadiran Santri - ${categoryTitle} Periode ${formatDate(filterStartDate)} - ${formatDate(filterEndDate)}`;
-        
+
         let tableHeaderHtml = '';
         let tableBodyHtml = '';
 
@@ -573,10 +788,10 @@ const AdminAbsensiPage = () => {
             supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
             supabase.from('user_profiles').select('user_id, nama, email, guru_id, no_hp')
         ])
-        
+
         const rawJadwal = jadwalRes.data || []
-        const halaqohMap = (halaqohRes.data || []).reduce((acc, h) => ({...acc, [h.id]: h}), {})
-        const guruMap = (guruRes.data || []).reduce((acc, g) => ({...acc, [g.id]: g}), {})
+        const halaqohMap = (halaqohRes.data || []).reduce((acc, h) => ({ ...acc, [h.id]: h }), {})
+        const guruMap = (guruRes.data || []).reduce((acc, g) => ({ ...acc, [g.id]: g }), {})
         const guruList = guruRes.data || []
         const profilesList = profilesRes.data || []
         const mhData = musyrifHalaqohRes.data || []
@@ -600,7 +815,7 @@ const AdminAbsensiPage = () => {
             }
             return null
         }
-        
+
         const halaqohToMusyrifs = {}
         mhData.forEach(mh => {
             if (!halaqohToMusyrifs[mh.halaqoh_id]) halaqohToMusyrifs[mh.halaqoh_id] = []
@@ -609,9 +824,9 @@ const AdminAbsensiPage = () => {
                 halaqohToMusyrifs[mh.halaqoh_id].push(resolvedGid)
             }
         })
-        
+
         const fixedJadwal = []
-        
+
         rawJadwal.forEach(j => {
             const isHalaqoh = j.tipe === 'HALAQOH' || Boolean(j.halaqoh_id)
             const targetHalaqohId = j.halaqoh_id || j.referensi_id
@@ -677,7 +892,7 @@ const AdminAbsensiPage = () => {
                 })
             }
         })
-        
+
         setAllJadwal(fixedJadwal)
     }
 
@@ -819,7 +1034,7 @@ const AdminAbsensiPage = () => {
             let query = supabase
                 .from('presensi_staf')
                 .select('*')
-            
+
             let queryIzin = supabase
                 .from('izin_guru')
                 .select('*')
@@ -1021,11 +1236,11 @@ const AdminAbsensiPage = () => {
             // Jika filterHalaqohId aktif (Qur'aniyah), jangan sertakan log Madrosah
             if (filterHalaqohId && !filterKelasId && !isQuraniyah) return false
 
-            const matchesType = 
-                filterType === 'Semua' || 
-                (filterType === 'Madrosah' && !isQuraniyah) || 
+            const matchesType =
+                filterType === 'Semua' ||
+                (filterType === 'Madrosah' && !isQuraniyah) ||
                 (filterType === 'Quraniyah' && isQuraniyah)
-            
+
             if (!matchesType) return false
 
             if (filterKelasId) {
@@ -1056,8 +1271,8 @@ const AdminAbsensiPage = () => {
 
         const currentSemObj = semesterList.find(s => String(s.id) === String(selectedSemesterId))
         const isFullSemesterSelected = Boolean(
-            selectedSemesterId && 
-            currentSemObj && 
+            selectedSemesterId &&
+            currentSemObj &&
             filterStartDate === currentSemObj.tanggal_mulai &&
             (filterEndDate === currentSemObj.tanggal_selesai || filterEndDate >= currentSemObj.tanggal_selesai)
         )
@@ -1083,9 +1298,9 @@ const AdminAbsensiPage = () => {
                 if (sHalaqohId !== String(filterHalaqohId)) return
             }
 
-            const autoObj = autoCounts[s.id] || { 
-                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 }, 
-                quraniyah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 } 
+            const autoObj = autoCounts[s.id] || {
+                madrosah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 },
+                quraniyah: { sakit: 0, izin: 0, alpha: 0, pulang: 0, hadir: 0, terlambat: 0 }
             }
 
             // Jika preset semester penuh dipilih dan ada nilai tersimpan di perilaku_semester, gunakan tanpa saling silang (madrosah vs halaqoh terpisah murni)
@@ -1128,12 +1343,12 @@ const AdminAbsensiPage = () => {
             }
 
             // Tentukan baris yang ditampilkan secara terisolasi tanpa saling tumpang tindih
-            const showMadrosah = (filterType === 'Madrosah') || 
-                (Boolean(filterKelasId) && !filterHalaqohId) || 
+            const showMadrosah = (filterType === 'Madrosah') ||
+                (Boolean(filterKelasId) && !filterHalaqohId) ||
                 (filterType === 'Semua' && !filterHalaqohId)
 
-            const showQuraniyah = (filterType === 'Quraniyah') || 
-                (Boolean(filterHalaqohId) && !filterKelasId) || 
+            const showQuraniyah = (filterType === 'Quraniyah') ||
+                (Boolean(filterHalaqohId) && !filterKelasId) ||
                 (filterType === 'Semua' && !filterKelasId)
 
             // A. Madrosah (Kelas)
@@ -1191,7 +1406,7 @@ const AdminAbsensiPage = () => {
         if (!relevantJadwal.length) return []
 
         const stafSummary = {}
-        
+
         // 1. Dapatkan daftar tanggal dalam rentang (maksimal sampai hari ini)
         const start = new Date(filterStartDate)
         const end = new Date(filterEndDate)
@@ -1253,7 +1468,7 @@ const AdminAbsensiPage = () => {
             const jadwalHariIni = relevantJadwal.filter(j => j.hari === dayName)
             const dayScans = presensiStaf.filter(p => p.tanggal === dateStr)
             const matchedScanIds = new Set()
-            
+
             jadwalHariIni.forEach(j => {
                 if (!stafSummary[j.guru_id]) return
 
@@ -1302,9 +1517,9 @@ const AdminAbsensiPage = () => {
 
                     // Jika tidak scan, cek izin
                     const matchedIzin = izinGuruList.find(izin => {
-                        return izin.guru_id === j.guru_id && 
-                               izin.tanggal_mulai <= dateStr && 
-                               izin.tanggal_selesai >= dateStr
+                        return izin.guru_id === j.guru_id &&
+                            izin.tanggal_mulai <= dateStr &&
+                            izin.tanggal_selesai >= dateStr
                     })
 
                     if (matchedIzin) {
@@ -1329,7 +1544,7 @@ const AdminAbsensiPage = () => {
                         } else {
                             classDate.setHours(23, 59, 59, 999)
                         }
-                        
+
                         if (now > classDate) {
                             stafSummary[j.guru_id].Alpha++
                             stafSummary[j.guru_id].totalSelesai++
@@ -1361,7 +1576,7 @@ const AdminAbsensiPage = () => {
     // Logika untuk Kehadiran Staf Harian (Daftar seluruh jadwal hari ini + status kehadirannya)
     const dailyStaffAttendance = React.useMemo(() => {
         if (!allJadwal.length && !presensiStaf.length) return []
-        
+
         const dateObj = new Date(filterDate)
         const dayMap = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
         const dayName = dayMap[dateObj.getDay()]
@@ -1369,7 +1584,7 @@ const AdminAbsensiPage = () => {
 
         const dayScans = presensiStaf.filter(p => p.tanggal === dateStr)
         const matchedScanIds = new Set()
-        
+
         // 1. Ambil jadwal hari ini
         const jadwalHariIni = allJadwal.filter(j => {
             if (j.hari !== dayName) return false
@@ -1381,7 +1596,7 @@ const AdminAbsensiPage = () => {
             return true
         }).map(j => {
             const guru = guruList.find(g => g.id === j.guru_id)
-            
+
             // Cari scan yang cocok menggunakan helper terpadu
             const scan = findStaffScan(
                 dayScans.filter(p => !matchedScanIds.has(p.id)),
@@ -1394,7 +1609,7 @@ const AdminAbsensiPage = () => {
             }
 
             // Cek Izin
-            const matchedIzin = izinGuruList.find(izin => 
+            const matchedIzin = izinGuruList.find(izin =>
                 izin.guru_id === j.guru_id &&
                 izin.tanggal_mulai <= dateStr &&
                 izin.tanggal_selesai >= dateStr
@@ -1460,7 +1675,7 @@ const AdminAbsensiPage = () => {
         })
 
         const combined = [...jadwalHariIni, ...presensiLuarJadwal]
-        
+
         // Sort by Waktu Scan (jika ada), lalu by Jam Ke
         return combined.sort((a, b) => {
             if (a.jam_ke !== b.jam_ke) return Number(a.jam_ke) - Number(b.jam_ke)
@@ -1526,33 +1741,33 @@ const AdminAbsensiPage = () => {
 
     return (
         <div className={`relative space-y-6 md:space-y-8 animate-fade-in pb-20 ${isStandalone ? 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8' : ''}`}>
-            <PageHeader 
+            <PageHeader
                 title={
                     isDashboard ? 'Dashboard Presensi' :
-                    isRekap ? 'Kehadiran Santri' :
-                    isStaf ? 'Kehadiran Staf & Guru' :
-                    isLaporan ? 'Laporan Kehadiran Periode' :
-                    isJurnal ? 'Agenda Mengajar' :
-                    isQr ? 'Manajemen QR Code' :
-                    'Admin Absensi'
+                        isRekap ? 'Kehadiran Santri' :
+                            isStaf ? 'Kehadiran Staf & Guru' :
+                                isLaporan ? 'Laporan Kehadiran Periode' :
+                                    isJurnal ? 'Agenda Mengajar' :
+                                        isQr ? 'Manajemen QR Code' :
+                                            'Admin Absensi'
                 }
                 description={
                     isDashboard ? 'Pusat monitoring dan analisis kehadiran harian pondok' :
-                    isRekap ? 'Rekapitulasi data kehadiran santri madrasah & halaqoh hari ini' :
-                    isStaf ? 'Monitoring kehadiran dan scan QR staf pengajar hari ini' :
-                    isLaporan ? 'Rekapitulasi dan analisis kehadiran per periode semester' :
-                    isJurnal ? 'Jurnal dan agenda mengajar kelas & halaqoh hari ini' :
-                    isQr ? 'Kelola dan cetak kode QR kelas & halaqoh' :
-                    'Pusat rekapitulasi kehadiran'
+                        isRekap ? 'Rekapitulasi data kehadiran santri madrasah & halaqoh hari ini' :
+                            isStaf ? 'Monitoring kehadiran dan scan QR staf pengajar hari ini' :
+                                isLaporan ? 'Rekapitulasi dan analisis kehadiran per periode semester' :
+                                    isJurnal ? 'Jurnal dan agenda mengajar kelas & halaqoh hari ini' :
+                                        isQr ? 'Kelola dan cetak kode QR kelas & halaqoh' :
+                                            'Pusat rekapitulasi kehadiran'
                 }
                 icon={
                     isDashboard ? LayoutDashboard :
-                    isRekap ? Users :
-                    isStaf ? UserCheck :
-                    isLaporan ? FileText :
-                    isJurnal ? Calendar :
-                    isQr ? QrCode :
-                    Users
+                        isRekap ? Users :
+                            isStaf ? UserCheck :
+                                isLaporan ? FileText :
+                                    isJurnal ? Calendar :
+                                        isQr ? QrCode :
+                                            Users
                 }
                 actions={
                     <div className="flex items-center gap-2">
@@ -1574,107 +1789,104 @@ const AdminAbsensiPage = () => {
                             </Button>
                         )}
                         {isStaf && (
-                            <Button 
-                                variant="primary" 
-                                size="sm" 
-                                onClick={() => setShowBroadcastGuruModal(true)} 
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => setShowBroadcastGuruModal(true)}
                                 className="rounded-xl flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
                             >
-                                <MessageSquare size={16} /> 
+                                <MessageSquare size={16} />
                                 <span className="hidden sm:inline">Kirim Pengingat WA Guru</span>
                                 <span className="sm:hidden">WA Guru</span>
                             </Button>
                         )}
                         {isLaporan && (
                             <div className="relative">
-                                <Button 
-                                variant="secondary" 
-                                size="sm" 
-                                onClick={() => setShowDownloadDropdown(!showDownloadDropdown)} 
-                                className="rounded-xl flex items-center gap-2"
-                            >
-                                <Download size={18} /> 
-                                <span>Unduh Laporan</span>
-                            </Button>
-                            
-                            {showDownloadDropdown && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setShowDownloadDropdown(false)}></div>
-                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl border border-gray-100 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                                        <button 
-                                            onClick={() => {
-                                                setShowDownloadDropdown(false);
-                                                exportToPDF();
-                                            }}
-                                            className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
-                                        >
-                                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                            Unduh PDF
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                setShowDownloadDropdown(false);
-                                                exportToExcel();
-                                            }}
-                                            className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
-                                        >
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                            Unduh Excel (.xlsx)
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                setShowDownloadDropdown(false);
-                                                exportToWord();
-                                            }}
-                                            className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
-                                        >
-                                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                            Unduh Word (.doc)
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
-            }
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+                                    className="rounded-xl flex items-center gap-2"
+                                >
+                                    <Download size={18} />
+                                    <span>Unduh Laporan</span>
+                                </Button>
+
+                                {showDownloadDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowDownloadDropdown(false)}></div>
+                                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl border border-gray-100 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                                            <button
+                                                onClick={() => {
+                                                    setShowDownloadDropdown(false);
+                                                    exportToPDF();
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                                            >
+                                                <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                                Unduh PDF
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowDownloadDropdown(false);
+                                                    exportToExcel();
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                                            >
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                                Unduh Excel (.xlsx)
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowDownloadDropdown(false);
+                                                    exportToWord();
+                                                }}
+                                                className="w-full px-4 py-2.5 text-left text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                                            >
+                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                Unduh Word (.doc)
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                }
             />
 
             {/* Sub-menu Navigation for KEHADIRAN (Santri vs Staf vs Laporan) */}
             {mainTab === 'kehadiran' && (
                 <div className="flex items-center gap-2 p-1.5 bg-gray-100/90 rounded-2xl border border-gray-200/60 w-fit max-w-full overflow-x-auto scrollbar-none shadow-sm">
-                    <button 
+                    <button
                         type="button"
                         onClick={() => handleSwitchSubKehadiran('santri')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                            subKehadiran === 'santri' 
-                                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100 scale-[1.02]' 
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${subKehadiran === 'santri'
+                            ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100 scale-[1.02]'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
                     >
                         <Users size={15} />
                         <span>Kehadiran Santri</span>
                     </button>
-                    <button 
+                    <button
                         type="button"
                         onClick={() => handleSwitchSubKehadiran('staf')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                            subKehadiran === 'staf' 
-                                ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100 scale-[1.02]' 
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${subKehadiran === 'staf'
+                            ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100 scale-[1.02]'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
                     >
                         <UserCheck size={15} />
                         <span>Kehadiran Staf &amp; Guru</span>
                     </button>
-                    <button 
+                    <button
                         type="button"
                         onClick={() => handleSwitchSubKehadiran('laporan')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                            subKehadiran === 'laporan' 
-                                ? 'bg-white text-purple-700 shadow-sm border border-purple-100 scale-[1.02]' 
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${subKehadiran === 'laporan'
+                            ? 'bg-white text-purple-700 shadow-sm border border-purple-100 scale-[1.02]'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
                     >
                         <FileText size={15} />
                         <span>Laporan Periode</span>
@@ -1685,26 +1897,24 @@ const AdminAbsensiPage = () => {
             {/* Sub-menu Navigation for AGENDA (Jurnal vs QR Code) */}
             {mainTab === 'agenda' && (
                 <div className="flex items-center gap-2 p-1.5 bg-gray-100/90 rounded-2xl border border-gray-200/60 w-fit max-w-full overflow-x-auto scrollbar-none shadow-sm">
-                    <button 
+                    <button
                         type="button"
                         onClick={() => handleSwitchSubAgenda('jurnal')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                            subAgenda === 'jurnal' 
-                                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100 scale-[1.02]' 
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${subAgenda === 'jurnal'
+                            ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100 scale-[1.02]'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
                     >
                         <Calendar size={15} />
                         <span>Agenda Mengajar</span>
                     </button>
-                    <button 
+                    <button
                         type="button"
                         onClick={() => handleSwitchSubAgenda('qr')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                            subAgenda === 'qr' 
-                                ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100 scale-[1.02]' 
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${subAgenda === 'qr'
+                            ? 'bg-white text-indigo-700 shadow-sm border border-indigo-100 scale-[1.02]'
+                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                            }`}
                     >
                         <QrCode size={15} />
                         <span>Manajemen QR Code</span>
@@ -1780,7 +1990,7 @@ const AdminAbsensiPage = () => {
                                 </button>
                                 <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-xl border border-white/10">
                                     <Calendar size={16} className="text-[#BCF32F]" />
-                                    <input 
+                                    <input
                                         type="date"
                                         value={filterDate}
                                         onChange={(e) => setFilterDate(e.target.value)}
@@ -1860,8 +2070,8 @@ const AdminAbsensiPage = () => {
                                 </div>
                                 {/* Progress Bar */}
                                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                                    <div 
-                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                                    <div
+                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                                         style={{ width: `${dashboardSantriStats.persenHadir}%` }}
                                     ></div>
                                 </div>
@@ -1914,8 +2124,8 @@ const AdminAbsensiPage = () => {
                                 </div>
                                 {/* Progress Bar */}
                                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                                    <div 
-                                        className="bg-indigo-500 h-full rounded-full transition-all duration-500" 
+                                    <div
+                                        className="bg-indigo-500 h-full rounded-full transition-all duration-500"
                                         style={{ width: `${dashboardStafStats.persenHadir}%` }}
                                     ></div>
                                 </div>
@@ -2011,8 +2221,8 @@ const AdminAbsensiPage = () => {
                                 </div>
                                 {/* Progress Bar */}
                                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                                    <div 
-                                        className="bg-purple-500 h-full rounded-full transition-all duration-500" 
+                                    <div
+                                        className="bg-purple-500 h-full rounded-full transition-all duration-500"
                                         style={{ width: `${dashboardAgendaStats.persenTerisi}%` }}
                                     ></div>
                                 </div>
@@ -2185,9 +2395,9 @@ const AdminAbsensiPage = () => {
                                                 <Badge
                                                     variant={
                                                         item.status === 'Hadir' ? 'success' :
-                                                        item.status === 'Libur' ? 'purple' :
-                                                        ['Sakit', 'Izin', 'Dinas'].includes(item.status) ? 'warning' :
-                                                        item.status === 'Belum Absen' ? 'neutral' : 'danger'
+                                                            item.status === 'Libur' ? 'purple' :
+                                                                ['Sakit', 'Izin', 'Dinas'].includes(item.status) ? 'warning' :
+                                                                    item.status === 'Belum Absen' ? 'neutral' : 'danger'
                                                     }
                                                     className="text-[9px] font-black uppercase px-2.5 py-1"
                                                 >
@@ -2258,8 +2468,8 @@ const AdminAbsensiPage = () => {
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tanggal</label>
                                 <div className="relative">
                                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
-                                    <input 
-                                        type="date" 
+                                    <input
+                                        type="date"
                                         value={filterDate}
                                         onChange={(e) => setFilterDate(e.target.value)}
                                         className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-sm bg-gray-50/30"
@@ -2268,7 +2478,7 @@ const AdminAbsensiPage = () => {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tipe Absensi</label>
-                                <select 
+                                <select
                                     value={filterType}
                                     onChange={(e) => {
                                         setFilterType(e.target.value)
@@ -2285,7 +2495,7 @@ const AdminAbsensiPage = () => {
                             {filterType === 'Madrosah' ? (
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Filter Kelas</label>
-                                    <select 
+                                    <select
                                         value={filterKelasId}
                                         onChange={(e) => setFilterKelasId(e.target.value)}
                                         className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs md:text-sm bg-emerald-50/30 text-emerald-900 appearance-none cursor-pointer"
@@ -2299,7 +2509,7 @@ const AdminAbsensiPage = () => {
                             ) : filterType === 'Quraniyah' ? (
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1">Filter Halaqoh</label>
-                                    <select 
+                                    <select
                                         value={filterHalaqohId}
                                         onChange={(e) => setFilterHalaqohId(e.target.value)}
                                         className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-blue-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-xs md:text-sm bg-blue-50/30 text-blue-900 appearance-none cursor-pointer"
@@ -2315,8 +2525,8 @@ const AdminAbsensiPage = () => {
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Cari Santri</label>
                                 <div className="relative">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         placeholder="Nama atau NIS..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -2330,8 +2540,8 @@ const AdminAbsensiPage = () => {
                     <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
                         <ResponsiveTable
                             columns={[
-                                { 
-                                    header: 'Waktu', 
+                                {
+                                    header: 'Waktu',
                                     render: (row) => (
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 rounded-lg bg-white shadow-sm text-emerald-500 group-hover:scale-110 transition-transform">
@@ -2339,23 +2549,23 @@ const AdminAbsensiPage = () => {
                                             </div>
                                             <span className="font-black text-gray-900">{new Date(row.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                                         </div>
-                                    ), 
-                                    className: 'px-8 py-6 whitespace-nowrap', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6 whitespace-nowrap',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Santri', 
+                                {
+                                    header: 'Santri',
                                     render: (row) => (
                                         <>
                                             <div className="font-black text-gray-900 text-sm group-hover:text-emerald-600 transition-colors">{row.santri?.nama}</div>
                                             <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.santri?.nis}</div>
                                         </>
-                                    ), 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Grup', 
+                                {
+                                    header: 'Grup',
                                     render: (row) => {
                                         const isQuraniyah = row.keterangan?.includes('[Quraniyah]')
                                         return (
@@ -2366,33 +2576,33 @@ const AdminAbsensiPage = () => {
                                                 </span>
                                             </div>
                                         )
-                                    }, 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                    },
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Status', 
+                                {
+                                    header: 'Status',
                                     render: (row) => (
                                         <Badge variant={
                                             (row.status || '').toLowerCase() === 'hadir' ? 'success' :
-                                            (row.status || '').toLowerCase() === 'sakit' ? 'warning' :
-                                            (row.status || '').toLowerCase() === 'izin' ? 'info' : 
-                                            (row.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
+                                                (row.status || '').toLowerCase() === 'sakit' ? 'warning' :
+                                                    (row.status || '').toLowerCase() === 'izin' ? 'info' :
+                                                        (row.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
                                         } className="px-4 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-widest">
                                             {row.status}
                                         </Badge>
-                                    ), 
-                                    className: 'px-8 py-6 text-center', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6 text-center',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Keterangan', 
-                                    render: (row) => <span className="text-gray-500 text-xs font-medium italic max-w-[200px] truncate">{row.keterangan?.replace('[Quraniyah] ', '') || '-'}</span>, 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                {
+                                    header: 'Keterangan',
+                                    render: (row) => <span className="text-gray-500 text-xs font-medium italic max-w-[200px] truncate">{row.keterangan?.replace('[Quraniyah] ', '') || '-'}</span>,
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Operator', 
+                                {
+                                    header: 'Operator',
                                     render: (row) => (
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-[10px] font-black uppercase shadow-lg shadow-slate-200">
@@ -2400,9 +2610,9 @@ const AdminAbsensiPage = () => {
                                             </div>
                                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{row.nama_pengabsen || '-'}</span>
                                         </div>
-                                    ), 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 }
                             ]}
                             data={filteredPresensi}
@@ -2438,9 +2648,9 @@ const AdminAbsensiPage = () => {
                                             <span className="text-gray-500 text-xs">Status</span>
                                             <Badge variant={
                                                 (row.status || '').toLowerCase() === 'hadir' ? 'success' :
-                                                (row.status || '').toLowerCase() === 'sakit' ? 'warning' :
-                                                (row.status || '').toLowerCase() === 'izin' ? 'info' : 
-                                                (row.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
+                                                    (row.status || '').toLowerCase() === 'sakit' ? 'warning' :
+                                                        (row.status || '').toLowerCase() === 'izin' ? 'info' :
+                                                            (row.status || '').toLowerCase() === 'pulang' ? 'neutral' : 'danger'
                                             } className="px-2 py-0.5 rounded-lg font-black uppercase text-[9px] tracking-widest">
                                                 {row.status}
                                             </Badge>
@@ -2464,8 +2674,8 @@ const AdminAbsensiPage = () => {
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Filter Tanggal</label>
                             <div className="relative">
                                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" size={18} />
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     value={filterDate}
                                     onChange={(e) => setFilterDate(e.target.value)}
                                     className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none font-bold text-sm bg-gray-50/30"
@@ -2477,8 +2687,8 @@ const AdminAbsensiPage = () => {
                     <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
                         <ResponsiveTable
                             columns={[
-                                { 
-                                    header: 'Jadwal & Waktu', 
+                                {
+                                    header: 'Jadwal & Waktu',
                                     render: (row) => (
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
@@ -2503,12 +2713,12 @@ const AdminAbsensiPage = () => {
                                                 </div>
                                             )}
                                         </div>
-                                    ), 
-                                    className: 'px-8 py-4 whitespace-nowrap', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-4 whitespace-nowrap',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Staf Pengajar', 
+                                {
+                                    header: 'Staf Pengajar',
                                     render: (row) => (
                                         <>
                                             <div className="font-black text-gray-900 text-sm group-hover:text-blue-600 transition-colors">
@@ -2519,25 +2729,25 @@ const AdminAbsensiPage = () => {
                                             </div>
                                             <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.guru?.email}</div>
                                         </>
-                                    ), 
-                                    className: 'px-8 py-4', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-4',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Grup / Lokasi', 
+                                {
+                                    header: 'Grup / Lokasi',
                                     render: (row) => (
                                         <div className="flex items-center gap-2 font-black text-gray-600 uppercase tracking-tighter text-xs">
-                                            {row.tipe === 'MADROSAH' 
+                                            {row.tipe === 'MADROSAH'
                                                 ? (kelasList.find(k => k.id === row.referensi_id)?.nama || 'Kelas')
                                                 : (halaqohList.find(h => h.id === row.referensi_id)?.nama || 'Halaqoh')
                                             }
                                         </div>
-                                    ), 
-                                    className: 'px-8 py-4', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-4',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Status Kehadiran', 
+                                {
+                                    header: 'Status Kehadiran',
                                     render: (row) => {
                                         if (row.status === 'Hadir') {
                                             return (
@@ -2589,9 +2799,9 @@ const AdminAbsensiPage = () => {
                                                 </div>
                                             )
                                         }
-                                    }, 
-                                    className: 'px-8 py-4 text-center', 
-                                    hideOnMobile: true 
+                                    },
+                                    className: 'px-8 py-4 text-center',
+                                    hideOnMobile: true
                                 }
                             ]}
                             data={dailyStaffAttendance}
@@ -2599,28 +2809,26 @@ const AdminAbsensiPage = () => {
                             emptyState={<div className="px-8 py-20"><EmptyState icon={Clock} title="Tidak Ada Jadwal" message="Belum ada jadwal mengajar atau scan QR di hari ini." /></div>}
                             mobileCardHeader={(row) => (
                                 <div className="flex items-center gap-3 w-full">
-                                    <div className={`p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 shrink-0 ${
-                                        row.status === 'Hadir' ? 'text-emerald-500' :
+                                    <div className={`p-2.5 rounded-xl bg-white shadow-sm border border-gray-100 shrink-0 ${row.status === 'Hadir' ? 'text-emerald-500' :
                                         row.status === 'Libur' ? 'text-purple-500' :
-                                        row.status === 'Izin' ? 'text-amber-500' : 
-                                        row.status === 'Belum Absen' ? 'text-gray-400' : 'text-red-500'
-                                    }`}>
+                                            row.status === 'Izin' ? 'text-amber-500' :
+                                                row.status === 'Belum Absen' ? 'text-gray-400' : 'text-red-500'
+                                        }`}>
                                         {row.status === 'Hadir' ? <CheckCircle2 size={16} /> :
-                                         row.status === 'Libur' ? <span className="text-sm">🏖️</span> :
-                                         row.status === 'Izin' ? <ClipboardList size={16} /> : 
-                                         row.status === 'Belum Absen' ? <Clock size={16} /> : <XCircle size={16} />}
+                                            row.status === 'Libur' ? <span className="text-sm">🏖️</span> :
+                                                row.status === 'Izin' ? <ClipboardList size={16} /> :
+                                                    row.status === 'Belum Absen' ? <Clock size={16} /> : <XCircle size={16} />}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
                                         <div className="flex justify-between items-start">
                                             <div className="font-black text-gray-900 text-sm leading-tight truncate">
                                                 {row.guru?.nama}
                                             </div>
-                                            <span className={`font-black text-sm shrink-0 ml-2 ${
-                                                row.status === 'Hadir' ? 'text-emerald-600' :
+                                            <span className={`font-black text-sm shrink-0 ml-2 ${row.status === 'Hadir' ? 'text-emerald-600' :
                                                 row.status === 'Libur' ? 'text-purple-600' :
-                                                row.status === 'Izin' ? 'text-amber-600' : 
-                                                row.status === 'Belum Absen' ? 'text-gray-500' : 'text-red-600'
-                                            }`}>
+                                                    row.status === 'Izin' ? 'text-amber-600' :
+                                                        row.status === 'Belum Absen' ? 'text-gray-500' : 'text-red-600'
+                                                }`}>
                                                 {row.status}
                                             </span>
                                         </div>
@@ -2649,7 +2857,7 @@ const AdminAbsensiPage = () => {
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-500 text-xs">Grup / Lokasi</span>
                                         <span className="text-[9px] font-black text-gray-600 uppercase tracking-tighter">
-                                            {row.tipe === 'MADROSAH' 
+                                            {row.tipe === 'MADROSAH'
                                                 ? (kelasList.find(k => k.id === row.referensi_id)?.nama || 'Kelas')
                                                 : (halaqohList.find(h => h.id === row.referensi_id)?.nama || 'Halaqoh')
                                             }
@@ -2666,8 +2874,8 @@ const AdminAbsensiPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tanggal</label>
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     value={filterDate}
                                     onChange={(e) => setFilterDate(e.target.value)}
                                     className="w-full px-4 py-3.5 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none font-bold text-sm bg-gray-50/30"
@@ -2675,7 +2883,7 @@ const AdminAbsensiPage = () => {
                             </div>
                             <div className="md:col-span-2 space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Filter Pengajar</label>
-                                <select 
+                                <select
                                     value={filterGuru}
                                     onChange={(e) => setFilterGuru(e.target.value)}
                                     className="w-full px-3 py-2 md:px-4 md:py-3 rounded-xl md:rounded-2xl border border-gray-100 focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none font-bold text-xs md:text-sm bg-gray-50/30 appearance-none cursor-pointer"
@@ -2692,8 +2900,8 @@ const AdminAbsensiPage = () => {
                     <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
                         <ResponsiveTable
                             columns={[
-                                { 
-                                    header: 'Jadwal & Waktu', 
+                                {
+                                    header: 'Jadwal & Waktu',
                                     render: (row) => (
                                         <div className="flex flex-col gap-1">
                                             <div className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-lg w-fit uppercase tracking-tighter">
@@ -2703,24 +2911,24 @@ const AdminAbsensiPage = () => {
                                                 {row.jam_mulai.slice(0, 5)} — {row.jam_selesai.slice(0, 5)}
                                             </div>
                                         </div>
-                                    ), 
-                                    className: 'px-8 py-6 whitespace-nowrap', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6 whitespace-nowrap',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Staf Pengajar', 
-                                    render: (row) => <div className="font-black text-gray-900 text-sm group-hover:text-amber-600 transition-colors">{row.guru?.nama || '-'}</div>, 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                {
+                                    header: 'Staf Pengajar',
+                                    render: (row) => <div className="font-black text-gray-900 text-sm group-hover:text-amber-600 transition-colors">{row.guru?.nama || '-'}</div>,
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Mata Pelajaran', 
-                                    render: (row) => <span className="font-bold text-gray-600">{row.mapel?.nama || (row.tipe === 'HALAQOH' ? 'Halaqoh' : '-')}</span>, 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                {
+                                    header: 'Mata Pelajaran',
+                                    render: (row) => <span className="font-bold text-gray-600">{row.mapel?.nama || (row.tipe === 'HALAQOH' ? 'Halaqoh' : '-')}</span>,
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Grup', 
+                                {
+                                    header: 'Grup',
                                     render: (row) => (
                                         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100/50 w-fit">
                                             {row.tipe === 'HALAQOH' ? <Users size={12} className="text-blue-500" /> : <BookOpen size={12} className="text-emerald-500" />}
@@ -2728,12 +2936,12 @@ const AdminAbsensiPage = () => {
                                                 {row.tipe === 'HALAQOH' ? (row.halaqoh?.nama || 'Halaqoh') : (row.kelas?.nama || 'Kelas')}
                                             </span>
                                         </div>
-                                    ), 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Status Log', 
+                                {
+                                    header: 'Status Log',
                                     render: (row) => (
                                         row.jurnal ? (
                                             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 font-black text-[10px] uppercase tracking-widest border border-emerald-100">
@@ -2746,26 +2954,26 @@ const AdminAbsensiPage = () => {
                                                 Kosong
                                             </div>
                                         )
-                                    ), 
-                                    className: 'px-8 py-6', 
-                                    hideOnMobile: true 
+                                    ),
+                                    className: 'px-8 py-6',
+                                    hideOnMobile: true
                                 },
-                                { 
-                                    header: 'Aksi', 
+                                {
+                                    header: 'Aksi',
                                     render: (row) => (
-                                        <button 
+                                        <button
                                             className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg w-full md:w-auto
-                                                ${row.jurnal 
-                                                    ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' 
+                                                ${row.jurnal
+                                                    ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                                     : 'bg-amber-500 text-white shadow-amber-200 hover:bg-amber-600'}
                                             `}
                                             onClick={(e) => { e.stopPropagation(); navigate(`/absensi/agenda?jadwal_id=${row.id}&tanggal=${filterDate}`); }}
                                         >
                                             {row.jurnal ? 'Update Jurnal' : 'Input Absensi'}
                                         </button>
-                                    ), 
-                                    className: 'px-8 py-6 text-center', 
-                                    hideOnMobile: false 
+                                    ),
+                                    className: 'px-8 py-6 text-center',
+                                    hideOnMobile: false
                                 }
                             ]}
                             data={agendaList}
@@ -2817,10 +3025,10 @@ const AdminAbsensiPage = () => {
                                 </div>
                             )}
                             mobileCardPrimaryAction={(row) => (
-                                <button 
+                                <button
                                     className={`w-full py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all
-                                        ${row.jurnal 
-                                            ? 'bg-slate-100 text-slate-500 active:scale-95' 
+                                        ${row.jurnal
+                                            ? 'bg-slate-100 text-slate-500 active:scale-95'
                                             : 'bg-amber-500 text-white shadow-lg shadow-amber-200 active:scale-95'}
                                     `}
                                     onClick={(e) => { e.stopPropagation(); navigate(`/absensi/agenda?jadwal_id=${row.id}&tanggal=${filterDate}`); }}
@@ -2840,7 +3048,7 @@ const AdminAbsensiPage = () => {
                                 <p className="text-[10px] md:text-sm text-gray-400 font-bold uppercase tracking-widest">Rekapitulasi kehadiran lintas periode</p>
                             </div>
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-2 md:p-3 bg-gray-100/50 rounded-[2rem] border border-gray-100">
-                                <div 
+                                <div
                                     onClick={() => {
                                         if (startDateRef.current?.showPicker) {
                                             startDateRef.current.showPicker()
@@ -2851,23 +3059,23 @@ const AdminAbsensiPage = () => {
                                     className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-300 transition-all flex-1 cursor-pointer"
                                 >
                                     <Calendar size={18} className="text-emerald-500 shrink-0" />
-                                    <input 
+                                    <input
                                         ref={startDateRef}
-                                        type="date" 
-                                        value={filterStartDate} 
+                                        type="date"
+                                        value={filterStartDate}
                                         onChange={(e) => {
                                             setFilterStartDate(e.target.value)
                                             setSelectedSemesterId('')
-                                        }} 
+                                        }}
                                         onClick={(e) => {
-                                             e.stopPropagation()
-                                             if (e.target.showPicker) e.target.showPicker()
-                                         }}
-                                        className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer" 
+                                            e.stopPropagation()
+                                            if (e.target.showPicker) e.target.showPicker()
+                                        }}
+                                        className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer"
                                     />
                                 </div>
                                 <div className="text-gray-400 font-black uppercase text-[10px] tracking-widest px-2 text-center">s/d</div>
-                                <div 
+                                <div
                                     onClick={() => {
                                         if (endDateRef.current?.showPicker) {
                                             endDateRef.current.showPicker()
@@ -2878,37 +3086,37 @@ const AdminAbsensiPage = () => {
                                     className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 hover:border-emerald-300 transition-all flex-1 cursor-pointer"
                                 >
                                     <Calendar size={18} className="text-emerald-500 shrink-0" />
-                                    <input 
+                                    <input
                                         ref={endDateRef}
-                                        type="date" 
-                                        value={filterEndDate} 
+                                        type="date"
+                                        value={filterEndDate}
                                         onChange={(e) => {
                                             setFilterEndDate(e.target.value)
                                             setSelectedSemesterId('')
-                                        }} 
+                                        }}
                                         onClick={(e) => {
-                                             e.stopPropagation()
-                                             if (e.target.showPicker) e.target.showPicker()
-                                         }}
-                                        className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer" 
+                                            e.stopPropagation()
+                                            if (e.target.showPicker) e.target.showPicker()
+                                        }}
+                                        className="bg-transparent border-none focus:ring-0 text-xs md:text-sm font-black text-gray-700 outline-none w-full cursor-pointer"
                                     />
                                 </div>
                             </div>
-                        {laporanSubTab === 'santri' && (
-                            <div className="flex items-start gap-3 p-4 bg-emerald-50/80 border border-emerald-100 rounded-2xl text-xs text-emerald-800 font-bold">
-                                <span className="text-emerald-500 mt-0.5 shrink-0">ℹ️</span>
-                                <span>
-                                    Rekap kehadiran santri dihitung otomatis dari log harian presensi sesuai rentang tanggal, kategori, dan kelas/halaqoh yang dipilih secara terisolasi.
-                                </span>
-                            </div>
-                        )}
+                            {laporanSubTab === 'santri' && (
+                                <div className="flex items-start gap-3 p-4 bg-emerald-50/80 border border-emerald-100 rounded-2xl text-xs text-emerald-800 font-bold">
+                                    <span className="text-emerald-500 mt-0.5 shrink-0">ℹ️</span>
+                                    <span>
+                                        Rekap kehadiran santri dihitung otomatis dari log harian presensi sesuai rentang tanggal, kategori, dan kelas/halaqoh yang dipilih secara terisolasi.
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Kategori & Semester Filter Bar inside Laporan Card */}
                         <div className="pt-4 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Preset Periode Semester</label>
-                                <select 
+                                <select
                                     value={selectedSemesterId}
                                     onChange={(e) => handleSemesterChange(e.target.value)}
                                     className="w-full px-3 py-2 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl border border-emerald-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none font-bold text-xs bg-emerald-50/40 text-emerald-900 appearance-none cursor-pointer"
@@ -2924,7 +3132,7 @@ const AdminAbsensiPage = () => {
 
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Kategori Absensi</label>
-                                <select 
+                                <select
                                     value={filterType}
                                     onChange={(e) => {
                                         setFilterType(e.target.value)
@@ -2942,7 +3150,7 @@ const AdminAbsensiPage = () => {
                             {(filterType === 'Semua' || filterType === 'Madrosah') && (
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Filter Kelas</label>
-                                    <select 
+                                    <select
                                         value={filterKelasId}
                                         onChange={(e) => {
                                             setFilterKelasId(e.target.value)
@@ -2961,7 +3169,7 @@ const AdminAbsensiPage = () => {
                             {(filterType === 'Semua' || filterType === 'Quraniyah') && (
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-1">Filter Halaqoh</label>
-                                    <select 
+                                    <select
                                         value={filterHalaqohId}
                                         onChange={(e) => {
                                             setFilterHalaqohId(e.target.value)
@@ -2980,13 +3188,13 @@ const AdminAbsensiPage = () => {
                     </Card>
 
                     <div className="flex p-2 bg-gray-100 rounded-[2rem] w-fit border border-gray-100 shadow-inner">
-                        <button 
+                        <button
                             onClick={() => setLaporanSubTab('staf')}
                             className={`px-10 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${laporanSubTab === 'staf' ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             Staff Analysis
                         </button>
-                        <button 
+                        <button
                             onClick={() => setLaporanSubTab('santri')}
                             className={`px-10 py-3.5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 ${laporanSubTab === 'santri' ? 'bg-white text-emerald-600 shadow-xl scale-105' : 'text-gray-400 hover:text-gray-600'}`}
                         >
@@ -2996,134 +3204,134 @@ const AdminAbsensiPage = () => {
 
                     {laporanSubTab === 'staf' ? (
                         <div className="space-y-6 animate-slide-up">
-                             <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                                 <ResponsiveTable
-                                     columns={[
-                                         { 
-                                             header: 'Nama Pengajar', 
-                                             render: (row) => (
-                                                 <div className="flex items-center gap-4">
-                                                     <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
-                                                         {row.nama?.charAt(0)}
-                                                     </div>
-                                                     <div>
-                                                         <div className="font-black text-gray-900">{row.nama}</div>
-                                                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
-                                                     </div>
-                                                 </div>
-                                             ), 
-                                             className: 'px-8 py-6', 
-                                             hideOnMobile: true 
-                                         },
-                                         { 
-                                             header: 'Hadir', 
-                                             render: (row) => <span className="font-black text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-xl border border-emerald-100">{row.Hadir}</span>, 
-                                             className: 'px-8 py-6 text-center text-emerald-600', 
-                                             hideOnMobile: true 
-                                         },
-                                         { 
-                                             header: 'Izin', 
-                                             render: (row) => <span className="font-black text-amber-600 bg-amber-50 px-4 py-1.5 rounded-xl border border-amber-100">{row.Izin}</span>, 
-                                             className: 'px-8 py-6 text-center text-amber-600', 
-                                             hideOnMobile: true 
-                                         },
-                                         { 
-                                             header: 'Libur', 
-                                             render: (row) => <span className="font-black text-teal-700 bg-teal-50 px-4 py-1.5 rounded-xl border border-teal-200">{row.Libur || 0}</span>, 
-                                             className: 'px-8 py-6 text-center text-teal-700', 
-                                             hideOnMobile: true 
-                                         },
-                                         { 
-                                             header: 'Alpha', 
-                                             render: (row) => <span className="font-black text-red-600 bg-red-50 px-4 py-1.5 rounded-xl border border-red-100">{row.Alpha}</span>, 
-                                             className: 'px-8 py-6 text-center text-red-600', 
-                                             hideOnMobile: true 
-                                         },
-                                         { 
-                                             header: 'Score', 
-                                                 render: (row) => {
-                                                     const total = row.totalSelesai || 0
-                                                     const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
-                                                 return (
-                                                     <div className="flex items-center justify-center gap-3">
-                                                         <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                             <div className="h-full bg-indigo-500" style={{ width: `${score}%` }}></div>
-                                                         </div>
-                                                         <span className="text-xs font-black text-indigo-600">{score}%</span>
-                                                     </div>
-                                                 )
-                                             }, 
-                                             className: 'px-8 py-6 text-center', 
-                                             hideOnMobile: true 
-                                         },
-                                         { 
-                                             header: 'Details', 
-                                             render: (row) => (
-                                                 <button 
-                                                     onClick={(e) => { e.stopPropagation(); setSelectedGuruId(row.id); }}
-                                                     className="p-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
-                                                 >
-                                                     <Eye size={16} />
-                                                 </button>
-                                             ), 
-                                             className: 'px-8 py-6 text-right', 
-                                             hideOnMobile: false 
-                                         }
-                                     ]}
-                                     data={aggregatedStaf}
-                                     loading={false}
-                                     emptyState={<div className="px-8 py-20 text-center text-gray-400 italic font-medium">Tidak ada data scan staf pada periode ini</div>}
-                                     mobileCardHeader={(row) => (
-                                         <div className="flex items-center gap-3 w-full">
-                                             <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0">
-                                                 {row.nama?.charAt(0)}
-                                             </div>
-                                             <div className="flex-1">
-                                                 <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
-                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
-                                             </div>
-                                         </div>
-                                     )}
-                                     mobileCardContent={(row) => {
-                                         const total = row.totalSelesai || 0
-                                         const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
-                                         return (
-                                             <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
-                                                 <div className="grid grid-cols-5 gap-1.5">
-                                                     <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-center">
-                                                         <div className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Hadir</div>
-                                                         <div className="text-xs sm:text-sm font-black text-emerald-600">{row.Hadir}</div>
-                                                     </div>
-                                                     <div className="bg-amber-50 p-2 rounded-xl border border-amber-100 text-center">
-                                                         <div className="text-[8px] font-black text-amber-400 uppercase tracking-widest mb-1">Izin</div>
-                                                         <div className="text-xs sm:text-sm font-black text-amber-600">{row.Izin}</div>
-                                                     </div>
-                                                     <div className="bg-teal-50 p-2 rounded-xl border border-teal-200 text-center">
-                                                         <div className="text-[8px] font-black text-teal-500 uppercase tracking-widest mb-1">Libur</div>
-                                                         <div className="text-xs sm:text-sm font-black text-teal-700">{row.Libur || 0}</div>
-                                                     </div>
-                                                     <div className="bg-red-50 p-2 rounded-xl border border-red-100 text-center">
-                                                         <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Alpha</div>
-                                                         <div className="text-xs sm:text-sm font-black text-red-600">{row.Alpha}</div>
-                                                     </div>
-                                                     <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100 text-center">
-                                                         <div className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Score</div>
-                                                         <div className="text-xs sm:text-sm font-black text-indigo-600">{score}%</div>
-                                                     </div>
-                                                 </div>
-                                             </div>
-                                         )
-                                     }}
-                                     mobileCardPrimaryAction={(row) => (
-                                         <button 
-                                             onClick={(e) => { e.stopPropagation(); setSelectedGuruId(row.id); }}
-                                             className="w-full py-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-                                         >
-                                             <Eye size={14} /> Lihat Detail
-                                         </button>
-                                     )}
-                                 />
-                             </Card>
+                            <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
+                                <ResponsiveTable
+                                    columns={[
+                                        {
+                                            header: 'Nama Pengajar',
+                                            render: (row) => (
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm group-hover:scale-110 transition-transform">
+                                                        {row.nama?.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-gray-900">{row.nama}</div>
+                                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
+                                                    </div>
+                                                </div>
+                                            ),
+                                            className: 'px-8 py-6',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Hadir',
+                                            render: (row) => <span className="font-black text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-xl border border-emerald-100">{row.Hadir}</span>,
+                                            className: 'px-8 py-6 text-center text-emerald-600',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Izin',
+                                            render: (row) => <span className="font-black text-amber-600 bg-amber-50 px-4 py-1.5 rounded-xl border border-amber-100">{row.Izin}</span>,
+                                            className: 'px-8 py-6 text-center text-amber-600',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Libur',
+                                            render: (row) => <span className="font-black text-teal-700 bg-teal-50 px-4 py-1.5 rounded-xl border border-teal-200">{row.Libur || 0}</span>,
+                                            className: 'px-8 py-6 text-center text-teal-700',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Alpha',
+                                            render: (row) => <span className="font-black text-red-600 bg-red-50 px-4 py-1.5 rounded-xl border border-red-100">{row.Alpha}</span>,
+                                            className: 'px-8 py-6 text-center text-red-600',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Score',
+                                            render: (row) => {
+                                                const total = row.totalSelesai || 0
+                                                const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
+                                                return (
+                                                    <div className="flex items-center justify-center gap-3">
+                                                        <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-indigo-500" style={{ width: `${score}%` }}></div>
+                                                        </div>
+                                                        <span className="text-xs font-black text-indigo-600">{score}%</span>
+                                                    </div>
+                                                )
+                                            },
+                                            className: 'px-8 py-6 text-center',
+                                            hideOnMobile: true
+                                        },
+                                        {
+                                            header: 'Details',
+                                            render: (row) => (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedGuruId(row.id); }}
+                                                    className="p-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                            ),
+                                            className: 'px-8 py-6 text-right',
+                                            hideOnMobile: false
+                                        }
+                                    ]}
+                                    data={aggregatedStaf}
+                                    loading={false}
+                                    emptyState={<div className="px-8 py-20 text-center text-gray-400 italic font-medium">Tidak ada data scan staf pada periode ini</div>}
+                                    mobileCardHeader={(row) => (
+                                        <div className="flex items-center gap-3 w-full">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0">
+                                                {row.nama?.charAt(0)}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
+                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Staff Member</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    mobileCardContent={(row) => {
+                                        const total = row.totalSelesai || 0
+                                        const score = total > 0 ? Math.round(((row.Hadir + row.Izin) / total) * 100) : 0
+                                        return (
+                                            <div className="flex flex-col gap-2 w-full mt-2 pt-2 border-t border-gray-50">
+                                                <div className="grid grid-cols-5 gap-1.5">
+                                                    <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100 text-center">
+                                                        <div className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Hadir</div>
+                                                        <div className="text-xs sm:text-sm font-black text-emerald-600">{row.Hadir}</div>
+                                                    </div>
+                                                    <div className="bg-amber-50 p-2 rounded-xl border border-amber-100 text-center">
+                                                        <div className="text-[8px] font-black text-amber-400 uppercase tracking-widest mb-1">Izin</div>
+                                                        <div className="text-xs sm:text-sm font-black text-amber-600">{row.Izin}</div>
+                                                    </div>
+                                                    <div className="bg-teal-50 p-2 rounded-xl border border-teal-200 text-center">
+                                                        <div className="text-[8px] font-black text-teal-500 uppercase tracking-widest mb-1">Libur</div>
+                                                        <div className="text-xs sm:text-sm font-black text-teal-700">{row.Libur || 0}</div>
+                                                    </div>
+                                                    <div className="bg-red-50 p-2 rounded-xl border border-red-100 text-center">
+                                                        <div className="text-[8px] font-black text-red-400 uppercase tracking-widest mb-1">Alpha</div>
+                                                        <div className="text-xs sm:text-sm font-black text-red-600">{row.Alpha}</div>
+                                                    </div>
+                                                    <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100 text-center">
+                                                        <div className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Score</div>
+                                                        <div className="text-xs sm:text-sm font-black text-indigo-600">{score}%</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }}
+                                    mobileCardPrimaryAction={(row) => (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setSelectedGuruId(row.id); }}
+                                            className="w-full py-3 rounded-xl bg-slate-900 text-white hover:bg-indigo-600 transition-all shadow-lg active:scale-95 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                                        >
+                                            <Eye size={14} /> Lihat Detail
+                                        </button>
+                                    )}
+                                />
+                            </Card>
                         </div>
                     ) : (
                         <div className="space-y-8 animate-slide-up">
@@ -3155,15 +3363,15 @@ const AdminAbsensiPage = () => {
                                     )
                                 })}
                             </div>
-                            
+
                             <Card className="p-8 bg-slate-900 text-white border-none rounded-[2.5rem] overflow-hidden relative group max-w-md shadow-2xl">
                                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 <div className="relative z-10 flex items-center justify-between">
                                     <div className="space-y-1">
                                         <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em]">Total Participation</p>
                                         <h5 className="text-4xl font-black tracking-tighter">
-                                            {filteredPresensi.length > 0 
-                                                ? Math.round((filteredPresensi.filter(p => ['hadir', 'terlambat', 'telat'].includes((p.status || '').toLowerCase())).length / filteredPresensi.length) * 100) 
+                                            {filteredPresensi.length > 0
+                                                ? Math.round((filteredPresensi.filter(p => ['hadir', 'terlambat', 'telat'].includes((p.status || '').toLowerCase())).length / filteredPresensi.length) * 100)
                                                 : 0}%
                                         </h5>
                                     </div>
@@ -3180,164 +3388,166 @@ const AdminAbsensiPage = () => {
                                     <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
                                     <h4 className="font-black text-gray-900 uppercase tracking-widest text-xs">Detailed Student Metrics</h4>
                                 </div>
-                                 <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
-                                     <ResponsiveTable
-                                         columns={[
-                                             { 
-                                                 header: 'Student Profil', 
-                                                 render: (row) => (
-                                                     <>
-                                                         <div className="font-black text-gray-900 group-hover:text-emerald-600 transition-colors">{row.nama}</div>
-                                                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.nis}</div>
-                                                     </>
-                                                 ), 
-                                                 className: 'px-6 py-6', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Kategori & Grup', 
-                                                 render: (row) => (
-                                                     <div className="flex items-center gap-2">
-                                                         <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                                                             row.isQuraniyah 
-                                                                 ? 'bg-blue-50 text-blue-700 border border-blue-100' 
-                                                                 : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                                         }`}>
-                                                             {row.isQuraniyah ? <Users size={12} /> : <BookOpen size={12} />}
-                                                             {row.kategoriLabel}: {row.grup || '-'}
-                                                         </span>
-                                                     </div>
-                                                 ), 
-                                                 className: 'px-6 py-6', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Hadir', 
-                                                 render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Hadir > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                         {row.Hadir}
-                                                     </span>
-                                                 ), 
-                                                 className: 'px-4 py-6 text-center text-emerald-600', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Terlambat', 
-                                                 render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Terlambat > 0 ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                         {row.Terlambat}
-                                                     </span>
-                                                 ), 
-                                                 className: 'px-4 py-6 text-center text-orange-600', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Sakit', 
-                                                 render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Sakit > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                         {row.Sakit}
-                                                     </span>
-                                                 ), 
-                                                 className: 'px-4 py-6 text-center text-amber-600', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Izin', 
-                                                 render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Izin > 0 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                         {row.Izin}
-                                                     </span>
-                                                 ), 
-                                                 className: 'px-4 py-6 text-center text-blue-600', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Alpha', 
-                                                 render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Alpha > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                         {row.Alpha}
-                                                     </span>
-                                                 ), 
-                                                 className: 'px-4 py-6 text-center text-red-600', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Pulang', 
-                                                 render: (row) => (
-                                                     <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Pulang > 0 ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-gray-50 text-gray-300'}`}>
-                                                         {row.Pulang || 0}
-                                                     </span>
-                                                 ), 
-                                                 className: 'px-4 py-6 text-center text-purple-600', 
-                                                 hideOnMobile: true 
-                                             },
-                                             { 
-                                                 header: 'Action', 
-                                                 render: (row) => (
-                                                     <button 
-                                                         onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
-                                                         className="p-2.5 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
-                                                     >
-                                                         <Eye size={16} />
-                                                     </button>
-                                                 ), 
-                                                 className: 'px-6 py-6 text-right', 
-                                                 hideOnMobile: false 
-                                             }
-                                         ]}
-                                         data={aggregatedSantri}
-                                         keyField="key"
-                                         loading={false}
-                                         emptyState={<div className="px-8 py-20 text-center text-gray-400 italic font-medium">No record found for selected period</div>}
-                                         mobileCardHeader={(row) => (
-                                             <div className="flex-1 w-full">
-                                                 <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
-                                                 <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{row.nis}</div>
-                                                 <div className="mt-2">
-                                                     <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-flex items-center gap-1 ${
-                                                         row.isQuraniyah ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                                     }`}>
-                                                         {row.kategoriLabel}: {row.grup || '-'}
-                                                     </span>
-                                                 </div>
-                                             </div>
-                                         )}
-                                         mobileCardContent={(row) => (
-                                             <div className="flex flex-col gap-2 w-full mt-4 pt-4 border-t border-gray-50">
-                                                 <div className="grid grid-cols-5 gap-1.5">
-                                                     <div className={`${row.Hadir > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Hadir > 0 ? 'text-emerald-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>H</div>
-                                                         <div className={`text-xs font-black ${row.Hadir > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.Hadir}</div>
-                                                     </div>
-                                                     <div className={`${row.Terlambat > 0 ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Terlambat > 0 ? 'text-orange-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>T</div>
-                                                         <div className={`text-xs font-black ${row.Terlambat > 0 ? 'text-orange-600' : 'text-gray-300'}`}>{row.Terlambat}</div>
-                                                     </div>
-                                                     <div className={`${row.Sakit > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Sakit > 0 ? 'text-amber-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>S</div>
-                                                         <div className={`text-xs font-black ${row.Sakit > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{row.Sakit}</div>
-                                                     </div>
-                                                     <div className={`${row.Izin > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Izin > 0 ? 'text-blue-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>I</div>
-                                                         <div className={`text-xs font-black ${row.Izin > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{row.Izin}</div>
-                                                     </div>
-                                                     <div className={`${row.Alpha > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} p-1.5 rounded-xl border text-center`}>
-                                                         <div className={`text-[8px] font-black ${row.Alpha > 0 ? 'text-red-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>A</div>
-                                                         <div className={`text-xs font-black ${row.Alpha > 0 ? 'text-red-600' : 'text-gray-300'}`}>{row.Alpha}</div>
-                                                     </div>
-                                                 </div>
-                                             </div>
-                                         )}
-                                         mobileCardPrimaryAction={(row) => (
-                                             <button 
-                                                 onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
-                                                 className="w-full py-3 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
-                                             >
-                                                 <Eye size={14} /> Lihat Detail
-                                             </button>
-                                         )}
-                                     />
-                                 </Card>
+                                <Card variant="premium" className="overflow-hidden p-0 border-none shadow-2xl">
+                                    <ResponsiveTable
+                                        columns={[
+                                            {
+                                                header: 'Student Profil',
+                                                render: (row) => (
+                                                    <>
+                                                        <div className="font-black text-gray-900 group-hover:text-emerald-600 transition-colors">{row.nama}</div>
+                                                        <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{row.nis}</div>
+                                                    </>
+                                                ),
+                                                className: 'px-6 py-6',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Kategori & Grup',
+                                                render: (row) => (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${row.isQuraniyah
+                                                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                            }`}>
+                                                            {row.isQuraniyah ? <Users size={12} /> : <BookOpen size={12} />}
+                                                            {row.kategoriLabel}: {row.grup || '-'}
+                                                        </span>
+                                                    </div>
+                                                ),
+                                                className: 'px-6 py-6',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Hadir',
+                                                render: (row) => (
+                                                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Hadir > 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                        {row.Hadir}
+                                                    </span>
+                                                ),
+                                                className: 'px-4 py-6 text-center text-emerald-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Terlambat',
+                                                render: (row) => (
+                                                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Terlambat > 0 ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                        {row.Terlambat}
+                                                    </span>
+                                                ),
+                                                className: 'px-4 py-6 text-center text-orange-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Sakit',
+                                                render: (row) => (
+                                                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Sakit > 0 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                        {row.Sakit}
+                                                    </span>
+                                                ),
+                                                className: 'px-4 py-6 text-center text-amber-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Izin',
+                                                render: (row) => (
+                                                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Izin > 0 ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                        {row.Izin}
+                                                    </span>
+                                                ),
+                                                className: 'px-4 py-6 text-center text-blue-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Alpha',
+                                                render: (row) => (
+                                                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Alpha > 0 ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                        {row.Alpha}
+                                                    </span>
+                                                ),
+                                                className: 'px-4 py-6 text-center text-red-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Pulang',
+                                                render: (row) => (
+                                                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-2xl font-black text-xs ${row.Pulang > 0 ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-gray-50 text-gray-300'}`}>
+                                                        {row.Pulang || 0}
+                                                    </span>
+                                                ),
+                                                className: 'px-4 py-6 text-center text-purple-600',
+                                                hideOnMobile: true
+                                            },
+                                            {
+                                                header: 'Action',
+                                                render: (row) => (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
+                                                        className="p-2.5 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 w-full md:w-auto flex justify-center"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                ),
+                                                className: 'px-6 py-6 text-right',
+                                                hideOnMobile: false
+                                            }
+                                        ]}
+                                        data={aggregatedSantri}
+                                        keyField="key"
+                                        loading={false}
+                                        emptyState={<div className="px-8 py-20 text-center text-gray-400 italic font-medium">No record found for selected period</div>}
+                                        mobileCardHeader={(row) => (
+                                            <div className="flex-1 w-full">
+                                                <div className="font-black text-gray-900 text-sm leading-tight">{row.nama}</div>
+                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">{row.nis}</div>
+                                                <div className="mt-2">
+                                                    <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-flex items-center gap-1 ${row.isQuraniyah ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                        }`}>
+                                                        {row.kategoriLabel}: {row.grup || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        mobileCardContent={(row) => (
+                                            <div className="flex flex-col gap-2 w-full mt-4 pt-4 border-t border-gray-50">
+                                                <div className="grid grid-cols-6 gap-1 sm:gap-1.5">
+                                                    <div className={`${row.Hadir > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100'} p-1 sm:p-1.5 rounded-xl border text-center`}>
+                                                        <div className={`text-[8px] font-black ${row.Hadir > 0 ? 'text-emerald-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>H</div>
+                                                        <div className={`text-xs font-black ${row.Hadir > 0 ? 'text-emerald-600' : 'text-gray-300'}`}>{row.Hadir}</div>
+                                                    </div>
+                                                    <div className={`${row.Terlambat > 0 ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'} p-1 sm:p-1.5 rounded-xl border text-center`}>
+                                                        <div className={`text-[8px] font-black ${row.Terlambat > 0 ? 'text-orange-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>T</div>
+                                                        <div className={`text-xs font-black ${row.Terlambat > 0 ? 'text-orange-600' : 'text-gray-300'}`}>{row.Terlambat}</div>
+                                                    </div>
+                                                    <div className={`${row.Sakit > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100'} p-1 sm:p-1.5 rounded-xl border text-center`}>
+                                                        <div className={`text-[8px] font-black ${row.Sakit > 0 ? 'text-amber-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>S</div>
+                                                        <div className={`text-xs font-black ${row.Sakit > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{row.Sakit}</div>
+                                                    </div>
+                                                    <div className={`${row.Izin > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'} p-1 sm:p-1.5 rounded-xl border text-center`}>
+                                                        <div className={`text-[8px] font-black ${row.Izin > 0 ? 'text-blue-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>I</div>
+                                                        <div className={`text-xs font-black ${row.Izin > 0 ? 'text-blue-600' : 'text-gray-300'}`}>{row.Izin}</div>
+                                                    </div>
+                                                    <div className={`${row.Alpha > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'} p-1 sm:p-1.5 rounded-xl border text-center`}>
+                                                        <div className={`text-[8px] font-black ${row.Alpha > 0 ? 'text-red-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>A</div>
+                                                        <div className={`text-xs font-black ${row.Alpha > 0 ? 'text-red-600' : 'text-gray-300'}`}>{row.Alpha}</div>
+                                                    </div>
+                                                    <div className={`${(row.Pulang || 0) > 0 ? 'bg-purple-50 border-purple-100' : 'bg-gray-50 border-gray-100'} p-1 sm:p-1.5 rounded-xl border text-center`}>
+                                                        <div className={`text-[8px] font-black ${(row.Pulang || 0) > 0 ? 'text-purple-400' : 'text-gray-300'} uppercase tracking-widest mb-0.5`}>P</div>
+                                                        <div className={`text-xs font-black ${(row.Pulang || 0) > 0 ? 'text-purple-600' : 'text-gray-300'}`}>{row.Pulang || 0}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        mobileCardPrimaryAction={(row) => (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setSelectedSantriId(row.id); }}
+                                                className="w-full py-3 rounded-xl bg-slate-900 text-white hover:bg-emerald-600 transition-all shadow-lg active:scale-95 font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                                            >
+                                                <Eye size={14} /> Lihat Detail
+                                            </button>
+                                        )}
+                                    />
+                                </Card>
                             </div>
                         </div>
                     )}
@@ -3359,9 +3569,9 @@ const AdminAbsensiPage = () => {
                                             <div className="font-bold text-gray-900">{k.nama}</div>
                                             <div className="text-xs text-gray-400">UUID: {k.id.split('-')[0]}...</div>
                                         </div>
-                                        <Button 
-                                            size="sm" 
-                                            variant="secondary" 
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
                                             icon={QrCode}
                                             onClick={() => setSelectedQR({ type: 'MADROSAH', name: k.nama, id: k.id })}
                                         >
@@ -3385,9 +3595,9 @@ const AdminAbsensiPage = () => {
                                             <div className="font-bold text-gray-900">{h.nama}</div>
                                             <div className="text-xs text-gray-400">UUID: {h.id.split('-')[0]}...</div>
                                         </div>
-                                        <Button 
-                                            size="sm" 
-                                            variant="secondary" 
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
                                             icon={QrCode}
                                             onClick={() => setSelectedQR({ type: 'QURANIYAH', name: h.nama, id: h.id })}
                                         >
@@ -3412,10 +3622,10 @@ const AdminAbsensiPage = () => {
                                             <X size={20} />
                                         </button>
                                     </div>
-                                    
+
                                     <div id="qr-printable" className="bg-white p-4 rounded-3xl border border-gray-100 inline-block shadow-inner">
-                                        <QRCodeSVG 
-                                            value={`SITAQUA_ABSENSI_${selectedQR.type}_${selectedQR.id}`} 
+                                        <QRCodeSVG
+                                            value={`SITAQUA_ABSENSI_${selectedQR.type}_${selectedQR.id}`}
                                             size={200}
                                             level="H"
                                             includeMargin={false}
@@ -3473,15 +3683,15 @@ const AdminAbsensiPage = () => {
                                         <p className="text-[10px] md:text-xs text-emerald-600 font-bold uppercase tracking-widest">{aggregatedSantri.find(s => s.id === selectedSantriId)?.nama}</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => setSelectedSantriId(null)} 
+                                <button
+                                    onClick={() => setSelectedSantriId(null)}
                                     className="p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-gray-100 hover:text-gray-900 transition-all active:scale-90"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6 md:p-8">
                             <div className="space-y-3">
                                 {presensiData
@@ -3543,342 +3753,340 @@ const AdminAbsensiPage = () => {
                                         <p className="text-[10px] md:text-xs text-indigo-600 font-bold uppercase tracking-widest">{aggregatedStaf.find(s => s.id === selectedGuruId)?.nama}</p>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => setSelectedGuruId(null)} 
+                                <button
+                                    onClick={() => setSelectedGuruId(null)}
                                     className="p-3 bg-gray-50 text-gray-400 rounded-2xl hover:bg-gray-100 hover:text-gray-900 transition-all active:scale-90"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
                         </div>
-                        
+
                         <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6 md:p-8">
                             <div className="space-y-3">
-                                    {(aggregatedStaf.find(s => s.id === selectedGuruId)?.details || [])
-                                        .slice()
-                                        .sort((a, b) => b.tanggal.localeCompare(a.tanggal) || Number(b.jam_ke || 0) - Number(a.jam_ke || 0))
-                                        .map((p, idx) => (
-                                            <div key={idx} className="bg-white p-4 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:border-indigo-200 transition-all group">
-                                                <div className="grid grid-cols-[auto,1fr] gap-4 md:gap-6 items-center">
-                                                    <div className="bg-gray-50 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl text-center min-w-[80px] md:min-w-[90px] border border-gray-100 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
-                                                        <div className="text-[8px] md:text-[10px] font-black text-gray-400 group-hover:text-indigo-400 uppercase tracking-tighter">
-                                                            {new Date(p.tanggal).toLocaleDateString('id-ID', { weekday: 'long' })}
+                                {(aggregatedStaf.find(s => s.id === selectedGuruId)?.details || [])
+                                    .slice()
+                                    .sort((a, b) => b.tanggal.localeCompare(a.tanggal) || Number(b.jam_ke || 0) - Number(a.jam_ke || 0))
+                                    .map((p, idx) => (
+                                        <div key={idx} className="bg-white p-4 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:border-indigo-200 transition-all group">
+                                            <div className="grid grid-cols-[auto,1fr] gap-4 md:gap-6 items-center">
+                                                <div className="bg-gray-50 px-3 py-2 md:px-4 md:py-2.5 rounded-2xl text-center min-w-[80px] md:min-w-[90px] border border-gray-100 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
+                                                    <div className="text-[8px] md:text-[10px] font-black text-gray-400 group-hover:text-indigo-400 uppercase tracking-tighter">
+                                                        {new Date(p.tanggal).toLocaleDateString('id-ID', { weekday: 'long' })}
+                                                    </div>
+                                                    <div className="text-sm md:text-base font-black text-gray-800 group-hover:text-indigo-600">
+                                                        {new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <div className="text-sm font-black text-gray-900 flex items-center gap-2">
+                                                            <Clock size={14} className="text-indigo-500" />
+                                                            Jam Pelajaran Ke-{p.jam_ke}
                                                         </div>
-                                                        <div className="text-sm md:text-base font-black text-gray-800 group-hover:text-indigo-600">
-                                                            {new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                        <div className="text-[10px] text-gray-500 font-bold italic bg-gray-50 px-2 py-0.5 rounded-lg inline-block border border-gray-100">
+                                                            {p.tipe} - {p.referensi_id ? (kelasList.find(k => k.id === p.referensi_id)?.nama || halaqohList.find(h => h.id === p.referensi_id)?.nama || 'Lokasi Terdaftar') : 'Scan QR'}
                                                         </div>
                                                     </div>
-                                                    
-                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                                        <div className="space-y-1">
-                                                            <div className="text-sm font-black text-gray-900 flex items-center gap-2">
-                                                                <Clock size={14} className="text-indigo-500" />
-                                                                Jam Pelajaran Ke-{p.jam_ke}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-500 font-bold italic bg-gray-50 px-2 py-0.5 rounded-lg inline-block border border-gray-100">
-                                                                {p.tipe} - {p.referensi_id ? (kelasList.find(k => k.id === p.referensi_id)?.nama || halaqohList.find(h => h.id === p.referensi_id)?.nama || 'Lokasi Terdaftar') : 'Scan QR'}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div className="flex items-center gap-2">
-                                                            {p.keterangan && (
-                                                                <span className="hidden sm:inline-block text-[10px] text-teal-700 font-bold bg-teal-50/80 px-2.5 py-0.5 rounded-lg border border-teal-200 max-w-[220px] truncate" title={p.keterangan}>
-                                                                    {p.keterangan}
-                                                                </span>
-                                                            )}
-                                                            <Badge 
-                                                                variant={
-                                                                    p.status === 'Hadir' ? 'success' : 
-                                                                    p.status === 'Sakit' ? 'warning' : 
-                                                                    p.status === 'Izin' ? 'info' : 
-                                                                    p.status === 'Dinas' ? 'primary' : 
-                                                                    p.status === 'Libur' ? 'neutral' :
-                                                                    p.status === 'Belum Absen' ? 'neutral' : 'danger'
-                                                                } 
-                                                                className={
-                                                                    p.status === 'Libur'
-                                                                        ? "px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-teal-50 text-teal-700 border border-teal-200"
-                                                                        : "px-3 py-1 text-[9px] font-black uppercase tracking-widest"
-                                                                }
-                                                            >
-                                                                {p.status}
-                                                            </Badge>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    setEditingSession(p)
-                                                                    setManualStatus(p.status === 'Alpha' || p.status === 'Belum Absen' ? 'Hadir' : p.status)
-                                                                    setManualKeterangan('')
-                                                                }}
-                                                                className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"
-                                                                title="Ubah Status Kehadiran / Aksi"
-                                                            >
-                                                                <Edit2 size={14} />
-                                                            </button>
-                                                        </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        {p.keterangan && (
+                                                            <span className="hidden sm:inline-block text-[10px] text-teal-700 font-bold bg-teal-50/80 px-2.5 py-0.5 rounded-lg border border-teal-200 max-w-[220px] truncate" title={p.keterangan}>
+                                                                {p.keterangan}
+                                                            </span>
+                                                        )}
+                                                        <Badge
+                                                            variant={
+                                                                p.status === 'Hadir' ? 'success' :
+                                                                    p.status === 'Sakit' ? 'warning' :
+                                                                        p.status === 'Izin' ? 'info' :
+                                                                            p.status === 'Dinas' ? 'primary' :
+                                                                                p.status === 'Libur' ? 'neutral' :
+                                                                                    p.status === 'Belum Absen' ? 'neutral' : 'danger'
+                                                            }
+                                                            className={
+                                                                p.status === 'Libur'
+                                                                    ? "px-3 py-1 text-[9px] font-black uppercase tracking-widest bg-teal-50 text-teal-700 border border-teal-200"
+                                                                    : "px-3 py-1 text-[9px] font-black uppercase tracking-widest"
+                                                            }
+                                                        >
+                                                            {p.status}
+                                                        </Badge>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingSession(p)
+                                                                setManualStatus(p.status === 'Alpha' || p.status === 'Belum Absen' ? 'Hadir' : p.status)
+                                                                setManualKeterangan('')
+                                                            }}
+                                                            className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm active:scale-90"
+                                                            title="Ubah Status Kehadiran / Aksi"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))
-                                    }
-                                </div>
+                                        </div>
+                                    ))
+                                }
                             </div>
                         </div>
-                    </div>,
-                    document.body
-                )}
+                    </div>
+                </div>,
+                document.body
+            )}
 
-                    {/* Manual Adjustment Modal (Portal) */}
-                    {editingSession && createPortal(
-                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-                            <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setEditingSession(null)}></div>
-                            <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-scale-up">
-                                <div className="bg-indigo-600 p-6 text-white text-center">
-                                    <h3 className="text-xl font-black">Ubah Status Kehadiran</h3>
-                                    <p className="text-xs text-indigo-100 mt-1 uppercase tracking-widest font-bold">
-                                        {new Date(editingSession.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} • Jam Ke-{editingSession.jam_ke}
+            {/* Manual Adjustment Modal (Portal) */}
+            {editingSession && createPortal(
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setEditingSession(null)}></div>
+                    <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-scale-up">
+                        <div className="bg-indigo-600 p-6 text-white text-center">
+                            <h3 className="text-xl font-black">Ubah Status Kehadiran</h3>
+                            <p className="text-xs text-indigo-100 mt-1 uppercase tracking-widest font-bold">
+                                {new Date(editingSession.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} • Jam Ke-{editingSession.jam_ke}
+                            </p>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ubah Status Menjadi</label>
+                                    <select
+                                        value={manualStatus}
+                                        onChange={(e) => setManualStatus(e.target.value)}
+                                        className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm p-4 bg-gray-50 transition-all font-bold text-indigo-700 outline-none"
+                                    >
+                                        <option value="Hadir">Hadir (Manual)</option>
+                                        <option value="Sakit">Sakit</option>
+                                        <option value="Izin">Izin</option>
+                                        <option value="Dinas">Dinas</option>
+                                        <option value="Alpha">Alpha / Reset (Hapus Penyesuaian)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan / Alasan (Opsional)</label>
+                                    <textarea
+                                        value={manualKeterangan}
+                                        onChange={(e) => setManualKeterangan(e.target.value)}
+                                        placeholder={manualStatus === 'Hadir' ? "Opsional: Lupa scan, HP tertinggal..." : manualStatus === 'Alpha' ? "Reset penyesuaian..." : "Alasan izin/sakit..."}
+                                        className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm min-h-[100px] p-4 bg-gray-50 transition-all outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => { setEditingSession(null); setManualStatus('Hadir'); setManualKeterangan(''); }}
+                                    className="flex-1 px-6 py-3.5 rounded-2xl border border-gray-100 font-black text-xs text-gray-500 hover:bg-gray-50 transition-all uppercase tracking-widest"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    disabled={isSavingManual}
+                                    onClick={handleSaveManualStatus}
+                                    className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest active:scale-95 cursor-pointer disabled:opacity-50"
+                                >
+                                    {isSavingManual ? 'Menyimpan...' : 'Simpan'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Holiday Modal (Portal) */}
+            {showHolidayModal && createPortal(
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+                    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowHolidayModal(false)}></div>
+                    <div className="relative bg-white rounded-3xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up my-auto max-h-[90vh] flex flex-col">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 p-6 text-white flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
+                                    🏖️
+                                </div>
+                                <div>
+                                    <h3 className="text-lg sm:text-xl font-black">Pengaturan Hari Libur Absensi</h3>
+                                    <p className="text-xs text-emerald-100/80 font-medium">
+                                        Jadwalkan rentang libur & sesuaikan cakupan (Semua, Madrasah, atau Halaqoh)
                                     </p>
                                 </div>
-                                <div className="p-8 space-y-6">
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Ubah Status Menjadi</label>
-                                            <select 
-                                                value={manualStatus}
-                                                onChange={(e) => setManualStatus(e.target.value)}
-                                                className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm p-4 bg-gray-50 transition-all font-bold text-indigo-700 outline-none"
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowHolidayModal(false)}
+                                className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Body with scroll */}
+                        <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
+                            {/* Form Tambah Libur */}
+                            <form onSubmit={handleSaveHoliday} className="bg-gray-50/80 rounded-2xl p-5 border border-gray-100 space-y-4">
+                                <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                                    <Sparkles size={16} className="text-emerald-600" />
+                                    <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                                        Tambah Agenda Libur Baru
+                                    </h4>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                        Nama Agenda / Judul Libur <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={holidayForm.judul}
+                                        onChange={(e) => setHolidayForm(prev => ({ ...prev, judul: e.target.value }))}
+                                        placeholder="Contoh: Libur Awal Ramadhan 1448 H / Libur Maulid"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-xs sm:text-sm font-bold bg-white outline-none"
+                                    />
+                                </div>
+
+                                {/* Rentang Tanggal */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                            Tanggal Mulai <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={holidayForm.tanggal_mulai}
+                                            onChange={(e) => setHolidayForm(prev => ({ ...prev, tanggal_mulai: e.target.value }))}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs font-bold bg-white outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                            Tanggal Selesai <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={holidayForm.tanggal_selesai}
+                                            onChange={(e) => setHolidayForm(prev => ({ ...prev, tanggal_selesai: e.target.value }))}
+                                            className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs font-bold bg-white outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Cakupan Libur (Pills) */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                        Cakupan Libur <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { id: 'Semua', label: 'Semua (Total)', desc: 'Madrasah & Halaqoh' },
+                                            { id: 'Madrosah', label: 'Hanya Madrasah', desc: 'Halaqoh tetap aktif' },
+                                            { id: 'Quraniyah', label: 'Hanya Halaqoh', desc: 'Madrasah tetap aktif' }
+                                        ].map(sc => (
+                                            <button
+                                                key={sc.id}
+                                                type="button"
+                                                onClick={() => setHolidayForm(prev => ({ ...prev, cakupan: sc.id }))}
+                                                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${holidayForm.cakupan === sc.id
+                                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
+                                                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                                                    }`}
                                             >
-                                                <option value="Hadir">Hadir (Manual)</option>
-                                                <option value="Sakit">Sakit</option>
-                                                <option value="Izin">Izin</option>
-                                                <option value="Dinas">Dinas</option>
-                                                <option value="Alpha">Alpha / Reset (Hapus Penyesuaian)</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Keterangan / Alasan (Opsional)</label>
-                                            <textarea 
-                                                value={manualKeterangan}
-                                                onChange={(e) => setManualKeterangan(e.target.value)}
-                                                placeholder={manualStatus === 'Hadir' ? "Opsional: Lupa scan, HP tertinggal..." : manualStatus === 'Alpha' ? "Reset penyesuaian..." : "Alasan izin/sakit..."}
-                                                className="w-full rounded-2xl border-gray-200 focus:ring-indigo-500 focus:border-indigo-500 text-sm min-h-[100px] p-4 bg-gray-50 transition-all outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3 pt-2">
-                                        <button 
-                                            onClick={() => { setEditingSession(null); setManualStatus('Hadir'); setManualKeterangan(''); }}
-                                            className="flex-1 px-6 py-3.5 rounded-2xl border border-gray-100 font-black text-xs text-gray-500 hover:bg-gray-50 transition-all uppercase tracking-widest"
-                                        >
-                                            Batal
-                                        </button>
-                                        <button 
-                                            disabled={isSavingManual}
-                                            onClick={handleSaveManualStatus}
-                                            className="flex-1 px-6 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all uppercase tracking-widest active:scale-95 cursor-pointer disabled:opacity-50"
-                                        >
-                                            {isSavingManual ? 'Menyimpan...' : 'Simpan'}
-                                        </button>
+                                                <div className="text-xs font-black leading-tight">{sc.label}</div>
+                                                <div className={`text-[9px] mt-0.5 leading-tight ${holidayForm.cakupan === sc.id ? 'text-emerald-100' : 'text-gray-400'}`}>
+                                                    {sc.desc}
+                                                </div>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
-                        </div>,
-                        document.body
-                    )}
 
-                    {/* Holiday Modal (Portal) */}
-                    {showHolidayModal && createPortal(
-                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-                            <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => setShowHolidayModal(false)}></div>
-                            <div className="relative bg-white rounded-3xl sm:rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-up my-auto max-h-[90vh] flex flex-col">
-                                {/* Header */}
-                                <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 p-6 text-white flex items-center justify-between shrink-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                                            🏖️
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg sm:text-xl font-black">Pengaturan Hari Libur Absensi</h3>
-                                            <p className="text-xs text-emerald-100/80 font-medium">
-                                                Jadwalkan rentang libur & sesuaikan cakupan (Semua, Madrasah, atau Halaqoh)
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowHolidayModal(false)}
-                                        className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
-                                    >
-                                        <X size={18} />
-                                    </button>
+                                {/* Keterangan */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                        Keterangan Tambahan (Opsional)
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        value={holidayForm.deskripsi}
+                                        onChange={(e) => setHolidayForm(prev => ({ ...prev, deskripsi: e.target.value }))}
+                                        placeholder="Contoh: Berdasarkan surat edaran pimpinan pondok..."
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs bg-white outline-none"
+                                    />
                                 </div>
 
-                                {/* Body with scroll */}
-                                <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
-                                    {/* Form Tambah Libur */}
-                                    <form onSubmit={handleSaveHoliday} className="bg-gray-50/80 rounded-2xl p-5 border border-gray-100 space-y-4">
-                                        <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                                            <Sparkles size={16} className="text-emerald-600" />
-                                            <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider">
-                                                Tambah Agenda Libur Baru
-                                            </h4>
-                                        </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSavingHoliday}
+                                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    {isSavingHoliday ? 'Menyimpan Libur...' : '💾 Simpan Hari Libur'}
+                                </button>
+                            </form>
 
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                                                Nama Agenda / Judul Libur <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={holidayForm.judul}
-                                                onChange={(e) => setHolidayForm(prev => ({ ...prev, judul: e.target.value }))}
-                                                placeholder="Contoh: Libur Awal Ramadhan 1448 H / Libur Maulid"
-                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-xs sm:text-sm font-bold bg-white outline-none"
-                                            />
-                                        </div>
+                            {/* List Hari Libur Terdaftar */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                                        Daftar Hari Libur Terdaftar ({holidayList.length})
+                                    </h4>
+                                </div>
 
-                                        {/* Rentang Tanggal */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-1.5">
-                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                                                    Tanggal Mulai <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    required
-                                                    value={holidayForm.tanggal_mulai}
-                                                    onChange={(e) => setHolidayForm(prev => ({ ...prev, tanggal_mulai: e.target.value }))}
-                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs font-bold bg-white outline-none"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                                                    Tanggal Selesai <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    type="date"
-                                                    required
-                                                    value={holidayForm.tanggal_selesai}
-                                                    onChange={(e) => setHolidayForm(prev => ({ ...prev, tanggal_selesai: e.target.value }))}
-                                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs font-bold bg-white outline-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Cakupan Libur (Pills) */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                                                Cakupan Libur <span className="text-red-500">*</span>
-                                            </label>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {[
-                                                    { id: 'Semua', label: 'Semua (Total)', desc: 'Madrasah & Halaqoh' },
-                                                    { id: 'Madrosah', label: 'Hanya Madrasah', desc: 'Halaqoh tetap aktif' },
-                                                    { id: 'Quraniyah', label: 'Hanya Halaqoh', desc: 'Madrasah tetap aktif' }
-                                                ].map(sc => (
+                                {holidayList.length === 0 ? (
+                                    <div className="p-6 text-center text-xs text-gray-400 font-bold bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                        Belum ada agenda libur terdaftar di kalender akademik.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                        {holidayList.map((h) => {
+                                            const scope = parseHolidayScope(h)
+                                            const isRange = h.tanggal_mulai !== h.tanggal_selesai
+                                            return (
+                                                <div key={h.id} className="p-3.5 bg-white rounded-xl border border-gray-200 flex items-center justify-between gap-3 hover:border-gray-300 transition-all shadow-sm">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-xs text-gray-900">{h.judul}</span>
+                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${scope === 'Semua' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                                scope === 'Madrosah' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                    'bg-amber-50 text-amber-700 border-amber-200'
+                                                                }`}>
+                                                                {scope}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5">
+                                                            <Calendar size={12} className="text-emerald-500" />
+                                                            <span>
+                                                                {new Date(h.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                {isRange && ` s/d ${new Date(h.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                     <button
-                                                        key={sc.id}
                                                         type="button"
-                                                        onClick={() => setHolidayForm(prev => ({ ...prev, cakupan: sc.id }))}
-                                                        className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                                                            holidayForm.cakupan === sc.id
-                                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
-                                                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
-                                                        }`}
+                                                        onClick={() => {
+                                                            if (window.confirm(`Hapus libur "${h.judul}"?`)) {
+                                                                handleDeleteHoliday(h.id)
+                                                            }
+                                                        }}
+                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
+                                                        title="Hapus Libur"
                                                     >
-                                                        <div className="text-xs font-black leading-tight">{sc.label}</div>
-                                                        <div className={`text-[9px] mt-0.5 leading-tight ${holidayForm.cakupan === sc.id ? 'text-emerald-100' : 'text-gray-400'}`}>
-                                                            {sc.desc}
-                                                        </div>
+                                                        <Trash2 size={16} />
                                                     </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Keterangan */}
-                                        <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
-                                                Keterangan Tambahan (Opsional)
-                                            </label>
-                                            <textarea
-                                                rows={2}
-                                                value={holidayForm.deskripsi}
-                                                onChange={(e) => setHolidayForm(prev => ({ ...prev, deskripsi: e.target.value }))}
-                                                placeholder="Contoh: Berdasarkan surat edaran pimpinan pondok..."
-                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 text-xs bg-white outline-none"
-                                            />
-                                        </div>
-
-                                        <button
-                                            type="submit"
-                                            disabled={isSavingHoliday}
-                                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-600/20 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            {isSavingHoliday ? 'Menyimpan Libur...' : '💾 Simpan Hari Libur'}
-                                        </button>
-                                    </form>
-
-                                    {/* List Hari Libur Terdaftar */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <h4 className="text-xs font-black text-gray-700 uppercase tracking-wider">
-                                                Daftar Hari Libur Terdaftar ({holidayList.length})
-                                            </h4>
-                                        </div>
-
-                                        {holidayList.length === 0 ? (
-                                            <div className="p-6 text-center text-xs text-gray-400 font-bold bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                                Belum ada agenda libur terdaftar di kalender akademik.
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                                                {holidayList.map((h) => {
-                                                    const scope = parseHolidayScope(h)
-                                                    const isRange = h.tanggal_mulai !== h.tanggal_selesai
-                                                    return (
-                                                        <div key={h.id} className="p-3.5 bg-white rounded-xl border border-gray-200 flex items-center justify-between gap-3 hover:border-gray-300 transition-all shadow-sm">
-                                                            <div className="space-y-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-black text-xs text-gray-900">{h.judul}</span>
-                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${
-                                                                        scope === 'Semua' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                                        scope === 'Madrosah' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                                        'bg-amber-50 text-amber-700 border-amber-200'
-                                                                    }`}>
-                                                                        {scope}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="text-[10px] text-gray-400 font-bold flex items-center gap-1.5">
-                                                                    <Calendar size={12} className="text-emerald-500" />
-                                                                    <span>
-                                                                        {new Date(h.tanggal_mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                                        {isRange && ` s/d ${new Date(h.tanggal_selesai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    if (window.confirm(`Hapus libur "${h.judul}"?`)) {
-                                                                        handleDeleteHoliday(h.id)
-                                                                    }
-                                                                }}
-                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
-                                                                title="Hapus Libur"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
+                                                </div>
+                                            )
+                                        })}
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        </div>,
-                        document.body
-                    )}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             {/* Modal Broadcast WhatsApp Jadwal Guru */}
             <BroadcastJadwalGuruModal

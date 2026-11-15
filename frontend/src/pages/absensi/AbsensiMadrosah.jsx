@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Save, RefreshCw, CheckCircle2, Search, Calendar, Users, Filter } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, CheckCircle2, Search, Calendar, Users, Filter, Clock } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -26,6 +26,7 @@ const AbsensiMadrosah = () => {
 
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [selectedKelasId, setSelectedKelasId] = useState('')
+    const [selectedJamKe, setSelectedJamKe] = useState(1)
     const [santriList, setSantriList] = useState([])
     const [attendanceMap, setAttendanceMap] = useState({})
     const [loadingSantri, setLoadingSantri] = useState(false)
@@ -40,14 +41,14 @@ const AbsensiMadrosah = () => {
         }
     }, [searchParams])
 
-    // Fetch santri when Kelas changes
+    // Fetch santri when Kelas, Date, or Jam changes
     useEffect(() => {
         if (!selectedKelasId) {
             setSantriList([])
             return
         }
         fetchAttendanceData()
-    }, [selectedKelasId, selectedDate])
+    }, [selectedKelasId, selectedDate, selectedJamKe])
 
     const fetchAttendanceData = async () => {
         setLoadingSantri(true)
@@ -55,31 +56,89 @@ const AbsensiMadrosah = () => {
             // 1. Fetch Santri in this class
             const { data: sData, error: sError } = await supabase
                 .from('santri')
-                .select('id, nama, nis, no_telp_wali, nama_wali')
+                .select('id, nama, nis, no_telp_wali, nama_wali, wali_id')
                 .eq('kelas_id', selectedKelasId)
                 .eq('status', 'Aktif')
                 .order('nama')
 
             if (sError) throw sError
+
+            // Fallback nomor HP wali santri dari tabel user_profiles jika belum terisi di tabel santri
+            const missingWaliIds = (sData || []).filter(s => !s.no_telp_wali && s.wali_id).map(s => s.wali_id)
+            if (missingWaliIds.length > 0) {
+                try {
+                    const { data: profs } = await supabase
+                        .from('user_profiles')
+                        .select('user_id, no_hp')
+                        .in('user_id', missingWaliIds)
+                    if (profs && profs.length > 0) {
+                        const profMap = profs.reduce((acc, p) => ({ ...acc, [p.user_id]: p.no_hp }), {})
+                        sData.forEach(s => {
+                            if (!s.no_telp_wali && s.wali_id && profMap[s.wali_id]) {
+                                s.no_telp_wali = profMap[s.wali_id]
+                            }
+                        })
+                    }
+                } catch (profErr) {
+                    console.warn('[AbsensiMadrosah] Gagal fallback profil wali:', profErr)
+                }
+            }
+
             setSantriList(sData || [])
 
-            // 2. Fetch existing attendance for this date (Specifically Madrosah: jam_ke 1 and no [Quraniyah] tag)
+            // 2. Fetch existing attendance for this date & jam_ke
             const { data: aData, error: aError } = await supabase
                 .from('presensi')
                 .select('*')
                 .eq('tanggal', selectedDate)
-                .eq('jam_ke', 1)
+                .eq('jam_ke', selectedJamKe)
                 .not('keterangan', 'ilike', '%[Quraniyah]%')
                 .in('santri_id', sData.map(s => s.id))
 
             if (aError) throw aError
 
+            // Cek presensi santri di hari yang sama pada jam sebelumnya agar santri yang Sakit/Izin/Pulang/Alfa di jam 1 otomatis terdeteksi di jam berikutnya
+            const prevAttendanceMap = {}
+            if ((!aData || aData.length === 0) && selectedJamKe > 1) {
+                try {
+                    const { data: prevPresensi } = await supabase
+                        .from('presensi')
+                        .select('santri_id, status, keterangan, jam_ke')
+                        .eq('tanggal', selectedDate)
+                        .in('santri_id', sData.map(s => s.id))
+                        .order('jam_ke', { ascending: false })
+                    
+                    if (prevPresensi && prevPresensi.length > 0) {
+                        prevPresensi.forEach(p => {
+                            if (!prevAttendanceMap[p.santri_id] && p.status && p.status !== 'Hadir') {
+                                prevAttendanceMap[p.santri_id] = p
+                            }
+                        })
+                    }
+                } catch (prevErr) {
+                    console.warn('Gagal cek presensi sebelumnya:', prevErr)
+                }
+            }
+
             const initialMap = {}
             sData.forEach(s => {
                 const existing = aData?.find(a => a.santri_id === s.id)
-                initialMap[s.id] = {
-                    status: existing?.status || '',
-                    keterangan: existing?.keterangan || ''
+                if (existing) {
+                    initialMap[s.id] = {
+                        status: existing.status || '',
+                        keterangan: existing.keterangan || ''
+                    }
+                } else if (prevAttendanceMap[s.id]) {
+                    const prev = prevAttendanceMap[s.id]
+                    initialMap[s.id] = {
+                        status: prev.status,
+                        keterangan: prev.keterangan ? prev.keterangan : `(Lanjutan Jam Ke-${prev.jam_ke})`
+                    }
+                } else {
+                    initialMap[s.id] = {
+                        status: '',
+                        keterangan: ''
+                    }
                 }
             })
             setAttendanceMap(initialMap)
@@ -106,23 +165,17 @@ const AbsensiMadrosah = () => {
             const payloads = santriList.map(s => ({
                 santri_id: s.id,
                 tanggal: selectedDate,
-                jam_ke: 1,
+                jam_ke: selectedJamKe,
                 status: attendanceMap[s.id].status,
                 keterangan: attendanceMap[s.id].keterangan,
                 nama_pengabsen: userProfile?.nama || user?.user_metadata?.nama || user?.email || 'Sistem'
             }))
-
-            // Use upsert with conflict resolution on (santri_id, tanggal) 
-            // OR Delete and Insert. Since we don't know constraints, we'll try upsert.
-            // In SITAQUA, 'presensi' usually has no composite unique constraint on (santri_id, tanggal) 
-            // by default in some versions unless defined. 
-            // Let's use the safer delete-then-insert pattern if needed, but upsert is cleaner.
             
             // 1. Hapus data presensi santri ini di tanggal dan JAM yang sama agar tidak bentrok
             await supabase.from('presensi')
                 .delete()
                 .eq('tanggal', selectedDate)
-                .eq('jam_ke', 1)
+                .eq('jam_ke', selectedJamKe)
                 .in('santri_id', santriList.map(s => s.id))
 
             // 2. Simpan data baru
@@ -132,7 +185,7 @@ const AbsensiMadrosah = () => {
 
             if (saveError) throw saveError
 
-            showToast.success('Absensi Madrosah berhasil disimpan')
+            showToast.success(`Absensi Madrosah (Jam Ke-${selectedJamKe}) berhasil disimpan`)
 
             // === Push Notification: Kirim ke wali santri yang alpha ===
             try {
@@ -155,7 +208,7 @@ const AbsensiMadrosah = () => {
                                 type: 'santri_alpha',
                                 target_user_ids: [santri.wali_id],
                                 title: `${santri.nama} Tidak Hadir`,
-                                body: `Ananda ${santri.nama} tercatat tidak hadir (Alpha) pada Madrosah ${kelasNama}, ${selectedDate}`,
+                                body: `Ananda ${santri.nama} tercatat tidak hadir (Alpha) pada Madrosah ${kelasNama} Jam Ke-${selectedJamKe}, ${selectedDate}`,
                                 url: '/wali'
                             }).catch(() => {})
                         }
@@ -180,17 +233,20 @@ const AbsensiMadrosah = () => {
                 
                 if (absentSantri.length > 0) {
                     const kelasNama = kelasList.find(k => k.id === selectedKelasId)?.nama || 'Kelas'
-                    const formattedDateStr = formatDate(selectedDate)
+                    const formattedDateStr = new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                     
                     const waRes = await sendBulkAbsensiWhatsApp(absentSantri, {
                         sesi: `Madrosah (${kelasNama})`,
+                        jamKe: selectedJamKe,
                         tanggal: formattedDateStr
                     })
 
                     if (waRes.sent === waRes.total) {
                         showToast.success(`Presensi tersimpan! Notifikasi WA terkirim ke seluruh (${waRes.sent}) wali santri.`)
                     } else if (waRes.sent > 0) {
-                        showToast.success(`Presensi tersimpan. Notifikasi WA terkirim ke ${waRes.sent}/${waRes.total} wali${waRes.skipped > 0 ? ` (${waRes.skipped} santri belum ada no. WA)` : ''}.`)
+                        const skippedMsg = waRes.skipped > 0 ? ` • ${waRes.skipped} santri tanpa no. WA` : ''
+                        const failedMsg = waRes.failed > 0 ? ` • ${waRes.failed} gagal gateway` : ''
+                        showToast.success(`Presensi tersimpan. Notifikasi WA terkirim ke ${waRes.sent}/${waRes.total} wali${skippedMsg}${failedMsg}.`)
                     } else if (waRes.skipped > 0) {
                         showToast.warning(`Presensi tersimpan, namun ${waRes.skipped} santri tidak memiliki nomor WhatsApp wali.`)
                     }
@@ -267,7 +323,7 @@ const AbsensiMadrosah = () => {
             <main className="flex-1 max-w-5xl w-full mx-auto p-4 space-y-6">
                 
                 {/* Filters */}
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 grid sm:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 grid sm:grid-cols-3 gap-6">
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                             <Calendar size={16} className="text-emerald-600" />
@@ -293,6 +349,21 @@ const AbsensiMadrosah = () => {
                             <option value="">-- Pilih Kelas --</option>
                             {kelasList.map(k => (
                                 <option key={k.id} value={k.id}>{k.nama}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                            <Clock size={16} className="text-emerald-600" />
+                            Jam Pelajaran
+                        </label>
+                        <select 
+                            value={selectedJamKe}
+                            onChange={(e) => setSelectedJamKe(Number(e.target.value))}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 transition-all outline-none bg-gray-50/50 font-semibold"
+                        >
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(j => (
+                                <option key={j} value={j}>Jam Ke-{j}</option>
                             ))}
                         </select>
                     </div>

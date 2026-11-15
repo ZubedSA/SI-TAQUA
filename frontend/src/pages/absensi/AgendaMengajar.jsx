@@ -304,10 +304,31 @@ const AgendaMengajar = () => {
             const isHalaqoh = !!jadwalItem.halaqoh_id
             const { data: sData } = await supabase
                 .from('santri')
-                .select('id, nama, nis, no_telp_wali, nama_wali')
+                .select('id, nama, nis, no_telp_wali, nama_wali, wali_id')
                 .eq(isHalaqoh ? 'halaqoh_id' : 'kelas_id', isHalaqoh ? jadwalItem.halaqoh_id : jadwalItem.kelas_id)
                 .eq('status', 'Aktif')
                 .order('nama')
+
+            // Fallback nomor HP wali santri dari tabel user_profiles jika belum terisi di tabel santri
+            const missingWaliIds = (sData || []).filter(s => !s.no_telp_wali && s.wali_id).map(s => s.wali_id)
+            if (missingWaliIds.length > 0) {
+                try {
+                    const { data: profs } = await supabase
+                        .from('user_profiles')
+                        .select('user_id, no_hp')
+                        .in('user_id', missingWaliIds)
+                    if (profs && profs.length > 0) {
+                        const profMap = profs.reduce((acc, p) => ({ ...acc, [p.user_id]: p.no_hp }), {})
+                        sData.forEach(s => {
+                            if (!s.no_telp_wali && s.wali_id && profMap[s.wali_id]) {
+                                s.no_telp_wali = profMap[s.wali_id]
+                            }
+                        })
+                    }
+                } catch (profErr) {
+                    console.warn('[AgendaMengajar] Gagal fallback profil wali:', profErr)
+                }
+            }
 
             setSantriList(sData || [])
 
@@ -326,8 +347,37 @@ const AgendaMengajar = () => {
                     }
                 })
             } else {
+                // Cek presensi santri di hari yang sama pada jam sebelumnya agar santri yang Sakit/Izin/Pulang/Alfa di jam 1 otomatis terdeteksi di jam berikutnya
+                const prevAttendanceMap = {}
+                try {
+                    const { data: prevPresensi } = await supabase
+                        .from('presensi')
+                        .select('santri_id, status, keterangan, jam_ke')
+                        .eq('tanggal', selectedDate)
+                        .in('santri_id', (sData || []).map(s => s.id))
+                        .order('jam_ke', { ascending: false })
+                    
+                    if (prevPresensi && prevPresensi.length > 0) {
+                        prevPresensi.forEach(p => {
+                            if (!prevAttendanceMap[p.santri_id] && p.status && p.status !== 'Hadir') {
+                                prevAttendanceMap[p.santri_id] = p
+                            }
+                        })
+                    }
+                } catch (prevErr) {
+                    console.warn('Gagal cek presensi sebelumnya:', prevErr)
+                }
+
                 sData?.forEach(s => {
-                    initialMap[s.id] = { status: '', keterangan: '' }
+                    const prev = prevAttendanceMap[s.id]
+                    if (prev) {
+                        initialMap[s.id] = {
+                            status: prev.status,
+                            keterangan: prev.keterangan ? prev.keterangan : `(Lanjutan Jam Ke-${prev.jam_ke})`
+                        }
+                    } else {
+                        initialMap[s.id] = { status: '', keterangan: '' }
+                    }
                 })
             }
             setAttendanceMap(initialMap)
@@ -504,16 +554,20 @@ const AgendaMengajar = () => {
                             : (selectedJadwal.mapel?.nama || 'Pelajaran')
                             
                         const formattedDateStr = new Date(selectedDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                        const jamKeNumber = selectedJadwal.jam_ke || 1
                         
                         const waRes = await sendBulkAbsensiWhatsApp(absentSantri, {
                             sesi: `${selectedJadwal.tipe || 'Madrosah'} (${mapelNama})`,
+                            jamKe: jamKeNumber,
                             tanggal: formattedDateStr
                         })
 
                         if (waRes.sent === waRes.total) {
                             showToast.success(`Presensi tersimpan! Notifikasi WA terkirim ke seluruh (${waRes.sent}) wali santri.`)
                         } else if (waRes.sent > 0) {
-                            showToast.success(`Presensi tersimpan. Notifikasi WA terkirim ke ${waRes.sent}/${waRes.total} wali${waRes.skipped > 0 ? ` (${waRes.skipped} santri belum ada no. WA)` : ''}.`)
+                            const skippedNote = waRes.skipped > 0 ? ` • ${waRes.skipped} santri tanpa no. WA` : ''
+                            const failedNote = waRes.failed > 0 ? ` • ${waRes.failed} gagal gateway` : ''
+                            showToast.success(`Presensi tersimpan. Notifikasi WA terkirim ke ${waRes.sent}/${waRes.total} wali${skippedNote}${failedNote}.`)
                         } else if (waRes.skipped > 0) {
                             showToast.warning(`Presensi tersimpan, namun ${waRes.skipped} santri tidak memiliki nomor WhatsApp wali.`)
                         }

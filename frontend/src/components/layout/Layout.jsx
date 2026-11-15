@@ -1,6 +1,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import BottomNav from './BottomNav'
@@ -8,6 +9,7 @@ import FloatingChatButton from '../chat/FloatingChatButton'
 import Spinner from '../ui/Spinner'
 import { useAutoAudit } from '../../hooks/useAutoAudit'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
+import { checkAndSendDailyGuruReminders } from '../../utils/dailyGuruReminder'
 
 const Layout = () => {
     // Auto-log navigation events
@@ -17,8 +19,18 @@ const Layout = () => {
     useScrollAnimation()
 
     const location = useLocation()
+    const showToast = useToast()
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const { loading, isAuthenticated } = useAuth()
+    const { loading, isAuthenticated, user, isAdmin, isAdminAkademik, isAdminAbsensi } = useAuth()
+
+    // Pengingat jadwal guru otomatis di pagi hari ketika staff/admin membuka aplikasi
+    useEffect(() => {
+        if (isAuthenticated && (isAdmin || isAdminAkademik || isAdminAbsensi)) {
+            checkAndSendDailyGuruReminders({ user, showToast }).catch(err => {
+                console.warn('[Layout] Auto guru reminder check error:', err)
+            })
+        }
+    }, [isAuthenticated, isAdmin, isAdminAkademik, isAdminAbsensi, user])
 
     const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
     const closeSidebar = () => setSidebarOpen(false)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check, User, AlertCircle, CheckCircle, ChevronDown, X, Layers, List, Edit2 } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Search, CreditCard, Download, RefreshCw, MessageCircle, Printer, Check, User, AlertCircle, CheckCircle, ChevronDown, X, Layers, List, Edit2, Calendar } from 'lucide-react'
 import DateRangePicker from '../../components/ui/DateRangePicker'
 import MobileActionMenu from '../../components/ui/MobileActionMenu'
 import ConfirmationModal from '../../components/ui/ConfirmationModal'
@@ -12,6 +13,10 @@ import { logCreate, logUpdate } from '../../lib/auditLog'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import { useCalendar } from '../../context/CalendarContext'
+import PageHeader from '../../components/layout/PageHeader'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Badge from '../../components/ui/Badge'
 import './Keuangan.css'
 
 const PembayaranSantriPage = () => {
@@ -64,23 +69,30 @@ const PembayaranSantriPage = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Search santri when typing
+    // Search santri when typing (with debounce)
     useEffect(() => {
-        if (searchSantri.length >= 2) {
-            fetchSantri(searchSantri)
+        const query = searchSantri.trim()
+        if (query.length >= 2) {
             setShowSantriDropdown(true)
+            const timer = setTimeout(() => {
+                fetchSantri(query)
+            }, 250)
+            return () => clearTimeout(timer)
         } else {
             setSantriList([])
+            setShowSantriDropdown(false)
         }
     }, [searchSantri])
 
     const fetchSantri = async (query) => {
+        const cleanQuery = query.trim()
+        if (!cleanQuery) return
         setLoading(true)
         try {
             const { data, error } = await supabase
                 .from('santri')
                 .select('id, nama, nis, nama_wali, no_telp_wali, status, kelas:kelas_id(nama)')
-                .or(`nama.ilike.%${query}%,nis.ilike.%${query}%`)
+                .or(`nama.ilike.%${cleanQuery}%,nis.ilike.%${cleanQuery}%`)
                 .limit(10)
                 .order('nama')
 
@@ -88,6 +100,7 @@ const PembayaranSantriPage = () => {
                 throw error
             }
             setSantriList(data || [])
+            setShowSantriDropdown(true)
         } catch (err) {
             showToast.error('Gagal mencari santri: ' + err.message)
             setSantriList([])
@@ -99,7 +112,7 @@ const PembayaranSantriPage = () => {
     const fetchTagihanSantri = async (santriId) => {
         setLoadingTagihan(true)
         try {
-            const [tagihanRes, pembayaranRes] = await Promise.all([
+            const [tagihanRes, pembayaranRes, allPaymentsRes] = await Promise.all([
                 supabase
                     .from('tagihan_santri')
                     .select('*, kategori:kategori_id(nama)')
@@ -107,16 +120,48 @@ const PembayaranSantriPage = () => {
                     .order('jatuh_tempo', { ascending: false }),
                 supabase
                     .from('pembayaran_santri')
-                    .select('id, tagihan_id, jumlah, tanggal, metode, keterangan, santri_id, bukti_url, created_at, tagihan:tagihan_id(id, jumlah, kategori:kategori_id(nama))')
+                    .select('id, tagihan_id, jumlah, tanggal, metode, keterangan, santri_id, bukti_url, created_at, tagihan:tagihan_id(id, jumlah, jatuh_tempo, keterangan, kategori:kategori_id(nama))')
                     .eq('santri_id', santriId)
                     .order('tanggal', { ascending: false })
-                    .limit(20)
+                    .limit(50),
+                supabase
+                    .from('pembayaran_santri')
+                    .select('tagihan_id, jumlah')
+                    .eq('santri_id', santriId)
             ])
 
             if (tagihanRes.error) throw tagihanRes.error
             if (pembayaranRes.error) throw pembayaranRes.error
+            if (allPaymentsRes.error) throw allPaymentsRes.error
 
-            setTagihanSantri(tagihanRes.data || [])
+            // Hitung akumulasi pembayaran per tagihan secara akurat
+            const paymentsMap = {}
+            ;(allPaymentsRes.data || []).forEach(p => {
+                if (p.tagihan_id) {
+                    paymentsMap[p.tagihan_id] = (paymentsMap[p.tagihan_id] || 0) + Number(p.jumlah || 0)
+                }
+            })
+
+            const enriched = (tagihanRes.data || []).map(t => {
+                const nominalTagihan = Number(t.jumlah || 0)
+                const terbayar = paymentsMap[t.id] !== undefined ? paymentsMap[t.id] : (t.status === 'Lunas' ? nominalTagihan : 0)
+                const sisa = Math.max(0, nominalTagihan - terbayar)
+                const isLunas = t.status === 'Lunas' || sisa <= 0
+                const isSebagian = !isLunas && terbayar > 0
+                const persenTerbayar = nominalTagihan > 0 ? Math.min(100, Math.round((terbayar / nominalTagihan) * 100)) : 0
+
+                return {
+                    ...t,
+                    nominal_tagihan: nominalTagihan,
+                    terbayar: terbayar,
+                    sisa: sisa,
+                    isLunas: isLunas,
+                    isSebagian: isSebagian,
+                    persen_terbayar: persenTerbayar
+                }
+            })
+
+            setTagihanSantri(enriched)
             setPembayaranHistory(pembayaranRes.data || [])
             setSelectedTagihanIds([]) // Reset selection
         } catch (err) {
@@ -140,10 +185,10 @@ const PembayaranSantriPage = () => {
         setSearchSantri('')
     }
 
-    // Tagihan grouping logic
-    const belumLunas = tagihanSantri.filter(t => t.status !== 'Lunas')
-    const sudahLunas = tagihanSantri.filter(t => t.status === 'Lunas')
-    const totalBelumLunas = belumLunas.reduce((sum, t) => sum + Number(t.jumlah), 0)
+    // Tagihan grouping logic (memperhitungkan cicilan dan sisa tagihan)
+    const belumLunas = tagihanSantri.filter(t => !t.isLunas)
+    const sudahLunas = tagihanSantri.filter(t => t.isLunas)
+    const totalBelumLunas = belumLunas.reduce((sum, t) => sum + t.sisa, 0)
 
     // Toggle tagihan selection
     const toggleTagihanSelection = (id) => {
@@ -157,9 +202,41 @@ const PembayaranSantriPage = () => {
         setSelectedTagihanIds(belumLunas.map(t => t.id))
     }
 
-    // Get selected tagihan
+    // Get selected tagihan (berdasarkan sisa tagihan)
     const selectedTagihan = tagihanSantri.filter(t => selectedTagihanIds.includes(t.id))
-    const totalSelected = selectedTagihan.reduce((sum, t) => sum + Number(t.jumlah), 0)
+    const totalSelected = selectedTagihan.reduce((sum, t) => sum + t.sisa, 0)
+
+    // Helper untuk membersihkan keterangan agar tidak dobel nama kategori
+    const formatKeteranganRiwayat = (keterangan, kategoriNama) => {
+        if (!keterangan) return null
+        let str = keterangan.trim()
+        if (!str) return null
+
+        const isCicilan = str.toLowerCase().includes('cicilan') || str.toLowerCase().includes('sebagian')
+
+        // Bersihkan nama kategori dari teks keterangan
+        let clean = str
+            .replace(new RegExp(`^${kategoriNama}\\s*`, 'i'), '')
+            .replace(/\(pelunasan tagihan\)/gi, '')
+            .replace(/\(pembayaran sebagian \(cicilan\)\)/gi, '')
+            .replace(/pembayaran sebagian \(cicilan\)/gi, '')
+            .replace(/pelunasan tagihan/gi, '')
+            .trim()
+
+        clean = clean.replace(/^[,\s\-•()]+|[,\s\-•()]+$/g, '').trim()
+
+        // Jika hanya berisi daftar nama kategori (contoh: "SPP BULANAN, UANG MAKAN")
+        const kategoriKeywords = ['spp', 'uang makan', 'infaq', 'gedung', 'seragam', 'pendaftaran', 'bulanan']
+        const words = clean.toLowerCase().split(/[,\s]+/).filter(Boolean)
+        const onlyCategories = words.length > 0 && words.every(w => kategoriKeywords.some(k => k.includes(w) || w.includes(k)))
+
+        const customNote = onlyCategories ? '' : clean
+
+        return {
+            isCicilan,
+            customNote
+        }
+    }
 
     // Open payment modal
     const handleOpenPayment = () => {
@@ -171,7 +248,7 @@ const PembayaranSantriPage = () => {
             jumlah: totalSelected.toString(),
             tanggal: new Date().toISOString().split('T')[0],
             metode: 'Tunai',
-            keterangan: selectedTagihan.map(t => t.kategori?.nama).join(', ')
+            keterangan: ''
         })
         setShowPaymentModal(true)
     }
@@ -182,6 +259,15 @@ const PembayaranSantriPage = () => {
 
     const handleFormSubmit = (e) => {
         e.preventDefault()
+        const jumlahBayar = parseFloat(form.jumlah)
+        if (isNaN(jumlahBayar) || jumlahBayar <= 0) {
+            showToast.error('Nominal pembayaran harus lebih dari 0')
+            return
+        }
+        if (jumlahBayar > totalSelected) {
+            showToast.error(`Nominal pembayaran melebihi sisa tagihan (Maksimal Rp ${totalSelected.toLocaleString('id-ID')})`)
+            return
+        }
         setSaveModal({ isOpen: true })
     }
 
@@ -189,46 +275,70 @@ const PembayaranSantriPage = () => {
         setSaving(true)
         try {
             const jumlahBayar = parseFloat(form.jumlah)
+            let remainingToDistribute = jumlahBayar
 
-            // Insert pembayaran for each selected tagihan (proportionally)
+            // Alokasi pembayaran secara waterfall (berdasarkan sisa tagihan per item)
             for (const tagihan of selectedTagihan) {
-                const proportion = Number(tagihan.jumlah) / totalSelected
-                const amount = Math.round(jumlahBayar * proportion)
+                if (remainingToDistribute <= 0) break
 
-                await supabase.from('pembayaran_santri').insert([{
+                const amountForThis = Math.min(remainingToDistribute, tagihan.sisa)
+                remainingToDistribute -= amountForThis
+
+                const isCicilanThis = amountForThis < tagihan.sisa
+                const userNote = form.keterangan?.trim()
+                let itemKeterangan = ''
+                if (userNote) {
+                    itemKeterangan = isCicilanThis ? `${userNote} (Cicilan)` : userNote
+                } else if (isCicilanThis) {
+                    itemKeterangan = 'Cicilan'
+                }
+
+                // 1. Catat ke tabel pembayaran_santri
+                const { error: insertError } = await supabase.from('pembayaran_santri').insert([{
                     tagihan_id: tagihan.id,
                     santri_id: selectedSantri.id,
-                    jumlah: amount,
+                    jumlah: amountForThis,
                     tanggal: form.tanggal,
                     metode: form.metode,
-                    keterangan: form.keterangan || '',
+                    keterangan: itemKeterangan || null,
                     created_by: user?.id
                 }])
+                if (insertError) throw insertError
 
-                // Update status
-                const newStatus = amount >= Number(tagihan.jumlah) ? 'Lunas' : 'Sebagian'
-                await supabase.from('tagihan_santri').update({ status: newStatus }).eq('id', tagihan.id)
+                // 2. Hitung status baru secara kumulatif
+                const newTotalPaid = tagihan.terbayar + amountForThis
+                const newStatus = newTotalPaid >= tagihan.nominal_tagihan ? 'Lunas' : 'Sebagian'
+
+                const { error: updateError } = await supabase.from('tagihan_santri').update({
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                }).eq('id', tagihan.id)
+                if (updateError) throw updateError
             }
 
             // Audit Log - CREATE (payment)
+            const isPartialGlobal = jumlahBayar < totalSelected
+            const logType = isPartialGlobal ? ' [Cicilan/Sebagian]' : ' [Pelunasan]'
             await logCreate(
                 'pembayaran_santri',
                 selectedSantri?.nama,
-                `Pembayaran santri: ${selectedSantri?.nama} - ${selectedTagihan.map(t => t.kategori?.nama).join(', ')} - Rp ${Number(jumlahBayar).toLocaleString('id-ID')} (${form.metode})`
+                `Pembayaran santri: ${selectedSantri?.nama} - ${selectedTagihan.map(t => t.kategori?.nama).join(', ')} - Rp ${Number(jumlahBayar).toLocaleString('id-ID')} (${form.metode})${logType}`
             )
 
             setLastPayment({
                 jumlah: jumlahBayar,
                 tanggal: form.tanggal,
                 metode: form.metode,
-                items: selectedTagihan
+                items: selectedTagihan,
+                isPartial: isPartialGlobal,
+                sisaSetelahBayar: Math.max(0, totalSelected - jumlahBayar)
             })
 
             setSaveModal({ isOpen: false })
             setShowPaymentModal(false)
             setShowSuccessModal(true)
-            fetchTagihanSantri(selectedSantri.id)
-            showToast.success('Pembayaran berhasil disimpan!')
+            await fetchTagihanSantri(selectedSantri.id)
+            showToast.success(isPartialGlobal ? 'Pembayaran cicilan berhasil disimpan!' : 'Pembayaran pelunasan berhasil disimpan!')
         } catch (err) {
             showToast.error('Gagal memproses pembayaran: ' + err.message)
         } finally {
@@ -249,8 +359,11 @@ const PembayaranSantriPage = () => {
             data: [
                 `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
                 `Berikut daftar tagihan yang harus dibayar:`,
-                ...belumLunas.map(t => `• ${t.kategori?.nama}: Rp ${Number(t.jumlah).toLocaleString('id-ID')}`),
-                { label: 'Total Tagihan', value: `Rp ${totalBelumLunas.toLocaleString('id-ID')}` }
+                ...belumLunas.map(t => t.isSebagian 
+                    ? `• ${t.kategori?.nama}: Sisa Rp ${Number(t.sisa).toLocaleString('id-ID')} (dari Total Rp ${Number(t.nominal_tagihan).toLocaleString('id-ID')})`
+                    : `• ${t.kategori?.nama}: Rp ${Number(t.nominal_tagihan).toLocaleString('id-ID')}`
+                ),
+                { label: 'Total Belum Lunas', value: `Rp ${totalBelumLunas.toLocaleString('id-ID')}` }
             ],
             closing: "Mohon untuk segera melakukan pembayaran."
         })
@@ -267,16 +380,23 @@ const PembayaranSantriPage = () => {
             return
         }
 
+        const isPartial = lastPayment?.isPartial
+        const sisa = lastPayment?.sisaSetelahBayar || 0
+
         const message = createMessage({
-            intro: `KONFIRMASI PEMBAYARAN`,
+            intro: isPartial ? `KONFIRMASI PEMBAYARAN CICILAN / ANGSURAN` : `KONFIRMASI PEMBAYARAN LUNAS`,
             data: [
                 `Santri: *${selectedSantri.nama}*`,
                 `Pembayaran telah kami terima untuk:`,
                 ...lastPayment.items.map(t => `• ${t.kategori?.nama}`),
-                { label: 'Total Nominal', value: `Rp ${Number(lastPayment.jumlah).toLocaleString('id-ID')}` },
+                { label: 'Jumlah Dibayar', value: `Rp ${Number(lastPayment.jumlah).toLocaleString('id-ID')}` },
                 { label: 'Metode', value: lastPayment.metode },
-                { label: 'Tanggal', value: formatDate(lastPayment.tanggal) }
-            ]
+                { label: 'Tanggal', value: formatDate(lastPayment.tanggal) },
+                { label: 'Status Tagihan', value: isPartial ? `SEBAGIAN (Sisa Rp ${Number(sisa).toLocaleString('id-ID')})` : 'LUNAS ✅' }
+            ],
+            closing: isPartial
+                ? `Mohon untuk melunasi sisa tagihan sebesar Rp ${Number(sisa).toLocaleString('id-ID')} sebelum jatuh tempo. Jazakumullah khairan.`
+                : "Jazakumullah khairan katsiran atas pembayarannya."
         })
 
         sendWhatsApp(phone, message)
@@ -285,9 +405,8 @@ const PembayaranSantriPage = () => {
 
     // Print receipt
     const handlePrintKwitansi = () => {
-        // Get periode from payment date
-        // Use formatDate to respect mode for Month representation if desired, 
-        // or just standard Hijri/Masehi string
+        const isPartial = lastPayment?.isPartial
+        const sisa = lastPayment?.sisaSetelahBayar || 0
         const periodeStr = formatDate(lastPayment.tanggal, { day: undefined, month: 'long', year: 'numeric' })
 
         generateKwitansiPDF({
@@ -295,12 +414,15 @@ const PembayaranSantriPage = () => {
             tanggal: lastPayment.tanggal,
             namaSantri: selectedSantri?.nama,
             namaWali: selectedSantri?.nama_wali || '-',
-            kategori: lastPayment.items.map(t => t.kategori?.nama).join(', '),
+            kategori: `${lastPayment.items.map(t => t.kategori?.nama).join(', ')}${isPartial ? ' (Cicilan / Sebagian)' : ''}`,
             periode: periodeStr,
             jumlah: lastPayment.jumlah,
             metode: lastPayment.metode,
             formattedTanggal: formatDate(lastPayment.tanggal),
-            kasir: 'Bendahara PTQA'
+            kasir: 'Bendahara PTQA',
+            status: isPartial ? 'SEBAGIAN / CICILAN' : 'LUNAS',
+            sisaTagihan: isPartial ? sisa : 0,
+            keterangan: isPartial ? `Sisa tagihan: Rp ${Number(sisa).toLocaleString('id-ID')}` : 'Lunas'
         })
         showToast.success('Kwitansi berhasil dicetak')
     }
@@ -412,7 +534,10 @@ const PembayaranSantriPage = () => {
             data: [
                 `Santri: *${selectedSantri.nama}* (${selectedSantri.nis})`,
                 `Berikut riwayat pembayaran yang tercatat:`,
-                ...pembayaranHistory.map(p => `• ${formatDate(p.tanggal)}: ${p.tagihan?.kategori?.nama || '-'} (${Number(p.jumlah).toLocaleString('id-ID')})`),
+                ...pembayaranHistory.map(p => {
+                    const periodeStr = p.tagihan?.jatuh_tempo ? ` (Periode ${formatDate(p.tagihan.jatuh_tempo, { month: 'long', year: 'numeric' })})` : ''
+                    return `• ${formatDate(p.tanggal)}: ${p.tagihan?.kategori?.nama || '-'}${periodeStr} - Rp ${Number(p.jumlah).toLocaleString('id-ID')}`
+                }),
                 { label: 'Total Tercatat', value: `Rp ${pembayaranHistory.reduce((sum, p) => sum + Number(p.jumlah), 0).toLocaleString('id-ID')}` }
             ]
         })
@@ -429,14 +554,18 @@ const PembayaranSantriPage = () => {
             return
         }
 
+        const periodeTagihan = pembayaran.tagihan?.jatuh_tempo ? formatDate(pembayaran.tagihan.jatuh_tempo, { month: 'long', year: 'numeric' }) : '-'
+
         const message = createMessage({
             intro: `BUKTI PEMBAYARAN`,
             data: [
                 `Santri: *${selectedSantri.nama}*`,
-                { label: 'Tanggal', value: formatDate(pembayaran.tanggal) },
+                { label: 'Tanggal Bayar', value: formatDate(pembayaran.tanggal) },
                 { label: 'Kategori', value: pembayaran.tagihan?.kategori?.nama || '-' },
+                { label: 'Periode Tagihan', value: periodeTagihan },
                 { label: 'Jumlah', value: `Rp ${Number(pembayaran.jumlah).toLocaleString('id-ID')}` },
-                { label: 'Metode', value: pembayaran.metode }
+                { label: 'Metode', value: pembayaran.metode },
+                ...(pembayaran.keterangan ? [{ label: 'Keterangan', value: pembayaran.keterangan }] : [])
             ]
         })
 
@@ -449,12 +578,14 @@ const PembayaranSantriPage = () => {
         generateLaporanPDF({
             title: `Riwayat Pembayaran - ${selectedSantri?.nama}`,
             subtitle: `NIS: ${selectedSantri?.nis} | Kelas: ${selectedSantri?.kelas?.nama || '-'}`,
-            columns: ['Tanggal', 'Kategori', 'Jumlah', 'Metode'],
+            columns: ['Tanggal Bayar', 'Kategori', 'Periode', 'Jumlah', 'Metode', 'Keterangan'],
             data: pembayaranHistory.map(p => [
                 formatDate(p.tanggal),
                 p.tagihan?.kategori?.nama || '-',
+                p.tagihan?.jatuh_tempo ? formatDate(p.tagihan.jatuh_tempo, { month: 'long', year: 'numeric' }) : '-',
                 `Rp ${Number(p.jumlah).toLocaleString('id-ID')}`,
-                p.metode
+                p.metode || 'Tunai',
+                p.keterangan || '-'
             ]),
             filename: `riwayat_pembayaran_${selectedSantri?.nis}`,
             showTotal: true,
@@ -467,20 +598,29 @@ const PembayaranSantriPage = () => {
 
     // Print kwitansi for single history
     const handlePrintHistorySingle = (pembayaran) => {
-        // Get periode from payment date
-        const periodeStr = formatDate(pembayaran.tanggal, { day: undefined, month: 'long', year: 'numeric' })
+        // Ambil data tagihan terkait dari daftar tagihanSantri
+        const tagihan = tagihanSantri.find(t => t.id === pembayaran.tagihan_id)
+        const isPartial = tagihan ? tagihan.isSebagian : (pembayaran.keterangan?.toLowerCase().includes('cicilan') || pembayaran.keterangan?.toLowerCase().includes('sebagian'))
+        const sisa = tagihan?.sisa || 0
+
+        // Get periode from tagihan's jatuh_tempo if available, else from payment date
+        const targetDate = pembayaran.tagihan?.jatuh_tempo || pembayaran.tanggal
+        const periodeStr = formatDate(targetDate, { day: undefined, month: 'long', year: 'numeric' })
 
         generateKwitansiPDF({
             nomorKwitansi: `KW-${pembayaran.id.slice(-8)}`,
             tanggal: pembayaran.tanggal,
             namaSantri: selectedSantri?.nama,
             namaWali: selectedSantri?.nama_wali || '-',
-            kategori: pembayaran.tagihan?.kategori?.nama,
+            kategori: `${pembayaran.tagihan?.kategori?.nama || '-'}${isPartial ? ' (Cicilan / Sebagian)' : ''}`,
             periode: periodeStr,
             jumlah: pembayaran.jumlah,
             formattedTanggal: formatDate(pembayaran.tanggal),
             metode: pembayaran.metode,
-            kasir: 'Bendahara PTQA'
+            kasir: 'Bendahara PTQA',
+            status: isPartial ? 'SEBAGIAN / CICILAN' : 'LUNAS',
+            sisaTagihan: isPartial ? sisa : 0,
+            keterangan: pembayaran.keterangan || (isPartial ? `Sisa tagihan: Rp ${Number(sisa).toLocaleString('id-ID')}` : 'Lunas')
         })
         showToast.success('Kwitansi berhasil dicetak')
     }
@@ -531,17 +671,7 @@ const PembayaranSantriPage = () => {
 
             if (updateError) throw updateError
 
-            // Always update the tagihan amount to match the corrected payment
-            // When correcting a payment, the tagihan amount should also be corrected
-            const { error: updateTagihanError } = await supabase
-                .from('tagihan_santri')
-                .update({ jumlah: newAmount })
-                .eq('id', tagihanId)
-
-            if (updateTagihanError) throw updateTagihanError
-
-            // Recalculate tagihan status
-            // Get total payments for this tagihan
+            // Recalculate tagihan status based on all payments
             const { data: allPayments, error: payError } = await supabase
                 .from('pembayaran_santri')
                 .select('jumlah')
@@ -605,274 +735,558 @@ const PembayaranSantriPage = () => {
     }
 
     return (
-        <div className="keuangan-page">
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">
-                        <CreditCard className="title-icon green" /> Pembayaran Santri
-                    </h1>
-                    <p className="page-subtitle">Cari santri dan kelola pembayaran</p>
-                </div>
-            </div>
+        <div className="keuangan-page space-y-6">
+            <PageHeader
+                title="Pembayaran Santri"
+                description="Cari santri dan kelola pembayaran tagihan serta cicilan"
+                actions={
+                    selectedSantri && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => fetchTagihanSantri(selectedSantri.id)}
+                            disabled={loadingTagihan}
+                        >
+                            <RefreshCw size={14} className={loadingTagihan ? 'animate-spin' : ''} />
+                            Refresh Data
+                        </Button>
+                    )
+                }
+            />
 
-            {/* Santri Search */}
-            <div className="santri-search-section">
-                <div className="santri-search-container" ref={dropdownRef}>
-                    {selectedSantri ? (
-                        <div className="selected-santri-card">
-                            <div className="selected-santri-avatar">{selectedSantri.nama.charAt(0)}</div>
-                            <div className="selected-santri-info">
-                                <strong>{selectedSantri.nama}</strong>
-                                <span>{selectedSantri.nis} • {selectedSantri.kelas?.nama || '-'}</span>
+            {/* Santri Search / Profil Card */}
+            {selectedSantri ? (
+                <Card className="p-4 sm:p-5 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/70 border-emerald-200 shadow-sm">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-black text-lg sm:text-xl flex items-center justify-center shadow-md shadow-emerald-700/20 shrink-0">
+                                {selectedSantri.nama.charAt(0)}
                             </div>
-                            <button className="btn-clear-santri" onClick={handleClearSantri}>
-                                <X size={18} />
-                            </button>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h2 className="text-base sm:text-lg font-bold text-gray-900 truncate tracking-tight">
+                                        {selectedSantri.nama}
+                                    </h2>
+                                    {selectedSantri.status && (
+                                        <Badge variant={selectedSantri.status === 'Aktif' ? 'success' : 'danger'}>
+                                            {selectedSantri.status}
+                                        </Badge>
+                                    )}
+                                </div>
+                                <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5 truncate">
+                                    NIS: <span className="font-mono font-semibold">{selectedSantri.nis}</span> • Kelas: {selectedSantri.kelas?.nama || '-'} {selectedSantri.halaqoh?.nama ? `• Halaqoh: ${selectedSantri.halaqoh.nama}` : ''}
+                                </p>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="santri-search-input-wrapper">
-                            <Search size={20} />
+                        <button
+                            onClick={handleClearSantri}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all active:scale-95 shrink-0"
+                            title="Ganti Santri"
+                        >
+                            <X size={15} />
+                            <span className="hidden sm:inline">Ganti Santri</span>
+                        </button>
+                    </div>
+                </Card>
+            ) : (
+                <Card className="p-4 sm:p-6 overflow-visible relative z-30">
+                    <div className="relative max-w-2xl mx-auto" ref={dropdownRef}>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                            Pencarian Data Santri
+                        </label>
+                        <div className="relative">
+                            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                             <input
                                 type="text"
+                                className="w-full pl-10 pr-10 py-3 bg-gray-50/50 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-gray-400 font-medium"
                                 placeholder="Ketik nama atau NIS santri untuk mencari..."
                                 value={searchSantri}
                                 onChange={(e) => setSearchSantri(e.target.value)}
-                                onFocus={() => searchSantri.length >= 2 && setShowSantriDropdown(true)}
+                                onFocus={() => {
+                                    if (searchSantri.trim().length >= 2) {
+                                        setShowSantriDropdown(true)
+                                        if (santriList.length === 0 && !loading) {
+                                            fetchSantri(searchSantri.trim())
+                                        }
+                                    }
+                                }}
                             />
-                            {loading && <RefreshCw size={18} className="spin" />}
-                        </div>
-                    )}
-
-                    {/* Dropdown Results */}
-                    {showSantriDropdown && santriList.length > 0 && (
-                        <div className="santri-dropdown">
-                            {santriList.map(santri => (
-                                <div
-                                    key={santri.id}
-                                    className="santri-dropdown-item"
-                                    onClick={() => handleSelectSantri(santri)}
+                            {loading && (
+                                <RefreshCw size={16} className="animate-spin text-emerald-600 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                            )}
+                            {searchSantri && !loading && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setSearchSantri(''); setSantriList([]); setShowSantriDropdown(false); }}
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
                                 >
-                                    <div className="santri-dropdown-avatar">{santri.nama.charAt(0)}</div>
-                                    <div className="santri-dropdown-info">
-                                        <div className="flex items-center gap-2">
-                                            <strong>{santri.nama}</strong>
-                                            {santri.status && santri.status !== 'Aktif' && (
-                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-700">
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Dropdown Results */}
+                        {showSantriDropdown && (searchSantri.trim().length >= 2) && (
+                            <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-80 overflow-y-auto z-50 divide-y divide-gray-100">
+                                {loading && santriList.length === 0 ? (
+                                    <div className="p-4 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+                                        <RefreshCw size={16} className="animate-spin text-emerald-600" />
+                                        <span>Mencari santri...</span>
+                                    </div>
+                                ) : santriList.length > 0 ? (
+                                    santriList.map(santri => (
+                                        <div
+                                            key={santri.id}
+                                            className="p-3.5 flex items-center justify-between hover:bg-emerald-50/70 cursor-pointer transition-colors"
+                                            onClick={() => handleSelectSantri(santri)}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-800 font-bold text-sm flex items-center justify-center shrink-0 border border-emerald-200">
+                                                    {santri.nama?.charAt(0) || '?'}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="font-bold text-gray-900 text-sm truncate">{santri.nama}</div>
+                                                    <div className="text-xs text-gray-500 font-medium truncate">
+                                                        NIS: <span className="font-mono">{santri.nis}</span> • Kelas: {santri.kelas?.nama || '-'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {santri.status && (
+                                                <Badge variant={santri.status === 'Aktif' ? 'success' : 'danger'}>
                                                     {santri.status}
-                                                </span>
+                                                </Badge>
                                             )}
                                         </div>
-                                        <small>{santri.nis} • {santri.kelas?.nama || '-'}</small>
+                                    ))
+                                ) : !loading ? (
+                                    <div className="p-6 text-center text-gray-500 text-sm">
+                                        Tidak ditemukan santri dengan nama atau NIS "{searchSantri}"
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {showSantriDropdown && searchSantri.length >= 2 && santriList.length === 0 && !loading && (
-                        <div className="santri-dropdown">
-                            <div className="santri-dropdown-empty">Tidak ditemukan santri dengan "{searchSantri}"</div>
-                        </div>
-                    )}
-                </div>
-            </div>
+                                ) : null}
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            )}
 
             {/* Content when santri selected */}
             {selectedSantri && (
-                <div className="pembayaran-content">
+                <div className="space-y-6">
                     {loadingTagihan ? (
-                        <Spinner className="py-8" label="Memuat data tagihan..." />
+                        <div className="py-12 flex justify-center">
+                            <Spinner label="Memuat data tagihan & pembayaran santri..." />
+                        </div>
                     ) : (
                         <>
-                            {/* Unpaid Section - Grouped */}
+                            {/* Unpaid Section */}
                             {belumLunas.length > 0 && (
-                                <div className="tagihan-grouped-section">
-                                    <div className="section-header-row">
-                                        <h3 className="section-title red">
-                                            <AlertCircle size={20} /> Tagihan Belum Lunas ({belumLunas.length})
-                                        </h3>
-                                        <div className="section-actions">
-                                            <button className="btn btn-sm btn-outline" onClick={selectAllUnpaid}>
-                                                <Layers size={16} /> Pilih Semua
-                                            </button>
-                                            <button className="btn btn-sm btn-wa" onClick={handleSendGroupedWA}>
-                                                <MessageCircle size={16} /> Kirim WA Semua
-                                            </button>
+                                <Card>
+                                    <CardHeader
+                                        actions={
+                                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={selectAllUnpaid}
+                                                    className="flex-1 sm:flex-initial"
+                                                >
+                                                    <Layers size={14} />
+                                                    Pilih Semua
+                                                </Button>
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    onClick={handleSendGroupedWA}
+                                                    className="flex-1 sm:flex-initial !bg-[#25D366] hover:!bg-[#1ebd59] !text-white !border-none !shadow-sm"
+                                                >
+                                                    <MessageCircle size={14} />
+                                                    Kirim WA Semua
+                                                </Button>
+                                            </div>
+                                        }
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                                                <AlertCircle size={18} />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-rose-700">Tagihan Belum Lunas</CardTitle>
+                                                <CardDescription>{belumLunas.length} tagihan aktif</CardDescription>
+                                            </div>
                                         </div>
-                                    </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {/* Summary Cards */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="p-4 rounded-xl bg-gradient-to-br from-rose-50 to-red-50/50 border border-rose-100 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-xs font-bold text-rose-600 uppercase tracking-wider block">Total Belum Lunas</span>
+                                                    <span className="text-xl sm:text-2xl font-black font-mono text-rose-700 mt-1 block">
+                                                        Rp {totalBelumLunas.toLocaleString('id-ID')}
+                                                    </span>
+                                                </div>
+                                                <div className="w-10 h-10 rounded-xl bg-rose-100/80 text-rose-600 flex items-center justify-center shrink-0">
+                                                    <AlertCircle size={20} />
+                                                </div>
+                                            </div>
 
-                                    <div className="grouped-summary-card">
-                                        <div className="grouped-total">
-                                            <span>Total Belum Lunas</span>
-                                            <strong>Rp {totalBelumLunas.toLocaleString('id-ID')}</strong>
+                                            {selectedTagihanIds.length > 0 && (
+                                                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50/50 border border-emerald-200 flex items-center justify-between">
+                                                    <div>
+                                                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block">
+                                                            Dipilih ({selectedTagihanIds.length} Tagihan)
+                                                        </span>
+                                                        <span className="text-xl sm:text-2xl font-black font-mono text-emerald-800 mt-1 block">
+                                                            Rp {totalSelected.toLocaleString('id-ID')}
+                                                        </span>
+                                                    </div>
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                                        <Check size={20} />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
+
+                                        {/* Checklist Items */}
+                                        <div className="space-y-2.5">
+                                            {belumLunas.map(tagihan => {
+                                                const isSelected = selectedTagihanIds.includes(tagihan.id)
+                                                const overdue = isOverdue(tagihan.jatuh_tempo)
+                                                return (
+                                                    <div
+                                                        key={tagihan.id}
+                                                        onClick={() => toggleTagihanSelection(tagihan.id)}
+                                                        className={`p-3.5 sm:p-4 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                                                            isSelected
+                                                                ? 'bg-emerald-50/40 border-emerald-500 shadow-sm'
+                                                                : overdue
+                                                                ? 'bg-rose-50/30 border-rose-200 hover:border-rose-300'
+                                                                : 'bg-white border-gray-200 hover:border-gray-300'
+                                                        }`}
+                                                    >
+                                                        <div className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                                                            isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-300 bg-white'
+                                                        }`}>
+                                                            {isSelected && <Check size={13} strokeWidth={3} />}
+                                                        </div>
+
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-4">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="font-bold text-sm sm:text-base text-gray-900">{tagihan.kategori?.nama}</span>
+                                                                    {tagihan.jatuh_tempo && (
+                                                                        <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+                                                                            Periode: {formatDate(tagihan.jatuh_tempo, { month: 'long', year: 'numeric' })}
+                                                                        </span>
+                                                                    )}
+                                                                    {tagihan.isSebagian && (
+                                                                        <span className="text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                                                                            Dicicil {tagihan.persen_terbayar}%
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="text-left sm:text-right">
+                                                                    {tagihan.isSebagian ? (
+                                                                        <div>
+                                                                            <span className="text-sm sm:text-base font-black font-mono text-amber-700">
+                                                                                Sisa: Rp {tagihan.sisa.toLocaleString('id-ID')}
+                                                                            </span>
+                                                                            <span className="text-[11px] text-gray-500 font-medium block">
+                                                                                Total: Rp {tagihan.nominal_tagihan.toLocaleString('id-ID')}
+                                                                            </span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-sm sm:text-base font-black font-mono text-gray-900">
+                                                                            Rp {Number(tagihan.jumlah).toLocaleString('id-ID')}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 flex-wrap">
+                                                                <span>Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}</span>
+                                                                {tagihan.isSebagian && (
+                                                                    <span>• Terbayar: Rp {tagihan.terbayar.toLocaleString('id-ID')}</span>
+                                                                )}
+                                                                {overdue && (
+                                                                    <span className="font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                                                                        Terlambat
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {tagihan.isSebagian && (
+                                                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2 overflow-hidden">
+                                                                    <div
+                                                                        className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                                                                        style={{ width: `${tagihan.persen_terbayar}%` }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+
                                         {selectedTagihanIds.length > 0 && (
-                                            <div className="grouped-selected">
-                                                <span>Dipilih ({selectedTagihanIds.length})</span>
-                                                <strong>Rp {totalSelected.toLocaleString('id-ID')}</strong>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="tagihan-checklist">
-                                        {belumLunas.map(tagihan => (
-                                            <div
-                                                key={tagihan.id}
-                                                className={`tagihan-check-item ${selectedTagihanIds.includes(tagihan.id) ? 'selected' : ''} ${isOverdue(tagihan.jatuh_tempo) ? 'overdue' : ''}`}
-                                                onClick={() => toggleTagihanSelection(tagihan.id)}
+                                            <Button
+                                                variant="primary"
+                                                size="lg"
+                                                onClick={handleOpenPayment}
+                                                className="w-full !rounded-xl !py-3.5 sm:!py-4 text-sm font-bold shadow-lg"
                                             >
-                                                <div className={`check-box ${selectedTagihanIds.includes(tagihan.id) ? 'checked' : ''}`}>
-                                                    {selectedTagihanIds.includes(tagihan.id) && <Check size={14} />}
-                                                </div>
-                                                <div className="check-item-content">
-                                                    <div className="check-item-main">
-                                                        <span className="kategori-name">{tagihan.kategori?.nama}</span>
-                                                        <span className="tagihan-amount">Rp {Number(tagihan.jumlah).toLocaleString('id-ID')}</span>
-                                                    </div>
-                                                    <div className="check-item-sub">
-                                                        <span>Jatuh tempo: {formatDate(tagihan.jatuh_tempo)}</span>
-                                                        {isOverdue(tagihan.jatuh_tempo) && <span className="overdue-label">Terlambat</span>}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {selectedTagihanIds.length > 0 && (
-                                        <button className="btn btn-primary btn-pay-selected" onClick={handleOpenPayment}>
-                                            <CreditCard size={18} /> Bayar {selectedTagihanIds.length} Tagihan (Rp {totalSelected.toLocaleString('id-ID')})
-                                        </button>
-                                    )}
-                                </div>
+                                                <CreditCard size={18} />
+                                                Bayar {selectedTagihanIds.length} Tagihan Terpilih (Rp {totalSelected.toLocaleString('id-ID')})
+                                            </Button>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             )}
 
                             {belumLunas.length === 0 && (
-                                <div className="all-paid-message">
-                                    <CheckCircle size={48} />
-                                    <p>Semua tagihan sudah lunas! 🎉</p>
-                                </div>
+                                <Card className="p-8 text-center bg-emerald-50/40 border-emerald-200">
+                                    <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                                        <CheckCircle size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-emerald-900">Semua Tagihan Sudah Lunas</h3>
+                                    <p className="text-sm text-emerald-700 mt-1">Santri ini tidak memiliki tunggakan tagihan aktif.</p>
+                                </Card>
                             )}
 
                             {/* Paid Section */}
                             {sudahLunas.length > 0 && (
-                                <div className="tagihan-grouped-section lunas-section">
-                                    <div className="section-header-row">
-                                        <h3 className="section-title green">
-                                            <CheckCircle size={20} /> Tagihan Lunas ({sudahLunas.length})
-                                        </h3>
-                                        <div className="section-actions">
-                                            <button className="btn btn-sm btn-wa" onClick={handleSendLunasWAGlobal} title="Kirim WA Semua">
-                                                <MessageCircle size={14} />
-                                            </button>
-                                            <button className="btn btn-sm btn-outline" onClick={handleDownloadLunasGlobal} title="Download PDF">
-                                                <Download size={14} />
-                                            </button>
-                                            <div className="view-toggle">
+                                <Card>
+                                    <CardHeader
+                                        actions={
+                                            <div className="flex items-center gap-1.5">
                                                 <button
-                                                    className={`toggle-btn ${viewMode === 'grouped' ? 'active' : ''}`}
-                                                    onClick={() => setViewMode('grouped')}
+                                                    className="p-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                                                    onClick={handleSendLunasWAGlobal}
+                                                    title="Kirim WA Semua Tagihan Lunas"
                                                 >
-                                                    <Layers size={14} />
+                                                    <MessageCircle size={16} />
                                                 </button>
                                                 <button
-                                                    className={`toggle-btn ${viewMode === 'individual' ? 'active' : ''}`}
-                                                    onClick={() => setViewMode('individual')}
+                                                    className="p-2 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                    onClick={handleDownloadLunasGlobal}
+                                                    title="Download PDF Tagihan Lunas"
                                                 >
-                                                    <List size={14} />
+                                                    <Download size={16} />
                                                 </button>
+                                                <div className="flex items-center bg-gray-100 p-0.5 rounded-lg ml-1">
+                                                    <button
+                                                        className={`p-1.5 rounded-md text-xs transition-colors ${viewMode === 'grouped' ? 'bg-white shadow-sm text-gray-900 font-bold' : 'text-gray-500'}`}
+                                                        onClick={() => setViewMode('grouped')}
+                                                        title="Tampilan Grup"
+                                                    >
+                                                        <Layers size={14} />
+                                                    </button>
+                                                    <button
+                                                        className={`p-1.5 rounded-md text-xs transition-colors ${viewMode === 'individual' ? 'bg-white shadow-sm text-gray-900 font-bold' : 'text-gray-500'}`}
+                                                        onClick={() => setViewMode('individual')}
+                                                        title="Tampilan Rinci"
+                                                    >
+                                                        <List size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        }
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                                <CheckCircle size={18} />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-emerald-800">Tagihan Lunas</CardTitle>
+                                                <CardDescription>{sudahLunas.length} tagihan telah terselesaikan</CardDescription>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {viewMode === 'grouped' ? (
-                                        <div className="lunas-grouped">
-                                            <div className="lunas-total-card">
-                                                <span>Total Lunas</span>
-                                                <strong>Rp {sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0).toLocaleString('id-ID')}</strong>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-800 to-teal-900 text-white mb-4 flex items-center justify-between shadow-sm">
+                                            <div>
+                                                <span className="text-xs font-semibold text-emerald-200 uppercase tracking-wider block">Total Lunas</span>
+                                                <span className="text-xl sm:text-2xl font-black font-mono mt-1 block">
+                                                    Rp {sudahLunas.reduce((sum, t) => sum + Number(t.jumlah), 0).toLocaleString('id-ID')}
+                                                </span>
                                             </div>
-                                            <div className="lunas-categories">
+                                            <div className="w-10 h-10 rounded-xl bg-white/10 text-emerald-200 flex items-center justify-center shrink-0">
+                                                <CheckCircle size={22} />
+                                            </div>
+                                        </div>
+
+                                        {viewMode === 'grouped' ? (
+                                            <div className="flex flex-wrap gap-2">
                                                 {sudahLunas.map(t => (
-                                                    <span key={t.id} className="lunas-chip">{t.kategori?.nama}</span>
+                                                    <span
+                                                        key={t.id}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold"
+                                                    >
+                                                        <Check size={12} className="text-emerald-600" />
+                                                        {t.kategori?.nama} {t.jatuh_tempo ? `(${formatDate(t.jatuh_tempo, { month: 'short', year: 'numeric' })})` : ''}
+                                                    </span>
                                                 ))}
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="lunas-list">
-                                            {sudahLunas.map(tagihan => (
-                                                <div key={tagihan.id} className="lunas-item">
-                                                    <span className="lunas-kategori">{tagihan.kategori?.nama}</span>
-                                                    <span className="lunas-amount">Rp {Number(tagihan.jumlah).toLocaleString('id-ID')}</span>
-                                                    <span className="lunas-badge">✓ Lunas</span>
-                                                    <div className="lunas-item-actions">
-                                                        <MobileActionMenu
-                                                            actions={[
-                                                                { icon: <MessageCircle size={16} />, label: 'Kirim WA', onClick: () => handleSendLunasWASingle(tagihan) },
-                                                                { icon: <Printer size={16} />, label: 'Cetak', onClick: () => handlePrintLunasSingle(tagihan) }
-                                                            ]}
-                                                        >
-                                                            <button className="btn-icon-xs" onClick={() => handleSendLunasWASingle(tagihan)} title="Kirim WA">
-                                                                <MessageCircle size={14} />
-                                                            </button>
-                                                            <button className="btn-icon-xs" onClick={() => handlePrintLunasSingle(tagihan)} title="Cetak">
-                                                                <Printer size={14} />
-                                                            </button>
-                                                        </MobileActionMenu>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {sudahLunas.map(tagihan => (
+                                                    <div key={tagihan.id} className="p-3 sm:p-3.5 bg-gray-50/60 border border-gray-100 rounded-xl flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <div className="font-bold text-sm text-gray-900">{tagihan.kategori?.nama}</div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {tagihan.jatuh_tempo ? `Periode: ${formatDate(tagihan.jatuh_tempo, { month: 'long', year: 'numeric' })}` : ''}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="font-mono font-bold text-sm text-gray-800">
+                                                                Rp {Number(tagihan.jumlah).toLocaleString('id-ID')}
+                                                            </span>
+                                                            <Badge variant="success">Lunas</Badge>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                                    onClick={() => handleSendLunasWASingle(tagihan)}
+                                                                    title="Kirim WA"
+                                                                >
+                                                                    <MessageCircle size={15} />
+                                                                </button>
+                                                                <button
+                                                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                    onClick={() => handlePrintLunasSingle(tagihan)}
+                                                                    title="Cetak Kwitansi"
+                                                                >
+                                                                    <Printer size={15} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             )}
 
                             {/* Payment History */}
                             {pembayaranHistory.length > 0 && (
-                                <div className="tagihan-grouped-section history-section">
-                                    <div className="section-header-row">
-                                        <h3 className="section-title blue">
-                                            <CreditCard size={20} /> Riwayat Pembayaran ({pembayaranHistory.length})
-                                        </h3>
-                                        <div className="section-actions">
-                                            <button className="btn btn-sm btn-wa" onClick={handleSendHistoryWAGlobal} title="Kirim WA Semua">
-                                                <MessageCircle size={14} />
-                                            </button>
-                                            <button className="btn btn-sm btn-outline" onClick={handleDownloadHistoryGlobal} title="Download PDF">
-                                                <Download size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="history-list">
-                                        {pembayaranHistory.map(p => (
-                                            <div key={p.id} className="history-item">
-                                                <div className="history-date">{formatDate(p.tanggal)}</div>
-                                                <div className="history-info">
-                                                    <span>{p.tagihan?.kategori?.nama || '-'}</span>
-                                                    <strong className="green">Rp {Number(p.jumlah).toLocaleString('id-ID')}</strong>
-                                                </div>
-                                                <span className="history-method">{p.metode}</span>
-                                                <div className="history-item-actions">
-                                                    <MobileActionMenu
-                                                        actions={[
-                                                            { icon: <Edit2 size={16} />, label: 'Edit/Koreksi', onClick: () => handleOpenEditPayment(p) },
-                                                            { icon: <MessageCircle size={16} />, label: 'Kirim WA', onClick: () => handleSendHistoryWASingle(p) },
-                                                            { icon: <Printer size={16} />, label: 'Cetak Kwitansi', onClick: () => handlePrintHistorySingle(p) }
-                                                        ]}
-                                                    >
-                                                        <button className="btn-icon-xs" onClick={() => handleOpenEditPayment(p)} title="Edit/Koreksi">
-                                                            <Edit2 size={14} />
-                                                        </button>
-                                                        <button className="btn-icon-xs" onClick={() => handleSendHistoryWASingle(p)} title="Kirim WA">
-                                                            <MessageCircle size={14} />
-                                                        </button>
-                                                        <button className="btn-icon-xs" onClick={() => handlePrintHistorySingle(p)} title="Cetak Kwitansi">
-                                                            <Printer size={14} />
-                                                        </button>
-                                                    </MobileActionMenu>
-                                                </div>
+                                <Card>
+                                    <CardHeader
+                                        actions={
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    className="p-2 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                                                    onClick={handleSendHistoryWAGlobal}
+                                                    title="Kirim WA Semua Riwayat"
+                                                >
+                                                    <MessageCircle size={16} />
+                                                </button>
+                                                <button
+                                                    className="p-2 text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                    onClick={handleDownloadHistoryGlobal}
+                                                    title="Download PDF Riwayat"
+                                                >
+                                                    <Download size={16} />
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                        }
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                                <CreditCard size={18} />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-blue-900">Riwayat Pembayaran</CardTitle>
+                                                <CardDescription>{pembayaranHistory.length} transaksi tercatat</CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2.5">
+                                        {pembayaranHistory.map(p => {
+                                            const periodeTagihan = p.tagihan?.jatuh_tempo
+                                                ? formatDate(p.tagihan.jatuh_tempo, { month: 'long', year: 'numeric' })
+                                                : null
+                                            const noteInfo = formatKeteranganRiwayat(p.keterangan, p.tagihan?.kategori?.nama)
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    className="p-3.5 sm:p-4 rounded-xl border border-gray-100 bg-white hover:border-gray-200 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                                                >
+                                                    <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                                                        <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 text-gray-600 flex flex-col items-center justify-center shrink-0">
+                                                            <Calendar size={13} className="text-gray-400" />
+                                                            <span className="text-[10px] font-bold text-gray-700 mt-0.5">
+                                                                {new Date(p.tanggal).getDate()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="font-bold text-sm sm:text-base text-gray-900">
+                                                                    {p.tagihan?.kategori?.nama || '-'}
+                                                                </span>
+                                                                {periodeTagihan && (
+                                                                    <span className="text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+                                                                        Periode: {periodeTagihan}
+                                                                    </span>
+                                                                )}
+                                                                <Badge variant="neutral">{p.metode || 'Tunai'}</Badge>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 flex-wrap">
+                                                                <span>Tgl Bayar: {formatDate(p.tanggal)}</span>
+                                                                {noteInfo?.customNote && (
+                                                                    <span className="italic text-gray-600 font-medium">
+                                                                        • {noteInfo.customNote}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                                                        <div className="text-left sm:text-right">
+                                                            <div className="flex items-center gap-1.5 sm:justify-end">
+                                                                <span className="text-base sm:text-lg font-black font-mono text-emerald-600">
+                                                                    Rp {Number(p.jumlah).toLocaleString('id-ID')}
+                                                                </span>
+                                                                {noteInfo?.isCicilan && (
+                                                                    <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded">
+                                                                        Cicilan
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <button
+                                                                className="p-1.5 sm:p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                                onClick={() => handleOpenEditPayment(p)}
+                                                                title="Edit/Koreksi"
+                                                            >
+                                                                <Edit2 size={15} />
+                                                            </button>
+                                                            <button
+                                                                className="p-1.5 sm:p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                                onClick={() => handleSendHistoryWASingle(p)}
+                                                                title="Kirim WA"
+                                                            >
+                                                                <MessageCircle size={15} />
+                                                            </button>
+                                                            <button
+                                                                className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                onClick={() => handlePrintHistorySingle(p)}
+                                                                title="Cetak Kwitansi"
+                                                            >
+                                                                <Printer size={15} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </CardContent>
+                                </Card>
                             )}
                         </>
                     )}
@@ -881,15 +1295,15 @@ const PembayaranSantriPage = () => {
 
             {/* Empty State */}
             {!selectedSantri && (
-                <div className="select-santri-prompt">
-                    <User size={64} />
-                    <h3>Cari & Pilih Santri</h3>
-                    <p>Ketik nama atau NIS santri di atas untuk melihat tagihan</p>
-                </div>
+                <EmptyState
+                    icon={User}
+                    title="Cari & Pilih Santri"
+                    message="Ketik nama atau NIS santri pada kolom pencarian di atas untuk melihat rincian tagihan dan melakukan pembayaran."
+                />
             )}
 
             {/* Payment Modal */}
-            {showPaymentModal && (
+            {showPaymentModal && typeof document !== 'undefined' && createPortal(
                 <div className="modal-overlay active">
                     <div className="modal">
                         <div className="modal-header">
@@ -898,41 +1312,69 @@ const PembayaranSantriPage = () => {
                         </div>
                         <form onSubmit={handleFormSubmit}>
                             <div className="modal-body">
-                                <div className="payment-info-card">
-                                    <div className="payment-info-row">
+                                <div className="payment-info-card" style={{ padding: '12px 16px', marginBottom: '14px' }}>
+                                    <div className="payment-info-row" style={{ padding: '6px 0' }}>
                                         <span>Santri</span>
                                         <strong>{selectedSantri?.nama}</strong>
                                     </div>
-                                    <div className="payment-info-row">
+                                    <div className="payment-info-row" style={{ padding: '6px 0' }}>
                                         <span>Tagihan</span>
                                         <strong>{selectedTagihan.map(t => t.kategori?.nama).join(', ')}</strong>
                                     </div>
-                                    <div className="payment-info-row highlight">
-                                        <span>Total</span>
+                                    <div className="payment-info-row highlight" style={{ marginTop: '6px', padding: '8px 12px' }}>
+                                        <span>Total Sisa Tagihan</span>
                                         <strong>Rp {totalSelected.toLocaleString('id-ID')}</strong>
                                     </div>
                                 </div>
 
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Jumlah Bayar (Rp) *</label>
+                                <div className="form-row" style={{ gap: '14px', alignItems: 'flex-start' }}>
+                                    <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                            <label style={{ margin: 0 }}>Jumlah Bayar (Rp) *</label>
+                                            {Number(form.jumlah) !== totalSelected && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setForm({ ...form, jumlah: String(totalSelected) })}
+                                                    style={{ background: 'none', border: 'none', color: '#059669', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    Bayar Lunas Sisa (Rp {totalSelected.toLocaleString('id-ID')})
+                                                </button>
+                                            )}
+                                        </div>
                                         <input
                                             type="number"
                                             value={form.jumlah}
                                             onChange={e => setForm({ ...form, jumlah: e.target.value })}
-                                            min="0"
+                                            min="1"
+                                            max={totalSelected}
                                             required
+                                            placeholder="Masukkan nominal bayar..."
                                         />
+                                        {Number(form.jumlah) > 0 && (
+                                            <div style={{ marginTop: '8px', fontSize: '12px' }}>
+                                                {Number(form.jumlah) === totalSelected ? (
+                                                    <div style={{ color: '#059669', background: '#ecfdf5', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #a7f3d0' }}>
+                                                        <CheckCircle size={14} /> <span><strong>Pelunasan Penuh:</strong> Tagihan terpilih akan lunas.</span>
+                                                    </div>
+                                                ) : Number(form.jumlah) < totalSelected ? (
+                                                    <div style={{ color: '#b45309', background: '#fffbeb', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #fde68a' }}>
+                                                        <AlertCircle size={14} /> <span><strong>Pembayaran Cicilan:</strong> Sisa tagihan nantinya Rp {(totalSelected - Number(form.jumlah)).toLocaleString('id-ID')}.</span>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ color: '#dc2626', background: '#fef2f2', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #fecaca' }}>
+                                                        <AlertCircle size={14} /> <span><strong>Melebihi Tagihan:</strong> Maksimal pembayaran adalah Rp {totalSelected.toLocaleString('id-ID')}.</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="payment-info-row">
-                                        <span>Tanggal Bayar</span>
-                                        <div style={{ width: '200px' }}>
-                                            <DateRangePicker
-                                                singleDate
-                                                startDate={form.tanggal}
-                                                onChange={(date) => setForm({ ...form, tanggal: date })}
-                                            />
-                                        </div>
+                                    <div className="form-group" style={{ width: '180px', margin: 0 }}>
+                                        <label style={{ marginBottom: '6px' }}>Tanggal Bayar</label>
+                                        <DateRangePicker
+                                            singleDate
+                                            startDate={form.tanggal}
+                                            onChange={(date) => setForm({ ...form, tanggal: date })}
+                                        />
                                     </div>
                                 </div>
                                 <div className="form-group">
@@ -940,6 +1382,15 @@ const PembayaranSantriPage = () => {
                                     <select value={form.metode} onChange={e => setForm({ ...form, metode: e.target.value })}>
                                         {metodeOptions.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Keterangan (Opsional)</label>
+                                    <input
+                                        type="text"
+                                        value={form.keterangan || ''}
+                                        onChange={e => setForm({ ...form, keterangan: e.target.value })}
+                                        placeholder="Catatan tambahan, contoh: Angsuran 1 / Titipan wali"
+                                    />
                                 </div>
                             </div>
                             <div className="modal-footer">
@@ -950,11 +1401,12 @@ const PembayaranSantriPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Success Modal */}
-            {showSuccessModal && (
+            {showSuccessModal && typeof document !== 'undefined' && createPortal(
                 <div className="modal-overlay active">
                     <div className="modal modal-sm">
                         <div className="modal-header">
@@ -975,21 +1427,22 @@ const PembayaranSantriPage = () => {
                             <button className="btn btn-primary btn-block" onClick={() => setShowSuccessModal(false)}>Tutup</button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <ConfirmationModal
                 isOpen={saveModal.isOpen}
                 onClose={() => setSaveModal({ isOpen: false })}
                 onConfirm={executePayment}
-                title="Konfirmasi Pembayaran"
-                message={`Apakah Anda yakin ingin memproses pembayaran sebesar Rp ${Number(form.jumlah).toLocaleString('id-ID')}?`}
+                title={Number(form.jumlah) < totalSelected ? "Konfirmasi Pembayaran Cicilan" : "Konfirmasi Pelunasan Tagihan"}
+                message={`Apakah Anda yakin ingin memproses pembayaran sebesar Rp ${Number(form.jumlah).toLocaleString('id-ID')}${Number(form.jumlah) < totalSelected ? ` (Cicilan/Sebagian - Sisa Rp ${(totalSelected - Number(form.jumlah)).toLocaleString('id-ID')})` : ' (Lunas)'}?`}
                 confirmLabel="Bayar"
-                variant="success"
+                variant={Number(form.jumlah) < totalSelected ? "warning" : "success"}
             />
 
             {/* Edit Payment Modal */}
-            {showEditModal && (
+            {showEditModal && typeof document !== 'undefined' && createPortal(
                 <div className="modal-overlay active">
                     <div className="modal">
                         <div className="modal-header">
@@ -1057,7 +1510,8 @@ const PembayaranSantriPage = () => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <ConfirmationModal
