@@ -90,11 +90,11 @@ export const getTodayTeacherSchedules = async (targetDateStr) => {
     const isMadrosahHoliday = holidayList.some(h => h.scope === 'Madrosah')
     const isQuraniyahHoliday = holidayList.some(h => h.scope === 'Quraniyah')
 
-    // Aliases nama hari agar fleksibel (Ahad / Minggu, Jumat / Jum'at)
-    const dayAliases = [dayName]
-    if (dayName.toLowerCase() === 'ahad') dayAliases.push('Minggu')
-    else if (dayName.toLowerCase() === 'minggu') dayAliases.push('Ahad')
-    else if (dayName.toLowerCase() === 'jumat') dayAliases.push("Jum'at", "Jum`at")
+    // Aliases nama hari agar fleksibel (Ahad / Minggu, Jumat / Jum'at, dan spasi)
+    const dayAliases = [dayName, `${dayName} `]
+    if (dayName.toLowerCase() === 'ahad') dayAliases.push('Minggu', 'Minggu ')
+    else if (dayName.toLowerCase() === 'minggu') dayAliases.push('Ahad', 'Ahad ')
+    else if (dayName.toLowerCase() === 'jumat') dayAliases.push("Jum'at", "Jum`at", 'Jumat ')
 
     // 2. Query Jadwal, Guru, Halaqoh, User Profiles, Kelas, dan Mapel
     const [jadwalRes, guruRes, halaqohRes, musyrifHalaqohRes, profilesRes, kelasRes, mapelRes] = await Promise.all([
@@ -102,7 +102,7 @@ export const getTodayTeacherSchedules = async (targetDateStr) => {
         supabase.from('guru').select('id, nama, email, user_id, no_telp, status').eq('status', 'Aktif'),
         supabase.from('halaqoh').select('id, nama, musyrif_id'),
         supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
-        supabase.from('user_profiles').select('user_id, guru_id, no_hp, email'),
+        supabase.from('user_profiles').select('user_id, guru_id, no_telp, phone, email'),
         supabase.from('kelas').select('id, nama'),
         supabase.from('mata_pelajaran').select('id, nama')
     ])
@@ -213,8 +213,8 @@ export const getTodayTeacherSchedules = async (targetDateStr) => {
     // Lengkapi nomor telepon dari user_profiles jika guru.no_telp kosong
     Object.values(groupMap).forEach(g => {
         if (!g.noTelp) {
-            const prof = profilesList.find(p => p.guru_id === g.guruId || (g.email && p.email?.toLowerCase() === g.email.toLowerCase()))
-            if (prof?.no_hp) g.noTelp = prof.no_hp
+            const prof = profilesList.find(p => p.guru_id === g.guruId || (g.email && p.email?.toLowerCase() === g.email.toLowerCase()) || (g.guruId && p.user_id === guruMap[g.guruId]?.user_id))
+            if (prof?.no_telp || prof?.phone) g.noTelp = prof.no_telp || prof.phone
         }
         // Urutkan jadwal kronologis
         g.jadwal.sort((a, b) => {
@@ -245,8 +245,8 @@ export const checkAndSendDailyGuruReminders = async (options = {}) => {
     const { dateStr, dayName, formattedDate, currentHourWIB, currentMinuteWIB, currentTimeMinutes, timeStr } = getWIBDateInfo()
 
     // 1. Cek Batasan Waktu: Pengingat jadwal pagi hanya berjalan di jam 06:00 WIB s/d maksimal 07:00 WIB
-    // (06:00 = 360 menit, 07:00 = 420 menit)
-    const minTimeMinutes = 6 * 60 // 06:00 WIB
+    // Diberi toleransi awal 2 menit (05:58 WIB = 358 menit) untuk mengakomodasi jitter antrean server/cron
+    const minTimeMinutes = 5 * 60 + 58 // 05:58 WIB
     const maxTimeMinutes = 7 * 60 // 07:00 WIB (maksimal jam 7 pagi)
 
     if (!force) {
@@ -270,9 +270,9 @@ export const checkAndSendDailyGuruReminders = async (options = {}) => {
         // 3. Cek Audit Log Supabase: Apakah broadcast hari ini sudah pernah berhasil dikirim?
         const { data: existingLogs } = await supabase
             .from('audit_log')
-            .select('id, created_at, description')
+            .select('id, created_at, new_data')
             .eq('action', 'BROADCAST_JADWAL_GURU')
-            .ilike('description', `%${dateStr}%`)
+            .gte('created_at', `${dateStr}T00:00:00Z`)
             .limit(1)
 
         if (!force && existingLogs && existingLogs.length > 0) {
@@ -336,8 +336,15 @@ export const checkAndSendDailyGuruReminders = async (options = {}) => {
             await supabase.from('audit_log').insert({
                 action: 'BROADCAST_JADWAL_GURU',
                 table_name: 'jadwal_pelajaran',
-                user_email: user?.email || 'auto-sentinel@sitaqua.local',
-                description: `Pengingat jadwal guru otomatis (${dayName}, ${dateStr}): ${sentCount} berhasil, ${failedCount} gagal dari ${eligible.length} guru terjadwal.`
+                new_data: {
+                    user_email: user?.email || 'auto-sentinel@sitaqua.local',
+                    date: dateStr,
+                    day: dayName,
+                    sent: sentCount,
+                    failed: failedCount,
+                    total: eligible.length,
+                    summary: `Pengingat jadwal guru otomatis (${dayName}, ${dateStr}): ${sentCount} berhasil, ${failedCount} gagal dari ${eligible.length} guru terjadwal.`
+                }
             })
         } catch (auditErr) {
             console.warn('[AutoReminder Guru] Gagal mencatat audit log:', auditErr)

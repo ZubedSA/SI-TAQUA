@@ -216,8 +216,9 @@ async function main() {
     console.log(`[Cron] Status Supabase: Terhubung (${activeKeyType})`)
 
     // Batasan Waktu: Jam 06:00 s/d maksimal 07:00 WIB (kecuali flag --force)
+    // Toleransi awal 2 menit (05:58 WIB = 358 menit) untuk jitter trigger cron
     if (!isForce) {
-        if (totalMinutes < 360) {
+        if (totalMinutes < 358) {
             console.log(`[Cron] Belum memasuki jam 06:00 WIB (sekarang ${timeStr} WIB). Skip.`)
             console.log(`[Cron] Tips: Gunakan flag --force untuk menguji di luar jam 06:00 - 07:00 WIB.`)
             return
@@ -247,9 +248,9 @@ async function main() {
     if (!isForce) {
         const { data: existingLogs } = await supabase
             .from('audit_log')
-            .select('id')
+            .select('id, created_at, new_data')
             .eq('action', 'BROADCAST_JADWAL_GURU')
-            .ilike('description', `%${dateStr}%`)
+            .gte('created_at', `${dateStr}T00:00:00Z`)
             .limit(1)
 
         if (existingLogs && existingLogs.length > 0) {
@@ -260,10 +261,10 @@ async function main() {
     }
 
     // 3. Query Jadwal dan Guru dengan Aliases Hari (Ahad/Minggu fleksibel)
-    const dayAliases = [dayName]
-    if (dayName.toLowerCase() === 'ahad') dayAliases.push('Minggu')
-    else if (dayName.toLowerCase() === 'minggu') dayAliases.push('Ahad')
-    else if (dayName.toLowerCase() === 'jumat') dayAliases.push("Jum'at", "Jum`at")
+    const dayAliases = [dayName, `${dayName} `]
+    if (dayName.toLowerCase() === 'ahad') dayAliases.push('Minggu', 'Minggu ')
+    else if (dayName.toLowerCase() === 'minggu') dayAliases.push('Ahad', 'Ahad ')
+    else if (dayName.toLowerCase() === 'jumat') dayAliases.push("Jum'at", "Jum`at", 'Jumat ')
 
     console.log(`[Cron] Mengambil data jadwal pelajaran untuk hari [${dayAliases.join(', ')}] dari Supabase...`)
 
@@ -272,7 +273,7 @@ async function main() {
         supabase.from('guru').select('id, nama, email, user_id, no_telp, status').eq('status', 'Aktif'),
         supabase.from('halaqoh').select('id, nama, musyrif_id'),
         supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
-        supabase.from('user_profiles').select('user_id, guru_id, no_hp, email'),
+        supabase.from('user_profiles').select('user_id, guru_id, no_telp, phone, email'),
         supabase.from('kelas').select('id, nama'),
         supabase.from('mata_pelajaran').select('id, nama'),
         supabase.from('jadwal_pelajaran').select('hari')
@@ -425,8 +426,8 @@ async function main() {
     // Lengkapi nomor kontak dari user_profiles jika di tabel guru kosong
     Object.values(groupMap).forEach(g => {
         if (!g.noTelp) {
-            const prof = profilesList.find(p => p.guru_id === g.guruId || (g.email && p.email?.toLowerCase() === g.email.toLowerCase()))
-            if (prof?.no_hp) g.noTelp = prof.no_hp
+            const prof = profilesList.find(p => p.guru_id === g.guruId || (g.email && p.email?.toLowerCase() === g.email.toLowerCase()) || (g.guruId && p.user_id === guruMap[g.guruId]?.user_id))
+            if (prof?.no_telp || prof?.phone) g.noTelp = prof.no_telp || prof.phone
         }
         g.jadwal.sort((a, b) => {
             if (a.jam_mulai && b.jam_mulai) return a.jam_mulai.localeCompare(b.jam_mulai)
@@ -502,8 +503,15 @@ async function main() {
         await supabase.from('audit_log').insert({
             action: 'BROADCAST_JADWAL_GURU',
             table_name: 'jadwal_pelajaran',
-            user_email: 'cron-runner@sitaqua.local',
-            description: `Pengingat jadwal guru via cron script (${dayName}, ${dateStr}): ${sentCount} berhasil, ${failedCount} gagal dari ${eligible.length} guru.`
+            new_data: {
+                user_email: 'cron-runner@sitaqua.local',
+                date: dateStr,
+                day: dayName,
+                sent: sentCount,
+                failed: failedCount,
+                total: eligible.length,
+                summary: `Pengingat jadwal guru via cron script (${dayName}, ${dateStr}): ${sentCount} berhasil, ${failedCount} gagal dari ${eligible.length} guru.`
+            }
         })
         console.log(`[Cron] Sukses mencatat ke audit_log: ${sentCount} terkirim.`)
     } catch (logErr) {

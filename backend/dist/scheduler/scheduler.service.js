@@ -100,12 +100,19 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 guruGroups: []
             };
         }
+        const dayAliases = [dayName, `${dayName} `];
+        if (dayName.toLowerCase() === 'ahad')
+            dayAliases.push('Minggu', 'Minggu ');
+        else if (dayName.toLowerCase() === 'minggu')
+            dayAliases.push('Ahad', 'Ahad ');
+        else if (dayName.toLowerCase() === 'jumat')
+            dayAliases.push("Jum'at", "Jum`at", 'Jumat ');
         const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes, profilesRes, kelasRes, mapelRes] = await Promise.all([
-            supabase.from('jadwal_pelajaran').select('*').eq('hari', dayName),
+            supabase.from('jadwal_pelajaran').select('*').in('hari', dayAliases),
             supabase.from('halaqoh').select('id, nama, musyrif_id'),
             supabase.from('guru').select('id, nama, email, user_id, no_telp, status'),
             supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
-            supabase.from('user_profiles').select('user_id, nama, email, guru_id, no_hp'),
+            supabase.from('user_profiles').select('user_id, nama, email, guru_id, no_telp, phone'),
             supabase.from('kelas').select('id, nama'),
             supabase.from('mata_pelajaran').select('id, nama')
         ]);
@@ -206,9 +213,9 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 return;
             let rawPhone = guru.no_telp || '';
             if (!rawPhone) {
-                const prof = profilesList.find(p => p.guru_id === gid || (guru.email && p.email?.toLowerCase() === guru.email.toLowerCase()));
-                if (prof?.no_hp)
-                    rawPhone = prof.no_hp;
+                const prof = profilesList.find(p => p.guru_id === gid || (guru.email && p.email?.toLowerCase() === guru.email.toLowerCase()) || (guru.user_id && p.user_id === guru.user_id));
+                if (prof?.no_telp || prof?.phone)
+                    rawPhone = prof.no_telp || prof.phone;
             }
             schedules.sort((a, b) => {
                 if (a.jam_mulai && b.jam_mulai) {
@@ -302,7 +309,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: formData.toString(),
-                signal: AbortSignal.timeout(6000),
+                signal: AbortSignal.timeout(3500),
             });
             const resData = await response.json();
             if (response.ok && (resData.status === true || resData.status === 'true')) {
@@ -324,7 +331,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
             const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false });
             const [hStr, mStr] = timeFormatter.format(now).split(':');
             const totalMinutes = parseInt(hStr, 10) * 60 + parseInt(mStr, 10);
-            if (totalMinutes < 360) {
+            if (totalMinutes < 358) {
                 this.logger.log(`[Scheduler] Belum pukul 06:00 WIB (${hStr}:${mStr} WIB). Skip.`);
                 return { success: true, skipped: true, message: `Belum pukul 06:00 WIB (sekarang ${hStr}:${mStr} WIB). Pengingat jadwal pagi dijadwalkan pukul 06:00 WIB.` };
             }
@@ -373,7 +380,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 eligibleTeachers.push(group);
             }
         }
-        const batchSize = 2;
+        const batchSize = 5;
         for (let i = 0; i < eligibleTeachers.length; i += batchSize) {
             const batch = eligibleTeachers.slice(i, i + batchSize);
             await Promise.all(batch.map(async (group) => {
@@ -381,7 +388,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 let sendResult = await this.sendFonnte(group.noTelp, msg);
                 if (!sendResult.success && sendResult.error && (sendResult.error.toLowerCase().includes('busy') ||
                     sendResult.error.toLowerCase().includes('rate'))) {
-                    await new Promise(r => setTimeout(r, 1200));
+                    await new Promise(r => setTimeout(r, 800));
                     sendResult = await this.sendFonnte(group.noTelp, msg);
                 }
                 if (sendResult.success) {
@@ -405,7 +412,7 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 }
             }));
             if (i + batchSize < eligibleTeachers.length) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
         this.logger.log(`[Scheduler] Selesai: ${successCount} berhasil, ${failedCount} gagal, ${noPhoneCount} tanpa nomor HP.`);
@@ -414,8 +421,16 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
             await supabase.from('audit_log').insert({
                 action: 'BROADCAST_JADWAL_GURU',
                 table_name: 'jadwal_pelajaran',
-                user_email: 'scheduler@sitaqua.local',
-                description: `Pengingat jadwal guru jam 06:00 WIB (${dayName}, ${dateStr}): ${successCount} berhasil, ${failedCount} gagal, ${noPhoneCount} tanpa nomor dari ${guruGroups.length} guru.`
+                new_data: {
+                    sender: 'scheduler@sitaqua.local',
+                    date: dateStr,
+                    day: dayName,
+                    successCount,
+                    failedCount,
+                    noPhoneCount,
+                    totalTeachers: guruGroups.length,
+                    summary: `Pengingat jadwal guru jam 06:00 WIB (${dayName}, ${dateStr}): ${successCount} berhasil, ${failedCount} gagal dari ${guruGroups.length} guru.`
+                }
             });
         }
         catch (logErr) {

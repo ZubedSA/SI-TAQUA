@@ -20,13 +20,15 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd frontend
+          cd backend
           npm install --no-audit --no-fund
 
       - name: Execute Daily Reminder Script
         env:
+          NODE_PATH: backend/node_modules:frontend/node_modules
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://cbevhwhmhptdadwvoozt.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNiZXZod2htaHB0ZGFkd3Zvb3p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMTEzOTUsImV4cCI6MjEwOTg4NzM5NX0.r5UJjTtwyTGJ1UgBNf-tG1Ko8Mk2LS8ZAmi23tUBRpQ' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || '' }}
           VITE_FONNTE_TOKEN: ${{ secrets.VITE_FONNTE_TOKEN || '9TKo4vZBPyQ1bjwSniV8' }}
         run: |
           node backend/scripts/cron-remind-guru.js

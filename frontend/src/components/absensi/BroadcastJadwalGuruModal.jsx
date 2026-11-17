@@ -28,7 +28,7 @@ const BroadcastJadwalGuruModal = ({
             try {
                 const [gRes, pRes] = await Promise.all([
                     supabase.from('guru').select('id, nama, no_telp, user_id, email'),
-                    supabase.from('user_profiles').select('user_id, guru_id, no_hp, email')
+                    supabase.from('user_profiles').select('user_id, guru_id, no_telp, phone, email')
                 ])
                 const pList = pRes.data || []
                 const map = {}
@@ -36,7 +36,7 @@ const BroadcastJadwalGuruModal = ({
                     let phone = g.no_telp || ''
                     if (!phone) {
                         const prof = pList.find(p => p.guru_id === g.id || (g.user_id && p.user_id === g.user_id) || (g.email && p.email?.toLowerCase() === g.email.toLowerCase()))
-                        if (prof?.no_hp) phone = prof.no_hp
+                        if (prof?.no_telp || prof?.phone) phone = prof.no_telp || prof.phone
                     }
                     if (phone) map[g.id] = phone
                 })
