@@ -112,7 +112,7 @@ export async function generateQRPdf({
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(7.5)
         doc.setTextColor(245, 197, 66) // Gold text
-        doc.text('PPTQ AL-USYMUNI', cardX + cardW / 2, cardY + 8, {
+        doc.text('PTQA BATUAN', cardX + cardW / 2, cardY + 8, {
             align: 'center',
             charSpace: 0.5
         })
@@ -128,7 +128,7 @@ export async function generateQRPdf({
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(6)
         doc.setTextColor(203, 213, 225) // Slate-300
-        doc.text('Madrosah Diniyah & Tahfidzul Quran', cardX + cardW / 2, cardY + 19.5, { align: 'center' })
+        doc.text('Madrosah Diniyah & Halaqoh Quran', cardX + cardW / 2, cardY + 19.5, { align: 'center' })
 
         // ==========================================
         // 4. PLAKAT NAMA KELAS / HALAQOH
