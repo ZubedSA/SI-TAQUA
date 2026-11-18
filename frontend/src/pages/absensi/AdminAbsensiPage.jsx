@@ -46,11 +46,12 @@ import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import ResponsiveTable from '../../components/ui/ResponsiveTable'
 import BroadcastJadwalGuruModal from '../../components/absensi/BroadcastJadwalGuruModal'
-import { QRCodeSVG } from 'qrcode.react'
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
 import { calculateAutoPresensi, getResolvedAttendance, findStaffScan, isStaffScanMatch, isBeforeScheduleActive, getLocalDateStr, getActiveHolidayForSchedule, isHolidayActiveOnDate, parseHolidayScope } from '../../utils/attendanceHelper'
+import { generateQRPdf } from '../../utils/qrPdfHelper'
 
 const AdminAbsensiPage = () => {
     const navigate = useNavigate()
@@ -251,6 +252,9 @@ const AdminAbsensiPage = () => {
 
     // QR Management State
     const [selectedQR, setSelectedQR] = useState(null)
+    const [qrExportList, setQrExportList] = useState([])
+    const [isExportingPdf, setIsExportingPdf] = useState(false)
+    const [pdfProgress, setPdfProgress] = useState('')
     const printRef = useRef(null)
     const startDateRef = useRef(null)
     const endDateRef = useRef(null)
@@ -1685,6 +1689,87 @@ const AdminAbsensiPage = () => {
 
     const handlePrintQR = () => {
         window.print()
+    }
+
+    const handleExportQRPdf = async (scope = 'all', singleItem = null) => {
+        try {
+            setIsExportingPdf(true)
+            setPdfProgress('Menyiapkan data QR...')
+
+            let items = []
+            let fileName = 'QR_Absensi_SITAQUA.pdf'
+
+            if (singleItem) {
+                items = [{
+                    id: singleItem.id,
+                    name: singleItem.name,
+                    type: singleItem.type,
+                    qrValue: `SITAQUA_ABSENSI_${singleItem.type}_${singleItem.id}`
+                }]
+                const safeName = (singleItem.name || 'QR').replace(/[^a-zA-Z0-9_\-]/g, '_')
+                fileName = `QR_${singleItem.type}_${safeName}.pdf`
+            } else if (scope === 'madrosah') {
+                items = kelasList.map(k => ({
+                    id: k.id,
+                    name: k.nama,
+                    type: 'MADROSAH',
+                    qrValue: `SITAQUA_ABSENSI_MADROSAH_${k.id}`
+                }))
+                fileName = 'QR_Absensi_Kelas_Madrosah.pdf'
+            } else if (scope === 'quraniyah') {
+                items = halaqohList.map(h => ({
+                    id: h.id,
+                    name: h.nama,
+                    type: 'QURANIYAH',
+                    qrValue: `SITAQUA_ABSENSI_QURANIYAH_${h.id}`
+                }))
+                fileName = 'QR_Absensi_Halaqoh_Quraniyah.pdf'
+            } else {
+                const kItems = kelasList.map(k => ({
+                    id: k.id,
+                    name: k.nama,
+                    type: 'MADROSAH',
+                    qrValue: `SITAQUA_ABSENSI_MADROSAH_${k.id}`
+                }))
+                const hItems = halaqohList.map(h => ({
+                    id: h.id,
+                    name: h.nama,
+                    type: 'QURANIYAH',
+                    qrValue: `SITAQUA_ABSENSI_QURANIYAH_${h.id}`
+                }))
+                items = [...kItems, ...hItems]
+                fileName = 'QR_Absensi_Semua_SITAQUA.pdf'
+            }
+
+            if (items.length === 0) {
+                showToast('Tidak ada data QR yang tersedia untuk dicetak.', 'warning')
+                setIsExportingPdf(false)
+                return
+            }
+
+            // Mount canvas hidden stage
+            setQrExportList(items)
+            setPdfProgress('Merender kode QR...')
+
+            // Tunggu 150ms agar elemen canvas selesai ter-render di DOM
+            await new Promise(resolve => setTimeout(resolve, 150))
+
+            await generateQRPdf({
+                items,
+                getCanvasElement: (idx) => document.getElementById(`qr-canvas-export-${idx}`),
+                fileName,
+                onProgress: (curr, tot) => setPdfProgress(`Memproses PDF (${curr}/${tot})...`)
+            })
+
+            showToast(`PDF berhasil diunduh (${items.length} QR Code)`, 'success')
+        } catch (err) {
+            console.error('Error exporting QR PDF:', err)
+            showToast('Gagal mencetak PDF: ' + (err.message || 'Terjadi kesalahan'), 'error')
+        } finally {
+            setIsExportingPdf(false)
+            setQrExportList([])
+            setPdfProgress('')
+        }
     }
 
     const activeDateHolidays = React.useMemo(() => {
@@ -3555,13 +3640,59 @@ const AdminAbsensiPage = () => {
 
             ) : isQr ? (
                 <div className="space-y-8 no-print">
+                    {/* Action Header Card: Cetak PDF Kolektif */}
+                    <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-emerald-700/50">
+                        <div className="space-y-1 text-center md:text-left">
+                            <div className="flex items-center justify-center md:justify-start gap-2 text-emerald-300 font-bold text-xs uppercase tracking-wider">
+                                <Sparkles size={16} /> Fitur Cetak Dokumen QR Code
+                            </div>
+                            <h2 className="text-xl md:text-2xl font-black text-white">Cetak Dokumen QR Code</h2>
+                            <p className="text-sm text-emerald-100/80 max-w-xl">
+                                Unduh seluruh kode QR kelas dan halaqoh dalam satu file PDF siap cetak (kertas A4, desain simpel & tajam).
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2.5">
+                            <Button
+                                onClick={() => handleExportQRPdf('all')}
+                                disabled={isExportingPdf}
+                                className="bg-white text-emerald-900 hover:bg-emerald-50 font-black shadow-lg text-xs"
+                                icon={isExportingPdf ? Spinner : Printer}
+                            >
+                                {isExportingPdf ? (pdfProgress || 'Memproses PDF...') : 'Cetak Semua QR (PDF)'}
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => handleExportQRPdf('madrosah')}
+                                disabled={isExportingPdf}
+                                className="bg-emerald-700/60 hover:bg-emerald-700 text-white border-emerald-500/40 text-xs font-bold"
+                                icon={Download}
+                            >
+                                Khusus Kelas
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => handleExportQRPdf('quraniyah')}
+                                disabled={isExportingPdf}
+                                className="bg-emerald-700/60 hover:bg-emerald-700 text-white border-emerald-500/40 text-xs font-bold"
+                                icon={Download}
+                            >
+                                Khusus Halaqoh
+                            </Button>
+                        </div>
+                    </div>
+
                     <div className="grid md:grid-cols-2 gap-8">
                         {/* Section Kelas */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-emerald-800 flex items-center gap-2 px-2">
-                                <BookOpen size={20} />
-                                QR Code Kelas (Madrosah)
-                            </h3>
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="text-lg font-bold text-emerald-800 flex items-center gap-2">
+                                    <BookOpen size={20} />
+                                    QR Code Kelas (Madrosah)
+                                </h3>
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                                    {kelasList.length} Kelas
+                                </span>
+                            </div>
                             <div className="grid gap-3">
                                 {kelasList.map(k => (
                                     <div key={k.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all group">
@@ -3584,10 +3715,15 @@ const AdminAbsensiPage = () => {
 
                         {/* Section Halaqoh */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-blue-800 flex items-center gap-2 px-2">
-                                <Users size={20} />
-                                QR Code Halaqoh (Qur'aniyah)
-                            </h3>
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="text-lg font-bold text-blue-800 flex items-center gap-2">
+                                    <Users size={20} />
+                                    QR Code Halaqoh (Qur'aniyah)
+                                </h3>
+                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                                    {halaqohList.length} Halaqoh
+                                </span>
+                            </div>
                             <div className="grid gap-3">
                                 {halaqohList.map(h => (
                                     <div key={h.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all group">
@@ -3637,8 +3773,16 @@ const AdminAbsensiPage = () => {
                                         <p className="text-gray-400 text-sm font-medium">Scan untuk memulai absensi</p>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4 pt-4">
+                                    <div className="grid grid-cols-3 gap-2 pt-4">
                                         <Button variant="secondary" onClick={() => setSelectedQR(null)}>Tutup</Button>
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => handleExportQRPdf('single', selectedQR)}
+                                            disabled={isExportingPdf}
+                                            icon={Download}
+                                        >
+                                            PDF
+                                        </Button>
                                         <Button onClick={handlePrintQR} icon={Printer}>Cetak</Button>
                                     </div>
                                 </div>
@@ -4098,6 +4242,34 @@ const AdminAbsensiPage = () => {
                 halaqohList={halaqohList}
                 mapelList={mapelList}
             />
+
+            {/* Hidden Stage untuk Render Canvas QR Code sebelum diekspor ke PDF */}
+            {qrExportList.length > 0 && (
+                <div
+                    aria-hidden="true"
+                    style={{
+                        position: 'fixed',
+                        left: '-9999px',
+                        top: '-9999px',
+                        width: '1px',
+                        height: '1px',
+                        overflow: 'hidden',
+                        opacity: 0,
+                        pointerEvents: 'none'
+                    }}
+                >
+                    {qrExportList.map((item, idx) => (
+                        <QRCodeCanvas
+                            key={`${item.type}-${item.id}-${idx}`}
+                            id={`qr-canvas-export-${idx}`}
+                            value={item.qrValue}
+                            size={512}
+                            level="H"
+                            includeMargin={false}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     )
 }
