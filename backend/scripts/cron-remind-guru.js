@@ -250,7 +250,7 @@ async function main() {
             .from('audit_log')
             .select('id, created_at, new_data')
             .eq('action', 'BROADCAST_JADWAL_GURU')
-            .gte('created_at', `${dateStr}T00:00:00Z`)
+            .filter('new_data->>date', 'eq', dateStr)
             .limit(1)
 
         if (existingLogs && existingLogs.length > 0) {
@@ -260,22 +260,17 @@ async function main() {
         }
     }
 
-    // 3. Query Jadwal dan Guru dengan Aliases Hari (Ahad/Minggu fleksibel)
-    const dayAliases = [dayName, `${dayName} `]
-    if (dayName.toLowerCase() === 'ahad') dayAliases.push('Minggu', 'Minggu ')
-    else if (dayName.toLowerCase() === 'minggu') dayAliases.push('Ahad', 'Ahad ')
-    else if (dayName.toLowerCase() === 'jumat') dayAliases.push("Jum'at", "Jum`at", 'Jumat ')
-
-    console.log(`[Cron] Mengambil data jadwal pelajaran untuk hari [${dayAliases.join(', ')}] dari Supabase...`)
+    // 3. Query Jadwal dan Guru (Kolom `hari` bertipe Postgres ENUM)
+    console.log(`[Cron] Mengambil data jadwal pelajaran untuk hari "${dayName}" dari Supabase...`)
 
     const [jadwalRes, guruRes, halaqohRes, mhRes, profilesRes, kelasRes, mapelRes, allJadwalStats] = await Promise.all([
-        supabase.from('jadwal_pelajaran').select('*').in('hari', dayAliases),
+        supabase.from('jadwal_pelajaran').select('*').eq('hari', dayName),
         supabase.from('guru').select('id, nama, email, user_id, no_telp, status').eq('status', 'Aktif'),
         supabase.from('halaqoh').select('id, nama, musyrif_id'),
         supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
         supabase.from('user_profiles').select('user_id, guru_id, no_telp, phone, email'),
         supabase.from('kelas').select('id, nama'),
-        supabase.from('mata_pelajaran').select('id, nama'),
+        supabase.from('mapel').select('id, nama'),
         supabase.from('jadwal_pelajaran').select('hari')
     ])
 
@@ -287,7 +282,7 @@ async function main() {
         { table: 'musyrif_halaqoh', err: mhRes.error },
         { table: 'user_profiles', err: profilesRes.error },
         { table: 'kelas', err: kelasRes.error },
-        { table: 'mata_pelajaran', err: mapelRes.error },
+        { table: 'mapel', err: mapelRes.error },
         { table: 'jadwal_pelajaran (all)', err: allJadwalStats.error }
     ].filter(item => Boolean(item.err))
 
@@ -297,7 +292,7 @@ async function main() {
             console.error(`   • Tabel [${e.table}]: ${e.err.message || JSON.stringify(e.err)} (Code: ${e.err.code || 'N/A'})`)
         })
         console.log(`[Cron] Supabase URL : ${supabaseUrl}`)
-        console.log(`[Cron] Key Type     : ${supabaseKey === process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SERVICE_ROLE_KEY' : 'ANON_KEY'}`)
+        console.log(`[Cron] Key Type     : ${activeKeyType}`)
         return
     }
 

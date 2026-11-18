@@ -100,22 +100,18 @@ let SchedulerService = SchedulerService_1 = class SchedulerService {
                 guruGroups: []
             };
         }
-        const dayAliases = [dayName, `${dayName} `];
-        if (dayName.toLowerCase() === 'ahad')
-            dayAliases.push('Minggu', 'Minggu ');
-        else if (dayName.toLowerCase() === 'minggu')
-            dayAliases.push('Ahad', 'Ahad ');
-        else if (dayName.toLowerCase() === 'jumat')
-            dayAliases.push("Jum'at", "Jum`at", 'Jumat ');
         const [jadwalRes, halaqohRes, guruRes, musyrifHalaqohRes, profilesRes, kelasRes, mapelRes] = await Promise.all([
-            supabase.from('jadwal_pelajaran').select('*').in('hari', dayAliases),
+            supabase.from('jadwal_pelajaran').select('*').eq('hari', dayName),
             supabase.from('halaqoh').select('id, nama, musyrif_id'),
             supabase.from('guru').select('id, nama, email, user_id, no_telp, status'),
             supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
             supabase.from('user_profiles').select('user_id, nama, email, guru_id, no_telp, phone'),
             supabase.from('kelas').select('id, nama'),
-            supabase.from('mata_pelajaran').select('id, nama')
+            supabase.from('mapel').select('id, nama')
         ]);
+        if (jadwalRes.error) {
+            this.logger.error(`[Scheduler] Gagal mengambil jadwal_pelajaran untuk hari ${dayName}: ${jadwalRes.error.message}`);
+        }
         const rawJadwal = jadwalRes.data || [];
         const halaqohMap = (halaqohRes.data || []).reduce((acc, h) => ({ ...acc, [h.id]: h }), {});
         const guruMap = (guruRes.data || []).reduce((acc, g) => ({ ...acc, [g.id]: g }), {});

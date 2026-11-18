@@ -90,22 +90,22 @@ export const getTodayTeacherSchedules = async (targetDateStr) => {
     const isMadrosahHoliday = holidayList.some(h => h.scope === 'Madrosah')
     const isQuraniyahHoliday = holidayList.some(h => h.scope === 'Quraniyah')
 
-    // Aliases nama hari agar fleksibel (Ahad / Minggu, Jumat / Jum'at, dan spasi)
-    const dayAliases = [dayName, `${dayName} `]
-    if (dayName.toLowerCase() === 'ahad') dayAliases.push('Minggu', 'Minggu ')
-    else if (dayName.toLowerCase() === 'minggu') dayAliases.push('Ahad', 'Ahad ')
-    else if (dayName.toLowerCase() === 'jumat') dayAliases.push("Jum'at", "Jum`at", 'Jumat ')
-
     // 2. Query Jadwal, Guru, Halaqoh, User Profiles, Kelas, dan Mapel
+    // Kolom `hari` bertipe ENUM ('Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Ahad').
+    // dayName sudah dinormalisasi oleh getWIBDateInfo() ke nilai enum yang valid.
     const [jadwalRes, guruRes, halaqohRes, musyrifHalaqohRes, profilesRes, kelasRes, mapelRes] = await Promise.all([
-        supabase.from('jadwal_pelajaran').select('*').in('hari', dayAliases),
+        supabase.from('jadwal_pelajaran').select('*').eq('hari', dayName),
         supabase.from('guru').select('id, nama, email, user_id, no_telp, status').eq('status', 'Aktif'),
         supabase.from('halaqoh').select('id, nama, musyrif_id'),
         supabase.from('musyrif_halaqoh').select('halaqoh_id, user_id'),
         supabase.from('user_profiles').select('user_id, guru_id, no_telp, phone, email'),
         supabase.from('kelas').select('id, nama'),
-        supabase.from('mata_pelajaran').select('id, nama')
+        supabase.from('mapel').select('id, nama')
     ])
+
+    if (jadwalRes.error) {
+        console.error(`[AutoReminder Guru] Gagal mengambil jadwal_pelajaran: ${jadwalRes.error.message}`)
+    }
 
     const rawJadwal = jadwalRes.data || []
     const guruList = guruRes.data || []
@@ -272,7 +272,7 @@ export const checkAndSendDailyGuruReminders = async (options = {}) => {
             .from('audit_log')
             .select('id, created_at, new_data')
             .eq('action', 'BROADCAST_JADWAL_GURU')
-            .gte('created_at', `${dateStr}T00:00:00Z`)
+            .filter('new_data->>date', 'eq', dateStr)
             .limit(1)
 
         if (!force && existingLogs && existingLogs.length > 0) {
